@@ -2451,7 +2451,13 @@ window.saveHeaderConfigFromForm = function () {
     safeSetText('dash-main-title-mobile', window.dashboardConfig.mainTitle);
     safeSetText('dash-sub-title', window.dashboardConfig.subTitle);
     safeSetText('dash-sub-title-mobile', window.dashboardConfig.subTitle);
-    document.title = `${window.dashboardConfig.topTag} - ${window.dashboardConfig.mainTitle}`;
+    if (window.dashboardConfig.topTag && window.dashboardConfig.mainTitle) {
+        document.title = `${window.dashboardConfig.topTag} - ${window.dashboardConfig.mainTitle}`;
+    } else if (window.dashboardConfig.topTag || window.dashboardConfig.mainTitle) {
+        document.title = window.dashboardConfig.topTag || window.dashboardConfig.mainTitle;
+    } else {
+        document.title = "X-29";
+    }
 
     FirebaseService.saveToCloud();
     showToast("Dashboard titles updated!", "success");
@@ -2932,6 +2938,15 @@ function renderUI() {
     const dashContent = document.getElementById('dashboard-content');
     if (dashContent) dashContent.classList.remove('hidden');
 
+    if (window.dashboardConfig) {
+        if (window.dashboardConfig.topTag && /trax/i.test(window.dashboardConfig.topTag)) {
+            window.dashboardConfig.topTag = window.dashboardConfig.topTag.replace(/trax/gi, 'X-29');
+        }
+        if (window.dashboardConfig.mainTitle && /trax/i.test(window.dashboardConfig.mainTitle)) {
+            window.dashboardConfig.mainTitle = window.dashboardConfig.mainTitle.replace(/trax/gi, 'X-29');
+        }
+    }
+
     safeSetText('dash-top-tag', window.dashboardConfig.topTag);
     safeSetText('dash-top-tag-mobile', window.dashboardConfig.topTag);
     safeSetText('dash-main-title', window.dashboardConfig.mainTitle);
@@ -2943,7 +2958,13 @@ function renderUI() {
     if (trendsStartDateInput && window.dashboardConfig && window.dashboardConfig.trendStartDate) {
         trendsStartDateInput.value = window.dashboardConfig.trendStartDate;
     }
-    document.title = `${window.dashboardConfig.topTag} - ${window.dashboardConfig.mainTitle}`;
+    if (window.dashboardConfig.topTag && window.dashboardConfig.mainTitle) {
+        document.title = `${window.dashboardConfig.topTag} - ${window.dashboardConfig.mainTitle}`;
+    } else if (window.dashboardConfig.topTag || window.dashboardConfig.mainTitle) {
+        document.title = window.dashboardConfig.topTag || window.dashboardConfig.mainTitle;
+    } else {
+        document.title = "X-29";
+    }
 
     const tagInput = document.getElementById('edit-header-tag');
     if (tagInput) tagInput.value = window.dashboardConfig.topTag || '';
@@ -12975,8 +12996,8 @@ window.resetToCleanSlate = function (confirmFirst = true) {
         AppState.fiscalLedger = { transactions: [], budgets: [], vaults: [] };
 
         AppState.dashboardConfig = {
-            topTag: "",
-            mainTitle: "Study Dashboard",
+            topTag: "X-29",
+            mainTitle: "X-29 Dashboard",
             subTitle: "",
             trendStartDate: new Date().toISOString().split('T')[0],
             trendEndDate: "",
@@ -17619,13 +17640,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     window.addEventListener('appinstalled', (evt) => {
-        console.log('[PWA] Project X was installed successfully!');
+        console.log('[PWA] X-29 was installed successfully!');
         if (installBtn) {
             installBtn.classList.add('hidden');
             installBtn.classList.remove('flex');
         }
         if (typeof showToast === 'function') {
-            showToast('Project X Installed Successfully!', 'success');
+            showToast('X-29 Installed Successfully!', 'success');
         }
     });
 });
@@ -17646,7 +17667,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Show error banner if redirected with error
     const params = new URLSearchParams(window.location.search);
     if (params.get('error') === 'denied') {
-        showError("Access denied. Project X is private.");
+        showError("Access denied. X-29 is private.");
     }
 
     function showError(msg) {
@@ -17694,7 +17715,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if ((user.email || '').trim().toLowerCase() !== 'ris2k29@gmail.com') {
                 await FirebaseService.logout();
-                showError("Access denied. Project X is private.");
+                showError("Access denied. X-29 is private.");
                 btnSubmit.disabled = false;
                 spinner.classList.add('hidden');
             } else {
@@ -20363,7 +20384,7 @@ window.renderAccountingCycleMatrix = function () {
 
             <div class="bg-slate-50 dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-4 max-w-3xl mx-auto">
                 <div class="text-center border-b border-slate-200 dark:border-slate-700 pb-3">
-                    <h5 class="font-black text-sm uppercase tracking-widest text-slate-900 dark:text-white">PROJECT X ENTERPRISE</h5>
+                    <h5 class="font-black text-sm uppercase tracking-widest text-slate-900 dark:text-white">X-29 ENTERPRISE</h5>
                     <div class="text-xs font-bold text-teal-600 dark:text-teal-400">INCOME STATEMENT</div>
                     <div class="text-[10px] text-slate-400 font-medium">For Period Ending ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
                 </div>
@@ -20421,7 +20442,7 @@ window.renderAccountingCycleMatrix = function () {
 
             <div class="bg-slate-50 dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-4 max-w-3xl mx-auto">
                 <div class="text-center border-b border-slate-200 dark:border-slate-700 pb-3">
-                    <h5 class="font-black text-sm uppercase tracking-widest text-slate-900 dark:text-white">PROJECT X ENTERPRISE</h5>
+                    <h5 class="font-black text-sm uppercase tracking-widest text-slate-900 dark:text-white">X-29 ENTERPRISE</h5>
                     <div class="text-xs font-bold text-indigo-600 dark:text-indigo-400">STATEMENT OF OWNER'S EQUITY</div>
                     <div class="text-[10px] text-slate-400 font-medium">For Period Ending ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
                 </div>
@@ -20465,7 +20486,7 @@ window.renderAccountingCycleMatrix = function () {
 
             <div class="bg-slate-900 text-white p-6 rounded-2xl border border-teal-500/30 shadow-lg space-y-6 max-w-4xl mx-auto">
                 <div class="text-center border-b border-slate-800 pb-4">
-                    <h5 class="font-black text-base uppercase tracking-widest text-teal-300">PROJECT X ENTERPRISE</h5>
+                    <h5 class="font-black text-base uppercase tracking-widest text-teal-300">X-29 ENTERPRISE</h5>
                     <div class="text-xs font-bold text-white uppercase tracking-wider">BALANCE SHEET</div>
                     <div class="text-[10px] text-slate-400 font-medium">As of ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
                 </div>
@@ -20786,7 +20807,7 @@ window.exportJSONBackup = function() {
         const currentPayload = {
             _metadata: {
                 exportedAt: new Date().toISOString(),
-                source: "Project X Backup Export"
+                source: "X-29 Backup Export"
             },
             tasks: AppState.tasks,
             tracks: window.tracks,

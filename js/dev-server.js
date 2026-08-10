@@ -102,7 +102,7 @@ const server = http.createServer((req, res) => {
 const PORT = 3000;
 server.listen(PORT, () => {
   console.log(`\n  ┌─────────────────────────────────────────────────────┐`);
-  console.log(`  │  Project X Dev Server running at:                  │`);
+  console.log(`  │  X-29 Dev Server running at:                       │`);
   console.log(`  │  → http://localhost:${PORT}                          │`);
   console.log(`  │                                                     │`);
   console.log(`  │  ⚠  Use ONLY this URL for local development.       │`);

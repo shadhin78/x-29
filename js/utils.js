@@ -1,5 +1,5 @@
 /**
- * Project X Utilities Module
+ * X-29 Utilities Module
  * Established in window.Utils namespace for compatibility.
  */
 

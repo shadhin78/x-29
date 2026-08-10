@@ -1,5 +1,5 @@
 /**
- * Project X State Module
+ * X-29 State Module
  * Established in window.AppState namespace as the single source of truth.
  */
 
@@ -73,8 +73,8 @@ window.AppState = {
     trendDatasetVisibility: { actual: true, target: true },
 
     dashboardConfig: {
-        topTag: "",
-        mainTitle: "Study Dashboard",
+        topTag: "X-29",
+        mainTitle: "X-29 Dashboard",
         subTitle: "",
         trendStartDate: "",
         trendEndDate: "",
@@ -187,7 +187,15 @@ window.applyFullAppState = function(data, saveCloud = true) {
     if (data.timerAnalyticsGrouping !== undefined) AppState.timerAnalyticsGrouping = data.timerAnalyticsGrouping;
     if (data.timerAnalyticsChartStyle !== undefined) AppState.timerAnalyticsChartStyle = data.timerAnalyticsChartStyle;
     if (data.subjectFocusTargets) AppState.subjectFocusTargets = data.subjectFocusTargets;
-    if (data.dashboardConfig) AppState.dashboardConfig = data.dashboardConfig;
+    if (data.dashboardConfig) {
+        AppState.dashboardConfig = data.dashboardConfig;
+        if (AppState.dashboardConfig.topTag && /trax/i.test(AppState.dashboardConfig.topTag)) {
+            AppState.dashboardConfig.topTag = AppState.dashboardConfig.topTag.replace(/trax/gi, 'X-29');
+        }
+        if (AppState.dashboardConfig.mainTitle && /trax/i.test(AppState.dashboardConfig.mainTitle)) {
+            AppState.dashboardConfig.mainTitle = AppState.dashboardConfig.mainTitle.replace(/trax/gi, 'X-29');
+        }
+    }
     if (data.weeklyTargetsDatabase) AppState.weeklyTargetsDatabase = data.weeklyTargetsDatabase;
     if (data.dailyTargetsDatabase) AppState.dailyTargetsDatabase = data.dailyTargetsDatabase;
     if (data.scheduleBlocks) AppState.scheduleBlocks = data.scheduleBlocks;

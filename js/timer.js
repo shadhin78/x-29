@@ -1,5 +1,5 @@
 /**
- * Project X Focus Timer Module
+ * X-29 Focus Timer Module
  * Established in window.TimerService namespace.
  */
 

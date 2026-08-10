@@ -1,5 +1,5 @@
 /**
- * Project X Firebase & Data Layer Module
+ * X-29 Firebase & Data Layer Module
  * Established in window.FirebaseService namespace.
  */
 
