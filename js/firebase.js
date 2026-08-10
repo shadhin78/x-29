@@ -32,6 +32,16 @@ function showSync(state) {
     }
 }
 
+const firebaseConfig = {
+    apiKey: "AIzaSyB3esen42Pqg2KzwSbn2N9Af_XpR90Z8Cw",
+    authDomain: "trax-76836.firebaseapp.com",
+    projectId: "trax-76836",
+    storageBucket: "trax-76836.firebasestorage.app",
+    messagingSenderId: "451643537797",
+    appId: "1:451643537797:web:ccd35df69ff56e3320ecec"
+};
+window.firebaseConfig = firebaseConfig;
+
 window.FirebaseService = {
     _saveDebounceTimer: null,
     _unsubscribeSnapshot: null,
@@ -42,14 +52,7 @@ window.FirebaseService = {
     fetchConfig: async function() {
         if (window.location.protocol === 'file:') {
             console.log("file:// protocol detected in fetchConfig. Using offline fallback config.");
-            return {
-                apiKey: "AIzaSyB3esen42Pqg2KzwSbn2N9Af_XpR90Z8Cw",
-                authDomain: "trax-76836.firebaseapp.com",
-                projectId: "trax-76836",
-                storageBucket: "trax-76836.firebasestorage.app",
-                messagingSenderId: "451643537797",
-                appId: "1:451643537797:web:ccd35df69ff56e3320ecec"
-            };
+            return firebaseConfig;
         }
 
         let config;
@@ -91,12 +94,12 @@ window.FirebaseService = {
                 });
 
                 config = {
-                    apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY,
-                    authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-                    projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-                    storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-                    messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-                    appId: env.NEXT_PUBLIC_FIREBASE_APP_ID
+                    apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY || firebaseConfig.apiKey,
+                    authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain,
+                    projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || firebaseConfig.projectId,
+                    storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
+                    messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
+                    appId: env.NEXT_PUBLIC_FIREBASE_APP_ID || firebaseConfig.appId
                 };
 
                 if (!config.apiKey) throw new Error("No API key found in .env");
@@ -108,7 +111,7 @@ window.FirebaseService = {
                 if (cachedConfig) {
                     try {
                         const parsed = JSON.parse(cachedConfig);
-                        if (parsed && parsed.projectId === 'trax-76836') {
+                        if (parsed && parsed.projectId === firebaseConfig.projectId) {
                             config = parsed;
                             console.log("Loaded Firebase config from localStorage cache for offline boot.");
                         }
@@ -116,23 +119,17 @@ window.FirebaseService = {
                 }
                 if (!config) {
                     console.log("Using offline fallback config.");
-                    config = {
-                        apiKey: "AIzaSyB3esen42Pqg2KzwSbn2N9Af_XpR90Z8Cw",
-                        authDomain: "trax-76836.firebaseapp.com",
-                        projectId: "trax-76836",
-                        storageBucket: "trax-76836.firebasestorage.app",
-                        messagingSenderId: "451643537797",
-                        appId: "1:451643537797:web:ccd35df69ff56e3320ecec"
-                    };
+                    config = firebaseConfig;
                     safeStorage.setItem('firebaseConfig', JSON.stringify(config));
                 }
             }
         }
-        return config;
+        return config || firebaseConfig;
     },
 
     // 2. Initialize Firebase Client App and Firestore reference
     init: function(config) {
+        const finalConfig = config || firebaseConfig;
         if (window.location.protocol === 'file:') {
             AppState.db = null;
             console.log("Firebase initialized in mock mode for file:// protocol.");
@@ -141,7 +138,7 @@ window.FirebaseService = {
         if (typeof firebase !== 'undefined') {
             try {
                 if (!firebase.apps.length) {
-                    firebase.initializeApp(config);
+                    firebase.initializeApp(finalConfig);
                 }
                 if (typeof firebase.firestore === 'function') {
                     AppState.db = firebase.firestore();
@@ -156,7 +153,7 @@ window.FirebaseService = {
                         }
                     }
                 }
-                console.log("Firebase initialized successfully.");
+                console.log("Firebase initialized successfully with project:", finalConfig.projectId);
             } catch (initErr) {
                 console.warn("Firebase initializeApp caught error:", initErr);
                 AppState.db = null;

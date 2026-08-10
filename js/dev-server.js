@@ -38,18 +38,23 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
-  let url = req.url.split('?')[0];
+  let url;
+  try {
+    url = decodeURIComponent(req.url.split('?')[0]);
+  } catch (e) {
+    url = req.url.split('?')[0];
+  }
 
   // Route /api/config to environmental response
   if (url === '/api/config') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
-      apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
-      authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
-      projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
-      storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
-      messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
-      appId: env.NEXT_PUBLIC_FIREBASE_APP_ID || ""
+      apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyB3esen42Pqg2KzwSbn2N9Af_XpR90Z8Cw",
+      authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "trax-76836.firebaseapp.com",
+      projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "trax-76836",
+      storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "trax-76836.firebasestorage.app",
+      messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "451643537797",
+      appId: env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:451643537797:web:ccd35df69ff56e3320ecec"
     }));
     return;
   }
