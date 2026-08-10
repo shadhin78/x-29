@@ -10,7 +10,7 @@ function showSync(state) {
     const text = document.getElementById('sync-text');
     if (!el || !icon || !text) return;
 
-    el.classList.remove('opacity-0', 'scale-95');
+    el.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
     el.classList.add('opacity-100', 'scale-100');
 
     if (state === 'saving') {
@@ -23,7 +23,7 @@ function showSync(state) {
         icon.classList.remove('animate-spin', 'text-blue-500', 'text-red-500');
         icon.classList.add('text-emerald-500');
         text.textContent = 'Saved'; text.className = 'text-[9px] font-black uppercase tracking-widest text-emerald-500';
-        setTimeout(() => { el.classList.remove('opacity-100', 'scale-100'); el.classList.add('opacity-0', 'scale-95'); }, 2000);
+        setTimeout(() => { el.classList.remove('opacity-100', 'scale-100'); el.classList.add('opacity-0', 'scale-95', 'pointer-events-none'); }, 2000);
     } else if (state === 'error') {
         icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />`;
         icon.classList.remove('animate-spin', 'text-blue-500', 'text-emerald-500');

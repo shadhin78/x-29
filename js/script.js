@@ -2452,7 +2452,11 @@ window.saveHeaderConfigFromForm = function () {
     safeSetText('dash-sub-title', window.dashboardConfig.subTitle);
     safeSetText('dash-sub-title-mobile', window.dashboardConfig.subTitle);
     if (window.dashboardConfig.topTag && window.dashboardConfig.mainTitle) {
-        document.title = `${window.dashboardConfig.topTag} - ${window.dashboardConfig.mainTitle}`;
+        if (window.dashboardConfig.mainTitle.toLowerCase().startsWith(window.dashboardConfig.topTag.toLowerCase())) {
+            document.title = window.dashboardConfig.mainTitle;
+        } else {
+            document.title = `${window.dashboardConfig.topTag} - ${window.dashboardConfig.mainTitle}`;
+        }
     } else if (window.dashboardConfig.topTag || window.dashboardConfig.mainTitle) {
         document.title = window.dashboardConfig.topTag || window.dashboardConfig.mainTitle;
     } else {
@@ -2959,7 +2963,11 @@ function renderUI() {
         trendsStartDateInput.value = window.dashboardConfig.trendStartDate;
     }
     if (window.dashboardConfig.topTag && window.dashboardConfig.mainTitle) {
-        document.title = `${window.dashboardConfig.topTag} - ${window.dashboardConfig.mainTitle}`;
+        if (window.dashboardConfig.mainTitle.toLowerCase().startsWith(window.dashboardConfig.topTag.toLowerCase())) {
+            document.title = window.dashboardConfig.mainTitle;
+        } else {
+            document.title = `${window.dashboardConfig.topTag} - ${window.dashboardConfig.mainTitle}`;
+        }
     } else if (window.dashboardConfig.topTag || window.dashboardConfig.mainTitle) {
         document.title = window.dashboardConfig.topTag || window.dashboardConfig.mainTitle;
     } else {
@@ -2983,6 +2991,7 @@ function renderUI() {
     updateGlobalDates();
     setupFocusTodayButton();
     updateCountdown();
+    if (window.updateExamCountdown) window.updateExamCountdown();
     updateSuccessScore();
     renderSubjectNavigation();
     renderTaskList();
@@ -20899,7 +20908,10 @@ window.updateExamCountdown = function() {
     const cdMins = document.getElementById('exam-cd-mins');
     const cdSecs = document.getElementById('exam-cd-secs');
 
-    if (!cdDays || !cdHours || !cdMins || !cdSecs) return;
+    const hdrSubject = document.getElementById('hdr-exam-cd-subject');
+    const hdrTimer = document.getElementById('hdr-exam-cd-timer');
+    const hdrSubjectMobile = document.getElementById('hdr-exam-cd-subject-mobile');
+    const hdrTimerMobile = document.getElementById('hdr-exam-cd-timer-mobile');
 
     const exams = AppState.examRoutine || [];
     const sessions = AppState.examSessions || [];
@@ -20962,10 +20974,15 @@ window.updateExamCountdown = function() {
         if (heroVenue) heroVenue.style.display = 'none';
         if (heroDateTime) heroDateTime.textContent = "Date: --";
 
-        cdDays.textContent = "00";
-        cdHours.textContent = "00";
-        cdMins.textContent = "00";
-        cdSecs.textContent = "00";
+        if (cdDays) cdDays.textContent = "00";
+        if (cdHours) cdHours.textContent = "00";
+        if (cdMins) cdMins.textContent = "00";
+        if (cdSecs) cdSecs.textContent = "00";
+
+        if (hdrSubject) hdrSubject.textContent = "No Exam Scheduled";
+        if (hdrTimer) hdrTimer.textContent = "--";
+        if (hdrSubjectMobile) hdrSubjectMobile.textContent = "No Exam";
+        if (hdrTimerMobile) hdrTimerMobile.textContent = "--";
         return;
     }
 
@@ -20995,10 +21012,15 @@ window.updateExamCountdown = function() {
 
     if (diff <= 0) {
         if (heroDetails) heroDetails.innerHTML = `<span class="text-emerald-400 font-black flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>${nextExam.subject.toUpperCase()} EXAM IS IN PROGRESS NOW!</span>`;
-        cdDays.textContent = "00";
-        cdHours.textContent = "00";
-        cdMins.textContent = "00";
-        cdSecs.textContent = "00";
+        if (cdDays) cdDays.textContent = "00";
+        if (cdHours) cdHours.textContent = "00";
+        if (cdMins) cdMins.textContent = "00";
+        if (cdSecs) cdSecs.textContent = "00";
+
+        if (hdrSubject) hdrSubject.textContent = nextExam.subject;
+        if (hdrTimer) hdrTimer.textContent = "Live Now!";
+        if (hdrSubjectMobile) hdrSubjectMobile.textContent = nextExam.subject;
+        if (hdrTimerMobile) hdrTimerMobile.textContent = "Live Now";
     } else {
         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
         const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -21009,10 +21031,17 @@ window.updateExamCountdown = function() {
             heroDetails.innerHTML = `<svg class="w-4 h-4 text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>Target Subject Exam: <strong class="text-white font-black">${nextExam.subject}</strong> (${dateFormatted})</span>`;
         }
 
-        cdDays.textContent = String(days).padStart(2, '0');
-        cdHours.textContent = String(hours).padStart(2, '0');
-        cdMins.textContent = String(mins).padStart(2, '0');
-        cdSecs.textContent = String(secs).padStart(2, '0');
+        if (cdDays) cdDays.textContent = String(days).padStart(2, '0');
+        if (cdHours) cdHours.textContent = String(hours).padStart(2, '0');
+        if (cdMins) cdMins.textContent = String(mins).padStart(2, '0');
+        if (cdSecs) cdSecs.textContent = String(secs).padStart(2, '0');
+
+        const compactTimerStr = `${String(days).padStart(2, '0')}d ${String(hours).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
+        const compactTimerStrMobile = `${String(days).padStart(2, '0')}d ${String(hours).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m`;
+        if (hdrSubject) hdrSubject.textContent = nextExam.subject;
+        if (hdrTimer) hdrTimer.textContent = compactTimerStr;
+        if (hdrSubjectMobile) hdrSubjectMobile.textContent = nextExam.subject;
+        if (hdrTimerMobile) hdrTimerMobile.textContent = compactTimerStrMobile;
     }
 };
 
@@ -21640,10 +21669,7 @@ window.deleteExam = function(examId) {
 };
 
 setInterval(() => {
-    const pageEl = document.getElementById('page-exam');
-    if (pageEl && !pageEl.classList.contains('hidden')) {
-        window.updateExamCountdown();
-    }
+    window.updateExamCountdown();
 }, 1000);
 
 
