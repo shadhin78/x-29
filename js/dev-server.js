@@ -49,12 +49,12 @@ const server = http.createServer((req, res) => {
   if (url === '/api/config') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
-      apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyB3esen42Pqg2KzwSbn2N9Af_XpR90Z8Cw",
-      authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "trax-76836.firebaseapp.com",
-      projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "trax-76836",
-      storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "trax-76836.firebasestorage.app",
-      messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "451643537797",
-      appId: env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:451643537797:web:ccd35df69ff56e3320ecec"
+      apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAiqf66FVpOM9UV20LEcOjOPkkFcS_qFIs",
+      authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "x-2k29.firebaseapp.com",
+      projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "x-2k29",
+      storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "x-2k29.firebasestorage.app",
+      messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "17156117405",
+      appId: env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:17156117405:web:78cb75ef31f3ffdba15574"
     }));
     return;
   }

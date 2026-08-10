@@ -33,12 +33,12 @@ function showSync(state) {
 }
 
 const firebaseConfig = {
-    apiKey: "AIzaSyB3esen42Pqg2KzwSbn2N9Af_XpR90Z8Cw",
-    authDomain: "trax-76836.firebaseapp.com",
-    projectId: "trax-76836",
-    storageBucket: "trax-76836.firebasestorage.app",
-    messagingSenderId: "451643537797",
-    appId: "1:451643537797:web:ccd35df69ff56e3320ecec"
+    apiKey: "AIzaSyAiqf66FVpOM9UV20LEcOjOPkkFcS_qFIs",
+    authDomain: "x-2k29.firebaseapp.com",
+    projectId: "x-2k29",
+    storageBucket: "x-2k29.firebasestorage.app",
+    messagingSenderId: "17156117405",
+    appId: "1:17156117405:web:78cb75ef31f3ffdba15574"
 };
 window.firebaseConfig = firebaseConfig;
 
