@@ -376,7 +376,7 @@ window.FirebaseService = {
             subjectTimeLinks: window.subjectTimeLinks || {},
             successResults: window.successResults || [],
             timerLogs: window.timerLogs || [],
-            dailyFocusHoursTarget: window.dailyFocusHoursTarget || 4.0,
+            dailyFocusHoursTarget: window.dailyFocusHoursTarget !== undefined ? window.dailyFocusHoursTarget : 0,
             dailyFocusHoursTargetDate: window.dailyFocusHoursTargetDate || "",
             dailyFocusHoursTargetHistory: window.dailyFocusHoursTargetHistory || [],
             timerAnalyticsRange: window.timerAnalyticsRange || 180,

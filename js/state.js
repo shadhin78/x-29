@@ -16,7 +16,7 @@ window.AppState = {
     appState: {},
     tracks: [],
     timerLogs: [],
-    dailyFocusHoursTarget: 4.0,
+    dailyFocusHoursTarget: 0,
     dailyFocusHoursTargetDate: "",
     dailyFocusHoursTargetHistory: [],
     timerAnalyticsRange: 180,

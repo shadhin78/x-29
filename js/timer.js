@@ -1309,7 +1309,7 @@
         });
 
         // Sync Target Input values
-        const targetVal = window.dailyFocusHoursTarget || 4.0;
+        const targetVal = window.dailyFocusHoursTarget !== undefined ? window.dailyFocusHoursTarget : 0;
         ['timer-target-input', 'spectra-timer-target-input'].forEach(id => {
             const input = document.getElementById(id);
             if (input && parseFloat(input.value) !== targetVal) {
@@ -1321,7 +1321,7 @@
     window.openTimerAnalyticsModal = function () {
         const targetInput = document.getElementById('timer-target-input');
         if (targetInput) {
-            targetInput.value = window.dailyFocusHoursTarget || 4.0;
+            targetInput.value = window.dailyFocusHoursTarget !== undefined ? window.dailyFocusHoursTarget : 0;
         }
         if (window.timerAnalyticsRange === undefined) {
             window.timerAnalyticsRange = 180;
@@ -1339,7 +1339,7 @@
 
     window.getDailyFocusHoursTargetForDate = function (dateObj) {
         if (!window.dailyFocusHoursTargetHistory || window.dailyFocusHoursTargetHistory.length === 0) {
-            return window.dailyFocusHoursTarget || 4.0;
+            return window.dailyFocusHoursTarget !== undefined ? window.dailyFocusHoursTarget : 0;
         }
 
         const sorted = [...window.dailyFocusHoursTargetHistory].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -1367,7 +1367,7 @@
 
     window.updateDailyFocusHoursTarget = function (value) {
         const parsed = parseFloat(value);
-        if (!isNaN(parsed) && parsed > 0) {
+        if (!isNaN(parsed) && parsed >= 0) {
             window.dailyFocusHoursTarget = parsed;
             window.dailyFocusHoursTargetDate = new Date().toISOString();
 
@@ -1695,7 +1695,7 @@
             id: 'targetLineLabel_' + instanceRefKey,
             afterDraw: (chart) => {
                 const { ctx: drawingCtx, chartArea: { right }, scales: { y: yScale } } = chart;
-                const targetHours = window.dailyFocusHoursTarget || 4.0;
+                const targetHours = window.dailyFocusHoursTarget !== undefined ? window.dailyFocusHoursTarget : 0;
                 if (!yScale || !chart.chartArea) return;
                 const yPos = yScale.getPixelForValue(targetHours);
 
@@ -2689,7 +2689,7 @@
             elDashDetail.innerHTML = `<span class="text-slate-600 dark:text-slate-300 font-extrabold">${compactDateFormatted}</span><span class="text-fuchsia-400 font-black">•</span><span class="font-black text-fuchsia-600 dark:text-fuchsia-400">${compactDurFormatted}</span>`;
         }
 
-        const target = window.getDailyFocusHoursTargetForDate ? window.getDailyFocusHoursTargetForDate(dateObj) : (window.dailyFocusHoursTarget || 4.0);
+        const target = window.getDailyFocusHoursTargetForDate ? window.getDailyFocusHoursTargetForDate(dateObj) : (window.dailyFocusHoursTarget !== undefined ? window.dailyFocusHoursTarget : 0);
         const targetPct = target > 0 ? Math.round((hrs / target) * 100) : 0;
 
         let tierText = "❌ No Focus (0h)";
