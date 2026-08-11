@@ -2339,36 +2339,7 @@ window.renderSchedulePage = function () {
     }
 };
 
-// Toggle Second Timeline Grid
-window.toggleSecondTimelineGrid = function () {
-    const wrapper = document.getElementById('schedule-timeline-grid-2-wrapper');
-    const btn = document.getElementById('schedule-toggle-grid2-btn');
-    const btnWrapper = document.getElementById('schedule-toggle-grid2-btn-wrapper');
-    if (!wrapper) return;
 
-    const isHidden = wrapper.classList.contains('hidden');
-    if (isHidden) {
-        wrapper.classList.remove('hidden');
-        if (btn) btn.innerHTML = `
-                    <svg class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                    <span>Close Routine 2</span>
-                `;
-        if (btnWrapper) btnWrapper.classList.add('hidden');
-        wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else {
-        wrapper.classList.add('hidden');
-        if (btn) btn.innerHTML = `
-                    <svg class="w-4 h-4 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
-                    </svg>
-                    <span>Open Routine 2</span>
-                `;
-        if (btnWrapper) btnWrapper.classList.remove('hidden');
-    }
-};
 
 // --- Grid 2 (Routine 2) management functions ---
 // Flag to track which routine set the modal targets: 1 or 2
@@ -3056,12 +3027,15 @@ function renderUI() {
     if (typeof window.renderTimerAnalyticsChart === 'function') {
         setTimeout(window.renderTimerAnalyticsChart, 60);
     }
+    if (typeof window.renderSpectraFocusHeatmap === 'function') {
+        setTimeout(window.renderSpectraFocusHeatmap, 80);
+    }
+    if (typeof window.setSessionHistoryFilterUI === 'function') {
+        setTimeout(() => window.setSessionHistoryFilterUI(window.sessionHistoryFilter || 'all'), 50);
+    }
 
     const spectraPage = document.getElementById('page-spectra-analytics');
     if (spectraPage && !spectraPage.classList.contains('hidden')) {
-        if (typeof window.renderSpectraFocusHeatmap === 'function') {
-            setTimeout(window.renderSpectraFocusHeatmap, 80);
-        }
         if (typeof window.renderSpectraCircleChart === 'function') {
             setTimeout(window.renderSpectraCircleChart, 60);
         }
@@ -7252,7 +7226,7 @@ function renderTrendCharts() {
     window.renderSubjectTrendCircle();
 
 
-    // Update Spectra Pulse stats cards if they exist
+    // Update Analytics stats cards if they exist
     const avgCompEl = document.getElementById('analytics-avg-completion');
     const avgCompBar = document.getElementById('analytics-avg-completion-bar');
     if (avgCompEl) {
@@ -17462,7 +17436,7 @@ window.switchPage = function (pageId) {
     }
 
     // Handle chart resizing or rendering when visible
-    if (pageId === 'dashboard' || pageId === 'spectra-analytics') {
+    if (pageId === 'dashboard' || pageId === 'spectra-analytics' || pageId === 'timer') {
         const resizeAndUpdateAll = () => {
             const charts = [
                 window.mainChartPrograms,
@@ -17488,13 +17462,17 @@ window.switchPage = function (pageId) {
         // Resize and repaint again after entry transition completes (400ms animation) to prevent GPU caching/blank canvas bugs
         setTimeout(resizeAndUpdateAll, 420);
 
-        if (window.renderSpectraFocusHeatmap) setTimeout(window.renderSpectraFocusHeatmap, 50);
+        if (window.setSpectraHeatmapRangeUI) setTimeout(() => window.setSpectraHeatmapRangeUI(window.spectraHeatmapRange), 50);
+        else if (window.renderSpectraFocusHeatmap) setTimeout(window.renderSpectraFocusHeatmap, 50);
 
-        if (pageId === 'spectra-analytics') {
+        if (pageId === 'spectra-analytics' || pageId === 'timer') {
             if (window.updateTimerAnalyticsControls) setTimeout(window.updateTimerAnalyticsControls, 50);
-            if (window.renderSpectraCircleChart) setTimeout(window.renderSpectraCircleChart, 50);
             if (window.renderTimerAnalyticsChart) setTimeout(window.renderTimerAnalyticsChart, 50);
-            if (window.renderSpectraCommitmentsChart) setTimeout(window.renderSpectraCommitmentsChart, 50);
+            if (window.setSessionHistoryFilterUI) setTimeout(() => window.setSessionHistoryFilterUI(window.sessionHistoryFilter || 'all'), 50);
+            if (pageId === 'spectra-analytics') {
+                if (window.renderSpectraCircleChart) setTimeout(window.renderSpectraCircleChart, 50);
+                if (window.renderSpectraCommitmentsChart) setTimeout(window.renderSpectraCommitmentsChart, 50);
+            }
         }
         } else if (pageId === 'subjects') {
         if (typeof renderSubjectNavigation === 'function') renderSubjectNavigation();
@@ -20836,6 +20814,8 @@ window.exportJSONBackup = function() {
             timerAnalyticsRange: window.timerAnalyticsRange || 180,
             timerAnalyticsGrouping: window.timerAnalyticsGrouping || 'daily',
             timerAnalyticsChartStyle: window.timerAnalyticsChartStyle || 'combo',
+            spectraHeatmapRange: window.spectraHeatmapRange || 365,
+            sessionHistoryFilter: window.sessionHistoryFilter || 'all',
             subjectFocusTargets: window.subjectFocusTargets || {},
             dashboardConfig: window.dashboardConfig,
             weeklyTargetsDatabase: window.weeklyTargetsDatabase || {},

@@ -412,7 +412,7 @@ body.timer-fullscreen-active {
     box-sizing: border-box;
 }
 
-/* Spectra Pulse mobile overflow fix — constrain canvas and prevent horizontal bleed */
+/* Analytics mobile overflow fix — constrain canvas and prevent horizontal bleed */
 #page-spectra-analytics canvas {
     max-width: 100%;
     display: block;

@@ -1244,9 +1244,9 @@
         );
     };
 
-    window.timerAnalyticsRange = 180;
-    window.timerAnalyticsChartStyle = 'combo';
-    window.timerAnalyticsGrouping = 'daily';
+    if (window.timerAnalyticsRange === undefined) window.timerAnalyticsRange = 180;
+    if (window.timerAnalyticsChartStyle === undefined) window.timerAnalyticsChartStyle = 'combo';
+    if (window.timerAnalyticsGrouping === undefined) window.timerAnalyticsGrouping = 'daily';
 
     window.updateTimerAnalyticsControls = function () {
         const range = window.timerAnalyticsRange || 180;
@@ -1402,6 +1402,9 @@
         window.timerAnalyticsRange = days;
         window.updateTimerAnalyticsControls();
         window.renderTimerAnalyticsChart();
+        if (window.FirebaseService) {
+            window.FirebaseService.saveToCloud(true);
+        }
     };
 
     window.setTimerAnalyticsGrouping = function (grouping) {
@@ -1414,16 +1417,22 @@
         window.timerAnalyticsGrouping = grouping;
         window.updateTimerAnalyticsControls();
         window.renderTimerAnalyticsChart();
+        if (window.FirebaseService) {
+            window.FirebaseService.saveToCloud(true);
+        }
     };
 
     window.setTimerAnalyticsChartStyle = function (style) {
         window.timerAnalyticsChartStyle = style;
         window.updateTimerAnalyticsControls();
         window.renderTimerAnalyticsChart();
+        if (window.FirebaseService) {
+            window.FirebaseService.saveToCloud(true);
+        }
     };
 
     window.renderTimerAnalyticsChart = function () {
-        const ctx = document.getElementById('timerAnalyticsChart');
+        const ctx = document.getElementById('timerAnalyticsChart') || document.getElementById('spectraFocusAnalyticsChart');
         if (!ctx) return;
 
         if (window.timerAnalyticsChartInstance) {
@@ -1521,7 +1530,7 @@
             const sumTarget = dayTarget;
             const successRate = sumTarget > 0 ? Math.round((sumActual / sumTarget) * 100) : 0;
 
-            // Update Stats UI for Today (both Modal and Spectra Pulse page)
+            // Update Stats UI for Today (both Modal and Analytics page)
             ['timer-average-focus', 'spectra-timer-average-focus'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.innerText = formatHoursToHrMin(sumActual);
@@ -1611,7 +1620,7 @@
                 }
             });
 
-            // Update Stats UI (both Modal and Spectra Pulse page)
+            // Update Stats UI (both Modal and Analytics page)
             const avgVal = formatHoursToHrMin(avgActual);
             const avgTargetVal = formatHoursToHrMin(avgTarget);
             const totalVal = formatHoursToHrMin(sumActual);
@@ -2123,7 +2132,10 @@
             if (window.timerAnalyticsChartInstance) {
                 window.timerAnalyticsChartInstance.destroy();
             }
-            window.timerAnalyticsChartInstance = new Chart(ctx1.getContext('2d'), chartConfig);
+            window.timerAnalyticsChartInstance = new Chart(ctx1.getContext('2d'), {
+                ...chartConfig,
+                plugins: [...chartConfig.plugins]
+            });
         }
 
         const ctx2 = document.getElementById('spectraFocusAnalyticsChart');
@@ -2131,7 +2143,10 @@
             if (window.spectraFocusAnalyticsChartInstance) {
                 window.spectraFocusAnalyticsChartInstance.destroy();
             }
-            window.spectraFocusAnalyticsChartInstance = new Chart(ctx2.getContext('2d'), chartConfig);
+            window.spectraFocusAnalyticsChartInstance = new Chart(ctx2.getContext('2d'), {
+                ...chartConfig,
+                plugins: [...chartConfig.plugins]
+            });
         }
 
         if (window.renderSpectraFocusHeatmap) {
@@ -2139,10 +2154,11 @@
         }
     };
 
-    window.spectraHeatmapRange = window.spectraHeatmapRange || 365;
+    if (window.spectraHeatmapRange === undefined) window.spectraHeatmapRange = 365;
 
-    window.setSpectraHeatmapRange = function (days) {
-        window.spectraHeatmapRange = days;
+    window.setSpectraHeatmapRangeUI = function (days) {
+        const range = days || window.spectraHeatmapRange || 365;
+        window.spectraHeatmapRange = range;
         const btn30 = document.getElementById('spectra-hm-btn-30');
         const btn90 = document.getElementById('spectra-hm-btn-90');
         const btn180 = document.getElementById('spectra-hm-btn-180');
@@ -2151,12 +2167,21 @@
         const activeClass = "px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all bg-indigo-600 text-white shadow shadow-indigo-500/20";
         const inactiveClass = "px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200";
 
-        if (btn30) btn30.className = days === 30 ? activeClass : inactiveClass;
-        if (btn90) btn90.className = days === 90 ? activeClass : inactiveClass;
-        if (btn180) btn180.className = days === 180 ? activeClass : inactiveClass;
-        if (btn365) btn365.className = days === 365 ? activeClass : inactiveClass;
+        if (btn30) btn30.className = range === 30 ? activeClass : inactiveClass;
+        if (btn90) btn90.className = range === 90 ? activeClass : inactiveClass;
+        if (btn180) btn180.className = range === 180 ? activeClass : inactiveClass;
+        if (btn365) btn365.className = range === 365 ? activeClass : inactiveClass;
 
-        window.renderSpectraFocusHeatmap();
+        if (typeof window.renderSpectraFocusHeatmap === 'function') {
+            window.renderSpectraFocusHeatmap();
+        }
+    };
+
+    window.setSpectraHeatmapRange = function (days) {
+        window.setSpectraHeatmapRangeUI(days);
+        if (window.FirebaseService) {
+            window.FirebaseService.saveToCloud(true);
+        }
     };
 
     window.renderSpectraFocusHeatmap = function () {
@@ -2958,8 +2983,9 @@
         }
     };
 
-    window.sessionHistoryFilter = 'all';
-    window.setSessionHistoryFilter = function (filter) {
+    if (window.sessionHistoryFilter === undefined) window.sessionHistoryFilter = 'all';
+
+    window.setSessionHistoryFilterUI = function (filter) {
         window.sessionHistoryFilter = filter;
         ['all', 'day', 'week', 'month'].forEach(f => {
             const btn = document.getElementById(`sh-filter-${f}`);
@@ -2973,6 +2999,13 @@
         });
         if (window.TimerService && window.TimerService.updateDisplay) {
             window.TimerService.updateDisplay();
+        }
+    };
+
+    window.setSessionHistoryFilter = function (filter) {
+        window.setSessionHistoryFilterUI(filter);
+        if (window.FirebaseService) {
+            window.FirebaseService.saveToCloud(true);
         }
     };
 
@@ -3467,7 +3500,7 @@
             if (typeof window.renderTimerPage === 'function') {
                 window.renderTimerPage();
             }
-            // Real-time synchronization for Focus Analytics (both Modal & Spectra Pulse page)
+            // Real-time synchronization for Focus Analytics (both Modal & Analytics page)
             if (typeof window.updateTimerAnalyticsControls === 'function') {
                 window.updateTimerAnalyticsControls();
             }

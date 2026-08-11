@@ -22,6 +22,8 @@ window.AppState = {
     timerAnalyticsRange: 180,
     timerAnalyticsGrouping: 'daily',
     timerAnalyticsChartStyle: 'combo',
+    spectraHeatmapRange: 365,
+    sessionHistoryFilter: 'all',
     activeTimerState: {
         isRunning: false,
         mode: 'stopwatch',
@@ -126,7 +128,7 @@ window.AppState = {
 
 // Define transparent properties on window to alias AppState keys
 const stateKeys = [
-    'appState', 'tracks', 'timerLogs', 'dailyFocusHoursTarget', 'dailyFocusHoursTargetDate', 'dailyFocusHoursTargetHistory', 'timerAnalyticsRange', 'timerAnalyticsGrouping', 'timerAnalyticsChartStyle', 'activeTimerState', 'timerInterval', 'db',
+    'appState', 'tracks', 'timerLogs', 'dailyFocusHoursTarget', 'dailyFocusHoursTargetDate', 'dailyFocusHoursTargetHistory', 'timerAnalyticsRange', 'timerAnalyticsGrouping', 'timerAnalyticsChartStyle', 'spectraHeatmapRange', 'sessionHistoryFilter', 'activeTimerState', 'timerInterval', 'db',
     'subjectFocusTargets',
     'isSyncing', 'isAppInitialized', 'tasks', 'progressChart', 'masterLineChart',
     'localDataJSON', 'saveTimeout', 'isSaving', 'needsSave', 'activeRoutineSet',
@@ -186,6 +188,8 @@ window.applyFullAppState = function(data, saveCloud = true) {
     if (data.timerAnalyticsRange !== undefined) AppState.timerAnalyticsRange = data.timerAnalyticsRange;
     if (data.timerAnalyticsGrouping !== undefined) AppState.timerAnalyticsGrouping = data.timerAnalyticsGrouping;
     if (data.timerAnalyticsChartStyle !== undefined) AppState.timerAnalyticsChartStyle = data.timerAnalyticsChartStyle;
+    if (data.spectraHeatmapRange !== undefined) AppState.spectraHeatmapRange = data.spectraHeatmapRange;
+    if (data.sessionHistoryFilter !== undefined) AppState.sessionHistoryFilter = data.sessionHistoryFilter;
     if (data.subjectFocusTargets) AppState.subjectFocusTargets = data.subjectFocusTargets;
     if (data.dashboardConfig) {
         AppState.dashboardConfig = data.dashboardConfig;
@@ -208,6 +212,12 @@ window.applyFullAppState = function(data, saveCloud = true) {
     if (data.activeTimerState) AppState.activeTimerState = data.activeTimerState;
     if (data.activeRoutineSet !== undefined) AppState.activeRoutineSet = data.activeRoutineSet;
     if (data.subjectColors) AppState.subjectColors = data.subjectColors;
+
+    if (typeof window.updateTimerAnalyticsControls === 'function') window.updateTimerAnalyticsControls();
+    if (typeof window.renderTimerAnalyticsChart === 'function') window.renderTimerAnalyticsChart();
+    if (typeof window.setSpectraHeatmapRangeUI === 'function') window.setSpectraHeatmapRangeUI(AppState.spectraHeatmapRange);
+    else if (typeof window.renderSpectraFocusHeatmap === 'function') window.renderSpectraFocusHeatmap();
+    if (typeof window.setSessionHistoryFilterUI === 'function') window.setSessionHistoryFilterUI(AppState.sessionHistoryFilter);
 
     if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
     if (typeof window.renderUI === 'function') window.renderUI();

@@ -382,6 +382,8 @@ window.FirebaseService = {
             timerAnalyticsRange: window.timerAnalyticsRange || 180,
             timerAnalyticsGrouping: window.timerAnalyticsGrouping || 'daily',
             timerAnalyticsChartStyle: window.timerAnalyticsChartStyle || 'combo',
+            spectraHeatmapRange: window.spectraHeatmapRange || 365,
+            sessionHistoryFilter: window.sessionHistoryFilter || 'all',
             subjectFocusTargets: window.subjectFocusTargets || {},
             dashboardConfig: window.dashboardConfig || {},
             weeklyTargetsDatabase: window.weeklyTargetsDatabase || {},

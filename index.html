@@ -164,7 +164,7 @@
                                     d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
                                 </path>
                             </svg>
-                            Spectra Pulse
+                            Analytics
                         </button>
                         <button id="btn-nav-fiscal-ledger"
                             onclick="window.switchPage('fiscal-ledger'); window.closeMobileSidebar()"
@@ -736,7 +736,7 @@
                                 </div>
                                 <button onclick="window.switchPage('spectra-analytics')"
                                     class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0"
-                                    title="Go to Spectra Pulse Heatmap">
+                                    title="Go to Analytics Heatmap">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                             d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
@@ -918,7 +918,7 @@
                 </div>
             </div>
 
-            <!-- Page: Spectra Pulse Analytics -->
+            <!-- Page: Analytics -->
             <div id="page-spectra-analytics"
                 class="hidden relative space-y-4 md:space-y-8 animate-page-enter overflow-x-hidden">
                 <!-- Page Header with Ambient Glow -->
@@ -940,7 +940,7 @@
                                 class="px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-fuchsia-400 bg-fuchsia-400/10 rounded-full border border-fuchsia-400/20">Live
                                 Sync</span>
                         </div>
-                        <h2 class="text-xl md:text-2xl font-black text-white tracking-tight">Spectra Pulse</h2>
+                        <h2 class="text-xl md:text-2xl font-black text-white tracking-tight">Analytics</h2>
                         <p class="text-slate-400 text-[10px] sm:text-xs">Comprehensive visual intelligence, track and
                             program completion trends</p>
                     </div>
@@ -1159,7 +1159,7 @@
                     </div>
                 </div>
 
-                <!-- Embedded Focus Analytics Section (Spectra Pulse Page) -->
+                <!-- Embedded Focus Analytics Section (Analytics Page) -->
                 <div class="bg-white dark:bg-slate-800 p-5 sm:p-7 md:p-8 rounded-2xl md:rounded-[2rem] border border-slate-200/50 dark:border-slate-700/50 shadow-sm overflow-hidden mb-6 md:mb-8 flex flex-col">
                     <!-- Header Row -->
                     <div class="flex justify-between items-center mb-5 sm:mb-6 border-b border-slate-100 dark:border-slate-700 pb-4 shrink-0">
@@ -1328,7 +1328,7 @@
                     </div>
                 </div>
 
-                <!-- Focus Analytics GitHub Box Chart Heatmap (Spectra Pulse Page) -->
+                <!-- Focus Analytics GitHub Box Chart Heatmap (Analytics Page) -->
                 <div class="bg-white dark:bg-slate-800 p-5 sm:p-7 md:p-8 rounded-2xl md:rounded-[2rem] border border-slate-200/50 dark:border-slate-700/50 shadow-sm overflow-hidden mb-6 md:mb-8 flex flex-col relative">
                     <!-- Header Row -->
 
@@ -2425,52 +2425,7 @@
                     </div>
                 </div>
 
-                <!-- Second Daily Timeline Grid (Toggle) -->
-                <div id="schedule-timeline-grid-2-wrapper" class="hidden animate-page-enter">
-                    <div
-                        class="bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 rounded-3xl p-5 md:p-7 shadow-sm space-y-6">
-                        <div
-                            class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700/60 pb-4">
-                            <div>
-                                <h3 class="text-sm md:text-base font-black dark:text-white leading-tight">Daily Timeline
-                                    Grid — Extended View</h3>
-                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Full day
-                                    overview with all routine blocks</p>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span id="schedule-slots-count-badge-2"
-                                    class="text-[9px] bg-slate-100 dark:bg-slate-900 px-2.5 py-0.5 rounded-full font-bold text-slate-500 dark:text-slate-400">0
-                                    Slots</span>
-                                <button onclick="window.toggleSecondTimelineGrid()"
-                                    class="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 shrink-0 border border-slate-300 dark:border-slate-600">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                            d="M6 18L18 6M6 6l12 12"></path>
-                                    </svg>
-                                    Close
-                                </button>
-                            </div>
-                        </div>
-                        <div id="schedule-timeline-grid-2"
-                            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2.5">
-                            <!-- Dynamically populated second timeline grid -->
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Toggle Second Grid Button -->
-                <div class="flex justify-center" id="schedule-toggle-grid2-btn-wrapper">
-                    <button onclick="window.toggleSecondTimelineGrid()" id="schedule-toggle-grid2-btn"
-                        class="group flex items-center gap-2.5 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl transition-all active:scale-95 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 border border-indigo-500/30">
-                        <svg class="w-4 h-4 transition-transform group-hover:rotate-90" fill="none"
-                            stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z">
-                            </path>
-                        </svg>
-                        <span>Open Extended Timeline View</span>
-                    </button>
-                </div>
             </div>
 
             <!-- Page: Subjects -->
