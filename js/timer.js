@@ -1403,7 +1403,7 @@
         window.updateTimerAnalyticsControls();
         window.renderTimerAnalyticsChart();
         if (window.FirebaseService) {
-            window.FirebaseService.saveToCloud(true);
+            window.FirebaseService.saveToCloud();
         }
     };
 
@@ -1418,7 +1418,7 @@
         window.updateTimerAnalyticsControls();
         window.renderTimerAnalyticsChart();
         if (window.FirebaseService) {
-            window.FirebaseService.saveToCloud(true);
+            window.FirebaseService.saveToCloud();
         }
     };
 
@@ -1427,17 +1427,435 @@
         window.updateTimerAnalyticsControls();
         window.renderTimerAnalyticsChart();
         if (window.FirebaseService) {
-            window.FirebaseService.saveToCloud(true);
+            window.FirebaseService.saveToCloud();
         }
     };
 
-    window.renderTimerAnalyticsChart = function () {
-        const ctx = document.getElementById('timerAnalyticsChart') || document.getElementById('spectraFocusAnalyticsChart');
-        if (!ctx) return;
+    function buildDatasetsForCanvas(canvasEl, style, grouping, range, chartActuals, chartTargets, actualLabelName, targetLabelName, isDark) {
+        const canvasCtx = canvasEl.getContext('2d');
+        const width = canvasEl.clientWidth || 500;
+        const height = canvasEl.clientHeight || 300;
 
-        if (window.timerAnalyticsChartInstance) {
-            window.timerAnalyticsChartInstance.destroy();
+        let datasets = [];
+
+        if (style === 'combo') {
+            let successBarGrad = 'rgba(16, 185, 129, 1.0)';
+            let failBarGrad = 'rgba(99, 102, 241, 1.0)';
+            try {
+                const successGrad = canvasCtx.createLinearGradient(0, height, 0, 0);
+                successGrad.addColorStop(0, 'rgba(16, 185, 129, 0.85)');
+                successGrad.addColorStop(1, 'rgba(16, 185, 129, 1.0)');
+                successBarGrad = successGrad;
+
+                const failGrad = canvasCtx.createLinearGradient(0, height, 0, 0);
+                failGrad.addColorStop(0, 'rgba(99, 102, 241, 0.85)');
+                failGrad.addColorStop(1, 'rgba(99, 102, 241, 1.0)');
+                failBarGrad = failGrad;
+            } catch (e) {
+                console.error(e);
+            }
+
+            const barColors = [];
+            const barHoverColors = [];
+            for (let i = 0; i < chartActuals.length; i++) {
+                const met = chartActuals[i] >= chartTargets[i];
+                if (met) {
+                    barColors.push(successBarGrad);
+                    barHoverColors.push('rgba(16, 185, 129, 1)');
+                } else {
+                    barColors.push(failBarGrad);
+                    barHoverColors.push('rgba(99, 102, 241, 1)');
+                }
+            }
+
+            datasets = [
+                {
+                    type: 'bar',
+                    label: actualLabelName,
+                    data: [...chartActuals],
+                    backgroundColor: barColors,
+                    hoverBackgroundColor: barHoverColors,
+                    borderRadius: 8,
+                    borderWidth: 0,
+                    barPercentage: range > 30 && grouping === 'daily' ? 0.8 : (grouping === 'hourly' ? 0.7 : 0.6)
+                },
+                {
+                    type: 'line',
+                    label: targetLabelName,
+                    data: [...chartTargets],
+                    borderColor: '#f43f5e',
+                    borderWidth: 3.5,
+                    borderDash: [6, 4],
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: chartActuals.length > 30 ? 0 : 3.5,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: isDark ? '#0f172a' : '#ffffff',
+                    pointBorderColor: '#f43f5e',
+                    pointBorderWidth: 2,
+                    pointHoverBackgroundColor: '#f43f5e',
+                    pointHoverBorderColor: '#ffffff',
+                    pointHoverBorderWidth: 2
+                }
+            ];
+        } else if (style === 'bar') {
+            let barActualGrad = 'rgba(99, 102, 241, 1.0)';
+            let barTargetGrad = 'rgba(244, 63, 94, 1.0)';
+            try {
+                const g1 = canvasCtx.createLinearGradient(0, height, 0, 0);
+                g1.addColorStop(0, 'rgba(99, 102, 241, 0.85)');
+                g1.addColorStop(1, 'rgba(99, 102, 241, 1.0)');
+                barActualGrad = g1;
+
+                const g2 = canvasCtx.createLinearGradient(0, height, 0, 0);
+                g2.addColorStop(0, 'rgba(244, 63, 94, 0.85)');
+                g2.addColorStop(1, 'rgba(244, 63, 94, 1.0)');
+                barTargetGrad = g2;
+            } catch (e) {
+                console.error(e);
+            }
+
+            datasets = [
+                {
+                    type: 'bar',
+                    label: actualLabelName,
+                    data: [...chartActuals],
+                    backgroundColor: barActualGrad,
+                    hoverBackgroundColor: 'rgba(99, 102, 241, 1)',
+                    borderRadius: 6,
+                    borderWidth: 0
+                },
+                {
+                    type: 'bar',
+                    label: targetLabelName,
+                    data: [...chartTargets],
+                    backgroundColor: barTargetGrad,
+                    hoverBackgroundColor: 'rgba(244, 63, 94, 1.0)',
+                    borderRadius: 6,
+                    borderWidth: 0
+                }
+            ];
+        } else {
+            let actualLineGradient = '#6366f1';
+            let actualFillGradient = 'rgba(99, 102, 241, 0.65)';
+            try {
+                const gradLine = canvasCtx.createLinearGradient(0, 0, width || 500, 0);
+                gradLine.addColorStop(0, '#818cf8');
+                gradLine.addColorStop(0.5, '#6366f1');
+                gradLine.addColorStop(1, '#4f46e5');
+                actualLineGradient = gradLine;
+
+                const gradFill = canvasCtx.createLinearGradient(0, 0, 0, height || 300);
+                gradFill.addColorStop(0, 'rgba(99, 102, 241, 0.85)');
+                gradFill.addColorStop(0.5, 'rgba(129, 140, 248, 0.55)');
+                gradFill.addColorStop(1, 'rgba(99, 102, 241, 0)');
+                actualFillGradient = gradFill;
+            } catch (e) {
+                console.error(e);
+            }
+
+            datasets = [
+                {
+                    type: 'line',
+                    label: actualLabelName,
+                    data: [...chartActuals],
+                    borderColor: actualLineGradient,
+                    borderWidth: 4,
+                    backgroundColor: actualFillGradient,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: chartActuals.length > 30 ? 0 : 3.5,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: isDark ? '#0f172a' : '#ffffff',
+                    pointBorderColor: '#6366f1',
+                    pointBorderWidth: 2.5,
+                    pointHoverBackgroundColor: '#4f46e5',
+                    pointHoverBorderColor: '#ffffff',
+                    pointHoverBorderWidth: 3
+                },
+                {
+                    type: 'line',
+                    label: targetLabelName,
+                    data: [...chartTargets],
+                    borderColor: '#f43f5e',
+                    borderWidth: 3.5,
+                    borderDash: [6, 4],
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: chartActuals.length > 30 ? 0 : 3.5,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: isDark ? '#0f172a' : '#ffffff',
+                    pointBorderColor: '#f43f5e',
+                    pointBorderWidth: 2,
+                    pointHoverBackgroundColor: '#f43f5e',
+                    pointHoverBorderColor: '#ffffff',
+                    pointHoverBorderWidth: 2
+                }
+            ];
         }
+
+        return datasets;
+    }
+
+    function updateOrCreateCanvasChart(canvasEl, instanceRefKey, style, chartLabels, datasets, yMax, isDark, isLiveUpdate = false) {
+        if (!canvasEl) return;
+
+        let chartInstance = window[instanceRefKey];
+
+        const canUpdateInPlace = chartInstance &&
+            chartInstance.ctx &&
+            chartInstance.data &&
+            chartInstance.data.datasets &&
+            chartInstance.data.datasets.length === datasets.length &&
+            chartInstance.data.datasets.every((ds, idx) => ds.type === datasets[idx].type) &&
+            chartInstance._style === style;
+
+        if (canUpdateInPlace) {
+            chartInstance.data.labels = chartLabels;
+            datasets.forEach((newDs, idx) => {
+                const targetDs = chartInstance.data.datasets[idx];
+                targetDs.data = newDs.data;
+                targetDs.label = newDs.label;
+                targetDs.backgroundColor = newDs.backgroundColor;
+                targetDs.borderColor = newDs.borderColor;
+                targetDs.pointRadius = newDs.pointRadius;
+                if (newDs.borderDash !== undefined) targetDs.borderDash = newDs.borderDash;
+                if (newDs.barPercentage !== undefined) targetDs.barPercentage = newDs.barPercentage;
+            });
+
+            if (chartInstance.options.scales && chartInstance.options.scales.y) {
+                chartInstance.options.scales.y.max = yMax;
+                chartInstance.options.scales.y.ticks.color = isDark ? '#94a3b8' : '#64748b';
+                chartInstance.options.scales.y.grid.color = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(15, 23, 42, 0.04)';
+            }
+            if (chartInstance.options.scales && chartInstance.options.scales.x) {
+                chartInstance.options.scales.x.ticks.color = isDark ? '#94a3b8' : '#64748b';
+            }
+
+            chartInstance.update(isLiveUpdate ? 'none' : 'default');
+            return;
+        }
+
+        if (chartInstance) {
+            try {
+                chartInstance.destroy();
+            } catch (e) {
+                console.error('Error destroying chart instance:', e);
+            }
+            window[instanceRefKey] = null;
+        }
+
+        const shadowPlugin = {
+            id: 'timerAnalyticsShadow_' + instanceRefKey,
+            beforeDatasetDraw: (chart, args) => {
+                const { ctx: drawingCtx } = chart;
+                const dataset = chart.data.datasets[args.index];
+                if (dataset && dataset.type === 'line') {
+                    drawingCtx.save();
+                    drawingCtx.shadowColor = (args.index === 0)
+                        ? (isDark ? 'rgba(99, 102, 241, 0.45)' : 'rgba(99, 102, 241, 0.25)')
+                        : (isDark ? 'rgba(244, 63, 94, 0.45)' : 'rgba(244, 63, 94, 0.25)');
+                    drawingCtx.shadowBlur = 4;
+                    drawingCtx.shadowOffsetX = 0;
+                    drawingCtx.shadowOffsetY = 2;
+                }
+            },
+            afterDatasetDraw: (chart, args) => {
+                const { ctx: drawingCtx } = chart;
+                const dataset = chart.data.datasets[args.index];
+                if (dataset && dataset.type === 'line') {
+                    drawingCtx.restore();
+                }
+            }
+        };
+
+        const crosshairPlugin = {
+            id: 'timerAnalyticsCrosshair_' + instanceRefKey,
+            afterDraw: (chart) => {
+                const activeElements = chart.tooltip?.getActiveElements?.() || chart.tooltip?._active || [];
+                if (activeElements.length) {
+                    const activePoint = activeElements[0];
+                    const { ctx: drawingCtx, chartArea: { top, bottom } } = chart;
+                    if (!activePoint || !activePoint.element) return;
+                    const x = activePoint.element.x;
+                    drawingCtx.save();
+                    drawingCtx.beginPath();
+                    drawingCtx.moveTo(x, top);
+                    drawingCtx.lineTo(x, bottom);
+                    drawingCtx.lineWidth = 1.2;
+                    drawingCtx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(15, 23, 42, 0.08)';
+                    drawingCtx.setLineDash([4, 4]);
+                    drawingCtx.stroke();
+                    drawingCtx.restore();
+                }
+            }
+        };
+
+        const targetLineLabelPlugin = {
+            id: 'targetLineLabel_' + instanceRefKey,
+            afterDraw: (chart) => {
+                const { ctx: drawingCtx, chartArea: { right }, scales: { y: yScale } } = chart;
+                const targetHours = window.dailyFocusHoursTarget || 4.0;
+                if (!yScale || !chart.chartArea) return;
+                const yPos = yScale.getPixelForValue(targetHours);
+
+                if (yPos >= chart.chartArea.top && yPos <= chart.chartArea.bottom) {
+                    drawingCtx.save();
+                    drawingCtx.fillStyle = '#f43f5e';
+                    drawingCtx.font = 'bold 9px Inter, sans-serif';
+                    drawingCtx.textAlign = 'right';
+                    drawingCtx.textBaseline = 'bottom';
+                    drawingCtx.fillText('CURRENT GOAL', right - 4, yPos - 10);
+                    drawingCtx.restore();
+                }
+            }
+        };
+
+        const baseType = style === 'bar' ? 'bar' : (style === 'line' ? 'line' : 'bar');
+
+        const chartConfig = {
+            type: baseType,
+            data: {
+                labels: chartLabels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: isLiveUpdate ? 0 : 300,
+                    easing: 'easeOutQuart'
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            boxWidth: 10,
+                            boxHeight: 10,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            font: {
+                                weight: 'bold',
+                                size: 11,
+                                family: 'Outfit, Inter, sans-serif'
+                            },
+                            color: isDark ? '#cbd5e1' : '#475569',
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.95)',
+                        borderColor: isDark ? 'rgba(99, 102, 241, 0.35)' : 'rgba(99, 102, 241, 0.15)',
+                        borderWidth: 1.5,
+                        titleColor: isDark ? '#ffffff' : '#0f172a',
+                        titleFont: {
+                            family: 'Outfit, Inter, sans-serif',
+                            weight: '800',
+                            size: 12
+                        },
+                        bodyColor: isDark ? '#cbd5e1' : '#334155',
+                        bodyFont: {
+                            family: 'Inter, sans-serif',
+                            weight: '600',
+                            size: 11
+                        },
+                        footerColor: isDark ? '#818cf8' : '#6366f1',
+                        footerFont: {
+                            family: 'Inter, sans-serif',
+                            weight: '800',
+                            size: 10
+                        },
+                        cornerRadius: 12,
+                        padding: 12,
+                        boxPadding: 6,
+                        usePointStyle: true,
+                        callbacks: {
+                            label: function (context) {
+                                const label = context.dataset.label || '';
+                                const value = context.parsed.y;
+                                return ` ${label}: ${value !== undefined ? value.toFixed(2) : 0} hrs`;
+                            },
+                            footer: function (tooltipItems) {
+                                if (tooltipItems.length >= 2) {
+                                    const actual = tooltipItems[0].parsed.y;
+                                    const target = tooltipItems[1].parsed.y;
+                                    const diff = actual - target;
+                                    const percent = target > 0 ? Math.round((actual / target) * 100) : 0;
+                                    if (diff >= 0) {
+                                        return `Goal Met! (+${diff.toFixed(2)}h, ${percent}%)`;
+                                    } else {
+                                        return `Goal Missed (${diff.toFixed(2)}h, ${percent}%)`;
+                                    }
+                                }
+                                return '';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 0,
+                        max: yMax,
+                        grid: {
+                            color: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(15, 23, 42, 0.04)',
+                            drawBorder: false,
+                            borderDash: [5, 5]
+                        },
+                        border: {
+                            display: false
+                        },
+                        ticks: {
+                            color: isDark ? '#94a3b8' : '#64748b',
+                            font: {
+                                weight: 'bold',
+                                family: 'Inter, sans-serif',
+                                size: 10
+                            },
+                            padding: 8,
+                            callback: v => `${v}h`
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        },
+                        border: {
+                            display: false
+                        },
+                        ticks: {
+                            color: isDark ? '#94a3b8' : '#64748b',
+                            font: {
+                                weight: 'bold',
+                                family: 'Inter, sans-serif',
+                                size: 10
+                            },
+                            padding: 8,
+                            maxTicksLimit: chartLabels.length > 30 ? 6 : (chartLabels.length > 7 ? 10 : 7),
+                            maxRotation: 0,
+                            minRotation: 0
+                        }
+                    }
+                }
+            },
+            plugins: [shadowPlugin, crosshairPlugin, targetLineLabelPlugin]
+        };
+
+        const newChart = new Chart(canvasEl.getContext('2d'), chartConfig);
+        newChart._style = style;
+        window[instanceRefKey] = newChart;
+    }
+
+    window.renderTimerAnalyticsChart = function (isLiveUpdate = false) {
+        const ctx1 = document.getElementById('timerAnalyticsChart');
+        const ctx2 = document.getElementById('spectraFocusAnalyticsChart');
+        if (!ctx1 && !ctx2) return;
 
         const range = window.timerAnalyticsRange || 180;
         const style = window.timerAnalyticsChartStyle || 'combo';
@@ -1745,10 +2163,13 @@
             }
         }
 
-        // 4. Set up datasets based on visual style
-        let datasets = [];
-        const canvasCtx = ctx.getContext('2d');
+        const maxVal = Math.max(...chartActuals, ...chartTargets);
+        const yMax = maxVal > 0 ? Math.ceil(maxVal * 1.2) : 5;
         const isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark') || window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const textColor = isDark ? '#94a3b8' : '#64748b';
+
+        Chart.defaults.color = textColor;
+        Chart.defaults.font.family = 'Inter, ui-sans-serif, system-ui';
 
         const actualLabelName = grouping === 'hourly'
             ? 'Hourly Focus Hours'
@@ -1766,387 +2187,14 @@
                     ? 'Weekly Target Hours (Avg/Day)'
                     : 'Monthly Target Hours (Avg/Day)'));
 
-        if (style === 'combo') {
-            // Combo: Actual is Bar with rounded gradients, Target is Line with glow
-            let successBarGrad = 'rgba(16, 185, 129, 1.0)';
-            let failBarGrad = 'rgba(99, 102, 241, 1.0)';
-            try {
-                const successGrad = canvasCtx.createLinearGradient(0, 300, 0, 0);
-                successGrad.addColorStop(0, 'rgba(16, 185, 129, 0.85)');
-                successGrad.addColorStop(1, 'rgba(16, 185, 129, 1.0)');
-                successBarGrad = successGrad;
-
-                const failGrad = canvasCtx.createLinearGradient(0, 300, 0, 0);
-                failGrad.addColorStop(0, 'rgba(99, 102, 241, 0.85)');
-                failGrad.addColorStop(1, 'rgba(99, 102, 241, 1.0)');
-                failBarGrad = failGrad;
-            } catch (e) {
-                console.error(e);
-            }
-
-            const barColors = [];
-            const barHoverColors = [];
-            for (let i = 0; i < chartActuals.length; i++) {
-                const met = chartActuals[i] >= chartTargets[i];
-                if (met) {
-                    barColors.push(successBarGrad);
-                    barHoverColors.push('rgba(16, 185, 129, 1)');
-                } else {
-                    barColors.push(failBarGrad);
-                    barHoverColors.push('rgba(99, 102, 241, 1)');
-                }
-            }
-
-            datasets = [
-                {
-                    type: 'bar',
-                    label: actualLabelName,
-                    data: chartActuals,
-                    backgroundColor: barColors,
-                    hoverBackgroundColor: barHoverColors,
-                    borderRadius: 8,
-                    borderWidth: 0,
-                    barPercentage: range > 30 && grouping === 'daily' ? 0.8 : (grouping === 'hourly' ? 0.7 : 0.6)
-                },
-                {
-                    type: 'line',
-                    label: targetLabelName,
-                    data: chartTargets,
-                    borderColor: '#f43f5e',
-                    borderWidth: 3.5,
-                    borderDash: [6, 4],
-                    fill: false,
-                    tension: 0.4,
-                    pointRadius: chartActuals.length > 30 ? 0 : 3.5,
-                    pointHoverRadius: 8,
-                    pointBackgroundColor: isDark ? '#0f172a' : '#ffffff',
-                    pointBorderColor: '#f43f5e',
-                    pointBorderWidth: 2,
-                    pointHoverBackgroundColor: '#f43f5e',
-                    pointHoverBorderColor: '#ffffff',
-                    pointHoverBorderWidth: 2
-                }
-            ];
-        } else if (style === 'bar') {
-            // Bar: Grouped side-by-side actual vs target with premium gradients
-            let barActualGrad = 'rgba(99, 102, 241, 1.0)';
-            let barTargetGrad = 'rgba(244, 63, 94, 1.0)';
-            try {
-                const g1 = canvasCtx.createLinearGradient(0, 300, 0, 0);
-                g1.addColorStop(0, 'rgba(99, 102, 241, 0.85)');
-                g1.addColorStop(1, 'rgba(99, 102, 241, 1.0)');
-                barActualGrad = g1;
-
-                const g2 = canvasCtx.createLinearGradient(0, 300, 0, 0);
-                g2.addColorStop(0, 'rgba(244, 63, 94, 0.85)');
-                g2.addColorStop(1, 'rgba(244, 63, 94, 1.0)');
-                barTargetGrad = g2;
-            } catch (e) {
-                console.error(e);
-            }
-
-            datasets = [
-                {
-                    type: 'bar',
-                    label: actualLabelName,
-                    data: chartActuals,
-                    backgroundColor: barActualGrad,
-                    hoverBackgroundColor: 'rgba(99, 102, 241, 1)',
-                    borderRadius: 6,
-                    borderWidth: 0
-                },
-                {
-                    type: 'bar',
-                    label: targetLabelName,
-                    data: chartTargets,
-                    backgroundColor: barTargetGrad,
-                    hoverBackgroundColor: 'rgba(244, 63, 94, 1.0)',
-                    borderRadius: 6,
-                    borderWidth: 0
-                }
-            ];
-        } else {
-            // Line/Area: Line charts with futuristic linear gradients & smooth organic curves
-            let actualLineGradient = '#6366f1';
-            let actualFillGradient = 'rgba(99, 102, 241, 0.65)';
-            try {
-                const width = ctx.clientWidth || 500;
-                const gradLine = canvasCtx.createLinearGradient(0, 0, width, 0);
-                gradLine.addColorStop(0, '#818cf8');    // Bright Light Indigo
-                gradLine.addColorStop(0.5, '#6366f1');  // Primary Indigo
-                gradLine.addColorStop(1, '#4f46e5');    // Dark Indigo
-                actualLineGradient = gradLine;
-
-                const gradFill = canvasCtx.createLinearGradient(0, 0, 0, 300);
-                gradFill.addColorStop(0, 'rgba(99, 102, 241, 0.85)'); // Indigo glow at top
-                gradFill.addColorStop(0.5, 'rgba(129, 140, 248, 0.55)'); // Lighter indigo fade
-                gradFill.addColorStop(1, 'rgba(99, 102, 241, 0)'); // Transparent
-                actualFillGradient = gradFill;
-            } catch (e) {
-                console.error(e);
-            }
-
-            datasets = [
-                {
-                    type: 'line',
-                    label: actualLabelName,
-                    data: chartActuals,
-                    borderColor: actualLineGradient,
-                    borderWidth: 4,
-                    backgroundColor: actualFillGradient,
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: chartActuals.length > 30 ? 0 : 3.5,
-                    pointHoverRadius: 8,
-                    pointBackgroundColor: isDark ? '#0f172a' : '#ffffff',
-                    pointBorderColor: '#6366f1',
-                    pointBorderWidth: 2.5,
-                    pointHoverBackgroundColor: '#4f46e5',
-                    pointHoverBorderColor: '#ffffff',
-                    pointHoverBorderWidth: 3
-                },
-                {
-                    type: 'line',
-                    label: targetLabelName,
-                    data: chartTargets,
-                    borderColor: '#f43f5e',
-                    borderWidth: 3.5,
-                    borderDash: [6, 4],
-                    fill: false,
-                    tension: 0.4,
-                    pointRadius: chartActuals.length > 30 ? 0 : 3.5,
-                    pointHoverRadius: 8,
-                    pointBackgroundColor: isDark ? '#0f172a' : '#ffffff',
-                    pointBorderColor: '#f43f5e',
-                    pointBorderWidth: 2,
-                    pointHoverBackgroundColor: '#f43f5e',
-                    pointHoverBorderColor: '#ffffff',
-                    pointHoverBorderWidth: 2
-                }
-            ];
-        }
-
-        // 5. Build and configure the Chart
-        const maxVal = Math.max(...chartActuals, ...chartTargets);
-        const yMax = maxVal > 0 ? Math.ceil(maxVal * 1.2) : 5;
-        const textColor = isDark ? '#94a3b8' : '#64748b';
-
-        Chart.defaults.color = textColor;
-        Chart.defaults.font.family = 'Inter, ui-sans-serif, system-ui';
-
-        // Custom plugins to add futuristic touches
-        const shadowPlugin = {
-            id: 'timerAnalyticsShadow',
-            beforeDatasetDraw: (chart, args) => {
-                const { ctx: drawingCtx } = chart;
-                const dataset = chart.data.datasets[args.index];
-                drawingCtx.save();
-                if (dataset.type === 'line') {
-                    drawingCtx.shadowColor = (args.index === 0)
-                        ? (isDark ? 'rgba(99, 102, 241, 0.65)' : 'rgba(99, 102, 241, 0.45)')
-                        : (isDark ? 'rgba(244, 63, 94, 0.55)' : 'rgba(244, 63, 94, 0.35)');
-                    drawingCtx.shadowBlur = 10;
-                    drawingCtx.shadowOffsetX = 0;
-                    drawingCtx.shadowOffsetY = 4;
-                }
-            },
-            afterDatasetDraw: (chart, args) => {
-                const { ctx: drawingCtx } = chart;
-                drawingCtx.restore();
-            }
-        };
-
-        const crosshairPlugin = {
-            id: 'timerAnalyticsCrosshair',
-            afterDraw: (chart) => {
-                const activeElements = chart.tooltip?.getActiveElements?.() || chart.tooltip?._active || [];
-                if (activeElements.length) {
-                    const activePoint = activeElements[0];
-                    const { ctx: drawingCtx, chartArea: { top, bottom } } = chart;
-                    const x = activePoint.element.x;
-                    drawingCtx.save();
-                    drawingCtx.beginPath();
-                    drawingCtx.moveTo(x, top);
-                    drawingCtx.lineTo(x, bottom);
-                    drawingCtx.lineWidth = 1.2;
-                    drawingCtx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(15, 23, 42, 0.08)';
-                    drawingCtx.setLineDash([4, 4]);
-                    drawingCtx.stroke();
-                    drawingCtx.restore();
-                }
-            }
-        };
-
-        const chartConfig = {
-            data: {
-                labels: chartLabels,
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            boxWidth: 10,
-                            boxHeight: 10,
-                            usePointStyle: true,
-                            pointStyle: 'circle',
-                            font: {
-                                weight: 'bold',
-                                size: 11,
-                                family: 'Outfit, Inter, sans-serif'
-                            },
-                            color: isDark ? '#cbd5e1' : '#475569',
-                            padding: 20
-                        }
-                    },
-                    tooltip: {
-                        enabled: true,
-                        backgroundColor: isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.95)',
-                        borderColor: isDark ? 'rgba(99, 102, 241, 0.35)' : 'rgba(99, 102, 241, 0.15)',
-                        borderWidth: 1.5,
-                        titleColor: isDark ? '#ffffff' : '#0f172a',
-                        titleFont: {
-                            family: 'Outfit, Inter, sans-serif',
-                            weight: '800',
-                            size: 12
-                        },
-                        bodyColor: isDark ? '#cbd5e1' : '#334155',
-                        bodyFont: {
-                            family: 'Inter, sans-serif',
-                            weight: '600',
-                            size: 11
-                        },
-                        footerColor: isDark ? '#818cf8' : '#6366f1',
-                        footerFont: {
-                            family: 'Inter, sans-serif',
-                            weight: '800',
-                            size: 10
-                        },
-                        cornerRadius: 12,
-                        padding: 12,
-                        boxPadding: 6,
-                        usePointStyle: true,
-                        callbacks: {
-                            label: function (context) {
-                                const label = context.dataset.label || '';
-                                const value = context.parsed.y;
-                                return ` ${label}: ${value.toFixed(2)} hrs`;
-                            },
-                            footer: function (tooltipItems) {
-                                if (tooltipItems.length >= 2) {
-                                    const actual = tooltipItems[0].parsed.y;
-                                    const target = tooltipItems[1].parsed.y;
-                                    const diff = actual - target;
-                                    const percent = target > 0 ? Math.round((actual / target) * 100) : 0;
-                                    if (diff >= 0) {
-                                        return `Goal Met! (+${diff.toFixed(2)}h, ${percent}%)`;
-                                    } else {
-                                        return `Goal Missed (${diff.toFixed(2)}h, ${percent}%)`;
-                                    }
-                                }
-                                return '';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        min: 0,
-                        max: yMax,
-                        grid: {
-                            color: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(15, 23, 42, 0.04)',
-                            drawBorder: false,
-                            borderDash: [5, 5]
-                        },
-                        border: {
-                            display: false
-                        },
-                        ticks: {
-                            color: isDark ? '#94a3b8' : '#64748b',
-                            font: {
-                                weight: 'bold',
-                                family: 'Inter, sans-serif',
-                                size: 10
-                            },
-                            padding: 8,
-                            callback: v => `${v}h`
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false,
-                            drawBorder: false
-                        },
-                        border: {
-                            display: false
-                        },
-                        ticks: {
-                            color: isDark ? '#94a3b8' : '#64748b',
-                            font: {
-                                weight: 'bold',
-                                family: 'Inter, sans-serif',
-                                size: 10
-                            },
-                            padding: 8,
-                            maxTicksLimit: chartLabels.length > 30 ? 6 : (chartLabels.length > 7 ? 10 : 7),
-                            maxRotation: 0,
-                            minRotation: 0
-                        }
-                    }
-                }
-            },
-            plugins: [
-                shadowPlugin,
-                crosshairPlugin,
-                {
-                    id: 'targetLineLabel',
-                    afterDraw: (chart) => {
-                        const { ctx: drawingCtx, chartArea: { right }, scales: { y: yScale } } = chart;
-                        const targetHours = window.dailyFocusHoursTarget || 4.0;
-                        const yPos = yScale.getPixelForValue(targetHours);
-
-                        if (yPos >= chart.chartArea.top && yPos <= chart.chartArea.bottom) {
-                            drawingCtx.save();
-                            drawingCtx.fillStyle = '#f43f5e';
-                            drawingCtx.font = 'bold 9px Inter, sans-serif';
-                            drawingCtx.textAlign = 'right';
-                            drawingCtx.textBaseline = 'bottom';
-                            drawingCtx.fillText('CURRENT GOAL', right - 4, yPos - 10);
-                            drawingCtx.restore();
-                        }
-                    }
-                }
-            ]
-        };
-
-        const ctx1 = document.getElementById('timerAnalyticsChart');
         if (ctx1) {
-            if (window.timerAnalyticsChartInstance) {
-                window.timerAnalyticsChartInstance.destroy();
-            }
-            window.timerAnalyticsChartInstance = new Chart(ctx1.getContext('2d'), {
-                ...chartConfig,
-                plugins: [...chartConfig.plugins]
-            });
+            const datasets1 = buildDatasetsForCanvas(ctx1, style, grouping, range, chartActuals, chartTargets, actualLabelName, targetLabelName, isDark);
+            updateOrCreateCanvasChart(ctx1, 'timerAnalyticsChartInstance', style, chartLabels, datasets1, yMax, isDark, isLiveUpdate);
         }
 
-        const ctx2 = document.getElementById('spectraFocusAnalyticsChart');
         if (ctx2) {
-            if (window.spectraFocusAnalyticsChartInstance) {
-                window.spectraFocusAnalyticsChartInstance.destroy();
-            }
-            window.spectraFocusAnalyticsChartInstance = new Chart(ctx2.getContext('2d'), {
-                ...chartConfig,
-                plugins: [...chartConfig.plugins]
-            });
+            const datasets2 = buildDatasetsForCanvas(ctx2, style, grouping, range, chartActuals, chartTargets, actualLabelName, targetLabelName, isDark);
+            updateOrCreateCanvasChart(ctx2, 'spectraFocusAnalyticsChartInstance', style, chartLabels, datasets2, yMax, isDark, isLiveUpdate);
         }
 
         if (window.renderSpectraFocusHeatmap) {
@@ -2180,7 +2228,7 @@
     window.setSpectraHeatmapRange = function (days) {
         window.setSpectraHeatmapRangeUI(days);
         if (window.FirebaseService) {
-            window.FirebaseService.saveToCloud(true);
+            window.FirebaseService.saveToCloud();
         }
     };
 
@@ -3505,7 +3553,7 @@
                 window.updateTimerAnalyticsControls();
             }
             if (typeof window.renderTimerAnalyticsChart === 'function') {
-                window.renderTimerAnalyticsChart();
+                window.renderTimerAnalyticsChart(true);
             }
 
             const spectraPage = document.getElementById('page-spectra-analytics');

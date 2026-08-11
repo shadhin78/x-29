@@ -3025,7 +3025,7 @@ function renderUI() {
         setTimeout(window.updateTimerAnalyticsControls, 50);
     }
     if (typeof window.renderTimerAnalyticsChart === 'function') {
-        setTimeout(window.renderTimerAnalyticsChart, 60);
+        setTimeout(() => window.renderTimerAnalyticsChart(true), 60);
     }
     if (typeof window.renderSpectraFocusHeatmap === 'function') {
         setTimeout(window.renderSpectraFocusHeatmap, 80);

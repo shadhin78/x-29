@@ -402,8 +402,9 @@ window.FirebaseService = {
 
         // Cache state locally first for offline support
         window.appState = payload;
+        let jsonStr = '';
         try {
-            const jsonStr = JSON.stringify(payload);
+            jsonStr = JSON.stringify(payload);
             safeStorage.setItem('local_app_state', jsonStr);
             safeStorage.setItem('appState', jsonStr);
         } catch(e) {}
@@ -411,7 +412,7 @@ window.FirebaseService = {
         const user = this.getCurrentUser();
         if (AppState.db && user && user.uid && window.location.protocol !== 'file:') {
             try {
-                const cleanPayload = JSON.parse(JSON.stringify(payload));
+                const cleanPayload = jsonStr ? JSON.parse(jsonStr) : JSON.parse(JSON.stringify(payload));
                 if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
                     cleanPayload.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
                 } else {
