@@ -3682,6 +3682,18 @@ function handleTaskToggle(e) {
 
     if (!taskObj) return;
 
+    // Synchronize across all study tasks in AppState.tasks matching this track, subject, and chapter
+    AppState.tasks.forEach(t => {
+        if (t.type === 'study' && Array.isArray(t[key])) {
+            t[key].forEach(b => {
+                if (b.subject === taskObj.subject && b.chapter === taskObj.chapter) {
+                    b.completed = isCompleted;
+                    b.completedAt = isCompleted ? nowIso : null;
+                }
+            });
+        }
+    });
+
     // Synchronize to weeklyTargetsDatabase if this subtask is a weekly target!
     if (window.weeklyTargetsDatabase) {
         Object.keys(window.weeklyTargetsDatabase).forEach(weekKey => {
@@ -13531,6 +13543,23 @@ window.findTaskChapter = function (track, subject, chapter) {
     return null;
 };
 
+window.syncTaskChapterCompletion = function (track, subject, chapter, isCompleted, completedAt = null) {
+    const key = track + 'Tasks';
+    let updated = false;
+    AppState.tasks.forEach(t => {
+        if (t.type === 'study' && Array.isArray(t[key])) {
+            t[key].forEach(b => {
+                if (b.subject === subject && (b.chapter === chapter || b.chapter === `Ch. ${chapter}` || b.chapter === String(chapter))) {
+                    b.completed = isCompleted;
+                    b.completedAt = isCompleted ? (completedAt || new Date().toISOString()) : null;
+                    updated = true;
+                }
+            });
+        }
+    });
+    return updated;
+};
+
 window.getChaptersForSubject = function (track, subject) {
     const key = track + 'Tasks';
     const chapters = new Set();
@@ -13769,12 +13798,8 @@ window.toggleWeeklyTargetCompletion = function (idx, isCompleted) {
         }
     }
 
-    const found = window.findTaskChapter(target.track, target.subject, target.chapter);
-    if (found) {
-        found.subTask.completed = isCompleted;
-        found.subTask.completedAt = target.completedAt; // Sync date
-        recalculateTotals();
-    }
+    window.syncTaskChapterCompletion(target.track, target.subject, target.chapter, isCompleted, target.completedAt);
+    recalculateTotals();
 
     FirebaseService.saveToCloud();
     renderUI();
@@ -14862,17 +14887,12 @@ window.toggleDailyTargetCompletion = function (idx, isCompleted) {
     }
 
     // Sync with daily study task (with size-based awareness)
-    const found = window.findTaskChapter(target.track, target.subject, target.chapter);
-    if (found) {
-        if (hasWtSize) {
-            found.subTask.completed = wtCompleted;
-            found.subTask.completedAt = wtCompletedAt;
-        } else {
-            found.subTask.completed = isCompleted;
-            found.subTask.completedAt = target.completedAt;
-        }
-        recalculateTotals();
+    if (hasWtSize) {
+        window.syncTaskChapterCompletion(target.track, target.subject, target.chapter, wtCompleted, wtCompletedAt);
+    } else {
+        window.syncTaskChapterCompletion(target.track, target.subject, target.chapter, isCompleted, target.completedAt);
     }
+    recalculateTotals();
 
     FirebaseService.saveToCloud();
     renderUI();

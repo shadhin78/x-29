@@ -47,6 +47,8 @@ window.FirebaseService = {
     _unsubscribeSnapshot: null,
     _authListeners: [],
     _firestoreInitialized: false,
+    _isSaving: false,
+    _lastLocalEditTime: 0,
 
     // 1. Fetch Firebase Configuration from API, fallback to .env or cached settings
     fetchConfig: async function() {
@@ -319,6 +321,28 @@ window.FirebaseService = {
 
                 if (docSnapshot.exists) {
                     const cloudData = docSnapshot.data();
+
+                    // Skip applying cloud snapshot if local edits are pending save or in-flight
+                    if (this._saveDebounceTimer || this._isSaving) {
+                        console.log("Skipping cloud snapshot sync: local save is pending or in-flight.");
+                        showSync('saved');
+                        return;
+                    }
+
+                    if (this._lastLocalEditTime && cloudData.updatedAt) {
+                        let cloudTime = 0;
+                        if (typeof cloudData.updatedAt === 'number') {
+                            cloudTime = cloudData.updatedAt;
+                        } else if (cloudData.updatedAt && typeof cloudData.updatedAt.toMillis === 'function') {
+                            cloudTime = cloudData.updatedAt.toMillis();
+                        }
+                        if (cloudTime && cloudTime < this._lastLocalEditTime - 2000) {
+                            console.log("Skipping cloud snapshot sync: cloud snapshot is older than local edit timestamp.");
+                            showSync('saved');
+                            return;
+                        }
+                    }
+
                     console.log("Real-time cloud snapshot received from Firestore for UID:", activeUid);
                     showSync('saved');
                     if (typeof onData === 'function') {
@@ -345,6 +369,8 @@ window.FirebaseService = {
 
     // 8. Save AppState to Cloud & Local Storage
     saveToCloud: async function(immediate = false) {
+        this._lastLocalEditTime = Date.now();
+
         if (this._saveDebounceTimer) {
             clearTimeout(this._saveDebounceTimer);
             this._saveDebounceTimer = null;
@@ -362,71 +388,76 @@ window.FirebaseService = {
     },
 
     _executeSave: async function() {
-        const payload = {
-            tasks: AppState.tasks || [],
-            tracks: window.tracks || [],
-            customSyllabus: AppState.syllabusStructure || window.syllabusStructure || {},
-            syllabusStructure: AppState.syllabusStructure || window.syllabusStructure || {},
-            customPrograms: window.customPrograms || {},
-            customActions: window.customActions || [],
-            paceGoals: window.paceGoals || [],
-            passedItems: window.passedItems || { programs: [], subjects: [] },
-            revisionData: window.revisionData || { active: [], progress: {} },
-            programVisibility: window.programVisibility || {},
-            subjectTimeLinks: window.subjectTimeLinks || {},
-            successResults: window.successResults || [],
-            timerLogs: window.timerLogs || [],
-            dailyFocusHoursTarget: window.dailyFocusHoursTarget !== undefined ? window.dailyFocusHoursTarget : 0,
-            dailyFocusHoursTargetDate: window.dailyFocusHoursTargetDate || "",
-            dailyFocusHoursTargetHistory: window.dailyFocusHoursTargetHistory || [],
-            timerAnalyticsRange: window.timerAnalyticsRange || 180,
-            timerAnalyticsGrouping: window.timerAnalyticsGrouping || 'daily',
-            timerAnalyticsChartStyle: window.timerAnalyticsChartStyle || 'combo',
-            spectraHeatmapRange: window.spectraHeatmapRange || 365,
-            sessionHistoryFilter: window.sessionHistoryFilter || 'all',
-            subjectFocusTargets: window.subjectFocusTargets || {},
-            dashboardConfig: window.dashboardConfig || {},
-            weeklyTargetsDatabase: window.weeklyTargetsDatabase || {},
-            dailyTargetsDatabase: window.dailyTargetsDatabase || {},
-            scheduleBlocks: window.scheduleBlocks || [],
-            scheduleBlocks2: window.scheduleBlocks2 || [],
-            scheduleGroups: window.scheduleGroups || [],
-            fiscalLedger: AppState.fiscalLedger || { transactions: [], budgets: [], vaults: [] },
-            examSessions: AppState.examSessions || [],
-            examRoutine: AppState.examRoutine || [],
-            selectedCountdownExamId: AppState.selectedCountdownExamId || 'auto',
-            activeTimerState: AppState.activeTimerState || {},
-            activeRoutineSet: AppState.activeRoutineSet || 1,
-            subjectColors: AppState.subjectColors || {}
-        };
-
-        // Cache state locally first for offline support
-        window.appState = payload;
-        let jsonStr = '';
+        this._isSaving = true;
         try {
-            jsonStr = JSON.stringify(payload);
-            safeStorage.setItem('local_app_state', jsonStr);
-            safeStorage.setItem('appState', jsonStr);
-        } catch(e) {}
+            const payload = {
+                tasks: AppState.tasks || [],
+                tracks: window.tracks || [],
+                customSyllabus: AppState.syllabusStructure || window.syllabusStructure || {},
+                syllabusStructure: AppState.syllabusStructure || window.syllabusStructure || {},
+                customPrograms: window.customPrograms || {},
+                customActions: window.customActions || [],
+                paceGoals: window.paceGoals || [],
+                passedItems: window.passedItems || { programs: [], subjects: [] },
+                revisionData: window.revisionData || { active: [], progress: {} },
+                programVisibility: window.programVisibility || {},
+                subjectTimeLinks: window.subjectTimeLinks || {},
+                successResults: window.successResults || [],
+                timerLogs: window.timerLogs || [],
+                dailyFocusHoursTarget: window.dailyFocusHoursTarget !== undefined ? window.dailyFocusHoursTarget : 0,
+                dailyFocusHoursTargetDate: window.dailyFocusHoursTargetDate || "",
+                dailyFocusHoursTargetHistory: window.dailyFocusHoursTargetHistory || [],
+                timerAnalyticsRange: window.timerAnalyticsRange || 180,
+                timerAnalyticsGrouping: window.timerAnalyticsGrouping || 'daily',
+                timerAnalyticsChartStyle: window.timerAnalyticsChartStyle || 'combo',
+                spectraHeatmapRange: window.spectraHeatmapRange || 365,
+                sessionHistoryFilter: window.sessionHistoryFilter || 'all',
+                subjectFocusTargets: window.subjectFocusTargets || {},
+                dashboardConfig: window.dashboardConfig || {},
+                weeklyTargetsDatabase: window.weeklyTargetsDatabase || {},
+                dailyTargetsDatabase: window.dailyTargetsDatabase || {},
+                scheduleBlocks: window.scheduleBlocks || [],
+                scheduleBlocks2: window.scheduleBlocks2 || [],
+                scheduleGroups: window.scheduleGroups || [],
+                fiscalLedger: AppState.fiscalLedger || { transactions: [], budgets: [], vaults: [] },
+                examSessions: AppState.examSessions || [],
+                examRoutine: AppState.examRoutine || [],
+                selectedCountdownExamId: AppState.selectedCountdownExamId || 'auto',
+                activeTimerState: AppState.activeTimerState || {},
+                activeRoutineSet: AppState.activeRoutineSet || 1,
+                subjectColors: AppState.subjectColors || {}
+            };
 
-        const user = this.getCurrentUser();
-        if (AppState.db && user && user.uid && window.location.protocol !== 'file:') {
+            // Cache state locally first for offline support
+            window.appState = payload;
+            let jsonStr = '';
             try {
-                const cleanPayload = jsonStr ? JSON.parse(jsonStr) : JSON.parse(JSON.stringify(payload));
-                if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
-                    cleanPayload.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-                } else {
-                    cleanPayload.updatedAt = Date.now();
-                }
+                jsonStr = JSON.stringify(payload);
+                safeStorage.setItem('local_app_state', jsonStr);
+                safeStorage.setItem('appState', jsonStr);
+            } catch(e) {}
 
-                await AppState.db.collection('users').doc(user.uid).set(cleanPayload, { merge: true });
+            const user = this.getCurrentUser();
+            if (AppState.db && user && user.uid && window.location.protocol !== 'file:') {
+                try {
+                    const cleanPayload = jsonStr ? JSON.parse(jsonStr) : JSON.parse(JSON.stringify(payload));
+                    if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
+                        cleanPayload.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+                    } else {
+                        cleanPayload.updatedAt = Date.now();
+                    }
+
+                    await AppState.db.collection('users').doc(user.uid).set(cleanPayload, { merge: true });
+                    showSync('saved');
+                } catch (err) {
+                    console.error("Firestore cloud save error:", err);
+                    showSync('error');
+                }
+            } else {
                 showSync('saved');
-            } catch (err) {
-                console.error("Firestore cloud save error:", err);
-                showSync('error');
             }
-        } else {
-            showSync('saved');
+        } finally {
+            this._isSaving = false;
         }
     },
 
