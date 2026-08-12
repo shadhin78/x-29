@@ -16165,7 +16165,7 @@ window.togglePassStatus = function (type, name, isChecked) {
         }
     }
 
-    FirebaseService.saveToCloud();
+    FirebaseService.saveToCloud(true);
     updateSuccessScore();
     renderUI();
     window.renderPassConfig();
@@ -16249,8 +16249,6 @@ window.syncPassFreezeFromResults = function () {
                     if (!window.passedItems.programs.includes(progName)) {
                         window.passedItems.programs.push(progName);
                     }
-                } else {
-                    window.passedItems.programs = window.passedItems.programs.filter(p => p !== progName);
                 }
 
                 // 2. Subject Level Goal
@@ -16281,8 +16279,6 @@ window.syncPassFreezeFromResults = function () {
                         if (!window.passedItems.subjects.includes(s.subject)) {
                             window.passedItems.subjects.push(s.subject);
                         }
-                    } else {
-                        window.passedItems.subjects = window.passedItems.subjects.filter(name => name !== s.subject);
                     }
                 });
             });

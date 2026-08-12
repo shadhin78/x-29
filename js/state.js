@@ -176,7 +176,12 @@ window.applyFullAppState = function(data, saveCloud = true) {
     if (data.customPrograms) AppState.customPrograms = data.customPrograms;
     if (data.customActions) AppState.customActions = data.customActions;
     if (data.paceGoals) AppState.paceGoals = data.paceGoals;
-    if (data.passedItems) AppState.passedItems = data.passedItems;
+    if (data.passedItems) {
+        AppState.passedItems = {
+            programs: Array.isArray(data.passedItems.programs) ? data.passedItems.programs : [],
+            subjects: Array.isArray(data.passedItems.subjects) ? data.passedItems.subjects : []
+        };
+    }
     if (data.revisionData) AppState.revisionData = data.revisionData;
     if (data.programVisibility) AppState.programVisibility = data.programVisibility;
     if (data.subjectTimeLinks) AppState.subjectTimeLinks = data.subjectTimeLinks;
