@@ -5556,14 +5556,60 @@ window.populateSpectraFilterDropdown = function () {
         `;
     });
 
-    // Subjects Group
+    // Subjects Group (Program-wise sorted & grouped)
     html += '<div class="h-px bg-slate-100 dark:bg-slate-800/60 my-1 shrink-0"></div>';
     html += '<div class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-2 py-1 shrink-0">Subjects</div>';
-    window.getAllSubjects().forEach(sub => {
+    
+    const allSubjectsList = window.getAllSubjects();
+    const uniqueProgramsForSubjects = Array.from(new Set(allSubjectsList.map(s => s.program).filter(Boolean)));
+    const seenSubjects = new Set();
+
+    uniqueProgramsForSubjects.forEach(prog => {
+        const progSubjects = allSubjectsList.filter(s => s.program === prog);
+        let addedProgramHeader = false;
+        progSubjects.forEach(sub => {
+            if (!sub.subject || seenSubjects.has(sub.subject)) return;
+            seenSubjects.add(sub.subject);
+
+            if (!addedProgramHeader) {
+                addedProgramHeader = true;
+                html += `
+                    <div class="text-[9px] font-extrabold text-indigo-500/80 dark:text-indigo-400/80 uppercase tracking-wider px-2 pt-2 pb-0.5 shrink-0 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500/60 inline-block"></span>${prog}
+                    </div>
+                `;
+            }
+
+            const value = `subject:${sub.subject}`;
+            const isChecked = window.selectedSpectraFilters.includes(value);
+            html += `
+                <label class="flex items-center gap-2.5 px-2 py-1.5 pl-4 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer text-slate-700 dark:text-slate-200 select-none shrink-0">
+                    <input type="checkbox" value="${value}" class="spectra-filter-checkbox rounded text-indigo-500 focus:ring-indigo-500 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 h-3.5 w-3.5 transition-all" ${isChecked ? 'checked' : ''}>
+                    <span class="font-bold uppercase text-[9px] tracking-wider">📚 ${sub.subject}</span>
+                </label>
+            `;
+        });
+    });
+
+    const unassignedSubjects = allSubjectsList.filter(s => !s.program || !uniqueProgramsForSubjects.includes(s.program));
+    let addedOtherHeader = false;
+    unassignedSubjects.forEach(sub => {
+        if (!sub.subject || seenSubjects.has(sub.subject)) return;
+        seenSubjects.add(sub.subject);
+
+        if (!addedOtherHeader) {
+            addedOtherHeader = true;
+            html += `
+                <div class="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 pt-2 pb-0.5 shrink-0 flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-slate-400/60 inline-block"></span>Other Subjects
+                </div>
+            `;
+        }
+
         const value = `subject:${sub.subject}`;
         const isChecked = window.selectedSpectraFilters.includes(value);
         html += `
-            <label class="flex items-center gap-2.5 px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer text-slate-700 dark:text-slate-200 select-none shrink-0">
+            <label class="flex items-center gap-2.5 px-2 py-1.5 pl-4 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer text-slate-700 dark:text-slate-200 select-none shrink-0">
                 <input type="checkbox" value="${value}" class="spectra-filter-checkbox rounded text-indigo-500 focus:ring-indigo-500 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 h-3.5 w-3.5 transition-all" ${isChecked ? 'checked' : ''}>
                 <span class="font-bold uppercase text-[9px] tracking-wider">📚 ${sub.subject}</span>
             </label>
