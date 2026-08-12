@@ -5007,15 +5007,9 @@ window.openProgramCompletionsModal = function (track, programName) {
 };
 
 window.getChapterStatus = function (subName, chNum, trackId = null) {
-    // 1. Check if frozen
     const sObj = window.getAllSubjects().find(s => s.subject === subName);
-    const isFrozen = window.passedItems && (
-        (window.passedItems.subjects && window.passedItems.subjects.includes(subName)) ||
-        (window.passedItems.programs && sObj && window.passedItems.programs.includes(sObj.program))
-    );
-    if (isFrozen) return 'complete';
 
-    // 2. Search in tasks
+    // 1. Search in tasks
     let foundTaskObj = null;
     let taskType = trackId;
 
@@ -5060,9 +5054,20 @@ window.getChapterStatus = function (subName, chNum, trackId = null) {
         }
     }
 
-    if (foundTaskObj) {
-        if (foundTaskObj.skipped) return 'skip';
+    // 2. If chapter was explicitly skipped in tasks, return 'skip' regardless of pass status
+    if (foundTaskObj && foundTaskObj.skipped) {
+        return 'skip';
+    }
 
+    // 3. Check if frozen / passed
+    const isFrozen = window.passedItems && (
+        (window.passedItems.subjects && window.passedItems.subjects.includes(subName)) ||
+        (window.passedItems.programs && sObj && window.passedItems.programs.includes(sObj.program))
+    );
+    if (isFrozen) return 'complete';
+
+    // 4. Check completion or size-based completion
+    if (foundTaskObj) {
         // Check size-based weekly targets
         let isSizeBased = false;
         let progressPercent = 0;
