@@ -489,14 +489,14 @@ window.FirebaseService = {
                 if (typeof renderUI === 'function') renderUI();
             } else {
                 requestAnimationFrame(() => {
+                    const contentPanel = document.getElementById('main-content-panel');
+                    const contentScrollPos = contentPanel ? contentPanel.scrollTop : 0;
                     const scrollPos = window.scrollY;
+
                     if (typeof renderUI === 'function') renderUI();
-                    const activePage = document.querySelector('[id^="page-"]:not(.hidden)');
-                    if (activePage) {
-                        const activePageId = activePage.id.replace('page-', '');
-                        if (activePageId && activePageId !== 'dashboard' && typeof window.switchPage === 'function') {
-                            window.switchPage(activePageId);
-                        }
+
+                    if (contentPanel) {
+                        contentPanel.scrollTop = contentScrollPos;
                     }
                     window.scrollTo(0, scrollPos);
                 });

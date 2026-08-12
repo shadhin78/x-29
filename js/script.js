@@ -17384,13 +17384,19 @@ window.closeMobileSidebar = function () {
 };
 
 window.switchPage = function (pageId) {
+    const activePage = document.querySelector('[id^="page-"]:not(.hidden)');
+    const currentActiveId = activePage ? activePage.id.replace('page-', '') : null;
+    const isSamePage = currentActiveId === pageId;
+
     const pages = ['dashboard', 'spectra-analytics', 'fiscal-ledger', 'timer', 'daily-actions', 'schedule', 'subjects', 'paces-management', 'master-config', 'outcome', 'exam'];
     pages.forEach(p => {
         const el = document.getElementById(`page-${p}`);
         if (el) {
             if (p === pageId) {
                 el.classList.remove('hidden');
-                el.classList.add('animate-page-enter');
+                if (!isSamePage) {
+                    el.classList.add('animate-page-enter');
+                }
             } else {
                 el.classList.add('hidden');
                 el.classList.remove('animate-page-enter');
@@ -17428,11 +17434,13 @@ window.switchPage = function (pageId) {
         window.renderExamPage();
     }
 
-    const contentPanel = document.getElementById('main-content-panel');
-    if (contentPanel) {
-        contentPanel.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!isSamePage) {
+        const contentPanel = document.getElementById('main-content-panel');
+        if (contentPanel) {
+            contentPanel.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     }
 
     // Handle chart resizing or rendering when visible
