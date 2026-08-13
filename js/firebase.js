@@ -32,6 +32,40 @@ function showSync(state) {
     }
 }
 
+function hasUserData(payload) {
+    if (!payload || typeof payload !== 'object') return false;
+
+    if (Array.isArray(payload.tracks) && payload.tracks.length > 0) return true;
+    if (Array.isArray(payload.tasks) && payload.tasks.length > 0) return true;
+    if (payload.customPrograms && typeof payload.customPrograms === 'object' && Object.keys(payload.customPrograms).length > 0) return true;
+    if (payload.syllabusStructure && typeof payload.syllabusStructure === 'object' && Object.keys(payload.syllabusStructure).length > 0) return true;
+    if (Array.isArray(payload.customActions) && payload.customActions.length > 0) return true;
+    if (Array.isArray(payload.paceGoals) && payload.paceGoals.length > 0) return true;
+    if (Array.isArray(payload.examSessions) && payload.examSessions.length > 0) return true;
+    if (Array.isArray(payload.examRoutine) && payload.examRoutine.length > 0) return true;
+    if (Array.isArray(payload.scheduleBlocks) && payload.scheduleBlocks.length > 0) return true;
+    if (Array.isArray(payload.scheduleBlocks2) && payload.scheduleBlocks2.length > 0) return true;
+    if (Array.isArray(payload.timerLogs) && payload.timerLogs.length > 0) return true;
+    if (Array.isArray(payload.successResults) && payload.successResults.length > 0) return true;
+    if (payload.fiscalLedger && (
+        (Array.isArray(payload.fiscalLedger.transactions) && payload.fiscalLedger.transactions.length > 0) ||
+        (Array.isArray(payload.fiscalLedger.budgets) && payload.fiscalLedger.budgets.length > 0) ||
+        (Array.isArray(payload.fiscalLedger.vaults) && payload.fiscalLedger.vaults.length > 0)
+    )) return true;
+    if (payload.passedItems && (
+        (Array.isArray(payload.passedItems.programs) && payload.passedItems.programs.length > 0) ||
+        (Array.isArray(payload.passedItems.subjects) && payload.passedItems.subjects.length > 0)
+    )) return true;
+    if (payload.revisionData && (
+        (Array.isArray(payload.revisionData.active) && payload.revisionData.active.length > 0) ||
+        (payload.revisionData.progress && typeof payload.revisionData.progress === 'object' && Object.keys(payload.revisionData.progress).length > 0)
+    )) return true;
+    if (payload.dailyFocusHoursTarget && payload.dailyFocusHoursTarget > 0) return true;
+    if (payload.dailyFocusHoursTargetHistory && Array.isArray(payload.dailyFocusHoursTargetHistory) && payload.dailyFocusHoursTargetHistory.length > 0) return true;
+
+    return false;
+}
+
 const firebaseConfig = {
     apiKey: "AIzaSyAiqf66FVpOM9UV20LEcOjOPkkFcS_qFIs",
     authDomain: "x-2k29.firebaseapp.com",
@@ -380,7 +414,7 @@ window.FirebaseService = {
     },
 
     // 8. Save AppState to Cloud & Local Storage
-    saveToCloud: async function(immediate = false, isExplicitInitialization = false) {
+    saveToCloud: async function(immediate = false, isExplicitInitialization = false, isUserInitiated = false) {
         this._lastLocalEditTime = Date.now();
 
         if (this._saveDebounceTimer) {
@@ -391,31 +425,17 @@ window.FirebaseService = {
         showSync('saving');
 
         if (immediate) {
-            await this._executeSave(isExplicitInitialization);
+            await this._executeSave(isExplicitInitialization, isUserInitiated);
         } else {
             this._saveDebounceTimer = setTimeout(async () => {
-                await this._executeSave(isExplicitInitialization);
+                await this._executeSave(isExplicitInitialization, isUserInitiated);
             }, 800);
         }
     },
 
-    _executeSave: async function(isExplicitInitialization = false) {
+    _executeSave: async function(isExplicitInitialization = false, isUserInitiated = false) {
         this._isSaving = true;
         try {
-            // IMPORTANT SAFETY GUARD:
-            // A missing Firestore document must NEVER be recreated automatically from local cached state.
-            // Cloud initialization requires explicit user action.
-            if (this.cloudDocumentExists === false && !isExplicitInitialization) {
-                console.warn("⚠️ Cloud document does not exist for user. Skipping automatic Firestore save to prevent document re-creation.");
-                showSync('saved');
-                return;
-            }
-
-            if (isExplicitInitialization) {
-                this.cloudDocumentExists = true;
-                if (window.AppState) window.AppState.cloudDocumentExists = true;
-            }
-
             const payload = {
                 tasks: AppState.tasks || [],
                 tracks: window.tracks || [],
@@ -462,6 +482,26 @@ window.FirebaseService = {
                 safeStorage.setItem('local_app_state', jsonStr);
                 safeStorage.setItem('appState', jsonStr);
             } catch(e) {}
+
+            const isUserMutation = isExplicitInitialization || isUserInitiated || hasUserData(payload);
+
+            // IMPORTANT SAFETY GUARD:
+            // If cloud document does NOT exist and payload is empty default initial state (no user data), skip writing to Firestore.
+            // BUT if the user explicitly initialized or mutated state with actual user data, transition cloudDocumentExists = true and create the Firestore document.
+            if (this.cloudDocumentExists === false) {
+                if (!isUserMutation) {
+                    console.warn("⚠️ Cloud document does not exist for user and payload is empty initial state. Skipping automatic Firestore save.");
+                    showSync('saved');
+                    return;
+                } else {
+                    console.log("🚀 First user data creation detected on blank workspace! Initializing Firestore cloud document...");
+                    this.cloudDocumentExists = true;
+                    if (window.AppState) window.AppState.cloudDocumentExists = true;
+                }
+            } else if (isExplicitInitialization) {
+                this.cloudDocumentExists = true;
+                if (window.AppState) window.AppState.cloudDocumentExists = true;
+            }
 
             const user = this.getCurrentUser();
             if (AppState.db && user && user.uid && window.location.protocol !== 'file:') {
@@ -573,9 +613,18 @@ window.FirebaseService = {
 
         const handleDataLoad = (data, meta = { exists: true }) => {
             if (meta && meta.exists === false) {
-                console.log("Cloud document explicitly confirmed missing. Resetting local workspace to clean slate...");
-                this.resetLocalWorkspace(false);
+                if (this.cloudDocumentExists !== false) {
+                    console.log("Cloud document explicitly confirmed missing. Resetting local workspace to clean slate...");
+                    this.resetLocalWorkspace(false);
+                } else {
+                    const cachedStr = safeStorage.getItem('local_app_state') || safeStorage.getItem('appState');
+                    if (!cachedStr && typeof window.applyFullAppState === 'function' && typeof window.getDefaultAppState === 'function') {
+                        window.applyFullAppState(window.getDefaultAppState(), false, true);
+                    }
+                }
             } else if (data) {
+                this.cloudDocumentExists = true;
+                if (window.AppState) window.AppState.cloudDocumentExists = true;
                 const isFullyApplied = window.applyFullAppState(data, false);
                 try {
                     // If all fields were cleanly applied, persist cloud data.
