@@ -2913,15 +2913,6 @@ function renderUI() {
     const dashContent = document.getElementById('dashboard-content');
     if (dashContent) dashContent.classList.remove('hidden');
 
-    if (window.dashboardConfig) {
-        if (window.dashboardConfig.topTag && /trax/i.test(window.dashboardConfig.topTag)) {
-            window.dashboardConfig.topTag = window.dashboardConfig.topTag.replace(/trax/gi, 'X-29');
-        }
-        if (window.dashboardConfig.mainTitle && /trax/i.test(window.dashboardConfig.mainTitle)) {
-            window.dashboardConfig.mainTitle = window.dashboardConfig.mainTitle.replace(/trax/gi, 'X-29');
-        }
-    }
-
     safeSetText('dash-top-tag', window.dashboardConfig.topTag);
     safeSetText('dash-top-tag-mobile', window.dashboardConfig.topTag);
     safeSetText('dash-main-title', window.dashboardConfig.mainTitle);
