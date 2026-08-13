@@ -120,15 +120,14 @@ window.AppState = {
     programVisibility: {},
     weeklyTargetsDatabase: {},
     dailyTargetsDatabase: {},
-    scheduleBlocks: [],
-    scheduleBlocks2: [],
     scheduleGroups: [],
     hasLoadedFromCloud: false,
     cloudDocumentExists: null,
     syncGeneration: 0,
     lastAppliedCloudTimestamp: 0,
     isLocalDirty: false,
-    syncSessionId: ""
+    syncSessionId: "",
+    _tombstones: {}
 };
 
 // Define transparent properties on window to alias AppState keys
@@ -152,7 +151,7 @@ const stateKeys = [
     'syllabusStructure', 'customSyllabus', 'customPrograms', 'programVisibility', 'weeklyTargetsDatabase',
     'dailyTargetsDatabase', 'scheduleBlocks', 'scheduleBlocks2', 'scheduleGroups',
     'hasLoadedFromCloud', 'cloudDocumentExists',
-    'syncGeneration', 'lastAppliedCloudTimestamp', 'isLocalDirty', 'syncSessionId'
+    'syncGeneration', 'lastAppliedCloudTimestamp', 'isLocalDirty', 'syncSessionId', '_tombstones'
 ];
 
 stateKeys.forEach(key => {
@@ -169,8 +168,98 @@ stateKeys.forEach(key => {
 });
 
 /**
+ * Generates a stable unique ID for an array item across multi-device sync sessions.
+ */
+window.generateItemId = function(item, arrayKey = 'items') {
+    if (!item || typeof item !== 'object') return null;
+    if (item.id !== undefined && item.id !== null) return String(item.id);
+    if (item.taskId !== undefined && item.taskId !== null) return String(item.taskId);
+    if (item.trackId !== undefined && item.trackId !== null) return String(item.trackId);
+    if (item.actionId !== undefined && item.actionId !== null) return String(item.actionId);
+    if (item.goalId !== undefined && item.goalId !== null) return String(item.goalId);
+    if (item.sessionId !== undefined && item.sessionId !== null) return String(item.sessionId);
+    if (item.blockId !== undefined && item.blockId !== null) return String(item.blockId);
+    if (item.title && item.date) return `${arrayKey}_${item.title}_${item.date}`;
+    if (item.name) return `${arrayKey}_${item.name}`;
+    if (item.title) return `${arrayKey}_${item.title}`;
+    if (item.subject) return `${arrayKey}_${item.subject}`;
+    return null;
+};
+
+/**
+ * Deterministic 3-Way Array Reconciliation Algorithm.
+ * Merges local and cloud arrays by stable ID, respecting tombstones and timestamps.
+ */
+window.reconcileArrays = function(localArr = [], cloudArr = [], tombstones = {}, arrayKey = 'items') {
+    if (!Array.isArray(localArr)) localArr = [];
+    if (!Array.isArray(cloudArr)) cloudArr = [];
+    if (!tombstones || typeof tombstones !== 'object') tombstones = {};
+
+    const localMap = new Map();
+    const cloudMap = new Map();
+
+    localArr.forEach(item => {
+        const id = window.generateItemId(item, arrayKey);
+        if (id) localMap.set(id, item);
+    });
+
+    cloudArr.forEach(item => {
+        const id = window.generateItemId(item, arrayKey);
+        if (id) cloudMap.set(id, item);
+    });
+
+    const allIds = new Set([...localMap.keys(), ...cloudMap.keys()]);
+    const result = [];
+
+    allIds.forEach(id => {
+        const tombstoneTs = tombstones[id] || 0;
+        const localItem = localMap.get(id);
+        const cloudItem = cloudMap.get(id);
+
+        const localTs = (localItem && localItem.updatedAt) ? Number(localItem.updatedAt) : 0;
+        const cloudTs = (cloudItem && cloudItem.updatedAt) ? Number(cloudItem.updatedAt) : 0;
+        const latestTs = Math.max(localTs, cloudTs);
+
+        if (tombstoneTs > 0 && tombstoneTs >= latestTs) {
+            return;
+        }
+
+        if (localItem && cloudItem) {
+            if (localTs > cloudTs) {
+                result.push(localItem);
+            } else {
+                result.push(cloudItem);
+            }
+        } else if (localItem) {
+            result.push(localItem);
+        } else if (cloudItem) {
+            result.push(cloudItem);
+        }
+    });
+
+    const nonIdLocal = localArr.filter(item => !window.generateItemId(item, arrayKey));
+    const nonIdCloud = cloudArr.filter(item => !window.generateItemId(item, arrayKey));
+    const mergedNonId = [...nonIdCloud];
+    nonIdLocal.forEach(localItem => {
+        const isDuplicate = mergedNonId.some(cItem => JSON.stringify(cItem) === JSON.stringify(localItem));
+        if (!isDuplicate) mergedNonId.push(localItem);
+    });
+
+    return [...result, ...mergedNonId];
+};
+
+/**
+ * Registers an item deletion tombstone to prevent cross-device resurrection.
+ */
+window.recordItemDeletion = function(itemId) {
+    if (!itemId) return;
+    if (!AppState._tombstones) AppState._tombstones = {};
+    AppState._tombstones[String(itemId)] = Date.now() + (window.serverTimeOffset || 0);
+};
+
+/**
  * Safe Hydration Guard
- * Ensures authoritative Firestore cloud payloads (including empty arrays and objects representing deletions) are applied cleanly to AppState.
+ * Ensures authoritative Firestore cloud payloads are applied cleanly to AppState.
  */
 window.shouldHydrateField = function(key, cloudValue, currentLocalValue, isExplicitWipe = false) {
     return true;
@@ -179,6 +268,10 @@ window.shouldHydrateField = function(key, cloudValue, currentLocalValue, isExpli
 window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = false) {
     if (!data || typeof data !== 'object') return false;
     delete data._metadata;
+
+    if (data._tombstones) {
+        AppState._tombstones = Object.assign({}, AppState._tombstones || {}, data._tombstones);
+    }
 
     if (data.updatedAt) {
         let t = 0;
