@@ -123,7 +123,8 @@ window.AppState = {
     scheduleBlocks: [],
     scheduleBlocks2: [],
     scheduleGroups: [],
-    hasLoadedFromCloud: false
+    hasLoadedFromCloud: false,
+    cloudDocumentExists: null
 };
 
 // Define transparent properties on window to alias AppState keys
@@ -146,7 +147,7 @@ const stateKeys = [
     'fiscalLedger', 'examSessions', 'examRoutine', 'selectedCountdownExamId',
     'syllabusStructure', 'customSyllabus', 'customPrograms', 'programVisibility', 'weeklyTargetsDatabase',
     'dailyTargetsDatabase', 'scheduleBlocks', 'scheduleBlocks2', 'scheduleGroups',
-    'hasLoadedFromCloud'
+    'hasLoadedFromCloud', 'cloudDocumentExists'
 ];
 
 stateKeys.forEach(key => {

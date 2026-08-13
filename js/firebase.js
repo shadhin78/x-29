@@ -49,6 +49,7 @@ window.FirebaseService = {
     _firestoreInitialized: false,
     _isSaving: false,
     _lastLocalEditTime: 0,
+    cloudDocumentExists: null,
 
     // 1. Fetch Firebase Configuration from API, fallback to .env or cached settings
     fetchConfig: async function() {
@@ -320,6 +321,9 @@ window.FirebaseService = {
                 }
 
                 if (docSnapshot.exists) {
+                    this.cloudDocumentExists = true;
+                    if (window.AppState) window.AppState.cloudDocumentExists = true;
+
                     const cloudData = docSnapshot.data();
 
                     // Skip applying cloud snapshot if local edits are pending save or in-flight
@@ -349,8 +353,16 @@ window.FirebaseService = {
                         onData(cloudData);
                     }
                 } else {
-                    console.log("No cloud document found for user. Initializing first cloud save.");
-                    this.saveToCloud(true);
+                    // IMPORTANT SAFETY FIX:
+                    // A missing Firestore document must NEVER be recreated automatically from local cached state.
+                    // Cloud initialization requires explicit user action.
+                    console.log("Cloud document for user does NOT exist. Auto-recreation disabled to preserve deleted status.");
+                    this.cloudDocumentExists = false;
+                    if (window.AppState) window.AppState.cloudDocumentExists = false;
+                    showSync('saved');
+                    if (typeof onData === 'function') {
+                        onData(null);
+                    }
                 }
             }, (error) => {
                 console.error("Firestore onSnapshot error:", error);
@@ -368,7 +380,7 @@ window.FirebaseService = {
     },
 
     // 8. Save AppState to Cloud & Local Storage
-    saveToCloud: async function(immediate = false) {
+    saveToCloud: async function(immediate = false, isExplicitInitialization = false) {
         this._lastLocalEditTime = Date.now();
 
         if (this._saveDebounceTimer) {
@@ -379,17 +391,31 @@ window.FirebaseService = {
         showSync('saving');
 
         if (immediate) {
-            await this._executeSave();
+            await this._executeSave(isExplicitInitialization);
         } else {
             this._saveDebounceTimer = setTimeout(async () => {
-                await this._executeSave();
+                await this._executeSave(isExplicitInitialization);
             }, 800);
         }
     },
 
-    _executeSave: async function() {
+    _executeSave: async function(isExplicitInitialization = false) {
         this._isSaving = true;
         try {
+            // IMPORTANT SAFETY GUARD:
+            // A missing Firestore document must NEVER be recreated automatically from local cached state.
+            // Cloud initialization requires explicit user action.
+            if (this.cloudDocumentExists === false && !isExplicitInitialization) {
+                console.warn("⚠️ Cloud document does not exist for user. Skipping automatic Firestore save to prevent document re-creation.");
+                showSync('saved');
+                return;
+            }
+
+            if (isExplicitInitialization) {
+                this.cloudDocumentExists = true;
+                if (window.AppState) window.AppState.cloudDocumentExists = true;
+            }
+
             const payload = {
                 tasks: AppState.tasks || [],
                 tracks: window.tracks || [],
@@ -448,6 +474,8 @@ window.FirebaseService = {
                     }
 
                     await AppState.db.collection('users').doc(user.uid).set(cleanPayload, { merge: true });
+                    this.cloudDocumentExists = true;
+                    if (window.AppState) window.AppState.cloudDocumentExists = true;
                     showSync('saved');
                 } catch (err) {
                     console.error("Firestore cloud save error:", err);
@@ -461,11 +489,46 @@ window.FirebaseService = {
         }
     },
 
+    initializeCloudWorkspace: async function() {
+        console.log("Explicitly initializing Cloud Workspace for user...");
+        this.cloudDocumentExists = true;
+        if (window.AppState) window.AppState.cloudDocumentExists = true;
+        await this._executeSave(true);
+        console.log("Cloud Workspace initialized successfully.");
+    },
+
+    resetLocalWorkspace: function(confirmReset = true) {
+        if (confirmReset && typeof window !== 'undefined' && window.confirm) {
+            const ok = window.confirm("Are you sure you want to reset your local X-29 workspace?\nThis will clear locally cached app state without modifying Cloud Firestore.");
+            if (!ok) return false;
+        }
+        const keysToRemove = [
+            'local_app_state',
+            'appState',
+            'cached_fullAppState',
+            'cached_examSessions',
+            'cached_examRoutine',
+            'cached_selectedCountdownExamId'
+        ];
+        keysToRemove.forEach(k => safeStorage.removeItem(k));
+        console.log("X-29 local application persistence reset successfully.");
+
+        this.cloudDocumentExists = false;
+        if (window.AppState) window.AppState.cloudDocumentExists = false;
+
+        if (typeof window.applyFullAppState === 'function' && typeof window.getDefaultAppState === 'function') {
+            window.applyFullAppState(window.getDefaultAppState(), false, true);
+        }
+        return true;
+    },
+
     wipeCloudWorkspace: async function() {
         const user = this.getCurrentUser();
         if (AppState.db && user && user.uid && window.location.protocol !== 'file:') {
             try {
                 await AppState.db.collection('users').doc(user.uid).delete();
+                this.cloudDocumentExists = false;
+                if (window.AppState) window.AppState.cloudDocumentExists = false;
                 console.log("Firestore cloud workspace deleted.");
             } catch(e) {
                 console.warn("Failed to delete Firestore cloud document:", e);
@@ -581,5 +644,7 @@ window.dismissLoadingScreen = function() {
 window.saveToCloud = window.FirebaseService.saveToCloud.bind(window.FirebaseService);
 window.loadFromCloud = window.FirebaseService.loadFromCloud.bind(window.FirebaseService);
 window.saveTimerToCloud = window.FirebaseService.saveTimerToCloud.bind(window.FirebaseService);
+window.initializeCloudWorkspace = window.FirebaseService.initializeCloudWorkspace.bind(window.FirebaseService);
+window.resetLocalWorkspace = window.FirebaseService.resetLocalWorkspace.bind(window.FirebaseService);
 window.showSync = showSync;
 
