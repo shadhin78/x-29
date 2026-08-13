@@ -244,14 +244,62 @@ window.FirebaseService = {
         }
     },
 
-    // 4. Log out the current session
+    bumpSyncGeneration: function(reason) {
+        if (!AppState.syncGeneration) AppState.syncGeneration = 0;
+        AppState.syncGeneration++;
+        console.log(`SYNC: SYNC_GENERATION_BUMPED (${reason}) -> New Gen: ${AppState.syncGeneration}`);
+        return AppState.syncGeneration;
+    },
+
+    // 4. Log out the current session (CRITICAL FIX #5 & #6)
     logout: async function() {
+        console.log("SYNC: LOGOUT_INITIATED");
+        this.bumpSyncGeneration("logout");
+
+        if (this._saveDebounceTimer) {
+            clearTimeout(this._saveDebounceTimer);
+            this._saveDebounceTimer = null;
+            console.log("SYNC: SAVE_CANCELLED (logout)");
+        }
+
         if (this._unsubscribeSnapshot) {
             try { this._unsubscribeSnapshot(); } catch(e) {}
             this._unsubscribeSnapshot = null;
         }
-        safeStorage.removeItem('local_auth_user');
+
+        // Purge ALL user-specific application data from browser storage
+        const keysToRemove = [
+            'local_app_state',
+            'appState',
+            'cached_fullAppState',
+            'cached_examSessions',
+            'cached_examRoutine',
+            'cached_selectedCountdownExamId',
+            'local_auth_user'
+        ];
+        keysToRemove.forEach(k => safeStorage.removeItem(k));
+
+        try {
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.clear();
+            }
+        } catch(e) {}
+
+        // Reset memory AppState to clean empty default
+        if (typeof window.applyFullAppState === 'function' && typeof window.getDefaultAppState === 'function') {
+            window.applyFullAppState(window.getDefaultAppState(), false, true);
+        }
+
+        this.cloudDocumentExists = null;
+        if (window.AppState) {
+            window.AppState.cloudDocumentExists = null;
+            window.AppState.hasLoadedFromCloud = false;
+            window.AppState.isLocalDirty = false;
+        }
+
+        console.log("SYNC: LOGOUT_CACHE_CLEARED - All user cache and memory state purged.");
         this._notifyAuthListeners(null);
+
         if (window.location.protocol === 'file:') {
             console.log("Firebase logout mocked under file:// protocol.");
             return;
@@ -331,7 +379,7 @@ window.FirebaseService = {
         }
     },
 
-    // 7. Register Firestore Real-time Snapshot Listener
+    // 7. Register Firestore Real-time Snapshot Listener (CRITICAL FIX #1, #7, #8)
     startSnapshotListener: function(uid, onData, onError) {
         let activeUid = null;
         if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {
@@ -345,52 +393,77 @@ window.FirebaseService = {
             return function unsubscribe() {};
         }
 
+        const captureGen = AppState.syncGeneration || 0;
+
         try {
-            console.log("Registering Firestore real-time snapshot listener for user:", activeUid);
+            console.log("Registering Firestore real-time snapshot listener for user:", activeUid, "Gen:", captureGen);
             const userDocRef = AppState.db.collection('users').doc(activeUid);
-            
+
             const unsubscribe = userDocRef.onSnapshot((docSnapshot) => {
+                if (captureGen !== (AppState.syncGeneration || 0)) {
+                    console.warn("SYNC: SNAPSHOT_IGNORED_STALE_GENERATION", "Capture:", captureGen, "Current:", AppState.syncGeneration);
+                    return;
+                }
+
                 if (docSnapshot.metadata && docSnapshot.metadata.hasPendingWrites) {
                     return;
                 }
 
                 if (docSnapshot.exists) {
+                    console.log("SYNC: CLOUD_SNAPSHOT_RECEIVED for UID:", activeUid);
                     this.cloudDocumentExists = true;
                     if (window.AppState) window.AppState.cloudDocumentExists = true;
 
                     const cloudData = docSnapshot.data();
-
-                    // Skip applying cloud snapshot if local edits are pending save or in-flight
-                    if (this._saveDebounceTimer || this._isSaving) {
-                        console.log("Skipping cloud snapshot sync: local save is pending or in-flight.");
-                        showSync('saved');
-                        return;
-                    }
-
-                    if (this._lastLocalEditTime && cloudData.updatedAt) {
-                        let cloudTime = 0;
+                    let cloudTime = 0;
+                    if (cloudData && cloudData.updatedAt) {
                         if (typeof cloudData.updatedAt === 'number') {
                             cloudTime = cloudData.updatedAt;
-                        } else if (cloudData.updatedAt && typeof cloudData.updatedAt.toMillis === 'function') {
+                        } else if (typeof cloudData.updatedAt.toMillis === 'function') {
                             cloudTime = cloudData.updatedAt.toMillis();
-                        }
-                        if (cloudTime && cloudTime < this._lastLocalEditTime - 2000) {
-                            console.log("Skipping cloud snapshot sync: cloud snapshot is older than local edit timestamp.");
-                            showSync('saved');
-                            return;
+                        } else if (cloudData.updatedAt.seconds !== undefined) {
+                            cloudTime = cloudData.updatedAt.seconds * 1000;
                         }
                     }
 
-                    console.log("Real-time cloud snapshot received from Firestore for UID:", activeUid);
-                    showSync('saved');
-                    if (typeof onData === 'function') {
-                        onData(cloudData, { exists: true });
+                    // CRITICAL FIX #1 & #7: Reconcile incoming cloud snapshot cleanly.
+                    // DO NOT discard snapshots just because _saveDebounceTimer or _isSaving is true.
+                    if (AppState.isLocalDirty) {
+                        const lastApplied = AppState.lastAppliedCloudTimestamp || 0;
+                        if (cloudTime > lastApplied) {
+                            console.log("SYNC: CLOUD_STATE_APPLIED - Remote cloud snapshot is newer than last applied cloud timestamp. Overriding local dirty state and cancelling pending save to prevent resurrection.");
+                            if (this._saveDebounceTimer) {
+                                clearTimeout(this._saveDebounceTimer);
+                                this._saveDebounceTimer = null;
+                                console.log("SYNC: SAVE_CANCELLED (Superseded by newer cloud snapshot)");
+                            }
+                            showSync('saved');
+                            if (typeof onData === 'function') {
+                                onData(cloudData, { exists: true, reconciled: true });
+                            }
+                        } else {
+                            console.log("SYNC: LOCAL_DIRTY_PRESERVED - Local user edit is newer than incoming cloud timestamp. Keeping local edit for save.");
+                            showSync('saved');
+                        }
+                    } else {
+                        if (this._saveDebounceTimer) {
+                            clearTimeout(this._saveDebounceTimer);
+                            this._saveDebounceTimer = null;
+                            console.log("SYNC: SAVE_CANCELLED (Clean state snapshot applied)");
+                        }
+                        showSync('saved');
+                        if (typeof onData === 'function') {
+                            onData(cloudData, { exists: true });
+                        }
                     }
                 } else {
-                    // IMPORTANT SAFETY FIX:
-                    // A missing Firestore document must NEVER be recreated automatically from local cached state.
-                    // Cloud initialization requires explicit user action.
-                    console.log("Cloud document for user does NOT exist. Auto-recreation disabled to preserve deleted status.");
+                    // CRITICAL FIX #2: Missing Firestore document must NEVER be auto-recreated.
+                    console.log("SYNC: CLOUD_DOCUMENT_DELETED - Cloud document for user does NOT exist.");
+                    if (this._saveDebounceTimer) {
+                        clearTimeout(this._saveDebounceTimer);
+                        this._saveDebounceTimer = null;
+                        console.log("SYNC: SAVE_CANCELLED (Cloud document missing)");
+                    }
                     this.cloudDocumentExists = false;
                     if (window.AppState) window.AppState.cloudDocumentExists = false;
                     showSync('saved');
@@ -413,27 +486,67 @@ window.FirebaseService = {
         }
     },
 
-    // 8. Save AppState to Cloud & Local Storage
+    // 8. Save AppState to Cloud & Local Storage (CRITICAL FIX #2, #6, #8, #9)
     saveToCloud: async function(immediate = false, isExplicitInitialization = false, isUserInitiated = false) {
+        AppState.isLocalDirty = true;
         this._lastLocalEditTime = Date.now();
+
+        // CRITICAL FIX #2 & #9: If cloud document does not exist and this is NOT explicit initialization, ABORT SAVE!
+        if (this.cloudDocumentExists === false && !isExplicitInitialization) {
+            if (this._saveDebounceTimer) {
+                clearTimeout(this._saveDebounceTimer);
+                this._saveDebounceTimer = null;
+            }
+            console.warn("SYNC: SAVE_ABORTED_NO_CLOUD_DOCUMENT - Missing Firestore document cannot auto-save without explicit workspace initialization.");
+            showSync('saved');
+            return;
+        }
 
         if (this._saveDebounceTimer) {
             clearTimeout(this._saveDebounceTimer);
             this._saveDebounceTimer = null;
+            console.log("SYNC: SAVE_CANCELLED (Superseded by new local edit)");
         }
+
+        const captureGen = AppState.syncGeneration || 0;
+        console.log(`SYNC: SAVE_SCHEDULED (Immediate: ${immediate}, ExplicitInit: ${isExplicitInitialization}, Gen: ${captureGen})`);
 
         showSync('saving');
 
         if (immediate) {
-            await this._executeSave(isExplicitInitialization, isUserInitiated);
+            await this._executeSave(isExplicitInitialization, isUserInitiated, captureGen);
         } else {
             this._saveDebounceTimer = setTimeout(async () => {
-                await this._executeSave(isExplicitInitialization, isUserInitiated);
+                await this._executeSave(isExplicitInitialization, isUserInitiated, captureGen);
             }, 800);
         }
     },
 
-    _executeSave: async function(isExplicitInitialization = false, isUserInitiated = false) {
+    _executeSave: async function(isExplicitInitialization = false, isUserInitiated = false, captureGen = null) {
+        if (captureGen === null) captureGen = AppState.syncGeneration || 0;
+
+        // GUARD 1: Verify sync generation
+        if (captureGen !== (AppState.syncGeneration || 0)) {
+            console.warn("SYNC: SAVE_ABORTED_STALE_GENERATION", "Capture:", captureGen, "Current:", AppState.syncGeneration);
+            showSync('saved');
+            return;
+        }
+
+        // GUARD 2: Verify authenticated user
+        const user = this.getCurrentUser();
+        if (!user || !user.uid) {
+            console.warn("SYNC: SAVE_ABORTED_NO_AUTH - No active authenticated user UID.");
+            showSync('saved');
+            return;
+        }
+
+        // GUARD 3: Missing Document Protection (CRITICAL FIX #2)
+        if (this.cloudDocumentExists === false && !isExplicitInitialization) {
+            console.warn("SYNC: SAVE_ABORTED_NO_CLOUD_DOCUMENT - Document missing in cloud; auto-creation is disabled.");
+            showSync('saved');
+            return;
+        }
+
         this._isSaving = true;
         try {
             const payload = {
@@ -474,7 +587,7 @@ window.FirebaseService = {
                 subjectColors: AppState.subjectColors || {}
             };
 
-            // Cache state locally first for offline support
+            // Cache state locally for offline fallback
             window.appState = payload;
             let jsonStr = '';
             try {
@@ -483,27 +596,6 @@ window.FirebaseService = {
                 safeStorage.setItem('appState', jsonStr);
             } catch(e) {}
 
-            const isUserMutation = isExplicitInitialization || isUserInitiated || hasUserData(payload);
-
-            // IMPORTANT SAFETY GUARD:
-            // If cloud document does NOT exist and payload is empty default initial state (no user data), skip writing to Firestore.
-            // BUT if the user explicitly initialized or mutated state with actual user data, transition cloudDocumentExists = true and create the Firestore document.
-            if (this.cloudDocumentExists === false) {
-                if (!isUserMutation) {
-                    console.warn("⚠️ Cloud document does not exist for user and payload is empty initial state. Skipping automatic Firestore save.");
-                    showSync('saved');
-                    return;
-                } else {
-                    console.log("🚀 First user data creation detected on blank workspace! Initializing Firestore cloud document...");
-                    this.cloudDocumentExists = true;
-                    if (window.AppState) window.AppState.cloudDocumentExists = true;
-                }
-            } else if (isExplicitInitialization) {
-                this.cloudDocumentExists = true;
-                if (window.AppState) window.AppState.cloudDocumentExists = true;
-            }
-
-            const user = this.getCurrentUser();
             if (AppState.db && user && user.uid && window.location.protocol !== 'file:') {
                 try {
                     const cleanPayload = jsonStr ? JSON.parse(jsonStr) : JSON.parse(JSON.stringify(payload));
@@ -514,14 +606,26 @@ window.FirebaseService = {
                     }
 
                     await AppState.db.collection('users').doc(user.uid).set(cleanPayload, { merge: true });
+
+                    // Re-verify generation after async write
+                    if (captureGen !== (AppState.syncGeneration || 0)) {
+                        console.warn("SYNC: SAVE_COMMITTED_BUT_GENERATION_STALE", "Capture:", captureGen, "Current:", AppState.syncGeneration);
+                        return;
+                    }
+
                     this.cloudDocumentExists = true;
-                    if (window.AppState) window.AppState.cloudDocumentExists = true;
+                    if (window.AppState) {
+                        window.AppState.cloudDocumentExists = true;
+                        window.AppState.isLocalDirty = false;
+                    }
+                    console.log("SYNC: FIRESTORE_WRITE_SUCCESS for UID:", user.uid);
                     showSync('saved');
                 } catch (err) {
-                    console.error("Firestore cloud save error:", err);
+                    console.error("SYNC: FIRESTORE_WRITE_ERROR", err);
                     showSync('error');
                 }
             } else {
+                if (window.AppState) window.AppState.isLocalDirty = false;
                 showSync('saved');
             }
         } finally {
@@ -530,11 +634,12 @@ window.FirebaseService = {
     },
 
     initializeCloudWorkspace: async function() {
-        console.log("Explicitly initializing Cloud Workspace for user...");
+        console.log("SYNC: CLOUD_WORKSPACE_INITIALIZED - Explicit user creation requested.");
+        this.bumpSyncGeneration("initializeCloudWorkspace");
         this.cloudDocumentExists = true;
         if (window.AppState) window.AppState.cloudDocumentExists = true;
-        await this._executeSave(true);
-        console.log("Cloud Workspace initialized successfully.");
+        await this._executeSave(true, true);
+        console.log("SYNC: CLOUD_WORKSPACE_INITIALIZED - Save complete.");
     },
 
     resetLocalWorkspace: function(confirmReset = true) {
@@ -542,6 +647,13 @@ window.FirebaseService = {
             const ok = window.confirm("Are you sure you want to reset your local X-29 workspace?\nThis will clear locally cached app state without modifying Cloud Firestore.");
             if (!ok) return false;
         }
+        this.bumpSyncGeneration("resetLocalWorkspace");
+        if (this._saveDebounceTimer) {
+            clearTimeout(this._saveDebounceTimer);
+            this._saveDebounceTimer = null;
+            console.log("SYNC: SAVE_CANCELLED (resetLocalWorkspace)");
+        }
+
         const keysToRemove = [
             'local_app_state',
             'appState',
@@ -554,58 +666,84 @@ window.FirebaseService = {
 
         try {
             if (typeof sessionStorage !== 'undefined') {
-                sessionStorage.removeItem('local_app_state');
-                sessionStorage.removeItem('appState');
+                sessionStorage.clear();
             }
         } catch(e) {}
 
-        console.log("X-29 local application persistence reset successfully.");
-
         this.cloudDocumentExists = false;
-        if (window.AppState) window.AppState.cloudDocumentExists = false;
+        if (window.AppState) {
+            window.AppState.cloudDocumentExists = false;
+            window.AppState.isLocalDirty = false;
+        }
 
         if (typeof window.applyFullAppState === 'function' && typeof window.getDefaultAppState === 'function') {
             window.applyFullAppState(window.getDefaultAppState(), false, true);
         }
+        console.log("SYNC: RESET_COMPLETED - Local workspace reset to clean empty slate.");
         return true;
     },
 
     wipeCloudWorkspace: async function() {
+        this.bumpSyncGeneration("wipeCloudWorkspace");
+        if (this._saveDebounceTimer) {
+            clearTimeout(this._saveDebounceTimer);
+            this._saveDebounceTimer = null;
+            console.log("SYNC: SAVE_CANCELLED (wipeCloudWorkspace)");
+        }
+
         const user = this.getCurrentUser();
         if (AppState.db && user && user.uid && window.location.protocol !== 'file:') {
             try {
                 await AppState.db.collection('users').doc(user.uid).delete();
-                this.cloudDocumentExists = false;
-                if (window.AppState) window.AppState.cloudDocumentExists = false;
-                console.log("Firestore cloud workspace deleted.");
+                console.log("SYNC: CLOUD_DOCUMENT_DELETED for UID:", user.uid);
             } catch(e) {
                 console.warn("Failed to delete Firestore cloud document:", e);
             }
         }
+        this.cloudDocumentExists = false;
+        if (window.AppState) {
+            window.AppState.cloudDocumentExists = false;
+            window.AppState.isLocalDirty = false;
+        }
+
         safeStorage.removeItem('local_app_state');
         safeStorage.removeItem('appState');
-        console.log("Memory workspace wiped to clean slate.");
+
+        if (typeof window.applyFullAppState === 'function' && typeof window.getDefaultAppState === 'function') {
+            window.applyFullAppState(window.getDefaultAppState(), false, true);
+        }
+        console.log("SYNC: RESET_COMPLETED - Cloud workspace wiped to clean empty slate.");
     },
 
     saveTimerToCloud: async function() {
         this.saveToCloud(true);
     },
 
-    // 9. Load workspace from Cloud with real-time Firestore sync
+    // 9. Load workspace from Cloud with real-time Firestore sync (CRITICAL FIX #3 & #14)
     loadFromCloud: function() {
         const user = this.getCurrentUser();
+
+        this.bumpSyncGeneration("loadFromCloud");
+
+        if (this._saveDebounceTimer) {
+            clearTimeout(this._saveDebounceTimer);
+            this._saveDebounceTimer = null;
+        }
 
         if (this._unsubscribeSnapshot) {
             try { this._unsubscribeSnapshot(); } catch(e) {}
             this._unsubscribeSnapshot = null;
         }
 
-        // Synchronously hydrate cached state first for instant data display on refresh
+        // Display local cached state temporarily for instant startup UI
         const cachedStr = safeStorage.getItem('local_app_state') || safeStorage.getItem('appState');
         if (cachedStr) {
             try {
                 const cachedData = JSON.parse(cachedStr);
-                if (cachedData) window.applyFullAppState(cachedData, false);
+                if (cachedData) {
+                    window.applyFullAppState(cachedData, false);
+                    console.log("SYNC: LOCAL_CACHE_USED (Temporary initial rendering)");
+                }
             } catch (e) {
                 console.warn("Failed to parse cached local app state:", e);
             }
@@ -613,25 +751,33 @@ window.FirebaseService = {
 
         const handleDataLoad = (data, meta = { exists: true }) => {
             if (meta && meta.exists === false) {
-                if (this.cloudDocumentExists !== false) {
-                    console.log("Cloud document explicitly confirmed missing. Resetting local workspace to clean slate...");
-                    this.resetLocalWorkspace(false);
-                } else {
-                    const cachedStr = safeStorage.getItem('local_app_state') || safeStorage.getItem('appState');
-                    if (!cachedStr && typeof window.applyFullAppState === 'function' && typeof window.getDefaultAppState === 'function') {
-                        window.applyFullAppState(window.getDefaultAppState(), false, true);
-                    }
+                // CRITICAL FIX #2 & #3: Missing document in cloud.
+                console.log("SYNC: LOCAL_CACHE_DISCARDED - Cloud document does not exist. Initializing EMPTY local workspace.");
+                safeStorage.removeItem('local_app_state');
+                safeStorage.removeItem('appState');
+                this.cloudDocumentExists = false;
+                if (window.AppState) {
+                    window.AppState.cloudDocumentExists = false;
+                    window.AppState.isLocalDirty = false;
+                }
+                if (typeof window.applyFullAppState === 'function' && typeof window.getDefaultAppState === 'function') {
+                    window.applyFullAppState(window.getDefaultAppState(), false, true);
                 }
             } else if (data) {
                 this.cloudDocumentExists = true;
-                if (window.AppState) window.AppState.cloudDocumentExists = true;
+                if (window.AppState) {
+                    window.AppState.cloudDocumentExists = true;
+                    window.AppState.isLocalDirty = false;
+                }
                 window.applyFullAppState(data, false);
                 try {
                     const jsonStr = JSON.stringify(data);
                     safeStorage.setItem('local_app_state', jsonStr);
                     safeStorage.setItem('appState', jsonStr);
                 } catch (e) {}
+                console.log("SYNC: CLOUD_STATE_APPLIED");
             }
+
             AppState.hasLoadedFromCloud = true;
             if (typeof window.ensureConfigDefaults === 'function') window.ensureConfigDefaults();
             if (typeof window.migrateLegacyData === 'function') window.migrateLegacyData();
@@ -663,18 +809,18 @@ window.FirebaseService = {
             }, (err) => {
                 console.warn("Falling back to local storage due to Firestore listener error:", err);
                 const localData = safeStorage.getItem('local_app_state') || safeStorage.getItem('appState');
-                if (localData) {
-                    try { handleDataLoad(JSON.parse(localData), { exists: true, isErrorFallback: true }); } catch(e) { handleDataLoad(null, { exists: true, isErrorFallback: true }); }
+                if (localData && this.cloudDocumentExists !== false) {
+                    try { handleDataLoad(JSON.parse(localData), { exists: true, isErrorFallback: true }); } catch(e) { handleDataLoad(null, { exists: false }); }
                 } else {
-                    handleDataLoad(null, { exists: true, isErrorFallback: true });
+                    handleDataLoad(null, { exists: false });
                 }
             });
         } else {
             const localData = safeStorage.getItem('local_app_state') || safeStorage.getItem('appState');
-            if (localData) {
-                try { handleDataLoad(JSON.parse(localData), { exists: true, isErrorFallback: true }); } catch(e) { handleDataLoad(null, { exists: true, isErrorFallback: true }); }
+            if (localData && this.cloudDocumentExists !== false) {
+                try { handleDataLoad(JSON.parse(localData), { exists: true, isErrorFallback: true }); } catch(e) { handleDataLoad(null, { exists: false }); }
             } else {
-                handleDataLoad(null, { exists: true, isErrorFallback: true });
+                handleDataLoad(null, { exists: false });
             }
         }
     }

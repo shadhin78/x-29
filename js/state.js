@@ -124,7 +124,11 @@ window.AppState = {
     scheduleBlocks2: [],
     scheduleGroups: [],
     hasLoadedFromCloud: false,
-    cloudDocumentExists: null
+    cloudDocumentExists: null,
+    syncGeneration: 0,
+    lastAppliedCloudTimestamp: 0,
+    isLocalDirty: false,
+    syncSessionId: ""
 };
 
 // Define transparent properties on window to alias AppState keys
@@ -147,7 +151,8 @@ const stateKeys = [
     'fiscalLedger', 'examSessions', 'examRoutine', 'selectedCountdownExamId',
     'syllabusStructure', 'customSyllabus', 'customPrograms', 'programVisibility', 'weeklyTargetsDatabase',
     'dailyTargetsDatabase', 'scheduleBlocks', 'scheduleBlocks2', 'scheduleGroups',
-    'hasLoadedFromCloud', 'cloudDocumentExists'
+    'hasLoadedFromCloud', 'cloudDocumentExists',
+    'syncGeneration', 'lastAppliedCloudTimestamp', 'isLocalDirty', 'syncSessionId'
 ];
 
 stateKeys.forEach(key => {
@@ -174,6 +179,19 @@ window.shouldHydrateField = function(key, cloudValue, currentLocalValue, isExpli
 window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = false) {
     if (!data || typeof data !== 'object') return false;
     delete data._metadata;
+
+    if (data.updatedAt) {
+        let t = 0;
+        if (typeof data.updatedAt === 'number') {
+            t = data.updatedAt;
+        } else if (typeof data.updatedAt.toMillis === 'function') {
+            t = data.updatedAt.toMillis();
+        } else if (typeof data.updatedAt.seconds === 'number') {
+            t = data.updatedAt.seconds * 1000;
+        }
+        if (t > 0) AppState.lastAppliedCloudTimestamp = t;
+    }
+    AppState.isLocalDirty = false;
 
     let rejectedAnyField = false;
 
