@@ -350,7 +350,7 @@ window.FirebaseService = {
                     console.log("Real-time cloud snapshot received from Firestore for UID:", activeUid);
                     showSync('saved');
                     if (typeof onData === 'function') {
-                        onData(cloudData);
+                        onData(cloudData, { exists: true });
                     }
                 } else {
                     // IMPORTANT SAFETY FIX:
@@ -361,7 +361,7 @@ window.FirebaseService = {
                     if (window.AppState) window.AppState.cloudDocumentExists = false;
                     showSync('saved');
                     if (typeof onData === 'function') {
-                        onData(null);
+                        onData(null, { exists: false });
                     }
                 }
             }, (error) => {
@@ -511,6 +511,14 @@ window.FirebaseService = {
             'cached_selectedCountdownExamId'
         ];
         keysToRemove.forEach(k => safeStorage.removeItem(k));
+
+        try {
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.removeItem('local_app_state');
+                sessionStorage.removeItem('appState');
+            }
+        } catch(e) {}
+
         console.log("X-29 local application persistence reset successfully.");
 
         this.cloudDocumentExists = false;
@@ -563,8 +571,11 @@ window.FirebaseService = {
             }
         }
 
-        const handleDataLoad = (data) => {
-            if (data) {
+        const handleDataLoad = (data, meta = { exists: true }) => {
+            if (meta && meta.exists === false) {
+                console.log("Cloud document explicitly confirmed missing. Resetting local workspace to clean slate...");
+                this.resetLocalWorkspace(false);
+            } else if (data) {
                 const isFullyApplied = window.applyFullAppState(data, false);
                 try {
                     // If all fields were cleanly applied, persist cloud data.
@@ -604,23 +615,23 @@ window.FirebaseService = {
         };
 
         if (AppState.db && user && user.uid && window.location.protocol !== 'file:') {
-            this._unsubscribeSnapshot = this.startSnapshotListener(user.uid, (cloudData) => {
-                handleDataLoad(cloudData);
+            this._unsubscribeSnapshot = this.startSnapshotListener(user.uid, (cloudData, meta) => {
+                handleDataLoad(cloudData, meta);
             }, (err) => {
                 console.warn("Falling back to local storage due to Firestore listener error:", err);
                 const localData = safeStorage.getItem('local_app_state') || safeStorage.getItem('appState');
                 if (localData) {
-                    try { handleDataLoad(JSON.parse(localData)); } catch(e) { handleDataLoad(null); }
+                    try { handleDataLoad(JSON.parse(localData), { exists: true, isErrorFallback: true }); } catch(e) { handleDataLoad(null, { exists: true, isErrorFallback: true }); }
                 } else {
-                    handleDataLoad(null);
+                    handleDataLoad(null, { exists: true, isErrorFallback: true });
                 }
             });
         } else {
             const localData = safeStorage.getItem('local_app_state') || safeStorage.getItem('appState');
             if (localData) {
-                try { handleDataLoad(JSON.parse(localData)); } catch(e) { handleDataLoad(null); }
+                try { handleDataLoad(JSON.parse(localData), { exists: true, isErrorFallback: true }); } catch(e) { handleDataLoad(null, { exists: true, isErrorFallback: true }); }
             } else {
-                handleDataLoad(null);
+                handleDataLoad(null, { exists: true, isErrorFallback: true });
             }
         }
     }

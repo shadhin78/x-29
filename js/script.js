@@ -13051,6 +13051,8 @@ window.resetToCleanSlate = function (confirmFirst = true) {
 
         if (typeof safeStorage !== 'undefined') {
             try {
+                safeStorage.removeItem('local_app_state');
+                safeStorage.removeItem('appState');
                 safeStorage.removeItem('cached_fullAppState');
                 safeStorage.removeItem('cached_examSessions');
                 safeStorage.removeItem('cached_examRoutine');
@@ -13058,15 +13060,15 @@ window.resetToCleanSlate = function (confirmFirst = true) {
             } catch (e) { }
         }
         try {
-            localStorage.clear();
-        } catch (e) { }
-        try {
-            sessionStorage.clear();
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.removeItem('local_app_state');
+                sessionStorage.removeItem('appState');
+            }
         } catch (e) { }
 
         if (typeof recalculateTotals === 'function') recalculateTotals();
 
-        if (window.FirebaseService) {
+        if (window.FirebaseService && window.FirebaseService.cloudDocumentExists !== false) {
             if (typeof window.FirebaseService.wipeCloudWorkspace === 'function') {
                 window.FirebaseService.wipeCloudWorkspace();
             } else if (typeof window.FirebaseService.saveToCloud === 'function') {

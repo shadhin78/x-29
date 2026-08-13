@@ -364,3 +364,62 @@ window.getServerTime = function() {
     return Date.now() + (window.serverTimeOffset || 0);
 };
 
+/**
+ * Returns a clean initial AppState payload representing a fresh, empty workspace.
+ */
+window.getDefaultAppState = function() {
+    return {
+        tasks: [],
+        tracks: [],
+        customSyllabus: {},
+        syllabusStructure: {},
+        customPrograms: {},
+        customActions: [],
+        paceGoals: [],
+        passedItems: { programs: [], subjects: [] },
+        revisionData: { active: [], progress: {} },
+        programVisibility: {},
+        subjectTimeLinks: {},
+        successResults: [],
+        timerLogs: [],
+        dailyFocusHoursTarget: 0,
+        dailyFocusHoursTargetDate: "",
+        dailyFocusHoursTargetHistory: [],
+        timerAnalyticsRange: 180,
+        timerAnalyticsGrouping: 'daily',
+        timerAnalyticsChartStyle: 'combo',
+        spectraHeatmapRange: 365,
+        sessionHistoryFilter: 'all',
+        subjectFocusTargets: {},
+        dashboardConfig: {
+            topTag: "X-29",
+            mainTitle: "X-29 Dashboard",
+            subTitle: "",
+            trendStartDate: new Date().toISOString().split('T')[0],
+            trendEndDate: "",
+            showDaysRemaining: false,
+            independentPaces: { tracks: {}, programs: {}, subjects: {} }
+        },
+        weeklyTargetsDatabase: {},
+        dailyTargetsDatabase: {},
+        scheduleBlocks: [],
+        scheduleBlocks2: [],
+        scheduleGroups: [],
+        fiscalLedger: { transactions: [], budgets: [], vaults: [] },
+        examSessions: [],
+        examRoutine: [],
+        selectedCountdownExamId: 'auto',
+        activeTimerState: {
+            isRunning: false,
+            mode: 'stopwatch',
+            startTime: null,
+            elapsedBeforeStart: 0,
+            targetDuration: 0,
+            selectedSubject: 'General Study'
+        },
+        activeRoutineSet: 1,
+        subjectColors: {}
+    };
+};
+
+
