@@ -258,7 +258,8 @@ window.FirebaseService = {
         if (!AppState.syncGeneration) AppState.syncGeneration = 0;
         AppState.syncGeneration++;
         AppState.syncSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        console.log(`SYNC: SYNC_GENERATION_BUMPED (${reason}) -> New Gen: ${AppState.syncGeneration}, SessionID: ${AppState.syncSessionId}`);
+        console.log(`SYNC_DEBUG GENERATION_CHANGED: (${reason}) -> New Gen: ${AppState.syncGeneration}`);
+        console.log(`SYNC_DEBUG SESSION_CHANGED: (${reason}) -> New SessionID: ${AppState.syncSessionId}`);
         return AppState.syncGeneration;
     },
 
@@ -390,13 +391,13 @@ window.FirebaseService = {
         if (this._unsubscribeSnapshot) {
             const user = this.getCurrentUser();
             const uid = user ? user.uid : 'unknown';
-            console.log(`SYNC: LISTENER_STOP - UID: ${uid}, Reason: ${reason}, Timestamp: ${Date.now()}`);
+            console.log(`SYNC_DEBUG LISTENER_STOP: UID=${uid}, Reason=${reason}, Timestamp=${Date.now()}`);
             try { this._unsubscribeSnapshot(); } catch(e) {}
             this._unsubscribeSnapshot = null;
         }
     },
 
-    // 7. Register Firestore Real-time Snapshot Listener (BUG #1 & BUG #3 FIX)
+    // 7. Register Firestore Real-time Snapshot Listener
     startSnapshotListener: function(uid, onData, onError) {
         this.stopSnapshotListener("startNewListener");
 
@@ -408,37 +409,53 @@ window.FirebaseService = {
         }
 
         if (!AppState.db || !activeUid || window.location.protocol === 'file:') {
-            console.warn(`SYNC: LISTENER_START_ABORTED - DB null, unauthenticated user, or file:// protocol. UID: ${activeUid}`);
+            console.warn(`SYNC_DEBUG SNAPSHOT_REJECTED: reason=DB_NULL_OR_UNAUTH UID=${activeUid}`);
             return function unsubscribe() {};
         }
 
         const captureGen = AppState.syncGeneration || 0;
         const captureSessionId = AppState.syncSessionId || "";
+        console.log(`SYNC: FIREBASE_PROJECT: ${firebaseConfig.projectId}`);
+        console.log(`SYNC: AUTH_UID: ${activeUid}`);
+        console.log(`SYNC: FIRESTORE_CONNECTED: true`);
+        console.log(`SYNC_DEBUG FIRESTORE_PATH: users/${activeUid}`);
+        console.log(`SYNC_DEBUG LISTENER_START: UID=${activeUid}`);
         console.log(`SYNC: LISTENER_START - UID: ${activeUid}, Generation: ${captureGen}, SessionID: ${captureSessionId}, Timestamp: ${Date.now()}`);
+        console.log(`SYNC_DEBUG LISTENER_UID: ${activeUid}`);
+        console.log(`SYNC_DEBUG LISTENER_GENERATION: ${captureGen}`);
         console.log(`SYNC: LISTENER_GENERATION - Active Generation: ${captureGen}, Current AppState Gen: ${AppState.syncGeneration}, Timestamp: ${Date.now()}`);
+        console.log(`SYNC_DEBUG LISTENER_SESSION: ${captureSessionId}`);
 
         try {
             const userDocRef = AppState.db.collection('users').doc(activeUid);
 
             const unsubscribe = userDocRef.onSnapshot((docSnapshot) => {
-                console.log(`SYNC: SNAPSHOT_RECEIVED - UID: ${activeUid}, Gen: ${captureGen}, Timestamp: ${Date.now()}`);
+                console.log(`SYNC_DEBUG SNAPSHOT_RECEIVED: UID=${activeUid}, Gen=${captureGen}, Timestamp=${Date.now()}`);
 
-                if (captureGen !== (AppState.syncGeneration || 0) || (captureSessionId && captureSessionId !== AppState.syncSessionId)) {
-                    console.warn(`SYNC: SNAPSHOT_IGNORED_STALE_GENERATION - UID: ${activeUid}, CapturedGen: ${captureGen}, CurrentGen: ${AppState.syncGeneration}, Timestamp: ${Date.now()}`);
+                if (captureGen !== (AppState.syncGeneration || 0)) {
+                    console.warn(`SYNC_DEBUG SNAPSHOT_REJECTED: reason=STALE_GENERATION (Captured: ${captureGen}, Current: ${AppState.syncGeneration})`);
                     return;
                 }
 
-                // PENDING WRITE RULE:
-                // Distinguish local pending echo of THIS CLIENT'S in-flight write vs actual remote change.
-                if (docSnapshot.metadata && docSnapshot.metadata.hasPendingWrites) {
-                    console.log(`SYNC: SNAPSHOT_PENDING_WRITE_ECHO - Local write in flight for UID: ${activeUid}. Retaining local edit state.`);
+                if (captureSessionId && captureSessionId !== AppState.syncSessionId) {
+                    console.warn(`SYNC_DEBUG SNAPSHOT_REJECTED: reason=SESSION_MISMATCH (Captured: ${captureSessionId}, Current: ${AppState.syncSessionId})`);
+                    return;
+                }
+
+                const hasPending = docSnapshot.metadata && docSnapshot.metadata.hasPendingWrites;
+                const fromCache = docSnapshot.metadata && docSnapshot.metadata.fromCache;
+                console.log(`SYNC_DEBUG SNAPSHOT_PENDING_WRITES: ${hasPending}`);
+                console.log(`SYNC_DEBUG SNAPSHOT_FROM_CACHE: ${fromCache}`);
+
+                if (hasPending) {
+                    console.log(`SYNC_DEBUG SNAPSHOT_REJECTED: reason=PENDING_WRITE (Local echo write in flight)`);
                     this.cloudDocumentExists = true;
                     if (window.AppState) window.AppState.cloudDocumentExists = true;
                     return;
                 }
 
                 if (docSnapshot.exists) {
-                    console.log(`SYNC: SNAPSHOT_APPLIED - UID: ${activeUid}, Gen: ${captureGen}, Timestamp: ${Date.now()}`);
+                    console.log(`SYNC_DEBUG SNAPSHOT_EXISTS: true`);
                     this.cloudDocumentExists = true;
                     if (window.AppState) window.AppState.cloudDocumentExists = true;
 
@@ -453,35 +470,52 @@ window.FirebaseService = {
                             cloudTime = cloudData.updatedAt.seconds * 1000;
                         }
                     }
+                    console.log(`SYNC_DEBUG SNAPSHOT_UPDATED_AT: ${cloudTime}`);
 
-                    // 3-Way Array Reconciliation on Incoming Cloud Snapshot
-                    if (cloudData && typeof cloudData === 'object') {
+                    const incomingTaskIds = Array.isArray(cloudData.tasks) ? cloudData.tasks.map(t => window.generateItemId(t, 'tasks')) : [];
+                    console.log(`SYNC_DEBUG INCOMING_TASK_IDS: ${JSON.stringify(incomingTaskIds)}`);
+                    console.log(`SYNC_DEBUG SNAPSHOT_ARRAY_LENGTHS: ${JSON.stringify({
+                        tasks: (cloudData.tasks || []).length,
+                        tracks: (cloudData.tracks || []).length,
+                        customActions: (cloudData.customActions || []).length,
+                        paceGoals: (cloudData.paceGoals || []).length,
+                        timerLogs: (cloudData.timerLogs || []).length,
+                        scheduleBlocks: (cloudData.scheduleBlocks || []).length,
+                        examSessions: (cloudData.examSessions || []).length
+                    })}`);
+
+                    if (AppState.isLocalDirty) {
+                        const lastApplied = AppState.lastAppliedCloudTimestamp || 0;
+                        if (cloudTime > 0 && lastApplied > 0 && cloudTime <= lastApplied && AppState.hasLoadedFromCloud) {
+                            console.warn(`SYNC_DEBUG SNAPSHOT_REJECTED: reason=OLD_TIMESTAMP (cloudTime: ${cloudTime} <= lastApplied: ${lastApplied})`);
+                            showSync('saved');
+                            return;
+                        }
+
+                        console.log(`SYNC_DEBUG RECONCILE_START: Merging local dirty state with incoming cloud snapshot`);
+                        console.warn(`SYNC: CONFLICT_DETECTED - Remote cloud snapshot timestamp (${cloudTime}) > last applied (${AppState.lastAppliedCloudTimestamp || 0}) while local client state is dirty.`);
                         const tombstones = Object.assign({}, AppState._tombstones || {}, cloudData._tombstones || {});
                         AppState._tombstones = tombstones;
 
                         ['tasks', 'tracks', 'customActions', 'paceGoals', 'timerLogs', 'scheduleBlocks', 'scheduleBlocks2', 'scheduleGroups', 'examSessions', 'examRoutine'].forEach(key => {
+                            const localCount = (AppState[key] || []).length;
+                            const cloudCount = (cloudData[key] || []).length;
                             if (Array.isArray(cloudData[key]) || Array.isArray(AppState[key])) {
                                 cloudData[key] = window.reconcileArrays(AppState[key] || [], cloudData[key] || [], tombstones, key);
                             }
+                            const resultCount = (cloudData[key] || []).length;
+                            console.log(`SYNC_DEBUG RECONCILE_RESULT (${key}): Local=${localCount}, Cloud=${cloudCount}, Result=${resultCount}`);
                         });
-                    }
 
-                    if (AppState.isLocalDirty) {
-                        const lastApplied = AppState.lastAppliedCloudTimestamp || 0;
-                        if (cloudTime > lastApplied) {
-                            console.warn(`SYNC: CONFLICT_DETECTED - Remote cloud snapshot timestamp (${cloudTime}) > last applied (${lastApplied}) while local client state is dirty. Merging state via 3-way reconciliation.`);
-                            if (this._saveDebounceTimer) {
-                                clearTimeout(this._saveDebounceTimer);
-                                this._saveDebounceTimer = null;
-                                console.log("SYNC: SAVE_CANCELLED (Reconciled with newer cloud snapshot)");
-                            }
-                            showSync('saved');
-                            if (typeof onData === 'function') {
-                                onData(cloudData, { exists: true, reconciled: true });
-                            }
-                        } else {
-                            console.log("SYNC: LOCAL_DIRTY_PRESERVED - Local edit is newer than incoming cloud timestamp. Preserving local edit for save.");
-                            showSync('saved');
+                        if (this._saveDebounceTimer) {
+                            clearTimeout(this._saveDebounceTimer);
+                            this._saveDebounceTimer = null;
+                            console.log("SYNC: SAVE_CANCELLED (Reconciled with newer cloud snapshot)");
+                        }
+                        console.log(`SYNC_DEBUG SNAPSHOT_APPLYING: Reconciled dirty state`);
+                        showSync('saved');
+                        if (typeof onData === 'function') {
+                            onData(cloudData, { exists: true, reconciled: true });
                         }
                     } else {
                         if (this._saveDebounceTimer) {
@@ -489,13 +523,15 @@ window.FirebaseService = {
                             this._saveDebounceTimer = null;
                             console.log("SYNC: SAVE_CANCELLED (Clean state snapshot applied)");
                         }
+                        console.log(`SYNC_DEBUG SNAPSHOT_APPLYING: Clean state raw payload`);
                         showSync('saved');
                         if (typeof onData === 'function') {
                             onData(cloudData, { exists: true });
                         }
                     }
+                    console.log(`SYNC_DEBUG SNAPSHOT_APPLIED: UID=${activeUid}`);
                 } else {
-                    console.warn(`SYNC: CLOUD_DOCUMENT_MISSING - Document does not exist in cloud for UID: ${activeUid}`);
+                    console.warn(`SYNC_DEBUG SNAPSHOT_REJECTED: reason=CLOUD_DOCUMENT_MISSING UID=${activeUid}`);
                     if (this._saveDebounceTimer) {
                         clearTimeout(this._saveDebounceTimer);
                         this._saveDebounceTimer = null;
@@ -508,7 +544,7 @@ window.FirebaseService = {
                     }
                 }
             }, (error) => {
-                console.error(`SYNC: SNAPSHOT_ERROR - UID: ${activeUid}`, error);
+                console.error(`SYNC_DEBUG SNAPSHOT_REJECTED: reason=FIRESTORE_ERROR UID=${activeUid}`, error);
                 showSync('error');
                 if (typeof onError === 'function') {
                     onError(error);
@@ -516,29 +552,57 @@ window.FirebaseService = {
             });
 
             this._unsubscribeSnapshot = unsubscribe;
+            console.log(`SYNC_DEBUG ACTIVE_LISTENER=true`);
             return unsubscribe;
         } catch (e) {
-            console.error("Failed to register snapshot listener:", e);
+            console.error("SYNC_DEBUG SNAPSHOT_REJECTED: reason=REGISTRATION_EXCEPTION", e);
             return function unsubscribe() {};
         }
     },
 
-    // 8. Save AppState to Cloud & Local Storage (BUG #2 & BUG #3 FIX)
+    _syncDiagnostic: async function() {
+        const user = this.getCurrentUser();
+        if (!user || !user.uid || !AppState.db) {
+            console.warn("SYNC_DEBUG DIAGNOSTIC_ABORTED: No authenticated user or DB instance");
+            return null;
+        }
+        const diagnosticPayload = {
+            _syncDiagnostic: {
+                id: `ping_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                message: "SYNC_TEST",
+                timestamp: Date.now()
+            }
+        };
+        console.log(`SYNC_DEBUG DIAGNOSTIC_WRITE_START: UID=${user.uid}`);
+        await AppState.db.collection('users').doc(user.uid).set(diagnosticPayload, { merge: true });
+        console.log(`SYNC_DEBUG DIAGNOSTIC_WRITE_SUCCESS: UID=${user.uid}`);
+        return diagnosticPayload._syncDiagnostic;
+    },
+
+    // 8. Save AppState to Cloud & Local Storage
     saveToCloud: async function(immediate = false, isExplicitInitialization = false, isUserInitiated = false) {
         AppState.isLocalDirty = true;
         this._lastLocalEditTime = Date.now();
 
-        // BUG #2 FIX: Never pretend "saved" when save is blocked due to missing cloud document
+        const user = this.getCurrentUser();
+        const gen = AppState.syncGeneration || 0;
+
+        // Missing Document Protection: If no authenticated user exists, block save.
+        // If authenticated user exists and document does not exist yet in cloud, auto-initialize on first write.
         if (this.cloudDocumentExists === false && !isExplicitInitialization) {
-            if (this._saveDebounceTimer) {
-                clearTimeout(this._saveDebounceTimer);
-                this._saveDebounceTimer = null;
+            if (!user || !user.uid) {
+                if (this._saveDebounceTimer) {
+                    clearTimeout(this._saveDebounceTimer);
+                    this._saveDebounceTimer = null;
+                }
+                console.warn(`SYNC: SAVE_BLOCKED_NO_CLOUD_DOCUMENT - UID: none, SaveGen: ${gen}, Timestamp: ${Date.now()}`);
+                console.warn("SYNC: WRITE_BLOCKED", { reason: "NO_AUTH_USER", uid: null });
+                showSync('uninitialized');
+                return;
+            } else {
+                console.log(`SYNC: FIRST_WRITE_AUTO_INIT - Document users/${user.uid} will be created on save.`);
+                isExplicitInitialization = true;
             }
-            const user = this.getCurrentUser();
-            const gen = AppState.syncGeneration || 0;
-            console.warn(`SYNC: SAVE_BLOCKED_NO_CLOUD_DOCUMENT - UID: ${user ? user.uid : 'none'}, SaveGen: ${gen}, Timestamp: ${Date.now()}`);
-            showSync('uninitialized');
-            return;
         }
 
         if (this._saveDebounceTimer) {
@@ -563,10 +627,13 @@ window.FirebaseService = {
 
     _executeSave: async function(isExplicitInitialization = false, isUserInitiated = false, captureGen = null) {
         if (captureGen === null) captureGen = AppState.syncGeneration || 0;
+        const captureSessionId = AppState.syncSessionId || "";
+
+        console.log(`SYNC_DEBUG SAVE_START: Gen=${captureGen}, Session=${captureSessionId}`);
 
         // GUARD 1: Verify sync generation
         if (captureGen !== (AppState.syncGeneration || 0)) {
-            console.warn(`SYNC: SAVE_ABORTED_STALE_GENERATION - Capture: ${captureGen}, Current: ${AppState.syncGeneration}`);
+            console.warn(`SYNC_DEBUG SAVE_ABORTED: reason=STALE_GENERATION (Capture: ${captureGen}, Current: ${AppState.syncGeneration})`);
             showSync('saved');
             return;
         }
@@ -574,36 +641,36 @@ window.FirebaseService = {
         // GUARD 2: Verify authenticated user
         const user = this.getCurrentUser();
         if (!user || !user.uid) {
-            console.warn("SYNC: SAVE_ABORTED_NO_AUTH - No active authenticated user UID.");
+            console.warn("SYNC_DEBUG SAVE_ABORTED: reason=NO_AUTH_UID");
+            console.warn("SYNC: WRITE_BLOCKED", { reason: "NO_AUTH_UID", uid: null });
             showSync('saved');
             return;
         }
 
-        // GUARD 3: Missing Document Protection (BUG #2 FIX)
-        if (this.cloudDocumentExists === false && !isExplicitInitialization) {
-            console.warn(`SYNC: SAVE_BLOCKED_NO_CLOUD_DOCUMENT - UID: ${user.uid}, SaveGen: ${captureGen}, Timestamp: ${Date.now()}`);
-            showSync('uninitialized');
-            return;
-        }
+        console.log("SYNC: AUTH_READY", { uid: user.uid, email: user.email || 'ris2k29@gmail.com' });
+        console.log(`SYNC_DEBUG SAVE_UID: ${user.uid}`);
+        console.log(`SYNC_DEBUG SAVE_GENERATION: ${captureGen}`);
+        console.log(`SYNC_DEBUG SAVE_SESSION: ${captureSessionId}`);
+        console.log(`SYNC_DEBUG FIRESTORE_PATH: users/${user.uid}`);
 
         this._isSaving = true;
         try {
             const tombstones = AppState._tombstones || {};
 
             const payload = {
-                tasks: window.reconcileArrays(AppState.tasks || [], window.appState?.tasks || [], tombstones, 'tasks'),
-                tracks: window.reconcileArrays(window.tracks || [], window.appState?.tracks || [], tombstones, 'tracks'),
+                tasks: AppState.tasks || [],
+                tracks: window.tracks || [],
                 customSyllabus: AppState.syllabusStructure || window.syllabusStructure || {},
                 syllabusStructure: AppState.syllabusStructure || window.syllabusStructure || {},
                 customPrograms: window.customPrograms || {},
-                customActions: window.reconcileArrays(window.customActions || [], window.appState?.customActions || [], tombstones, 'customActions'),
-                paceGoals: window.reconcileArrays(window.paceGoals || [], window.appState?.paceGoals || [], tombstones, 'paceGoals'),
+                customActions: window.customActions || [],
+                paceGoals: window.paceGoals || [],
                 passedItems: window.passedItems || { programs: [], subjects: [] },
                 revisionData: window.revisionData || { active: [], progress: {} },
                 programVisibility: window.programVisibility || {},
                 subjectTimeLinks: window.subjectTimeLinks || {},
                 successResults: window.successResults || [],
-                timerLogs: window.reconcileArrays(window.timerLogs || [], window.appState?.timerLogs || [], tombstones, 'timerLogs'),
+                timerLogs: window.timerLogs || [],
                 dailyFocusHoursTarget: window.dailyFocusHoursTarget !== undefined ? window.dailyFocusHoursTarget : 0,
                 dailyFocusHoursTargetDate: window.dailyFocusHoursTargetDate || "",
                 dailyFocusHoursTargetHistory: window.dailyFocusHoursTargetHistory || [],
@@ -616,18 +683,23 @@ window.FirebaseService = {
                 dashboardConfig: window.dashboardConfig || {},
                 weeklyTargetsDatabase: window.weeklyTargetsDatabase || {},
                 dailyTargetsDatabase: window.dailyTargetsDatabase || {},
-                scheduleBlocks: window.reconcileArrays(window.scheduleBlocks || [], window.appState?.scheduleBlocks || [], tombstones, 'scheduleBlocks'),
-                scheduleBlocks2: window.reconcileArrays(window.scheduleBlocks2 || [], window.appState?.scheduleBlocks2 || [], tombstones, 'scheduleBlocks2'),
-                scheduleGroups: window.reconcileArrays(window.scheduleGroups || [], window.appState?.scheduleGroups || [], tombstones, 'scheduleGroups'),
+                scheduleBlocks: window.scheduleBlocks || [],
+                scheduleBlocks2: window.scheduleBlocks2 || [],
+                scheduleGroups: window.scheduleGroups || [],
                 fiscalLedger: AppState.fiscalLedger || { transactions: [], budgets: [], vaults: [] },
-                examSessions: window.reconcileArrays(AppState.examSessions || [], window.appState?.examSessions || [], tombstones, 'examSessions'),
-                examRoutine: window.reconcileArrays(AppState.examRoutine || [], window.appState?.examRoutine || [], tombstones, 'examRoutine'),
+                examSessions: AppState.examSessions || [],
+                examRoutine: AppState.examRoutine || [],
                 selectedCountdownExamId: AppState.selectedCountdownExamId || 'auto',
                 activeTimerState: AppState.activeTimerState || {},
                 activeRoutineSet: AppState.activeRoutineSet || 1,
                 subjectColors: AppState.subjectColors || {},
                 _tombstones: tombstones
             };
+
+            const outgoingTaskIds = (payload.tasks || []).map(t => window.generateItemId(t, 'tasks'));
+            console.log(`SYNC_DEBUG SAVE_PAYLOAD: Gen=${captureGen}`);
+            console.log(`SYNC_DEBUG SAVE_TASK_COUNT: ${(payload.tasks || []).length}`);
+            console.log(`SYNC_DEBUG OUTGOING_TASK_IDS: ${JSON.stringify(outgoingTaskIds)}`);
 
             // Cache state locally for offline fallback
             window.appState = payload;
@@ -651,20 +723,26 @@ window.FirebaseService = {
                         tasks: (cleanPayload.tasks || []).length,
                         tracks: (cleanPayload.tracks || []).length,
                         customActions: (cleanPayload.customActions || []).length,
-                        paceGoals: (cleanPayload.paceGoals || []).length,
-                        timerLogs: (cleanPayload.timerLogs || []).length,
-                        scheduleBlocks: (cleanPayload.scheduleBlocks || []).length,
-                        scheduleBlocks2: (cleanPayload.scheduleBlocks2 || []).length,
-                        examSessions: (cleanPayload.examSessions || []).length,
-                        examRoutine: (cleanPayload.examRoutine || []).length
+                        paceGoals: (cleanPayload.paceGoals || []).length
                     };
-                    console.log(`SYNC: EXECUTE_SAVE - UID: ${user.uid}, SaveGen: ${captureGen}, LocalDirty: ${AppState.isLocalDirty}, ArrayLengths: ${JSON.stringify(arrayLengths)}, Reason: ${isExplicitInitialization ? 'ExplicitInit' : (isUserInitiated ? 'UserAction' : 'AutoSave')}, Timestamp: ${Date.now()}`);
+                    console.log(`SYNC: EXECUTE_SAVE - UID: ${user.uid}, SaveGen: ${captureGen}, ArrayLengths: ${JSON.stringify(arrayLengths)}`);
+                    console.log("SYNC: WRITE_ATTEMPT", {
+                        uid: user.uid,
+                        generation: captureGen,
+                        sessionId: captureSessionId,
+                        cloudDocumentExists: this.cloudDocumentExists,
+                        isLocalDirty: AppState.isLocalDirty,
+                        documentPath: `users/${user.uid}`,
+                        payloadKeys: Object.keys(cleanPayload)
+                    });
+                    console.log(`SYNC_DEBUG SAVE_UPDATED_AT: ${cleanPayload.updatedAt}`);
+                    console.log(`SYNC_DEBUG FIRESTORE_WRITE_START: UID=${user.uid}`);
 
                     await AppState.db.collection('users').doc(user.uid).set(cleanPayload, { merge: true });
 
                     // Re-verify generation after async write
                     if (captureGen !== (AppState.syncGeneration || 0)) {
-                        console.warn(`SYNC: SAVE_COMMITTED_BUT_GENERATION_STALE - Capture: ${captureGen}, Current: ${AppState.syncGeneration}`);
+                        console.warn(`SYNC_DEBUG SAVE_COMMITTED_BUT_GENERATION_STALE: Capture=${captureGen}, Current=${AppState.syncGeneration}`);
                         return;
                     }
 
@@ -673,10 +751,20 @@ window.FirebaseService = {
                         window.AppState.cloudDocumentExists = true;
                         window.AppState.isLocalDirty = false;
                     }
-                    console.log(`SYNC: FIRESTORE_WRITE_SUCCESS - UID: ${user.uid}, Timestamp: ${Date.now()}`);
+                    console.log("SYNC: WRITE_SUCCESS", {
+                        uid: user.uid,
+                        documentPath: `users/${user.uid}`,
+                        timestamp: Date.now()
+                    });
+                    console.log(`SYNC_DEBUG FIRESTORE_WRITE_SUCCESS: UID=${user.uid}, Timestamp=${Date.now()}`);
                     showSync('saved');
                 } catch (err) {
-                    console.error("SYNC: FIRESTORE_WRITE_ERROR", err);
+                    console.error("SYNC: WRITE_FAILED", {
+                        uid: user.uid,
+                        documentPath: `users/${user.uid}`,
+                        error: err
+                    });
+                    console.error(`SYNC_DEBUG FIRESTORE_WRITE_FAILED: UID=${user.uid}`, err);
                     showSync('error');
                 }
             } else {
