@@ -165,25 +165,9 @@ stateKeys.forEach(key => {
 
 /**
  * Safe Hydration Guard
- * Prevents accidental empty Firestore payloads from overwriting non-empty local state.
+ * Ensures authoritative Firestore cloud payloads (including empty arrays and objects representing deletions) are applied cleanly to AppState.
  */
 window.shouldHydrateField = function(key, cloudValue, currentLocalValue, isExplicitWipe = false) {
-    if (isExplicitWipe) return true; // User explicitly initiated a wipe/reset action
-
-    const isCloudEmpty = Array.isArray(cloudValue)
-        ? cloudValue.length === 0
-        : (cloudValue !== null && typeof cloudValue === 'object' && Object.keys(cloudValue).length === 0);
-
-    const isLocalNonEmpty = Array.isArray(currentLocalValue)
-        ? currentLocalValue.length > 0
-        : (currentLocalValue !== null && typeof currentLocalValue === 'object' && Object.keys(currentLocalValue).length > 0);
-
-    if (isCloudEmpty && isLocalNonEmpty) {
-        const count = Array.isArray(currentLocalValue) ? currentLocalValue.length : Object.keys(currentLocalValue).length;
-        console.warn(`⚠️ Safe Hydration Guard: Ignored empty Firestore data for field '${key}' because local state contains ${count} item(s). Local data preserved.`);
-        return false;
-    }
-
     return true;
 };
 

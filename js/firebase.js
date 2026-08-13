@@ -625,17 +625,11 @@ window.FirebaseService = {
             } else if (data) {
                 this.cloudDocumentExists = true;
                 if (window.AppState) window.AppState.cloudDocumentExists = true;
-                const isFullyApplied = window.applyFullAppState(data, false);
+                window.applyFullAppState(data, false);
                 try {
-                    // If all fields were cleanly applied, persist cloud data.
-                    // If any suspicious empty field was rejected by Safe Hydration Guard, do NOT overwrite cache with raw empty cloud data.
-                    if (isFullyApplied) {
-                        const jsonStr = JSON.stringify(data);
-                        safeStorage.setItem('local_app_state', jsonStr);
-                        safeStorage.setItem('appState', jsonStr);
-                    } else {
-                        console.warn("⚠️ Safe Hydration Guard: Preserved local storage cache against suspicious empty Firestore overwrite.");
-                    }
+                    const jsonStr = JSON.stringify(data);
+                    safeStorage.setItem('local_app_state', jsonStr);
+                    safeStorage.setItem('appState', jsonStr);
                 } catch (e) {}
             }
             AppState.hasLoadedFromCloud = true;
