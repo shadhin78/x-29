@@ -502,11 +502,17 @@ window.FirebaseService = {
 
         const handleDataLoad = (data) => {
             if (data) {
-                window.applyFullAppState(data, false);
+                const isFullyApplied = window.applyFullAppState(data, false);
                 try {
-                    const jsonStr = JSON.stringify(data);
-                    safeStorage.setItem('local_app_state', jsonStr);
-                    safeStorage.setItem('appState', jsonStr);
+                    // If all fields were cleanly applied, persist cloud data.
+                    // If any suspicious empty field was rejected by Safe Hydration Guard, do NOT overwrite cache with raw empty cloud data.
+                    if (isFullyApplied) {
+                        const jsonStr = JSON.stringify(data);
+                        safeStorage.setItem('local_app_state', jsonStr);
+                        safeStorage.setItem('appState', jsonStr);
+                    } else {
+                        console.warn("⚠️ Safe Hydration Guard: Preserved local storage cache against suspicious empty Firestore overwrite.");
+                    }
                 } catch (e) {}
             }
             AppState.hasLoadedFromCloud = true;

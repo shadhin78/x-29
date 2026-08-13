@@ -19,3 +19,8 @@ Thumbs.db
 
 # Agents
 .agents/
+
+# Firebase Service Account Credentials & Backups
+firebase-service-account.json
+backup/
+

@@ -79,6 +79,15 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Block access to sensitive service account credentials and local backup files
+  const normalizedRelPath = relativePath.replace(/\\/g, '/');
+  if (normalizedRelPath === 'firebase-service-account.json' || normalizedRelPath.startsWith('backup/') || normalizedRelPath === 'backup' || normalizedRelPath.toLowerCase().includes('backup')) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('403 Forbidden: Access to service account credentials and backup files is strictly prohibited.');
+    return;
+  }
+
+
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });

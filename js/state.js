@@ -162,31 +162,124 @@ stateKeys.forEach(key => {
     });
 });
 
-window.applyFullAppState = function(data, saveCloud = true) {
+/**
+ * Safe Hydration Guard
+ * Prevents accidental empty Firestore payloads from overwriting non-empty local state.
+ */
+window.shouldHydrateField = function(key, cloudValue, currentLocalValue, isExplicitWipe = false) {
+    if (isExplicitWipe) return true; // User explicitly initiated a wipe/reset action
+
+    const isCloudEmpty = Array.isArray(cloudValue)
+        ? cloudValue.length === 0
+        : (cloudValue !== null && typeof cloudValue === 'object' && Object.keys(cloudValue).length === 0);
+
+    const isLocalNonEmpty = Array.isArray(currentLocalValue)
+        ? currentLocalValue.length > 0
+        : (currentLocalValue !== null && typeof currentLocalValue === 'object' && Object.keys(currentLocalValue).length > 0);
+
+    if (isCloudEmpty && isLocalNonEmpty) {
+        const count = Array.isArray(currentLocalValue) ? currentLocalValue.length : Object.keys(currentLocalValue).length;
+        console.warn(`⚠️ Safe Hydration Guard: Ignored empty Firestore data for field '${key}' because local state contains ${count} item(s). Local data preserved.`);
+        return false;
+    }
+
+    return true;
+};
+
+window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = false) {
     if (!data || typeof data !== 'object') return false;
     delete data._metadata;
 
-    if (data.tasks) AppState.tasks = data.tasks;
-    if (data.tracks) AppState.tracks = data.tracks;
-    if (data.customSyllabus || data.syllabusStructure) {
+    let rejectedAnyField = false;
+
+    if (data.tasks !== undefined) {
+        if (window.shouldHydrateField('tasks', data.tasks, AppState.tasks, isExplicitWipe)) {
+            AppState.tasks = data.tasks;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
+    if (data.tracks !== undefined) {
+        if (window.shouldHydrateField('tracks', data.tracks, AppState.tracks, isExplicitWipe)) {
+            AppState.tracks = data.tracks;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
+    if (data.customSyllabus !== undefined || data.syllabusStructure !== undefined) {
         const syl = data.syllabusStructure || data.customSyllabus;
-        AppState.syllabusStructure = syl;
-        AppState.customSyllabus = syl;
+        if (window.shouldHydrateField('syllabusStructure', syl, AppState.syllabusStructure, isExplicitWipe)) {
+            AppState.syllabusStructure = syl;
+            AppState.customSyllabus = syl;
+        } else {
+            rejectedAnyField = true;
+        }
     }
-    if (data.customPrograms) AppState.customPrograms = data.customPrograms;
-    if (data.customActions) AppState.customActions = data.customActions;
-    if (data.paceGoals) AppState.paceGoals = data.paceGoals;
-    if (data.passedItems) {
-        AppState.passedItems = {
-            programs: Array.isArray(data.passedItems.programs) ? data.passedItems.programs : [],
-            subjects: Array.isArray(data.passedItems.subjects) ? data.passedItems.subjects : []
-        };
+
+    if (data.customPrograms !== undefined) {
+        if (window.shouldHydrateField('customPrograms', data.customPrograms, AppState.customPrograms, isExplicitWipe)) {
+            AppState.customPrograms = data.customPrograms;
+        } else {
+            rejectedAnyField = true;
+        }
     }
-    if (data.revisionData) AppState.revisionData = data.revisionData;
-    if (data.programVisibility) AppState.programVisibility = data.programVisibility;
-    if (data.subjectTimeLinks) AppState.subjectTimeLinks = data.subjectTimeLinks;
-    if (data.successResults) AppState.successResults = data.successResults;
-    if (data.timerLogs) AppState.timerLogs = data.timerLogs;
+
+    if (data.customActions !== undefined) {
+        if (window.shouldHydrateField('customActions', data.customActions, AppState.customActions, isExplicitWipe)) {
+            AppState.customActions = data.customActions;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
+    if (data.paceGoals !== undefined) {
+        if (window.shouldHydrateField('paceGoals', data.paceGoals, AppState.paceGoals, isExplicitWipe)) {
+            AppState.paceGoals = data.paceGoals;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
+    if (data.passedItems !== undefined) {
+        if (window.shouldHydrateField('passedItems', data.passedItems, AppState.passedItems, isExplicitWipe)) {
+            AppState.passedItems = {
+                programs: Array.isArray(data.passedItems.programs) ? data.passedItems.programs : [],
+                subjects: Array.isArray(data.passedItems.subjects) ? data.passedItems.subjects : []
+            };
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
+    if (data.revisionData !== undefined) {
+        if (window.shouldHydrateField('revisionData', data.revisionData, AppState.revisionData, isExplicitWipe)) {
+            AppState.revisionData = data.revisionData;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
+    if (data.programVisibility !== undefined) AppState.programVisibility = data.programVisibility;
+    if (data.subjectTimeLinks !== undefined) AppState.subjectTimeLinks = data.subjectTimeLinks;
+
+    if (data.successResults !== undefined) {
+        if (window.shouldHydrateField('successResults', data.successResults, AppState.successResults, isExplicitWipe)) {
+            AppState.successResults = data.successResults;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
+    if (data.timerLogs !== undefined) {
+        if (window.shouldHydrateField('timerLogs', data.timerLogs, AppState.timerLogs, isExplicitWipe)) {
+            AppState.timerLogs = data.timerLogs;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
     if (data.dailyFocusHoursTarget !== undefined) AppState.dailyFocusHoursTarget = data.dailyFocusHoursTarget;
     if (data.dailyFocusHoursTargetDate !== undefined) AppState.dailyFocusHoursTargetDate = data.dailyFocusHoursTargetDate;
     if (data.dailyFocusHoursTargetHistory !== undefined) AppState.dailyFocusHoursTargetHistory = data.dailyFocusHoursTargetHistory;
@@ -195,22 +288,63 @@ window.applyFullAppState = function(data, saveCloud = true) {
     if (data.timerAnalyticsChartStyle !== undefined) AppState.timerAnalyticsChartStyle = data.timerAnalyticsChartStyle;
     if (data.spectraHeatmapRange !== undefined) AppState.spectraHeatmapRange = data.spectraHeatmapRange;
     if (data.sessionHistoryFilter !== undefined) AppState.sessionHistoryFilter = data.sessionHistoryFilter;
-    if (data.subjectFocusTargets) AppState.subjectFocusTargets = data.subjectFocusTargets;
-    if (data.dashboardConfig) {
-        AppState.dashboardConfig = data.dashboardConfig;
+    if (data.subjectFocusTargets !== undefined) AppState.subjectFocusTargets = data.subjectFocusTargets;
+    if (data.dashboardConfig !== undefined) AppState.dashboardConfig = data.dashboardConfig;
+    if (data.weeklyTargetsDatabase !== undefined) AppState.weeklyTargetsDatabase = data.weeklyTargetsDatabase;
+    if (data.dailyTargetsDatabase !== undefined) AppState.dailyTargetsDatabase = data.dailyTargetsDatabase;
+
+    if (data.scheduleBlocks !== undefined) {
+        if (window.shouldHydrateField('scheduleBlocks', data.scheduleBlocks, AppState.scheduleBlocks, isExplicitWipe)) {
+            AppState.scheduleBlocks = data.scheduleBlocks;
+        } else {
+            rejectedAnyField = true;
+        }
     }
-    if (data.weeklyTargetsDatabase) AppState.weeklyTargetsDatabase = data.weeklyTargetsDatabase;
-    if (data.dailyTargetsDatabase) AppState.dailyTargetsDatabase = data.dailyTargetsDatabase;
-    if (data.scheduleBlocks) AppState.scheduleBlocks = data.scheduleBlocks;
-    if (data.scheduleBlocks2) AppState.scheduleBlocks2 = data.scheduleBlocks2;
-    if (data.scheduleGroups) AppState.scheduleGroups = data.scheduleGroups;
-    if (data.fiscalLedger) AppState.fiscalLedger = data.fiscalLedger;
-    if (data.examSessions) AppState.examSessions = data.examSessions;
-    if (data.examRoutine) AppState.examRoutine = data.examRoutine;
-    if (data.selectedCountdownExamId) AppState.selectedCountdownExamId = data.selectedCountdownExamId;
-    if (data.activeTimerState) AppState.activeTimerState = data.activeTimerState;
+
+    if (data.scheduleBlocks2 !== undefined) {
+        if (window.shouldHydrateField('scheduleBlocks2', data.scheduleBlocks2, AppState.scheduleBlocks2, isExplicitWipe)) {
+            AppState.scheduleBlocks2 = data.scheduleBlocks2;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
+    if (data.scheduleGroups !== undefined) {
+        if (window.shouldHydrateField('scheduleGroups', data.scheduleGroups, AppState.scheduleGroups, isExplicitWipe)) {
+            AppState.scheduleGroups = data.scheduleGroups;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
+    if (data.fiscalLedger !== undefined) {
+        if (window.shouldHydrateField('fiscalLedger', data.fiscalLedger, AppState.fiscalLedger, isExplicitWipe)) {
+            AppState.fiscalLedger = data.fiscalLedger;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
+    if (data.examSessions !== undefined) {
+        if (window.shouldHydrateField('examSessions', data.examSessions, AppState.examSessions, isExplicitWipe)) {
+            AppState.examSessions = data.examSessions;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
+    if (data.examRoutine !== undefined) {
+        if (window.shouldHydrateField('examRoutine', data.examRoutine, AppState.examRoutine, isExplicitWipe)) {
+            AppState.examRoutine = data.examRoutine;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
+    if (data.selectedCountdownExamId !== undefined) AppState.selectedCountdownExamId = data.selectedCountdownExamId;
+    if (data.activeTimerState !== undefined) AppState.activeTimerState = data.activeTimerState;
     if (data.activeRoutineSet !== undefined) AppState.activeRoutineSet = data.activeRoutineSet;
-    if (data.subjectColors) AppState.subjectColors = data.subjectColors;
+    if (data.subjectColors !== undefined) AppState.subjectColors = data.subjectColors;
 
     if (typeof window.updateTimerAnalyticsControls === 'function') window.updateTimerAnalyticsControls();
     if (typeof window.renderTimerAnalyticsChart === 'function') window.renderTimerAnalyticsChart();
@@ -220,7 +354,7 @@ window.applyFullAppState = function(data, saveCloud = true) {
 
     if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
     if (typeof window.renderUI === 'function') window.renderUI();
-    return true;
+    return !rejectedAnyField;
 };
 
 window.DEFAULT_COMMITMENT_LABELS = ['Action 1', 'Action 2', 'Action 3', 'Action 4', 'Action 5', 'Action 6', 'Action 7'];

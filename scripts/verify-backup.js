@@ -1,0 +1,1172 @@
+/**
+ * X-29 (x-2k29) Read-Only Firestore Backup Deep Verification System
+ * scripts/verify-backup.js
+ */
+
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const readline = require('readline');
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getFirestore, Timestamp, GeoPoint, DocumentReference } = require('firebase-admin/firestore');
+
+const CODE_DIR = path.resolve(__dirname, '..');
+const X29_ROOT_DIR = path.dirname(CODE_DIR);
+const SERVICE_ACCOUNT_PATH = path.join(CODE_DIR, 'firebase-service-account.json');
+const BACKUP_BASE_DIR = path.join(X29_ROOT_DIR, 'X-29-Backups');
+const EXPECTED_PROJECT_ID = 'x-2k29';
+const PROJECT_NAME = 'X-29';
+
+// -----------------------------------------------------------------------------
+// SAFETY AUDIT GUARANTEE:
+// This script is 100% READ-ONLY.
+// It DOES NOT perform any Firestore writes, updates, deletes, or restores.
+// It DOES NOT modify, overwrite, delete, or create backup JSON files.
+// -----------------------------------------------------------------------------
+
+// Helper to handle CLI user input
+function askQuestion(query) {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+    return new Promise(resolve => rl.question(query, answer => {
+        rl.close();
+        resolve(answer.trim());
+    }));
+}
+
+// -----------------------------------------------------------------------------
+// 1. SERVICE ACCOUNT VERIFICATION & CONNECTION
+// -----------------------------------------------------------------------------
+function loadAndVerifyServiceAccount() {
+    if (!fs.existsSync(SERVICE_ACCOUNT_PATH)) {
+        console.error(`\n❌ ERROR: Service account file missing at: ${SERVICE_ACCOUNT_PATH}`);
+        console.error(`Aborting verification.\n`);
+        process.exit(1);
+    }
+
+    let serviceAccount;
+    try {
+        const fileContent = fs.readFileSync(SERVICE_ACCOUNT_PATH, 'utf8');
+        serviceAccount = JSON.parse(fileContent);
+    } catch (err) {
+        console.error(`\n❌ ERROR: Failed to parse service account JSON: ${err.message}`);
+        process.exit(1);
+    }
+
+    const projectId = serviceAccount.project_id || serviceAccount.projectId;
+
+    if (projectId !== EXPECTED_PROJECT_ID) {
+        console.error(`\n❌ ABORT IMMEDIATELY: Service account project ID [${projectId}] !== expected [${EXPECTED_PROJECT_ID}].`);
+        console.error(`Will not connect to or inspect another Firebase project.\n`);
+        process.exit(1);
+    }
+
+    return serviceAccount;
+}
+
+// -----------------------------------------------------------------------------
+// 2. BACKUP DISCOVERY & SELECTION
+// -----------------------------------------------------------------------------
+function scanAvailableBackups() {
+    if (!fs.existsSync(BACKUP_BASE_DIR)) {
+        return [];
+    }
+
+    const entries = fs.readdirSync(BACKUP_BASE_DIR, { withFileTypes: true });
+    const backupFolders = entries
+        .filter(entry => entry.isDirectory())
+        .map(entry => entry.name)
+        .sort(); // YYYY-MM-DD_HH-mm-ss format sorts chronologically
+
+    const results = [];
+
+    for (const folderName of backupFolders) {
+        const fullPath = path.join(BACKUP_BASE_DIR, folderName);
+        const jsonPath = path.join(fullPath, 'firestore-backup.json');
+
+        if (fs.existsSync(jsonPath)) {
+            let stats;
+            try {
+                stats = fs.statSync(jsonPath);
+            } catch (e) {
+                stats = { size: 0 };
+            }
+
+            let meta = { projectId: 'UNKNOWN', createdAt: 'UNKNOWN', totalDocuments: 0, totalCollections: 0 };
+            let isReadable = false;
+
+            try {
+                const content = fs.readFileSync(jsonPath, 'utf8');
+                const parsed = JSON.parse(content);
+                if (parsed && parsed.metadata) {
+                    meta = parsed.metadata;
+                    isReadable = true;
+                }
+            } catch (e) {
+                isReadable = false;
+            }
+
+            results.push({
+                folderName,
+                fullPath,
+                jsonPath,
+                fileSizeBytes: stats.size,
+                fileSizeKB: (stats.size / 1024).toFixed(2),
+                projectId: meta.projectId || 'UNKNOWN',
+                createdAt: meta.createdAt || folderName,
+                totalDocuments: meta.totalDocuments || 0,
+                totalCollections: meta.totalCollections || 0,
+                isReadable
+            });
+        }
+    }
+
+    return results;
+}
+
+async function selectBackupFromCli(backupsList, args) {
+    if (backupsList.length === 0) {
+        console.error(`❌ ERROR: No valid Firestore backups found in: ${BACKUP_BASE_DIR}`);
+        process.exit(1);
+    }
+
+    // Flag: --latest
+    if (args.includes('--latest')) {
+        const latest = backupsList[backupsList.length - 1];
+        console.log(`ℹ️ Flag '--latest' detected. Selected backup: [${latest.folderName}]`);
+        return latest;
+    }
+
+    // Flag: --backup <name or path>
+    const backupArgIdx = args.indexOf('--backup');
+    if (backupArgIdx !== -1 && args[backupArgIdx + 1]) {
+        const targetVal = args[backupArgIdx + 1].trim();
+
+        // Check exact folder name match
+        const foundByName = backupsList.find(b => b.folderName === targetVal);
+        if (foundByName) return foundByName;
+
+        // Check path match
+        if (fs.existsSync(targetVal)) {
+            const stat = fs.statSync(targetVal);
+            let jsonPath = targetVal;
+            if (stat.isDirectory()) {
+                jsonPath = path.join(targetVal, 'firestore-backup.json');
+            }
+
+            const folderName = path.basename(path.dirname(jsonPath));
+            const foundByPath = backupsList.find(b => b.jsonPath === jsonPath || b.folderName === folderName);
+            if (foundByPath) return foundByPath;
+
+            // Direct file inspect
+            return {
+                folderName,
+                fullPath: path.dirname(jsonPath),
+                jsonPath,
+                fileSizeBytes: stat.size,
+                fileSizeKB: (stat.size / 1024).toFixed(2),
+                projectId: 'UNKNOWN',
+                createdAt: folderName,
+                totalDocuments: 0,
+                totalCollections: 0,
+                isReadable: true
+            };
+        }
+
+        console.error(`❌ ERROR: Specified backup '${targetVal}' not found.`);
+        process.exit(1);
+    }
+
+    // Interactive Menu
+    console.log(`==================================================`);
+    console.log(` AVAILABLE LOCAL FIRESTORE BACKUPS`);
+    console.log(` Primary Location: ${BACKUP_BASE_DIR}`);
+    console.log(`==================================================\n`);
+
+    backupsList.forEach((b, idx) => {
+        const projBadge = b.projectId === EXPECTED_PROJECT_ID ? `[${b.projectId}]` : `[⚠️ ${b.projectId}]`;
+        console.log(` [${idx + 1}] Folder: ${b.folderName}`);
+        console.log(`     Created:     ${b.createdAt}`);
+        console.log(`     Project ID:  ${projBadge}`);
+        console.log(`     Data Stats:  ${b.totalCollections} collections, ${b.totalDocuments} docs`);
+        console.log(`     File Size:   ${b.fileSizeKB} KB`);
+        console.log(`--------------------------------------------------`);
+    });
+
+    console.log(` [L] LATEST BACKUP (${backupsList[backupsList.length - 1].folderName})`);
+    console.log(` [Q] CANCEL & QUIT\n`);
+
+    const answer = await askQuestion(`Select a backup to verify (1-${backupsList.length} or L) [default L]: `);
+
+    if (!answer || answer.toUpperCase() === 'L' || answer.toLowerCase() === 'latest') {
+        return backupsList[backupsList.length - 1];
+    }
+
+    if (answer.toUpperCase() === 'Q') {
+        console.log(`Verification cancelled.`);
+        process.exit(0);
+    }
+
+    const num = parseInt(answer, 10);
+    if (!isNaN(num) && num >= 1 && num <= backupsList.length) {
+        return backupsList[num - 1];
+    }
+
+    console.error(`❌ Invalid selection '${answer}'. Aborting.`);
+    process.exit(1);
+}
+
+function loadBackupFile(backupItem) {
+    if (!fs.existsSync(backupItem.jsonPath)) {
+        return {
+            valid: false,
+            errorCategory: 'INVALID BACKUP',
+            reason: `Backup JSON file missing at: ${backupItem.jsonPath}`
+        };
+    }
+
+    let rawContent;
+    try {
+        rawContent = fs.readFileSync(backupItem.jsonPath, 'utf8');
+    } catch (e) {
+        return {
+            valid: false,
+            errorCategory: 'INVALID BACKUP',
+            reason: `Failed to read backup file: ${e.message}`
+        };
+    }
+
+    let parsed;
+    try {
+        parsed = JSON.parse(rawContent);
+    } catch (e) {
+        return {
+            valid: false,
+            errorCategory: 'INVALID BACKUP',
+            reason: `Malformed JSON structure: ${e.message}`
+        };
+    }
+
+    if (!parsed || !parsed.metadata) {
+        return {
+            valid: false,
+            errorCategory: 'INVALID BACKUP',
+            reason: `Missing metadata section in backup file.`
+        };
+    }
+
+    if (parsed.metadata.projectId !== EXPECTED_PROJECT_ID) {
+        return {
+            valid: false,
+            errorCategory: 'BACKUP PROJECT ID MISMATCH',
+            reason: `Backup project ID [${parsed.metadata.projectId}] !== expected [${EXPECTED_PROJECT_ID}]`,
+            parsed
+        };
+    }
+
+    if (!Array.isArray(parsed.collections)) {
+        return {
+            valid: false,
+            errorCategory: 'INVALID BACKUP',
+            reason: `Missing or invalid collections array in backup payload.`
+        };
+    }
+
+    return {
+        valid: true,
+        parsed,
+        backupItem
+    };
+}
+
+// -----------------------------------------------------------------------------
+// 3. RECURSIVE FIRESTORE FETCHING (READ-ONLY)
+// -----------------------------------------------------------------------------
+async function fetchLiveCollection(colRef) {
+    console.log(`   📦 Reading Live collection: [${colRef.path}]...`);
+    const snapshot = await colRef.get();
+    const docs = [];
+
+    for (const doc of snapshot.docs) {
+        const subColRefs = await doc.ref.listCollections();
+        const subcollections = [];
+
+        for (const subColRef of subColRefs) {
+            const subColData = await fetchLiveCollection(subColRef);
+            subcollections.push(subColData);
+        }
+
+        docs.push({
+            id: doc.id,
+            path: doc.ref.path,
+            data: doc.data(),
+            subcollections
+        });
+    }
+
+    return {
+        id: colRef.id,
+        path: colRef.path,
+        documents: docs
+    };
+}
+
+async function fetchLiveFirestore(db) {
+    const rootCols = await db.listCollections();
+    const collections = [];
+
+    for (const colRef of rootCols) {
+        const colData = await fetchLiveCollection(colRef);
+        collections.push(colData);
+    }
+
+    return collections;
+}
+
+// -----------------------------------------------------------------------------
+// 4. DATA TYPE NORMALIZATION & CANONICAL REPRESENTATION
+// -----------------------------------------------------------------------------
+function getTypeOf(val) {
+    if (val === null) return 'null';
+    if (val === undefined) return 'undefined';
+    if (Array.isArray(val)) return 'array';
+
+    if (typeof val === 'object') {
+        if ((Timestamp && val instanceof Timestamp) || (typeof val.toDate === 'function' && typeof val.seconds === 'number')) {
+            return 'timestamp';
+        }
+        if ((GeoPoint && val instanceof GeoPoint) || (typeof val.latitude === 'number' && typeof val.longitude === 'number' && (val.constructor?.name === 'GeoPoint' || val.__type === 'geopoint'))) {
+            return 'geopoint';
+        }
+        if ((DocumentReference && val instanceof DocumentReference) || (val.path && (typeof val.collection === 'function' || val.__type === 'reference'))) {
+            return 'reference';
+        }
+        if (Buffer.isBuffer(val) || val.__type === 'bytes' || (val && val.constructor && val.constructor.name === 'Bytes')) {
+            return 'bytes';
+        }
+        if (val.__type === 'timestamp') return 'timestamp';
+        if (val.__type === 'geopoint') return 'geopoint';
+        if (val.__type === 'reference') return 'reference';
+        if (val.__type === 'bytes') return 'bytes';
+
+        return 'object';
+    }
+
+    return typeof val;
+}
+
+function normalizeValue(val) {
+    if (val === null || val === undefined) return val;
+    const type = getTypeOf(val);
+
+    if (type === 'timestamp') {
+        return {
+            __type: 'timestamp',
+            seconds: Number(val.seconds || 0),
+            nanoseconds: Number(val.nanoseconds || 0)
+        };
+    }
+    if (type === 'geopoint') {
+        return {
+            __type: 'geopoint',
+            latitude: Number(val.latitude || 0),
+            longitude: Number(val.longitude || 0)
+        };
+    }
+    if (type === 'reference') {
+        return {
+            __type: 'reference',
+            path: String(val.path || '')
+        };
+    }
+    if (type === 'bytes') {
+        let base64 = '';
+        if (Buffer.isBuffer(val)) {
+            base64 = val.toString('base64');
+        } else if (typeof val.base64 === 'string') {
+            base64 = val.base64;
+        } else if (typeof val.toBuffer === 'function') {
+            base64 = val.toBuffer().toString('base64');
+        } else if (val.toUint8Array) {
+            base64 = Buffer.from(val.toUint8Array()).toString('base64');
+        }
+        return {
+            __type: 'bytes',
+            base64
+        };
+    }
+    if (type === 'array') {
+        return val.map(normalizeValue);
+    }
+    if (type === 'object') {
+        const normalizedObj = {};
+        for (const [k, v] of Object.entries(val)) {
+            // Strip secondary 'iso' string from backup timestamp so canonical format matches perfectly
+            if (val.__type === 'timestamp' && k === 'iso') continue;
+            normalizedObj[k] = normalizeValue(v);
+        }
+        return normalizedObj;
+    }
+    return val;
+}
+
+function normalizeCollectionTree(collectionsData) {
+    if (!Array.isArray(collectionsData)) return [];
+    return collectionsData.map(col => ({
+        id: col.id,
+        path: col.path,
+        documents: (col.documents || []).map(doc => ({
+            id: doc.id,
+            path: doc.path,
+            data: normalizeValue(doc.data || {}),
+            subcollections: normalizeCollectionTree(doc.subcollections || [])
+        }))
+    }));
+}
+
+// -----------------------------------------------------------------------------
+// 5. DEEP VALUE-LEVEL COMPARISON & DIFFERENCE TRACKING
+// -----------------------------------------------------------------------------
+function compareValues(liveVal, backupVal, pathStr, diffs) {
+    const typeLive = getTypeOf(liveVal);
+    const typeBackup = getTypeOf(backupVal);
+
+    if (typeLive !== typeBackup) {
+        diffs.push({
+            category: 'TYPE DIFFERENCE',
+            path: pathStr,
+            backup: typeBackup,
+            firestore: typeLive,
+            details: `Firestore type [${typeLive}] vs Backup type [${typeBackup}]`
+        });
+        return;
+    }
+
+    if (typeLive === 'timestamp') {
+        if (liveVal.seconds !== backupVal.seconds || liveVal.nanoseconds !== backupVal.nanoseconds) {
+            diffs.push({
+                category: 'VALUE DIFFERENCE',
+                path: pathStr,
+                backup: `Timestamp (${backupVal.seconds}.${backupVal.nanoseconds})`,
+                firestore: `Timestamp (${liveVal.seconds}.${liveVal.nanoseconds})`,
+                details: `Firestore Timestamp (${liveVal.seconds}.${liveVal.nanoseconds}) vs Backup Timestamp (${backupVal.seconds}.${backupVal.nanoseconds})`
+            });
+        }
+        return;
+    }
+
+    if (typeLive === 'geopoint') {
+        if (liveVal.latitude !== backupVal.latitude || liveVal.longitude !== backupVal.longitude) {
+            diffs.push({
+                category: 'VALUE DIFFERENCE',
+                path: pathStr,
+                backup: `GeoPoint (${backupVal.latitude}, ${backupVal.longitude})`,
+                firestore: `GeoPoint (${liveVal.latitude}, ${liveVal.longitude})`,
+                details: `Firestore GeoPoint (${liveVal.latitude}, ${liveVal.longitude}) vs Backup GeoPoint (${backupVal.latitude}, ${backupVal.longitude})`
+            });
+        }
+        return;
+    }
+
+    if (typeLive === 'reference') {
+        if (liveVal.path !== backupVal.path) {
+            diffs.push({
+                category: 'VALUE DIFFERENCE',
+                path: pathStr,
+                backup: `Reference [${backupVal.path}]`,
+                firestore: `Reference [${liveVal.path}]`,
+                details: `Firestore Reference [${liveVal.path}] vs Backup Reference [${backupVal.path}]`
+            });
+        }
+        return;
+    }
+
+    if (typeLive === 'bytes') {
+        if (liveVal.base64 !== backupVal.base64) {
+            diffs.push({
+                category: 'VALUE DIFFERENCE',
+                path: pathStr,
+                backup: `Bytes (${backupVal.base64 ? backupVal.base64.substring(0, 20) + '...' : ''})`,
+                firestore: `Bytes (${liveVal.base64 ? liveVal.base64.substring(0, 20) + '...' : ''})`,
+                details: `Firestore Bytes mismatch`
+            });
+        }
+        return;
+    }
+
+    if (typeLive === 'array') {
+        if (liveVal.length !== backupVal.length) {
+            diffs.push({
+                category: 'ARRAY DIFFERENCE',
+                path: pathStr,
+                backup: `Array length ${backupVal.length}`,
+                firestore: `Array length ${liveVal.length}`,
+                details: `Firestore length [${liveVal.length}] vs Backup length [${backupVal.length}]`
+            });
+        }
+
+        const maxLen = Math.max(liveVal.length, backupVal.length);
+        for (let i = 0; i < maxLen; i++) {
+            const itemPath = `${pathStr}[${i}]`;
+            if (i >= liveVal.length) {
+                diffs.push({
+                    category: 'EXTRA IN BACKUP',
+                    path: itemPath,
+                    backup: JSON.stringify(backupVal[i]),
+                    firestore: '[MISSING]',
+                    details: `Array element exists in backup but missing from Live Firestore`
+                });
+            } else if (i >= backupVal.length) {
+                diffs.push({
+                    category: 'MISSING FROM BACKUP',
+                    path: itemPath,
+                    backup: '[MISSING]',
+                    firestore: JSON.stringify(liveVal[i]),
+                    details: `Array element exists in Live Firestore but missing from backup`
+                });
+            } else {
+                compareValues(liveVal[i], backupVal[i], itemPath, diffs);
+            }
+        }
+        return;
+    }
+
+    if (typeLive === 'object') {
+        const liveKeys = Object.keys(liveVal);
+        const backupKeys = Object.keys(backupVal);
+
+        for (const k of liveKeys) {
+            const fieldPath = `${pathStr}/${k}`;
+            if (!(k in backupVal)) {
+                diffs.push({
+                    category: 'MISSING FROM BACKUP',
+                    path: fieldPath,
+                    backup: '[MISSING]',
+                    firestore: JSON.stringify(liveVal[k]),
+                    details: `Field exists in Live Firestore but missing from backup`
+                });
+            } else {
+                compareValues(liveVal[k], backupVal[k], fieldPath, diffs);
+            }
+        }
+
+        for (const k of backupKeys) {
+            const fieldPath = `${pathStr}/${k}`;
+            if (!(k in liveVal)) {
+                diffs.push({
+                    category: 'EXTRA IN BACKUP',
+                    path: fieldPath,
+                    backup: JSON.stringify(backupVal[k]),
+                    firestore: '[MISSING]',
+                    details: `Field exists in backup but missing from Live Firestore`
+                });
+            }
+        }
+        return;
+    }
+
+    // Primitives
+    if (liveVal !== backupVal) {
+        diffs.push({
+            category: 'VALUE DIFFERENCE',
+            path: pathStr,
+            backup: JSON.stringify(backupVal),
+            firestore: JSON.stringify(liveVal),
+            details: `BACKUP: ${JSON.stringify(backupVal)} | FIRESTORE: ${JSON.stringify(liveVal)}`
+        });
+    }
+}
+
+function compareCollections(liveCols, backupCols, diffs) {
+    const liveMap = new Map(liveCols.map(c => [c.path, c]));
+    const backupMap = new Map(backupCols.map(c => [c.path, c]));
+
+    for (const [colPath, liveCol] of liveMap.entries()) {
+        if (!backupMap.has(colPath)) {
+            diffs.push({
+                category: 'MISSING FROM BACKUP',
+                path: colPath,
+                backup: '[MISSING COLLECTION]',
+                firestore: '[PRESENT]',
+                details: `Collection present in Live Firestore but missing from backup`
+            });
+            continue;
+        }
+
+        const backupCol = backupMap.get(colPath);
+        const liveDocMap = new Map(liveCol.documents.map(d => [d.id, d]));
+        const backupDocMap = new Map(backupCol.documents.map(d => [d.id, d]));
+
+        for (const [docId, liveDoc] of liveDocMap.entries()) {
+            if (!backupDocMap.has(docId)) {
+                diffs.push({
+                    category: 'MISSING FROM BACKUP',
+                    path: liveDoc.path,
+                    backup: '[MISSING DOCUMENT]',
+                    firestore: '[PRESENT]',
+                    details: `Document present in Live Firestore but missing from backup`
+                });
+            } else {
+                const backupDoc = backupDocMap.get(docId);
+                compareValues(liveDoc.data, backupDoc.data, liveDoc.path, diffs);
+                compareCollections(liveDoc.subcollections || [], backupDoc.subcollections || [], diffs);
+            }
+        }
+
+        for (const [docId, backupDoc] of backupDocMap.entries()) {
+            if (!liveDocMap.has(docId)) {
+                diffs.push({
+                    category: 'EXTRA IN BACKUP',
+                    path: backupDoc.path,
+                    backup: '[PRESENT]',
+                    firestore: '[MISSING DOCUMENT]',
+                    details: `Document present in backup but missing from Live Firestore`
+                });
+            }
+        }
+    }
+
+    for (const [colPath, backupCol] of backupMap.entries()) {
+        if (!liveMap.has(colPath)) {
+            diffs.push({
+                category: 'EXTRA IN BACKUP',
+                path: colPath,
+                backup: '[PRESENT COLLECTION]',
+                firestore: '[MISSING COLLECTION]',
+                details: `Collection present in backup but missing from Live Firestore`
+            });
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 6. SUMMARY STATISTICS COMPUTATION
+// -----------------------------------------------------------------------------
+function computeStats(collectionsTree) {
+    const stats = {
+        rootCollections: collectionsTree.length,
+        documents: 0,
+        nestedSubcollections: 0,
+        totalFields: 0,
+        arrays: 0,
+        objects: 0,
+        timestamps: 0,
+        geopoints: 0,
+        references: 0,
+        bytes: 0
+    };
+
+    function traverseVal(val) {
+        if (val === null || val === undefined) return;
+        const type = getTypeOf(val);
+
+        if (type === 'array') {
+            stats.arrays++;
+            val.forEach(traverseVal);
+        } else if (type === 'timestamp') {
+            stats.timestamps++;
+        } else if (type === 'geopoint') {
+            stats.geopoints++;
+        } else if (type === 'reference') {
+            stats.references++;
+        } else if (type === 'bytes') {
+            stats.bytes++;
+        } else if (type === 'object') {
+            stats.objects++;
+            for (const [k, v] of Object.entries(val)) {
+                stats.totalFields++;
+                traverseVal(v);
+            }
+        }
+    }
+
+    function traverseCol(col, isRoot = true) {
+        if (!isRoot) stats.nestedSubcollections++;
+        for (const doc of col.documents || []) {
+            stats.documents++;
+            traverseVal(doc.data);
+            if (doc.subcollections) {
+                for (const sub of doc.subcollections) {
+                    traverseCol(sub, false);
+                }
+            }
+        }
+    }
+
+    for (const col of collectionsTree) {
+        traverseCol(col, true);
+    }
+
+    return stats;
+}
+
+// -----------------------------------------------------------------------------
+// 7. X-29 DOMAIN INFORMATIONAL CHECKS
+// -----------------------------------------------------------------------------
+function extractX29Metrics(collectionsTree) {
+    const metrics = {
+        tracksCount: 0,
+        syllabusStructureSubjects: 0,
+        syllabusStructureChapters: 0,
+        customSyllabusSubjects: 0,
+        customSyllabusChapters: 0,
+        tasksCount: 0,
+        passedItemsCount: 0,
+        customProgramsCount: 0,
+        dashboardConfig: false,
+        revisionDataCount: 0,
+        timerLogsCount: 0,
+        examSessionsCount: 0,
+        examRoutineCount: 0,
+        scheduleBlocksCount: 0,
+        scheduleBlocks2Count: 0,
+        scheduleGroupsCount: 0,
+        dailyTargetsCount: 0,
+        weeklyTargetsCount: 0,
+        fiscalLedgerCount: 0,
+        updatedAt: null
+    };
+
+    function countChaptersInSyllabus(syllabusObj) {
+        if (!syllabusObj || typeof syllabusObj !== 'object') return { subjects: 0, chapters: 0 };
+        let subjects = 0;
+        let chapters = 0;
+
+        for (const trackArr of Object.values(syllabusObj)) {
+            if (Array.isArray(trackArr)) {
+                subjects += trackArr.length;
+                for (const item of trackArr) {
+                    if (item) {
+                        if (typeof item.chapters === 'number') {
+                            chapters += item.chapters;
+                        } else if (Array.isArray(item.chapters)) {
+                            chapters += item.chapters.length;
+                        }
+                    }
+                }
+            }
+        }
+
+        return { subjects, chapters };
+    }
+
+    function inspectDocData(data) {
+        if (!data || typeof data !== 'object') return;
+
+        if (Array.isArray(data.tracks)) metrics.tracksCount += data.tracks.length;
+
+        if (data.syllabusStructure) {
+            const res = countChaptersInSyllabus(data.syllabusStructure);
+            metrics.syllabusStructureSubjects += res.subjects;
+            metrics.syllabusStructureChapters += res.chapters;
+        }
+
+        if (data.customSyllabus) {
+            const res = countChaptersInSyllabus(data.customSyllabus);
+            metrics.customSyllabusSubjects += res.subjects;
+            metrics.customSyllabusChapters += res.chapters;
+        }
+
+        if (Array.isArray(data.tasks)) metrics.tasksCount += data.tasks.length;
+
+        if (data.passedItems) {
+            metrics.passedItemsCount += Array.isArray(data.passedItems) ? data.passedItems.length : Object.keys(data.passedItems).length;
+        }
+
+        if (data.customPrograms && typeof data.customPrograms === 'object') {
+            for (const progArr of Object.values(data.customPrograms)) {
+                if (Array.isArray(progArr)) metrics.customProgramsCount += progArr.length;
+            }
+        }
+
+        if (data.dashboardConfig) metrics.dashboardConfig = true;
+
+        if (data.revisionData) {
+            if (Array.isArray(data.revisionData.active)) metrics.revisionDataCount += data.revisionData.active.length;
+        }
+
+        if (Array.isArray(data.timerLogs)) metrics.timerLogsCount += data.timerLogs.length;
+        if (Array.isArray(data.examSessions)) metrics.examSessionsCount += data.examSessions.length;
+        if (Array.isArray(data.examRoutine)) metrics.examRoutineCount += data.examRoutine.length;
+        if (Array.isArray(data.scheduleBlocks)) metrics.scheduleBlocksCount += data.scheduleBlocks.length;
+        if (Array.isArray(data.scheduleBlocks2)) metrics.scheduleBlocks2Count += data.scheduleBlocks2.length;
+        if (Array.isArray(data.scheduleGroups)) metrics.scheduleGroupsCount += data.scheduleGroups.length;
+
+        if (data.dailyTargetsDatabase && typeof data.dailyTargetsDatabase === 'object') {
+            metrics.dailyTargetsCount += Object.keys(data.dailyTargetsDatabase).length;
+        }
+        if (data.weeklyTargetsDatabase && typeof data.weeklyTargetsDatabase === 'object') {
+            metrics.weeklyTargetsCount += Object.keys(data.weeklyTargetsDatabase).length;
+        }
+
+        if (data.fiscalLedger && typeof data.fiscalLedger === 'object') {
+            const b = Array.isArray(data.fiscalLedger.budgets) ? data.fiscalLedger.budgets.length : 0;
+            const v = Array.isArray(data.fiscalLedger.vaults) ? data.fiscalLedger.vaults.length : 0;
+            const t = Array.isArray(data.fiscalLedger.transactions) ? data.fiscalLedger.transactions.length : 0;
+            metrics.fiscalLedgerCount += (b + v + t);
+        }
+
+        if (data.updatedAt) {
+            metrics.updatedAt = data.updatedAt;
+        }
+    }
+
+    function traverseCol(col) {
+        for (const doc of col.documents || []) {
+            inspectDocData(doc.data);
+            if (doc.subcollections) {
+                for (const sub of doc.subcollections) {
+                    traverseCol(sub);
+                }
+            }
+        }
+    }
+
+    for (const col of collectionsTree) {
+        traverseCol(col);
+    }
+
+    return metrics;
+}
+
+// -----------------------------------------------------------------------------
+// 8. CANONICAL SHA-256 HASH GENERATION
+// -----------------------------------------------------------------------------
+function canonicalizeVal(val) {
+    if (val === null || val === undefined) return val;
+    const type = getTypeOf(val);
+
+    if (type === 'timestamp') {
+        return { __type: 'timestamp', nanoseconds: Number(val.nanoseconds || 0), seconds: Number(val.seconds || 0) };
+    }
+    if (type === 'geopoint') {
+        return { __type: 'geopoint', latitude: Number(val.latitude || 0), longitude: Number(val.longitude || 0) };
+    }
+    if (type === 'reference') {
+        return { __type: 'reference', path: String(val.path || '') };
+    }
+    if (type === 'bytes') {
+        return { __type: 'bytes', base64: String(val.base64 || '') };
+    }
+    if (type === 'array') {
+        return val.map(canonicalizeVal);
+    }
+    if (type === 'object') {
+        const sortedObj = {};
+        const sortedKeys = Object.keys(val).sort();
+        for (const k of sortedKeys) {
+            if (val.__type === 'timestamp' && k === 'iso') continue;
+            sortedObj[k] = canonicalizeVal(val[k]);
+        }
+        return sortedObj;
+    }
+    return val;
+}
+
+function buildCanonicalTree(collectionsTree) {
+    const sortedCols = [...collectionsTree].sort((a, b) => a.path.localeCompare(b.path));
+    return sortedCols.map(col => ({
+        id: col.id,
+        path: col.path,
+        documents: [...(col.documents || [])]
+            .sort((a, b) => a.id.localeCompare(b.id))
+            .map(doc => ({
+                id: doc.id,
+                path: doc.path,
+                data: canonicalizeVal(doc.data),
+                subcollections: buildCanonicalTree(doc.subcollections || [])
+            }))
+    }));
+}
+
+function calculateCanonicalHash(collectionsTree) {
+    const canonicalTree = buildCanonicalTree(collectionsTree);
+    const jsonStr = JSON.stringify(canonicalTree);
+    return crypto.createHash('sha256').update(jsonStr).digest('hex');
+}
+
+// -----------------------------------------------------------------------------
+// 9. AUDIT ALL BACKUPS MODE (--all)
+// -----------------------------------------------------------------------------
+async function runAuditAllBackups(db) {
+    console.log(`\n==================================================`);
+    console.log(` X-29 ALL BACKUPS AUDIT MATRIX`);
+    console.log(` Firebase Project ID: [${EXPECTED_PROJECT_ID}]`);
+    console.log(`==================================================\n`);
+
+    const backupsList = scanAvailableBackups();
+    if (backupsList.length === 0) {
+        console.log(`❌ No backups found in ${BACKUP_BASE_DIR}`);
+        return;
+    }
+
+    console.log(`🚀 Recursively fetching Live Firestore snapshot...`);
+    const liveRawCols = await fetchLiveFirestore(db);
+    const liveNormalized = normalizeCollectionTree(liveRawCols);
+    const liveHash = calculateCanonicalHash(liveNormalized);
+
+    console.log(`Live Firestore SHA-256: ${liveHash.substring(0, 12)}...\n`);
+
+    const tableRows = [];
+
+    for (const bItem of backupsList) {
+        const backupRes = loadBackupFile(bItem);
+        let statusStr = 'UNKNOWN';
+        let docCount = bItem.totalDocuments;
+        let projStr = bItem.projectId;
+        let hashStr = 'N/A';
+
+        if (!backupRes.valid) {
+            statusStr = `❌ ${backupRes.errorCategory}`;
+        } else {
+            const backupNormalized = normalizeCollectionTree(backupRes.parsed.collections);
+            const backupHash = calculateCanonicalHash(backupNormalized);
+            hashStr = backupHash.substring(0, 10) + '...';
+
+            const diffs = [];
+            compareCollections(liveNormalized, backupNormalized, diffs);
+
+            if (diffs.length === 0 && liveHash === backupHash) {
+                statusStr = '✅ EXACT MATCH';
+            } else {
+                // Check if differences are purely newer activity in Live Firestore
+                const isOnlyNewerLive = diffs.every(d => d.category === 'MISSING FROM BACKUP' || d.category === 'VALUE DIFFERENCE');
+                if (isOnlyNewerLive) {
+                    statusStr = '⚠️ OUTDATED';
+                } else {
+                    statusStr = '❌ MISMATCH';
+                }
+            }
+        }
+
+        tableRows.push({
+            Backup: bItem.folderName,
+            Project: projStr,
+            Documents: docCount,
+            Hash: hashStr,
+            Status: statusStr
+        });
+    }
+
+    console.table(tableRows);
+    console.log(`\n==================================================\n`);
+}
+
+// -----------------------------------------------------------------------------
+// 10. SINGLE BACKUP VERIFICATION REPORT
+// -----------------------------------------------------------------------------
+async function runSingleVerification(backupItem, db) {
+    console.log(`\n==================================================`);
+    console.log(`X-29 FIRESTORE BACKUP VERIFICATION`);
+    console.log(`==================================================\n`);
+
+    console.log(`Project:`);
+    console.log(`${PROJECT_NAME}\n`);
+
+    console.log(`Firebase Project ID:`);
+    console.log(`${EXPECTED_PROJECT_ID}\n`);
+
+    console.log(`Backup:`);
+    console.log(`${backupItem.folderName}`);
+    console.log(`Path: ${backupItem.jsonPath}\n`);
+
+    const backupRes = loadBackupFile(backupItem);
+
+    if (!backupRes.valid) {
+        console.log(`Backup Created:`);
+        console.log(`${backupItem.createdAt}\n`);
+        console.log(`==================================================`);
+        console.log(`FINAL VERDICT`);
+        console.log(`==================================================\n`);
+        console.log(`❌ INVALID BACKUP`);
+        console.log(`Reason: ${backupRes.reason}\n`);
+        process.exit(1);
+    }
+
+    const backupData = backupRes.parsed;
+    console.log(`Backup Created:`);
+    console.log(`${backupData.metadata.createdAt}\n`);
+
+    console.log(`🚀 Recursively reading Live Firestore database...`);
+    const liveRawCols = await fetchLiveFirestore(db);
+
+    const liveNormalized = normalizeCollectionTree(liveRawCols);
+    const backupNormalized = normalizeCollectionTree(backupData.collections);
+
+    // Compute Summary Statistics
+    const liveStats = computeStats(liveNormalized);
+    const backupStats = computeStats(backupNormalized);
+
+    console.log(`\n==================================================`);
+    console.log(`FIRESTORE`);
+    console.log(`==================================================`);
+    console.log(`Collections:            ${liveStats.rootCollections}`);
+    console.log(`Documents:              ${liveStats.documents}`);
+    console.log(`Nested subcollections:  ${liveStats.nestedSubcollections}`);
+    console.log(`Fields:                 ${liveStats.totalFields}`);
+    console.log(`Arrays:                 ${liveStats.arrays}`);
+    console.log(`Objects:                ${liveStats.objects}`);
+    console.log(`Timestamps:             ${liveStats.timestamps}`);
+    console.log(`GeoPoints:              ${liveStats.geopoints}`);
+    console.log(`References:             ${liveStats.references}`);
+    console.log(`Bytes:                  ${liveStats.bytes}`);
+
+    console.log(`\n==================================================`);
+    console.log(`BACKUP`);
+    console.log(`==================================================`);
+    console.log(`Collections:            ${backupStats.rootCollections}`);
+    console.log(`Documents:              ${backupStats.documents}`);
+    console.log(`Nested subcollections:  ${backupStats.nestedSubcollections}`);
+    console.log(`Fields:                 ${backupStats.totalFields}`);
+    console.log(`Arrays:                 ${backupStats.arrays}`);
+    console.log(`Objects:                ${backupStats.objects}`);
+    console.log(`Timestamps:             ${backupStats.timestamps}`);
+    console.log(`GeoPoints:              ${backupStats.geopoints}`);
+    console.log(`References:             ${backupStats.references}`);
+    console.log(`Bytes:                  ${backupStats.bytes}`);
+
+    // X-29 Domain Checks
+    const liveDomain = extractX29Metrics(liveNormalized);
+    const backupDomain = extractX29Metrics(backupNormalized);
+
+    console.log(`\n==================================================`);
+    console.log(`X-29 DATA CHECK`);
+    console.log(`==================================================`);
+    console.log(`Tracks:`);
+    console.log(`  Live:   ${liveDomain.tracksCount}`);
+    console.log(`  Backup: ${backupDomain.tracksCount}`);
+    console.log(`Syllabus Structure Subjects / Chapters:`);
+    console.log(`  Live:   ${liveDomain.syllabusStructureSubjects} subjects, ${liveDomain.syllabusStructureChapters} total chapters`);
+    console.log(`  Backup: ${backupDomain.syllabusStructureSubjects} subjects, ${backupDomain.syllabusStructureChapters} total chapters`);
+    console.log(`Custom Syllabus Subjects / Chapters:`);
+    console.log(`  Live:   ${liveDomain.customSyllabusSubjects} subjects, ${liveDomain.customSyllabusChapters} total chapters`);
+    console.log(`  Backup: ${backupDomain.customSyllabusSubjects} subjects, ${backupDomain.customSyllabusChapters} total chapters`);
+    console.log(`Tasks:`);
+    console.log(`  Live:   ${liveDomain.tasksCount}`);
+    console.log(`  Backup: ${backupDomain.tasksCount}`);
+    console.log(`Updated At:`);
+    console.log(`  Live:   ${liveDomain.updatedAt ? (typeof liveDomain.updatedAt === 'object' ? JSON.stringify(liveDomain.updatedAt) : liveDomain.updatedAt) : 'N/A'}`);
+    console.log(`  Backup: ${backupDomain.updatedAt ? (typeof backupDomain.updatedAt === 'object' ? JSON.stringify(backupDomain.updatedAt) : backupDomain.updatedAt) : 'N/A'}`);
+
+    // Deep Comparison
+    const diffs = [];
+    compareCollections(liveNormalized, backupNormalized, diffs);
+
+    const missingFromBackupCount = diffs.filter(d => d.category === 'MISSING FROM BACKUP').length;
+    const extraInBackupCount = diffs.filter(d => d.category === 'EXTRA IN BACKUP').length;
+    const valueDiffCount = diffs.filter(d => d.category === 'VALUE DIFFERENCE').length;
+    const typeDiffCount = diffs.filter(d => d.category === 'TYPE DIFFERENCE').length;
+    const arrayDiffCount = diffs.filter(d => d.category === 'ARRAY DIFFERENCE').length;
+    const subcolDiffCount = diffs.filter(d => d.category === 'SUBCOLLECTION DIFFERENCE').length;
+
+    console.log(`\n==================================================`);
+    console.log(`DEEP COMPARISON`);
+    console.log(`==================================================`);
+    console.log(`Differences:              ${diffs.length}`);
+    console.log(`Missing from Backup:      ${missingFromBackupCount}`);
+    console.log(`Extra in Backup:          ${extraInBackupCount}`);
+    console.log(`Changed values:           ${valueDiffCount}`);
+    console.log(`Type differences:         ${typeDiffCount}`);
+    console.log(`Array differences:        ${arrayDiffCount}`);
+    console.log(`Subcollection differences:${subcolDiffCount}`);
+
+    // SHA-256 Hash
+    console.log(`\n==================================================`);
+    console.log(`HASH`);
+    console.log(`==================================================`);
+    const liveHash = calculateCanonicalHash(liveNormalized);
+    const backupHash = calculateCanonicalHash(backupNormalized);
+
+    console.log(`LIVE CANONICAL SHA-256:`);
+    console.log(liveHash);
+    console.log(`BACKUP CANONICAL SHA-256:`);
+    console.log(backupHash);
+
+    // Final Verdict Classification
+    console.log(`\n==================================================`);
+    console.log(`FINAL VERDICT`);
+    console.log(`==================================================`);
+
+    let verdict = 'UNKNOWN';
+
+    if (diffs.length === 0 && liveHash === backupHash) {
+        verdict = 'EXACT MATCH';
+        console.log(`\n✅ EXACT MATCH\n`);
+        console.log(`Live Firestore and selected backup are 100% identical in structure, data, and SHA-256 hash.`);
+    } else {
+        // Evaluate if differences are purely newer activity in Live Firestore
+        const onlyLiveNewer = extraInBackupCount === 0 &&
+            typeDiffCount === 0 &&
+            subcolDiffCount === 0 &&
+            missingFromBackupCount >= 0;
+
+        if (onlyLiveNewer) {
+            verdict = 'VALID BUT OUTDATED BACKUP';
+            console.log(`\n⚠️ VALID BUT OUTDATED BACKUP\n`);
+            console.log(`Backup belongs to X-29 (${EXPECTED_PROJECT_ID}) and is structurally valid, but Live Firestore contains newer updates created after the backup snapshot.`);
+        } else {
+            verdict = 'BACKUP DATA MISMATCH';
+            console.log(`\n❌ BACKUP DATA MISMATCH\n`);
+            console.log(`There are unexpected data/structural differences between Live Firestore and the selected backup.`);
+        }
+
+        console.log(`\n--------------------------------------------------`);
+        console.log(`EXACT DIFFERENCES DETECTED (${diffs.length}):`);
+        console.log(`--------------------------------------------------`);
+
+        diffs.forEach((d, idx) => {
+            console.log(`\n[${idx + 1}] ${d.category}`);
+            console.log(`Path:`);
+            console.log(`  ${d.path}`);
+            if (d.backup !== undefined) {
+                console.log(`BACKUP:`);
+                console.log(`  ${d.backup}`);
+            }
+            if (d.firestore !== undefined) {
+                console.log(`FIRESTORE:`);
+                console.log(`  ${d.firestore}`);
+            }
+            if (d.details) {
+                console.log(`Details: ${d.details}`);
+            }
+        });
+    }
+
+    console.log(`\n==================================================\n`);
+}
+
+// -----------------------------------------------------------------------------
+// MAIN EXECUTION ENTRYPOINT
+// -----------------------------------------------------------------------------
+async function main() {
+    const args = process.argv.slice(2);
+
+    // 1. Verify Service Account & Project ID
+    const serviceAccount = loadAndVerifyServiceAccount();
+
+    initializeApp({
+        credential: cert(serviceAccount)
+    });
+
+    const db = getFirestore();
+
+    // Check for audit all mode flag
+    if (args.includes('--all')) {
+        await runAuditAllBackups(db);
+        process.exit(0);
+    }
+
+    // Single backup mode
+    const backupsList = scanAvailableBackups();
+    const selectedBackupItem = await selectBackupFromCli(backupsList, args);
+
+    await runSingleVerification(selectedBackupItem, db);
+    process.exit(0);
+}
+
+main().catch(err => {
+    console.error(`\n❌ VERIFICATION SYSTEM EXCEPTION:`, err);
+    process.exit(1);
+});
