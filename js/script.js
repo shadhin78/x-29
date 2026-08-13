@@ -4098,6 +4098,7 @@ function updateMetrics() {
         } else {
             let projDate = window.latestPaceData.projectedDate;
             finishDisplay = projDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+            finishDisplay = projDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
             const globalDaysLeftNeed = remaining / globalCurPace;
             globalDaysNeededStr = `${Math.ceil(globalDaysLeftNeed)} Days Needed`;
             globalDaysLeftStr = '<span class="text-slate-400 font-bold">No Goal</span>';
@@ -4128,8 +4129,8 @@ function updateMetrics() {
         const dbPassedEl = document.getElementById('db-global-days-passed');
         if (dbPassedEl) dbPassedEl.innerHTML = globalDaysPassedStr;
 
-        let timelineText = earliestDate ? `Started: ${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}` : `Not Started`;
-        let dbTimelineText = earliestDate ? `${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}` : `Not Started`;
+        let timelineText = earliestDate ? `Started: ${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}` : `Not Started`;
+        let dbTimelineText = earliestDate ? `${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}` : `Not Started`;
         safeSetHtml('pace-timeline-info', `<span class="text-slate-500 font-bold">Global Baseline</span> <span class="mx-1 opacity-50">|</span> <span class="tracking-widest text-[9px] uppercase">${timelineText}</span>`);
         safeSetHtml('db-pace-timeline-info', dbTimelineText);
 
@@ -4290,7 +4291,7 @@ function updateMetrics() {
             else globalDaysLeftStr = `<span class="text-red-400">${Math.abs(diffGlobalDaysTG)} Days Overdue</span>`;
             globalDaysPassedStr = `${Utils.formatDaysPassed(Math.max(0, daysElapsed))} Passed`;
         } else {
-            finishDisplay = maxProjectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+            finishDisplay = maxProjectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
             if (diffGlobalDaysTG > 0) globalDaysLeftStr = `${diffGlobalDaysTG} Days Left`;
             else if (diffGlobalDaysTG === 0) globalDaysLeftStr = `<span class="text-orange-400">Due Today</span>`;
@@ -4332,7 +4333,7 @@ function updateMetrics() {
         if (dbPassedEl) dbPassedEl.innerHTML = globalDaysPassedStr;
 
         let timelineText = `${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} &rarr; ${end.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}`;
-        let dbTimelineText = `${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} &rarr; ${end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}`;
+        let dbTimelineText = `${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} &rarr; ${end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
         safeSetHtml('pace-timeline-info', `<span class="text-blue-500 font-bold">Global Baseline</span> <span class="mx-1 opacity-50">|</span> <span class="tracking-widest text-[9px] uppercase">${timelineText}</span>`);
         safeSetHtml('db-pace-timeline-info', dbTimelineText);
 
@@ -4359,20 +4360,20 @@ function updateMetrics() {
         const dbStatusLabel = document.getElementById('db-target-status-label');
         if (dbStatusLabel) {
             if (paceTotalChapters === 0) {
-                dbStatusLabel.className = "text-[7px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1 truncate";
+                dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5 truncate";
                 dbStatusLabel.textContent = "NO TARGETS";
             } else if (today < start) {
-                dbStatusLabel.className = "text-[7px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider mt-1 truncate";
+                dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider mt-0.5 truncate";
                 dbStatusLabel.textContent = "FUTURE";
             } else if (today > end && remaining > 0) {
-                dbStatusLabel.className = "text-[7px] font-bold text-red-500 dark:text-red-400 uppercase tracking-wider mt-1 truncate";
+                dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-red-500 dark:text-red-400 uppercase tracking-wider mt-0.5 truncate";
                 dbStatusLabel.textContent = "OVERDUE";
             } else if (remaining <= 0) {
-                dbStatusLabel.className = "text-[7px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider mt-1 truncate";
+                dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider mt-0.5 truncate";
                 dbStatusLabel.textContent = "DONE";
             } else {
-                dbStatusLabel.className = "text-[7px] font-bold text-blue-400 dark:text-blue-400 uppercase tracking-wider mt-1 truncate";
-                dbStatusLabel.textContent = `Target: ${end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}`;
+                dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-blue-400 dark:text-blue-400 uppercase tracking-wider mt-0.5 truncate";
+                dbStatusLabel.textContent = `Target: ${end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
             }
         }
 

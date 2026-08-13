@@ -351,11 +351,12 @@
                     <!-- Pace & Timeline Summary Dashboard Card -->
                     <div id="dashboard-pace-section"
                         class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col animate-page-enter select-none h-[225px] md:h-[250px] min-h-[225px] md:min-h-[250px]">
+                        <!-- Card Header -->
                         <div
-                            class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100 dark:border-slate-700/60">
-                            <div class="flex items-center space-x-2">
+                            class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100 dark:border-slate-700/60 shrink-0">
+                            <div class="flex items-center space-x-2.5 min-w-0">
                                 <div
-                                    class="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg shrink-0">
+                                    class="p-1.5 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0 border border-indigo-100 dark:border-indigo-800/40 shadow-xs">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                             d="M13 10V3L4 14h7v7l9-11h-7z"></path>
@@ -363,77 +364,73 @@
                                 </div>
                                 <div class="min-w-0">
                                     <h3
-                                        class="text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 truncate">
+                                        class="text-xs md:text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 truncate">
                                         Pace & Timeline</h3>
                                     <span
-                                        class="text-[8px] text-slate-400 uppercase tracking-wider block font-black truncate">Overview</span>
+                                        class="text-[9px] text-slate-400 uppercase tracking-wider block font-extrabold truncate">Overview & Baseline</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Info 2x2 Grid -->
-                        <div class="grid grid-cols-2 gap-2 flex-1 mt-2">
+                        <!-- 2x2 Metric Box Grid -->
+                        <div class="grid grid-cols-2 gap-2 flex-1 min-h-0 py-0.5">
                             <!-- Required Pace Block -->
                             <div
-                                class="bg-slate-50 dark:bg-slate-900/30 border border-slate-100/80 dark:border-slate-800/80 p-2.5 rounded-2xl flex flex-col justify-between leading-tight min-h-0">
-                                <div>
+                                class="bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/60 p-2.5 rounded-2xl flex flex-col justify-between leading-tight min-h-0 hover:border-indigo-500/30 transition-colors">
+                                <div class="min-w-0">
                                     <span
-                                        class="block text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">Req.
-                                        Pace</span>
+                                        class="block text-[10px] md:text-[11px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider leading-none mb-0.5 truncate">Req. Pace</span>
                                     <div id="db-target-req-pace"
-                                        class="text-xs font-black text-slate-800 dark:text-slate-100 mt-1 truncate">--
+                                        class="text-xs sm:text-sm md:text-base font-black text-slate-900 dark:text-white mt-1 truncate tracking-tight">--
                                     </div>
                                 </div>
                                 <div id="db-global-days-left"
-                                    class="text-[9px] text-blue-500 dark:text-blue-400 font-bold uppercase tracking-wider mt-1 truncate">
+                                    class="text-[9px] md:text-[10px] text-blue-500 dark:text-blue-400 font-extrabold uppercase tracking-wider mt-0.5 truncate">
                                     --</div>
                             </div>
 
                             <!-- Actual Pace Block -->
                             <div
-                                class="bg-slate-50 dark:bg-slate-900/30 border border-slate-100/80 dark:border-slate-800/80 p-2.5 rounded-2xl flex flex-col justify-between leading-tight min-h-0">
-                                <div>
+                                class="bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/60 p-2.5 rounded-2xl flex flex-col justify-between leading-tight min-h-0 hover:border-emerald-500/30 transition-colors">
+                                <div class="min-w-0">
                                     <span
-                                        class="block text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">Actual
-                                        Pace</span>
+                                        class="block text-[10px] md:text-[11px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider leading-none mb-0.5 truncate">Actual Pace</span>
                                     <div id="db-current-pace-stat"
-                                        class="text-xs font-black text-slate-800 dark:text-slate-100 mt-1 truncate">--
+                                        class="text-xs sm:text-sm md:text-base font-black text-slate-900 dark:text-white mt-1 truncate tracking-tight">--
                                     </div>
                                 </div>
                                 <div id="db-global-days-passed"
-                                    class="text-[9px] text-emerald-500 dark:text-emerald-400 font-bold uppercase tracking-wider mt-1 truncate">
+                                    class="text-[9px] md:text-[10px] text-emerald-500 dark:text-emerald-400 font-extrabold uppercase tracking-wider mt-0.5 truncate">
                                     --</div>
                             </div>
 
                             <!-- Est. Finish Block -->
                             <div
-                                class="bg-slate-50 dark:bg-slate-900/30 border border-slate-100/80 dark:border-slate-800/80 p-2.5 rounded-2xl flex flex-col justify-between leading-tight min-h-0">
-                                <div>
+                                class="bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/60 p-2.5 rounded-2xl flex flex-col justify-between leading-tight min-h-0 hover:border-indigo-500/30 transition-colors">
+                                <div class="min-w-0">
                                     <span
-                                        class="block text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">Est.
-                                        Finish</span>
+                                        class="block text-[10px] md:text-[11px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider leading-none mb-0.5 truncate">Est. Finish</span>
                                     <div id="db-projected-finish"
-                                        class="text-xs font-black text-slate-800 dark:text-slate-100 mt-1 truncate">--
+                                        class="text-xs sm:text-sm md:text-base font-black text-slate-900 dark:text-white mt-1 truncate tracking-tight">--
                                     </div>
                                 </div>
                                 <div id="db-global-days-needed"
-                                    class="text-[9px] text-indigo-500 dark:text-indigo-400 font-bold uppercase tracking-wider mt-1 truncate">
+                                    class="text-[9px] md:text-[10px] text-indigo-500 dark:text-indigo-400 font-extrabold uppercase tracking-wider mt-0.5 truncate">
                                     --</div>
                             </div>
 
                             <!-- Global Baseline Block -->
                             <div
-                                class="bg-slate-50 dark:bg-slate-900/30 border border-slate-100/80 dark:border-slate-800/80 p-2.5 rounded-2xl flex flex-col justify-between leading-tight min-h-0">
-                                <div>
+                                class="bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/60 p-2.5 rounded-2xl flex flex-col justify-between leading-tight min-h-0 hover:border-fuchsia-500/30 transition-colors">
+                                <div class="min-w-0">
                                     <span
-                                        class="block text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">Global
-                                        Baseline</span>
+                                        class="block text-[10px] md:text-[11px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider leading-none mb-0.5 truncate">Global Baseline</span>
                                     <div id="db-pace-timeline-info"
-                                        class="text-[10px] font-black text-slate-800 dark:text-slate-100 mt-1 truncate">
+                                        class="text-xs sm:text-xs md:text-sm font-black text-slate-900 dark:text-white mt-1 truncate tracking-tight">
                                         --</div>
                                 </div>
                                 <div id="db-target-status-label"
-                                    class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mt-1 truncate">
+                                    class="text-[9px] md:text-[10px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-wider mt-0.5 truncate">
                                     --</div>
                             </div>
                         </div>
