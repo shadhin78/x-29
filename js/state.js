@@ -435,42 +435,43 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
         if (window.shouldHydrateField('subjectFocusTargets', data.subjectFocusTargets, AppState.subjectFocusTargets, isExplicitWipe)) {
             let sft = Object.assign({}, data.subjectFocusTargets || {});
             const tombstones = AppState._tombstones || {};
+            const localTargets = AppState.subjectFocusTargets || {};
 
-            // 1. Reconcile incoming sft against tombstones using timestamps
-            Object.keys(sft).forEach(k => {
+            const allSubjects = new Set([...Object.keys(sft), ...Object.keys(localTargets)]);
+            const finalSft = {};
+
+            allSubjects.forEach(k => {
                 const tombstoneVal = tombstones[`subjectFocusTargets_${k}`] || tombstones[k];
-                if (tombstoneVal) {
-                    const tombstoneTime = (typeof tombstoneVal === 'number') ? tombstoneVal : (tombstoneVal === true ? Number.MAX_SAFE_INTEGER : 0);
-                    const target = sft[k];
-                    const targetTime = target ? (target.updatedAt || (target.createdAt ? new Date(target.createdAt).getTime() : 0)) : 0;
+                const tombstoneTime = (typeof tombstoneVal === 'number') ? tombstoneVal : (tombstoneVal === true ? Number.MAX_SAFE_INTEGER : 0);
 
-                    if (tombstoneTime >= targetTime) {
-                        delete sft[k];
-                    } else {
-                        // Target was created/updated AFTER tombstone -> purge stale tombstone
-                        delete tombstones[`subjectFocusTargets_${k}`];
-                        delete tombstones[k];
-                    }
+                const incomingTarget = sft[k];
+                const incomingTime = incomingTarget ? (incomingTarget.updatedAt || (incomingTarget.createdAt ? new Date(incomingTarget.createdAt).getTime() : 0)) : 0;
+
+                const localTarget = localTargets[k];
+                const localTime = localTarget ? (localTarget.updatedAt || (localTarget.createdAt ? new Date(localTarget.createdAt).getTime() : 0)) : 0;
+
+                let chosenTarget = null;
+                let chosenTime = 0;
+
+                if (localTarget && (localTime > incomingTime) && AppState.isLocalDirty) {
+                    chosenTarget = localTarget;
+                    chosenTime = localTime;
+                } else if (incomingTarget) {
+                    chosenTarget = incomingTarget;
+                    chosenTime = incomingTime;
+                } else if (localTarget) {
+                    chosenTarget = localTarget;
+                    chosenTime = localTime;
+                }
+
+                if (chosenTarget && chosenTime > tombstoneTime) {
+                    finalSft[k] = chosenTarget;
+                    delete tombstones[`subjectFocusTargets_${k}`];
+                    delete tombstones[k];
                 }
             });
 
-            // 2. Preserve un-synced local changes in AppState.subjectFocusTargets if created/updated after tombstone
-            if (AppState.subjectFocusTargets) {
-                Object.keys(AppState.subjectFocusTargets).forEach(k => {
-                    const localTarget = AppState.subjectFocusTargets[k];
-                    const tombstoneVal = tombstones[`subjectFocusTargets_${k}`] || tombstones[k];
-                    const tombstoneTime = (typeof tombstoneVal === 'number') ? tombstoneVal : (tombstoneVal === true ? Number.MAX_SAFE_INTEGER : 0);
-                    const localTime = localTarget ? (localTarget.updatedAt || (localTarget.createdAt ? new Date(localTarget.createdAt).getTime() : 0)) : 0;
-
-                    if (localTarget && localTime > tombstoneTime) {
-                        sft[k] = localTarget;
-                        delete tombstones[`subjectFocusTargets_${k}`];
-                        delete tombstones[k];
-                    }
-                });
-            }
-
-            AppState.subjectFocusTargets = sft;
+            AppState.subjectFocusTargets = finalSft;
         } else {
             rejectedAnyField = true;
         }

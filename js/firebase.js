@@ -499,7 +499,7 @@ window.FirebaseService = {
                                 const localItem = localSft[sub];
                                 const localTime = localItem ? (localItem.updatedAt || (localItem.createdAt ? new Date(localItem.createdAt).getTime() : 0)) : 0;
 
-                                const latestItem = (localTime >= cloudTime) ? localItem : cloudItem;
+                                const latestItem = (localItem && localTime > cloudTime && AppState.isLocalDirty) ? localItem : (cloudItem || localItem);
                                 const latestTime = Math.max(localTime, cloudTime);
 
                                 if (latestItem && latestTime > tombstoneTime) {
