@@ -31,17 +31,17 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Verify Firebase Secret Availability
+      - name: Diagnose Firebase Secret
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         shell: bash
         run: |
           if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
-            echo "SECRET_STATUS=EMPTY"
+            echo "FIREBASE_SERVICE_ACCOUNT_STATUS=MISSING"
             exit 1
           else
-            echo "SECRET_STATUS=PRESENT"
-            echo "SECRET_LENGTH=${#FIREBASE_SERVICE_ACCOUNT}"
+            echo "FIREBASE_SERVICE_ACCOUNT_STATUS=PRESENT"
+            echo "FIREBASE_SERVICE_ACCOUNT_LENGTH=${#FIREBASE_SERVICE_ACCOUNT}"
           fi
 
       - name: Execute Firebase Backup & Verification
