@@ -432,12 +432,16 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     if (data.spectraHeatmapRange !== undefined) AppState.spectraHeatmapRange = data.spectraHeatmapRange;
     if (data.sessionHistoryFilter !== undefined) AppState.sessionHistoryFilter = data.sessionHistoryFilter;
     if (data.subjectFocusTargets !== undefined) {
-        let sft = data.subjectFocusTargets || {};
-        const tombstones = AppState._tombstones || {};
-        Object.keys(sft).forEach(k => {
-            if (tombstones[k] || tombstones[`subjectFocusTargets_${k}`]) delete sft[k];
-        });
-        AppState.subjectFocusTargets = sft;
+        if (window.shouldHydrateField('subjectFocusTargets', data.subjectFocusTargets, AppState.subjectFocusTargets, isExplicitWipe)) {
+            let sft = Object.assign({}, data.subjectFocusTargets || {});
+            const tombstones = AppState._tombstones || {};
+            Object.keys(sft).forEach(k => {
+                if (tombstones[`subjectFocusTargets_${k}`]) delete sft[k];
+            });
+            AppState.subjectFocusTargets = sft;
+        } else {
+            rejectedAnyField = true;
+        }
     }
     if (data.dashboardConfig !== undefined) AppState.dashboardConfig = data.dashboardConfig;
     if (data.weeklyTargetsDatabase !== undefined) AppState.weeklyTargetsDatabase = data.weeklyTargetsDatabase;

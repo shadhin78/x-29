@@ -429,8 +429,11 @@
         const listContainer = document.getElementById('subject-targets-list');
         if (window.subjectFocusTargets && AppState._tombstones) {
             Object.keys(window.subjectFocusTargets).forEach(sub => {
-                if (AppState._tombstones[sub] || AppState._tombstones[`subjectFocusTargets_${sub}`]) {
+                if (AppState._tombstones[`subjectFocusTargets_${sub}`]) {
                     delete window.subjectFocusTargets[sub];
+                    if (AppState.subjectFocusTargets) {
+                        delete AppState.subjectFocusTargets[sub];
+                    }
                 }
             });
         }
@@ -648,6 +651,11 @@
             window.subjectFocusTargets = {};
         }
 
+        if (AppState._tombstones) {
+            delete AppState._tombstones[subject];
+            delete AppState._tombstones[`subjectFocusTargets_${subject}`];
+        }
+
         const dateInput = document.getElementById('modal-target-start-date');
         let createdAt;
         if (dateInput && dateInput.value) {
@@ -660,6 +668,9 @@
         }
 
         window.subjectFocusTargets[subject] = { hours, minutes, createdAt };
+        if (AppState.subjectFocusTargets) {
+            AppState.subjectFocusTargets[subject] = window.subjectFocusTargets[subject];
+        }
 
         if (window.FirebaseService) {
             window.FirebaseService.saveToCloud(true);
@@ -670,27 +681,40 @@
     };
 
     window.deleteSubjectTarget = function (subject) {
-        window.openConfirmModal(
-            "Delete Subject Target?",
-            `Are you sure you want to remove the focus target for "${subject}"?`,
-            () => {
-                if (window.subjectFocusTargets && window.subjectFocusTargets[subject]) {
-                    if (typeof window.recordItemDeletion === 'function') {
-                        window.recordItemDeletion(subject);
-                        window.recordItemDeletion(`subjectFocusTargets_${subject}`);
-                    }
+        if (!subject) return;
+        const executeDelete = () => {
+            if (window.subjectFocusTargets && window.subjectFocusTargets[subject]) {
+                if (typeof window.recordItemDeletion === 'function') {
+                    window.recordItemDeletion(`subjectFocusTargets_${subject}`);
+                }
+                if (AppState.subjectFocusTargets) {
+                    delete AppState.subjectFocusTargets[subject];
+                }
+                if (window.subjectFocusTargets) {
                     delete window.subjectFocusTargets[subject];
-                    if (window.FirebaseService) {
-                        window.FirebaseService.saveToCloud(true);
-                    }
-                    updateSubjectTargetUI();
+                }
+                if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
+                    window.FirebaseService.saveToCloud(true);
+                }
+                updateSubjectTargetUI();
+                if (typeof showToast === 'function') {
                     showToast(`Target for ${subject} deleted.`, "success");
-                    if (typeof window.closeSubjectTargetModal === 'function') {
-                        window.closeSubjectTargetModal();
-                    }
+                }
+                if (typeof window.closeSubjectTargetModal === 'function') {
+                    window.closeSubjectTargetModal();
                 }
             }
-        );
+        };
+
+        if (typeof window.openConfirmModal === 'function') {
+            window.openConfirmModal(
+                "Delete Subject Target?",
+                `Are you sure you want to remove the focus target for "${subject}"?`,
+                executeDelete
+            );
+        } else {
+            executeDelete();
+        }
     };
 
     function buildProgramWiseSubjectOptionsHtml() {
