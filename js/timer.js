@@ -495,7 +495,7 @@
             }
 
             html += `
-                <div class="p-3.5 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl flex flex-col gap-2.5 shadow-sm relative overflow-hidden" style="border-left: 4px solid ${subjColor};">
+                <div class="p-3.5 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl flex flex-col gap-2.5 shadow-sm relative overflow-hidden transition-all duration-300 hover:shadow-md" style="border-left: 4px solid ${subjColor};">
                     <div class="flex justify-between items-center gap-2">
                         <div class="flex flex-col min-w-0">
                             <span class="font-black text-xs text-slate-800 dark:text-white truncate" title="${subject}">${subject}</span>
@@ -503,7 +503,7 @@
                         </div>
                         <div class="flex items-center gap-1.5 shrink-0">
                             <!-- Progress Badge -->
-                            <span class="text-[9px] font-black font-mono px-1.5 py-0.5 rounded-full ${progressPercent >= 100 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}">${progressPercent}%</span>
+                            <span class="text-[9px] font-black font-mono px-1.5 py-0.5 rounded-full transition-colors duration-300 ${progressPercent >= 100 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}">${progressPercent}%</span>
                             
                             <!-- Edit Button -->
                             <button onclick="window.openSubjectTargetModal('${subject.replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all" title="Edit Target">
@@ -516,7 +516,7 @@
                     
                     <!-- Premium Progress Bar -->
                     <div class="w-full bg-slate-200/50 dark:bg-slate-800/50 rounded-full h-1.5 overflow-hidden">
-                        <div class="h-full rounded-full transition-all duration-500" style="width: ${progressPercent}%; background-color: ${progressPercent >= 100 ? '#10b981' : subjColor};"></div>
+                        <div class="h-full rounded-full transition-all duration-500 ease-out" style="width: ${progressPercent}%; background-color: ${progressPercent >= 100 ? '#10b981' : subjColor};"></div>
                     </div>
 
                     <!-- Details Grid -->
@@ -540,6 +540,7 @@
 
         listContainer.innerHTML = html;
     }
+    window.updateSubjectTargetUI = updateSubjectTargetUI;
 
     window.openSubjectTargetModal = function (prefilledSubject = '') {
         const modal = document.getElementById('subject-target-modal');

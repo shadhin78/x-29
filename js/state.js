@@ -538,6 +538,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     else if (typeof window.renderSpectraFocusHeatmap === 'function') window.renderSpectraFocusHeatmap();
     if (typeof window.setSessionHistoryFilterUI === 'function') window.setSessionHistoryFilterUI(AppState.sessionHistoryFilter);
 
+    if (typeof window.updateSubjectTargetUI === 'function') window.updateSubjectTargetUI();
     if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
     if (typeof window.renderUI === 'function') window.renderUI();
     return !rejectedAnyField;
