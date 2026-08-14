@@ -7950,6 +7950,8 @@ window.renderGlobalHistoryContent = function () {
     const container = document.getElementById('ghm-list');
     if (!container) return;
 
+    window.currentGhmTab = window.currentGhmTab || 'timeline';
+
     const scrollViews = {
         timeline: document.getElementById('ghm-view-timeline')?.scrollTop || 0,
         subject: document.getElementById('ghm-view-subject')?.scrollTop || 0,
