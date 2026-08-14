@@ -427,16 +427,6 @@
 
     function updateSubjectTargetUI() {
         const listContainer = document.getElementById('subject-targets-list');
-        if (window.subjectFocusTargets && AppState._tombstones) {
-            Object.keys(window.subjectFocusTargets).forEach(sub => {
-                if (AppState._tombstones[`subjectFocusTargets_${sub}`]) {
-                    delete window.subjectFocusTargets[sub];
-                    if (AppState.subjectFocusTargets) {
-                        delete AppState.subjectFocusTargets[sub];
-                    }
-                }
-            });
-        }
 
         if (!window.subjectFocusTargets || Object.keys(window.subjectFocusTargets).length === 0) {
             listContainer.innerHTML = `<p class="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider py-4 text-center">No subject targets set. Click + to add one.</p>`;
@@ -667,7 +657,8 @@
             createdAt = (existingTarget && existingTarget.createdAt) ? existingTarget.createdAt : new Date().toISOString();
         }
 
-        window.subjectFocusTargets[subject] = { hours, minutes, createdAt };
+        const nowMs = Date.now() + (window.serverTimeOffset || 0);
+        window.subjectFocusTargets[subject] = { hours, minutes, createdAt, updatedAt: nowMs };
         if (AppState.subjectFocusTargets) {
             AppState.subjectFocusTargets[subject] = window.subjectFocusTargets[subject];
         }

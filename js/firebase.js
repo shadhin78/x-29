@@ -484,10 +484,32 @@ window.FirebaseService = {
                         }
 
                         if (cloudData.subjectFocusTargets || AppState.subjectFocusTargets) {
-                            const mergedSft = Object.assign({}, cloudData.subjectFocusTargets || {}, AppState.subjectFocusTargets || {});
-                            Object.keys(mergedSft).forEach(k => {
-                                if (tombstones[`subjectFocusTargets_${k}`]) {
-                                    delete mergedSft[k];
+                            const cloudSft = cloudData.subjectFocusTargets || {};
+                            const localSft = AppState.subjectFocusTargets || {};
+                            const mergedSft = {};
+                            const allSubs = new Set([...Object.keys(cloudSft), ...Object.keys(localSft)]);
+
+                            allSubs.forEach(sub => {
+                                const tombstoneVal = tombstones[`subjectFocusTargets_${sub}`] || tombstones[sub];
+                                const tombstoneTime = (typeof tombstoneVal === 'number') ? tombstoneVal : (tombstoneVal === true ? Number.MAX_SAFE_INTEGER : 0);
+
+                                const cloudItem = cloudSft[sub];
+                                const cloudTime = cloudItem ? (cloudItem.updatedAt || (cloudItem.createdAt ? new Date(cloudItem.createdAt).getTime() : 0)) : 0;
+
+                                const localItem = localSft[sub];
+                                const localTime = localItem ? (localItem.updatedAt || (localItem.createdAt ? new Date(localItem.createdAt).getTime() : 0)) : 0;
+
+                                const latestItem = (localTime >= cloudTime) ? localItem : cloudItem;
+                                const latestTime = Math.max(localTime, cloudTime);
+
+                                if (latestItem && latestTime > tombstoneTime) {
+                                    mergedSft[sub] = latestItem;
+                                    delete tombstones[`subjectFocusTargets_${sub}`];
+                                    delete tombstones[sub];
+                                    if (cloudData._tombstones) {
+                                        delete cloudData._tombstones[`subjectFocusTargets_${sub}`];
+                                        delete cloudData._tombstones[sub];
+                                    }
                                 }
                             });
                             cloudData.subjectFocusTargets = mergedSft;
@@ -718,12 +740,43 @@ window.FirebaseService = {
                         cleanPayload.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
                         if (tombstones && typeof tombstones === 'object') {
                             if (!cleanPayload.subjectFocusTargets) cleanPayload.subjectFocusTargets = {};
+                            if (!cleanPayload._tombstones) cleanPayload._tombstones = tombstones;
+
+                            // Process subjectFocusTargets tombstones vs active targets based on timestamps
+                            Object.keys(cleanPayload.subjectFocusTargets).forEach(sub => {
+                                const target = cleanPayload.subjectFocusTargets[sub];
+                                if (target && target !== firebase.firestore.FieldValue.delete()) {
+                                    const targetTime = target.updatedAt || (target.createdAt ? new Date(target.createdAt).getTime() : 0);
+                                    const tombstoneVal = tombstones[`subjectFocusTargets_${sub}`] || tombstones[sub];
+                                    const tombstoneTime = (typeof tombstoneVal === 'number') ? tombstoneVal : (tombstoneVal === true ? Number.MAX_SAFE_INTEGER : 0);
+
+                                    if (targetTime > tombstoneTime) {
+                                        delete tombstones[`subjectFocusTargets_${sub}`];
+                                        delete tombstones[sub];
+                                        delete cleanPayload._tombstones[`subjectFocusTargets_${sub}`];
+                                        delete cleanPayload._tombstones[sub];
+                                        if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
+                                            cleanPayload._tombstones[`subjectFocusTargets_${sub}`] = firebase.firestore.FieldValue.delete();
+                                            cleanPayload._tombstones[sub] = firebase.firestore.FieldValue.delete();
+                                        }
+                                    } else {
+                                        delete cleanPayload.subjectFocusTargets[sub];
+                                        if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
+                                            cleanPayload.subjectFocusTargets[sub] = firebase.firestore.FieldValue.delete();
+                                        }
+                                    }
+                                }
+                            });
+
                             Object.keys(tombstones).forEach(tKey => {
                                 if (tKey.startsWith('subjectFocusTargets_')) {
                                     const subKey = tKey.substring('subjectFocusTargets_'.length);
-                                    delete cleanPayload.subjectFocusTargets[subKey];
-                                    if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
-                                        cleanPayload.subjectFocusTargets[subKey] = firebase.firestore.FieldValue.delete();
+                                    if (!cleanPayload.subjectFocusTargets[subKey] || cleanPayload.subjectFocusTargets[subKey] === firebase.firestore.FieldValue.delete()) {
+                                        if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
+                                            cleanPayload.subjectFocusTargets[subKey] = firebase.firestore.FieldValue.delete();
+                                        } else {
+                                            delete cleanPayload.subjectFocusTargets[subKey];
+                                        }
                                     }
                                 }
                             });
