@@ -61,12 +61,27 @@ function getBangladeshTimestamp() {
 // 2. Verify & Load Service Account Credentials
 function loadServiceAccount() {
     let serviceAccount;
+    const rawEnv = process.env.FIREBASE_SERVICE_ACCOUNT ? process.env.FIREBASE_SERVICE_ACCOUNT.trim() : '';
 
-    if (process.env.FIREBASE_SERVICE_ACCOUNT && process.env.FIREBASE_SERVICE_ACCOUNT.trim() !== '') {
+    if (rawEnv !== '') {
+        let jsonStr = rawEnv;
+        if (!jsonStr.startsWith('{')) {
+            try {
+                const decoded = Buffer.from(jsonStr, 'base64').toString('utf8').trim();
+                if (decoded.startsWith('{')) {
+                    jsonStr = decoded;
+                }
+            } catch (e) {
+                // Ignore base64 decoding error, fallback to raw string attempt
+            }
+        }
+
         try {
-            serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            serviceAccount = JSON.parse(jsonStr);
         } catch (err) {
-            console.error(`[BACKUP] ❌ ERROR: Failed to parse FIREBASE_SERVICE_ACCOUNT environment variable JSON: ${err.message}`);
+            console.error(`[BACKUP] ❌ ERROR: Failed to parse FIREBASE_SERVICE_ACCOUNT environment variable / secret as JSON.`);
+            console.error(`Please ensure the GitHub Repository Secret 'FIREBASE_SERVICE_ACCOUNT' contains valid Service Account JSON.`);
+            console.error(`Parse details: ${err.message}`);
             process.exit(1);
         }
     } else if (fs.existsSync(SERVICE_ACCOUNT_PATH)) {
@@ -78,15 +93,37 @@ function loadServiceAccount() {
             process.exit(1);
         }
     } else {
-        console.error(`[BACKUP] ❌ ERROR: Service account key not found.`);
-        console.error(`Please set FIREBASE_SERVICE_ACCOUNT secret or place 'firebase-service-account.json' in the project directory.`);
+        console.error(`[BACKUP] ❌ ERROR: Service account credentials missing.`);
+        if (isAutomaticMode) {
+            console.error(`In GitHub Actions, please ensure the GitHub Repository Secret 'FIREBASE_SERVICE_ACCOUNT' is set under:`);
+            console.error(`Settings -> Secrets and variables -> Actions -> New repository secret`);
+        } else {
+            console.error(`For local PC execution, place 'firebase-service-account.json' at:`);
+            console.error(`${SERVICE_ACCOUNT_PATH}`);
+            console.error(`or set the FIREBASE_SERVICE_ACCOUNT environment variable.`);
+        }
+        process.exit(1);
+    }
+
+    if (!serviceAccount || typeof serviceAccount !== 'object') {
+        console.error(`[BACKUP] ❌ ERROR: Service account payload is not a valid JSON object.`);
         process.exit(1);
     }
 
     const projectId = serviceAccount.project_id || serviceAccount.projectId;
+    if (!projectId) {
+        console.error(`[BACKUP] ❌ ERROR: Service account JSON is missing the required 'project_id' field.`);
+        process.exit(1);
+    }
+
     if (projectId !== EXPECTED_PROJECT_ID) {
         console.error(`[BACKUP] ❌ ERROR: Service account project ID is [${projectId}], expected [${EXPECTED_PROJECT_ID}].`);
         console.error(`Backup aborted to protect wrong project data.`);
+        process.exit(1);
+    }
+
+    if (!serviceAccount.private_key || !serviceAccount.client_email) {
+        console.error(`[BACKUP] ❌ ERROR: Service account JSON is missing required fields ('private_key' or 'client_email').`);
         process.exit(1);
     }
 
