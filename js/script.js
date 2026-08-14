@@ -7981,8 +7981,8 @@ window.renderGlobalHistoryContent = function () {
                             if (isNaN(actualDate.getTime())) actualDate = fallbackDate;
                             let displayDate = actualDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
                             let ts = actualDate.getTime();
-                            subjectLogs[b.subject].chapters.push({ ch: b.chapter, date: displayDate, ts: ts });
-                            allEvents.push({ type: 'Chapter', subject: b.subject, item: b.chapter, date: displayDate, ts: ts });
+                            subjectLogs[b.subject].chapters.push({ ch: b.chapter, date: displayDate, ts: ts, track: track.id });
+                            allEvents.push({ type: 'Chapter', subject: b.subject, item: b.chapter, date: displayDate, ts: ts, track: track.id });
                         }
                     });
                 }
@@ -8003,8 +8003,8 @@ window.renderGlobalHistoryContent = function () {
                     if (isNaN(actualDate.getTime())) actualDate = new Date();
                     let ts = actualDate.getTime();
                     let dStr = actualDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-                    subjectLogs[sub].revisions.push({ ch: 'Ch. ' + chNum, date: dStr, ts: ts });
-                    allEvents.push({ type: 'Revision', subject: sub, item: 'Ch. ' + chNum, date: dStr, ts: ts });
+                    subjectLogs[sub].revisions.push({ ch: 'Ch. ' + chNum, date: dStr, ts: ts, chNum: chNum });
+                    allEvents.push({ type: 'Revision', subject: sub, item: 'Ch. ' + chNum, date: dStr, ts: ts, chNum: chNum });
                 }
             });
             subjectLogs[sub].revisions.sort((a, b) => a.ts - b.ts);
@@ -8049,7 +8049,12 @@ window.renderGlobalHistoryContent = function () {
                                     ${log.chapters.length > 0 ? log.chapters.map(c => `
                                         <div class="flex justify-between items-center text-xs bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700/50">
                                             <span class="font-bold text-slate-700 dark:text-slate-300">${c.ch}</span>
-                                            <span class="text-[9px] font-black text-slate-400 bg-slate-50 dark:bg-slate-900 px-1.5 py-0.5 rounded shadow-inner whitespace-nowrap">${c.date}</span>
+                                            <div class="flex items-center space-x-1.5">
+                                                <span class="text-[9px] font-black text-slate-400 bg-slate-50 dark:bg-slate-900 px-1.5 py-0.5 rounded shadow-inner whitespace-nowrap">${c.date}</span>
+                                                <button onclick="window.openEditTimelineEntryModal('Chapter', '${encodeURIComponent(sub)}', '${encodeURIComponent(c.ch)}', ${c.ts}, '${c.track || ''}')" class="p-1 text-slate-400 hover:text-blue-500 rounded transition-colors" title="Edit Date & Time">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                                </button>
+                                            </div>
                                         </div>
                                     `).join('') : '<span class="text-[10px] text-slate-500 italic">No chapters completed yet.</span>'}
                                 </div>
@@ -8060,7 +8065,12 @@ window.renderGlobalHistoryContent = function () {
                                     ${log.revisions.length > 0 ? log.revisions.map(r => `
                                         <div class="flex justify-between items-center text-xs bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded-lg border border-blue-100 dark:border-blue-800/50">
                                             <span class="font-bold text-blue-700 dark:text-blue-400">${r.ch}</span>
-                                            <span class="text-[9px] font-black text-blue-500/70 bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded shadow-inner whitespace-nowrap">${r.date}</span>
+                                            <div class="flex items-center space-x-1.5">
+                                                <span class="text-[9px] font-black text-blue-500/70 bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded shadow-inner whitespace-nowrap">${r.date}</span>
+                                                <button onclick="window.openEditTimelineEntryModal('Revision', '${encodeURIComponent(sub)}', '${encodeURIComponent(r.ch)}', ${r.ts}, '', '${r.chNum || ''}')" class="p-1 text-slate-400 hover:text-blue-500 rounded transition-colors" title="Edit Date & Time">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                                </button>
+                                            </div>
                                         </div>
                                     `).join('') : '<span class="text-[10px] text-slate-500 italic">No revisions completed yet.</span>'}
                                 </div>
@@ -8072,7 +8082,7 @@ window.renderGlobalHistoryContent = function () {
     });
 
     let timelineHtml = allEvents.map(e => `
-                <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-slate-300 dark:hover:border-slate-600 transition-colors">
                     <div class="flex items-center space-x-3">
                         <div class="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" style="background-color: ${getSubjectColor(e.subject)}"></div>
                         <div class="flex flex-col">
@@ -8080,9 +8090,17 @@ window.renderGlobalHistoryContent = function () {
                             <span class="text-[10px] font-bold text-slate-500 mt-0.5">${e.item}</span>
                         </div>
                     </div>
-                    <div class="flex flex-col items-end shrink-0 ml-4">
-                        <span class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm ${e.type === 'Revision' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'}">${e.type}</span>
-                        <span class="text-[10px] font-bold text-slate-400 mt-1 whitespace-nowrap">${e.date}</span>
+                    <div class="flex items-center space-x-3">
+                        <div class="flex flex-col items-end shrink-0">
+                            <span class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm ${e.type === 'Revision' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'}">${e.type}</span>
+                            <span class="text-[10px] font-bold text-slate-400 mt-1 whitespace-nowrap">${e.date}</span>
+                        </div>
+                        <button onclick="window.openEditTimelineEntryModal('${e.type}', '${encodeURIComponent(e.subject)}', '${encodeURIComponent(e.item)}', ${e.ts}, '${e.track || ''}', '${e.chNum || ''}')"
+                            class="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-all active:scale-95" title="Edit Date & Time">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </button>
                     </div>
                 </div>
             `).join('');
@@ -8211,6 +8229,89 @@ window.renderGlobalHistoryContent = function () {
         if (subView) subView.scrollTop = scrollViews.subject;
         if (trendView) trendView.scrollTop = scrollViews.trend;
     });
+};
+
+window.currentTimelineEditEntry = null;
+
+window.openEditTimelineEntryModal = function (type, encSubject, encItem, ts, track = '', chNum = '') {
+    const subject = decodeURIComponent(encSubject);
+    const item = decodeURIComponent(encItem);
+    window.currentTimelineEditEntry = { type, subject, item, ts, track, chNum };
+
+    const subEl = document.getElementById('etem-subtitle');
+    if (subEl) subEl.textContent = `${subject} • ${item} (${type})`;
+
+    const dateObj = new Date(ts);
+    const pad = n => String(n).padStart(2, '0');
+    const dtStr = `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}T${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
+
+    const dtInput = document.getElementById('etem-datetime');
+    if (dtInput) dtInput.value = dtStr;
+
+    openModal('edit-timeline-entry-modal');
+};
+
+window.saveTimelineEntryDate = function () {
+    if (!window.currentTimelineEditEntry) return;
+    const dtInput = document.getElementById('etem-datetime');
+    if (!dtInput || !dtInput.value) {
+        showToast("Please select a valid date and time.", "error");
+        return;
+    }
+
+    const newDate = new Date(dtInput.value);
+    if (isNaN(newDate.getTime())) {
+        showToast("Invalid date/time selected.", "error");
+        return;
+    }
+
+    const newIsoStr = newDate.toISOString();
+    const { type, subject, item, track, chNum } = window.currentTimelineEditEntry;
+
+    if (type === 'Chapter') {
+        const targetTrack = track || 'academic';
+        window.syncTaskChapterCompletion(targetTrack, subject, item, true, newIsoStr);
+
+        AppState.tasks.forEach(t => {
+            if (t.type === 'study') {
+                window.tracks.forEach(tr => {
+                    const key = tr.id + 'Tasks';
+                    if (Array.isArray(t[key])) {
+                        t[key].forEach(b => {
+                            if (b.subject === subject && (b.chapter === item || b.chapter === `Ch. ${item}` || b.chapter === item.replace(/^Ch\.\s*/, ''))) {
+                                b.completed = true;
+                                b.completedAt = newIsoStr;
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    } else if (type === 'Revision') {
+        if (!window.revisionData) window.revisionData = { active: [], progress: {} };
+        if (!window.revisionData.progress) window.revisionData.progress = {};
+        if (!window.revisionData.progress[subject]) window.revisionData.progress[subject] = {};
+
+        let cNum = chNum;
+        if (!cNum && item) {
+            cNum = item.replace(/^Ch\.\s*/, '').replace(/^Chapter\s*/, '').trim();
+        }
+        if (cNum) {
+            window.revisionData.progress[subject][cNum] = newIsoStr;
+        }
+    }
+
+    if (typeof FirebaseService !== 'undefined' && FirebaseService.saveToCloud) {
+        FirebaseService.saveToCloud();
+    } else if (typeof window.saveState === 'function') {
+        window.saveState();
+    }
+
+    if (typeof renderUI === 'function') renderUI();
+    window.renderGlobalHistoryContent();
+
+    closeModal('edit-timeline-entry-modal');
+    showToast("Entry time and date updated!", "success");
 };
 
 window.switchGhmTab = function (tab) {
@@ -10520,8 +10621,8 @@ window.switchDadbTab = function (tab) {
 
 window.openModal = function (modalId, typeKey = null) {
     if (modalId === 'analytics-modal' && typeKey) populateAnalyticsModal(typeKey);
-    const backdrops = { 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-backdrop', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop', 'fiscal-tx-modal': 'fiscal-tx-backdrop', 'fiscal-budget-modal': 'fiscal-budget-backdrop', 'fiscal-vault-modal': 'fiscal-vault-backdrop', 'fiscal-deposit-modal': 'fiscal-deposit-backdrop', 'fiscal-vault-transfer-modal': 'fiscal-vault-transfer-backdrop', 'fiscal-vault-to-budget-modal': 'fiscal-vault-to-budget-backdrop', 'fiscal-delete-modal': 'fiscal-delete-backdrop' };
-    const contents = { 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content', 'fiscal-tx-modal': 'fiscal-tx-content', 'fiscal-budget-modal': 'fiscal-budget-content', 'fiscal-vault-modal': 'fiscal-vault-content', 'fiscal-deposit-modal': 'fiscal-deposit-content', 'fiscal-vault-transfer-modal': 'fiscal-vault-transfer-content', 'fiscal-vault-to-budget-modal': 'fiscal-vault-to-budget-content', 'fiscal-delete-modal': 'fiscal-delete-content' };
+    const backdrops = { 'edit-timeline-entry-modal': 'etem-backdrop', 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-backdrop', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop', 'fiscal-tx-modal': 'fiscal-tx-backdrop', 'fiscal-budget-modal': 'fiscal-budget-backdrop', 'fiscal-vault-modal': 'fiscal-vault-backdrop', 'fiscal-deposit-modal': 'fiscal-deposit-backdrop', 'fiscal-vault-transfer-modal': 'fiscal-vault-transfer-backdrop', 'fiscal-vault-to-budget-modal': 'fiscal-vault-to-budget-backdrop', 'fiscal-delete-modal': 'fiscal-delete-backdrop' };
+    const contents = { 'edit-timeline-entry-modal': 'etem-content', 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content', 'fiscal-tx-modal': 'fiscal-tx-content', 'fiscal-budget-modal': 'fiscal-budget-content', 'fiscal-vault-modal': 'fiscal-vault-content', 'fiscal-deposit-modal': 'fiscal-deposit-content', 'fiscal-vault-transfer-modal': 'fiscal-vault-transfer-content', 'fiscal-vault-to-budget-modal': 'fiscal-vault-to-budget-content', 'fiscal-delete-modal': 'fiscal-delete-content' };
     const modal = document.getElementById(modalId);
     const backdrop = (backdrops[modalId] && document.getElementById(backdrops[modalId])) || (modal ? modal.children[0] : null);
     const content = (contents[modalId] && document.getElementById(contents[modalId])) || (modal ? modal.children[1] : null);
