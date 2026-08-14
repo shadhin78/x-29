@@ -5929,7 +5929,7 @@ function safeEscapeHtml(str) {
 window.getCommitmentLabels = function () {
     if (Array.isArray(window.customActions) && window.customActions.length > 0) {
         const sorted = [...window.customActions].sort((a, b) => (a.priority ?? 3) - (b.priority ?? 3) || (a.order ?? 999) - (b.order ?? 999));
-        return sorted.slice(0, 7).map(a => (a.title || a.name || '').toUpperCase());
+        return sorted.map(a => (a.title || a.name || '').toUpperCase());
     }
     return [];
 };
@@ -5951,7 +5951,7 @@ window.getCommitmentMonthData = function (dateObj) {
     const result = {};
 
     let sortedActions = Array.isArray(window.customActions) && window.customActions.length > 0
-        ? [...window.customActions].sort((a, b) => (a.priority ?? 3) - (b.priority ?? 3) || (a.order ?? 999) - (b.order ?? 999)).slice(0, 7)
+        ? [...window.customActions].sort((a, b) => (a.priority ?? 3) - (b.priority ?? 3) || (a.order ?? 999) - (b.order ?? 999))
         : [];
 
     const tasksList = (typeof AppState !== 'undefined' && Array.isArray(AppState.tasks) && AppState.tasks.length > 0)
@@ -6097,32 +6097,22 @@ window.resetCommitmentLabelsDefault = function () {
 };
 
 window.saveCommitmentLabels = function () {
-    const newLabels = [];
-    for (let i = 0; i < 7; i++) {
-        const inp = document.getElementById(`spectra-commitment-input-${i}`);
-        const val = inp ? inp.value.trim() : '';
-        newLabels.push(val || window.DEFAULT_COMMITMENT_LABELS[i]);
-    }
-
     if (!Array.isArray(window.customActions)) {
         window.customActions = [];
     }
 
-    const sorted = [...window.customActions].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
-    
-    for (let i = 0; i < 7; i++) {
-        const newTitle = newLabels[i];
-        if (sorted[i]) {
-            sorted[i].title = newTitle;
+    const sorted = [...window.customActions].sort((a, b) => (a.priority ?? 3) - (b.priority ?? 3) || (a.order ?? 999) - (b.order ?? 999));
+    const numActions = sorted.length;
+    const newLabels = [];
+
+    for (let i = 0; i < numActions; i++) {
+        const inp = document.getElementById(`spectra-commitment-input-${i}`);
+        const val = inp ? inp.value.trim() : '';
+        if (val) {
+            sorted[i].title = val;
+            newLabels.push(val);
         } else {
-            const newAct = {
-                id: 'act_' + Date.now() + '_' + i,
-                title: newTitle,
-                color: 'indigo',
-                priority: i + 1,
-                order: i + 1
-            };
-            window.customActions.push(newAct);
+            newLabels.push(sorted[i].title || '');
         }
     }
 
@@ -6364,6 +6354,9 @@ window.renderSpectraCommitmentsChart = function () {
     }
 
     // 2. Draw habit checkboxes and task labels vertically centered inside each corresponding row band
+    const cbSize = Math.max(8, Math.min(14, ringStep * 0.75));
+    const fontSize = Math.max(7, Math.min(11, ringStep * 0.6));
+
     for (let h = 0; h < numHabits; h++) {
         const midY = cy - rOuter + (h + 0.5) * ringStep;
         const habitLabel = labels[h];
@@ -6374,8 +6367,8 @@ window.renderSpectraCommitmentsChart = function () {
             const isTodayDone = !!(monthData[dayKey] && monthData[dayKey][h]);
 
             const cbX = lineXStart;
-            const cbY = midY - 7;
-            const textX = lineXStart + 22;
+            const cbY = midY - (cbSize / 2);
+            const textX = lineXStart + cbSize + 8;
 
             const cbFill = isTodayDone ? '#10b981' : (isDarkMode ? 'rgba(15, 23, 42, 0.8)' : '#ffffff');
             const cbStroke = isTodayDone ? '#10b981' : (isDarkMode ? '#475569' : '#94a3b8');
@@ -6383,18 +6376,18 @@ window.renderSpectraCommitmentsChart = function () {
             leaderLinesSvg += `
                 <g class="commitment-checkbox-group cursor-pointer select-none" onclick="window.toggleCommitmentCell(${targetDay}, ${h})">
                     <!-- Interactive Checkbox Box for Today (${targetDay} ${monthName}) -->
-                    <rect x="${cbX}" y="${cbY.toFixed(2)}" width="14" height="14" rx="3.5"
+                    <rect x="${cbX}" y="${cbY.toFixed(2)}" width="${cbSize.toFixed(2)}" height="${cbSize.toFixed(2)}" rx="3"
                         fill="${cbFill}" stroke="${cbStroke}" stroke-width="1.4" />
 
                     ${isTodayDone ? `
                         <!-- Checkmark Icon -->
-                        <path d="M ${(cbX + 3.5).toFixed(2)} ${(cbY + 7).toFixed(2)} L ${(cbX + 5.8).toFixed(2)} ${(cbY + 9.5).toFixed(2)} L ${(cbX + 10.5).toFixed(2)} ${(cbY + 4.5).toFixed(2)}"
+                        <path d="M ${(cbX + cbSize * 0.25).toFixed(2)} ${(cbY + cbSize * 0.5).toFixed(2)} L ${(cbX + cbSize * 0.42).toFixed(2)} ${(cbY + cbSize * 0.68).toFixed(2)} L ${(cbX + cbSize * 0.75).toFixed(2)} ${(cbY + cbSize * 0.32).toFixed(2)}"
                             stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
                     ` : ''}
 
                     <!-- Task Name Label -->
-                    <text x="${textX}" y="${midY.toFixed(2)}"
-                        fill="${textFill}" class="commitment-label-text hover:opacity-80 transition-opacity" font-size="11" font-weight="800"
+                    <text x="${textX.toFixed(2)}" y="${midY.toFixed(2)}"
+                        fill="${textFill}" class="commitment-label-text hover:opacity-80 transition-opacity" font-size="${fontSize.toFixed(1)}" font-weight="800"
                         letter-spacing="0.02em" dominant-baseline="central">
                         ${safeEscapeHtml(habitLabel)}
                     </text>
@@ -6408,7 +6401,7 @@ window.renderSpectraCommitmentsChart = function () {
                 <g class="commitment-checkbox-group select-none">
                     <!-- Task Name Label -->
                     <text x="${textX}" y="${midY.toFixed(2)}"
-                        fill="${textFill}" class="commitment-label-text" font-size="11" font-weight="800"
+                        fill="${textFill}" class="commitment-label-text" font-size="${fontSize.toFixed(1)}" font-weight="800"
                         letter-spacing="0.02em" dominant-baseline="central">
                         ${safeEscapeHtml(habitLabel)}
                     </text>
