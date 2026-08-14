@@ -427,7 +427,13 @@
 
     function updateSubjectTargetUI() {
         const listContainer = document.getElementById('subject-targets-list');
-        if (!listContainer) return;
+        if (window.subjectFocusTargets && AppState._tombstones) {
+            Object.keys(window.subjectFocusTargets).forEach(sub => {
+                if (AppState._tombstones[sub] || AppState._tombstones[`subjectFocusTargets_${sub}`]) {
+                    delete window.subjectFocusTargets[sub];
+                }
+            });
+        }
 
         if (!window.subjectFocusTargets || Object.keys(window.subjectFocusTargets).length === 0) {
             listContainer.innerHTML = `<p class="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider py-4 text-center">No subject targets set. Click + to add one.</p>`;
@@ -669,6 +675,10 @@
             `Are you sure you want to remove the focus target for "${subject}"?`,
             () => {
                 if (window.subjectFocusTargets && window.subjectFocusTargets[subject]) {
+                    if (typeof window.recordItemDeletion === 'function') {
+                        window.recordItemDeletion(subject);
+                        window.recordItemDeletion(`subjectFocusTargets_${subject}`);
+                    }
                     delete window.subjectFocusTargets[subject];
                     if (window.FirebaseService) {
                         window.FirebaseService.saveToCloud(true);
@@ -1236,6 +1246,9 @@
             "Are you sure you want to delete this study record? This action cannot be undone.",
             () => {
                 if (!AppState.timerLogs) AppState.timerLogs = [];
+                if (typeof window.recordItemDeletion === 'function') {
+                    window.recordItemDeletion(logId);
+                }
                 AppState.timerLogs = AppState.timerLogs.filter(log => log.id !== logId);
                 FirebaseService.saveToCloud(true);
                 window.TimerService.updateDisplay();

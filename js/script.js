@@ -1242,6 +1242,9 @@ window.submitCreateScheduleGroup = function () {
 window.deleteScheduleGroup = function (groupId) {
     window.openConfirmModal('Delete Group', 'Remove this group? Items will become ungrouped.', () => {
         if (!window.scheduleGroups) return;
+        if (typeof window.recordItemDeletion === 'function') {
+            window.recordItemDeletion(groupId);
+        }
         window.scheduleGroups = window.scheduleGroups.filter(g => g.id !== groupId);
         FirebaseService.saveToCloud(true);
         if (window.renderSchedulePage) window.renderSchedulePage();
@@ -1888,6 +1891,9 @@ window.deleteScheduleBlock = function (blockId) {
     const title = currentSet === 2 ? "Delete Routine 2 Slot" : "Delete Routine Slot";
     const text = currentSet === 2 ? "Are you sure you want to delete this routine slot from Routine 2?" : "Are you sure you want to delete this routine slot?";
     window.openConfirmModal(title, text, () => {
+        if (typeof window.recordItemDeletion === 'function') {
+            window.recordItemDeletion(blockId);
+        }
         if (currentSet === 2) {
             if (window.scheduleBlocks2) {
                 window.scheduleBlocks2 = window.scheduleBlocks2.filter(b => b.id !== blockId);
@@ -8277,6 +8283,9 @@ window.saveSubjectTimeGoal = function () {
     } else if (goalId) {
         window.subjectTimeLinks[sub] = { type: 'goal', id: goalId };
     } else {
+        if (typeof window.recordItemDeletion === 'function') {
+            window.recordItemDeletion(sub);
+        }
         delete window.subjectTimeLinks[sub];
     }
 
@@ -8290,6 +8299,9 @@ window.clearSubjectTimeGoal = function () {
     if (!window.currentSubjectForTimeGoal) return;
     const sub = window.currentSubjectForTimeGoal;
     if (window.subjectTimeLinks && window.subjectTimeLinks[sub]) {
+        if (typeof window.recordItemDeletion === 'function') {
+            window.recordItemDeletion(sub);
+        }
         delete window.subjectTimeLinks[sub];
     }
     FirebaseService.saveToCloud();
@@ -8460,7 +8472,14 @@ window.requestDeleteSubjectFromModal = function () {
 window.executeDeleteSubjectFromModal = function (targetName) {
     const track = document.getElementById('esm-old-track').value;
 
-    syllabusStructure[track] = syllabusStructure[track].filter(s => s.subject !== targetName);
+    if (typeof window.recordItemDeletion === 'function') {
+        window.recordItemDeletion(targetName);
+        (window.paceGoals || []).filter(g => g.type === 'subject' && g.target === targetName).forEach(g => window.recordItemDeletion(g.id));
+    }
+
+    if (syllabusStructure[track]) {
+        syllabusStructure[track] = syllabusStructure[track].filter(s => s.subject !== targetName);
+    }
     delete window.chartVisibility.subjects[targetName];
     delete window.chartVisibility.revSubjects[targetName];
 
@@ -10270,6 +10289,9 @@ window.saveResult = function () {
 
 window.deleteResult = function (id) {
     window.openConfirmModal("Delete Result", "Are you sure you want to delete this result?", () => {
+        if (typeof window.recordItemDeletion === 'function') {
+            window.recordItemDeletion(id);
+        }
         window.successResults = window.successResults.filter(r => r.id !== id);
         window.syncPassFreezeFromResults();
         FirebaseService.saveToCloud();
@@ -10280,6 +10302,9 @@ window.deleteResult = function (id) {
 
 window.deleteProgramGroup = function (programName) {
     window.openConfirmModal("Delete Program Card", `Are you sure you want to delete this program card and all its subject results?`, () => {
+        if (typeof window.recordItemDeletion === 'function' && Array.isArray(window.successResults)) {
+            window.successResults.filter(r => r.type === 'cgpa' && r.title === programName).forEach(r => window.recordItemDeletion(r.id));
+        }
         window.successResults = window.successResults.filter(r => !(r.type === 'cgpa' && r.title === programName));
         window.syncPassFreezeFromResults();
         FirebaseService.saveToCloud();
@@ -12953,13 +12978,24 @@ window.executeManageDelete = function () {
     if (!targetName) return showToast("Please select an item to delete.", "error");
 
     if (type === 'action') {
-        window.customActions = window.customActions.filter(a => a.id !== targetName);
+        if (typeof window.recordItemDeletion === 'function') {
+            window.recordItemDeletion(targetName);
+            const act = (window.customActions || []).find(a => a.id === targetName || a.name === targetName);
+            if (act && act.id) window.recordItemDeletion(act.id);
+        }
+        window.customActions = window.customActions.filter(a => a.id !== targetName && a.name !== targetName);
         delete window.chartVisibility.monthly[targetName]; delete window.chartVisibility.yearly[targetName];
         showToast(`Action tracker deleted.`, "success");
     } else {
         const track = document.getElementById('manage-track').value;
         if (type === 'program') {
             const subsToDelete = (syllabusStructure[track] || []).filter(s => s.program === targetName).map(s => s.subject);
+            if (typeof window.recordItemDeletion === 'function') {
+                window.recordItemDeletion(targetName);
+                subsToDelete.forEach(sub => window.recordItemDeletion(sub));
+                (window.paceGoals || []).filter(g => (g.type === 'program' && g.target === targetName) || (g.type === 'subject' && subsToDelete.includes(g.target))).forEach(g => window.recordItemDeletion(g.id));
+                (window.successResults || []).filter(r => r.type === 'cgpa' && r.title === targetName).forEach(r => window.recordItemDeletion(r.id));
+            }
             window.customPrograms[track] = (window.customPrograms[track] || []).filter(p => (p.name || p) !== targetName);
             if (syllabusStructure[track]) {
                 syllabusStructure[track] = syllabusStructure[track].filter(s => s.program !== targetName);
@@ -12988,6 +13024,11 @@ window.executeManageDelete = function () {
             showToast(`Program "${targetName}" and its subjects deleted.`, "success");
 
         } else if (type === 'subject') {
+            if (typeof window.recordItemDeletion === 'function') {
+                window.recordItemDeletion(targetName);
+                (window.paceGoals || []).filter(g => g.type === 'subject' && g.target === targetName).forEach(g => window.recordItemDeletion(g.id));
+                (window.successResults || []).filter(r => r.type === 'cgpa' && r.subject === targetName).forEach(r => window.recordItemDeletion(r.id));
+            }
             if (syllabusStructure[track]) {
                 syllabusStructure[track] = syllabusStructure[track].filter(s => s.subject !== targetName);
             }
@@ -17108,6 +17149,9 @@ window.requestDeletePaceGoal = function (id) {
 };
 
 window.deletePaceGoal = function (id) {
+    if (typeof window.recordItemDeletion === 'function') {
+        window.recordItemDeletion(id);
+    }
     window.paceGoals = window.paceGoals.filter(g => g.id !== id);
     if (window.dashboardConfig && window.dashboardConfig.activePaceGoalId === id) {
         const defaultGoal = window.paceGoals.find(g => g.id === 'global-timeline') || window.paceGoals[0];
@@ -17307,6 +17351,12 @@ window.executeDeleteTrack = function (id) {
     // Gather associated programs and subjects to clean them up from global configs
     const programsToCleanup = (window.customPrograms[id] || []).map(p => p.name || p);
     const subjectsToCleanup = (syllabusStructure[id] || []).map(s => s.subject);
+
+    if (typeof window.recordItemDeletion === 'function') {
+        window.recordItemDeletion(id);
+        programsToCleanup.forEach(p => window.recordItemDeletion(p));
+        subjectsToCleanup.forEach(s => window.recordItemDeletion(s));
+    }
 
     // Remove from tracks
     window.tracks = window.tracks.filter(t => t.id !== id);
@@ -19086,6 +19136,10 @@ window.executeFiscalDelete = function () {
     if (!window.pendingFiscalDelete) return;
     const { type, id } = window.pendingFiscalDelete;
     window.ensureFiscalStateDefaults();
+
+    if (typeof window.recordItemDeletion === 'function') {
+        window.recordItemDeletion(id);
+    }
 
     if (type === 'transaction') {
         const tx = (AppState.fiscalLedger.transactions || []).find(t => t.id === id);
@@ -21283,6 +21337,10 @@ window.deleteSession = function(sessionId) {
         "Delete Exam Session",
         `Are you sure you want to delete "${sessionName}"? All associated subject exams will also be deleted.`,
         () => {
+            if (typeof window.recordItemDeletion === 'function') {
+                window.recordItemDeletion(sessionId);
+                (AppState.examRoutine || []).filter(e => e.sessionId === sessionId).forEach(e => window.recordItemDeletion(e.id));
+            }
             AppState.examSessions = (AppState.examSessions || []).filter(s => s.id !== sessionId);
             AppState.examRoutine = (AppState.examRoutine || []).filter(e => e.sessionId !== sessionId);
 
@@ -21715,6 +21773,9 @@ window.deleteExam = function(examId) {
         "Delete Subject Exam",
         `Are you sure you want to delete "${examName}"? This action cannot be undone.`,
         () => {
+            if (typeof window.recordItemDeletion === 'function') {
+                window.recordItemDeletion(examId);
+            }
             AppState.examRoutine = (AppState.examRoutine || []).filter(e => e.id !== examId);
             if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
                 window.FirebaseService.saveToCloud(true);

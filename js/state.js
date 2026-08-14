@@ -170,15 +170,24 @@ stateKeys.forEach(key => {
 /**
  * Generates a stable unique ID for an array item across multi-device sync sessions.
  */
+/**
+ * Generates a stable unique ID for an array item across multi-device sync sessions.
+ */
 window.generateItemId = function(item, arrayKey = 'items') {
-    if (!item || typeof item !== 'object') return null;
+    if (!item || (typeof item !== 'object' && typeof item !== 'string' && typeof item !== 'number')) return null;
+    if (typeof item === 'string' || typeof item === 'number') return String(item);
     if (item.id !== undefined && item.id !== null) return String(item.id);
+    if (item._id !== undefined && item._id !== null) return String(item._id);
+    if (item.uid !== undefined && item.uid !== null) return String(item.uid);
+    if (item.transactionId !== undefined && item.transactionId !== null) return String(item.transactionId);
     if (item.taskId !== undefined && item.taskId !== null) return String(item.taskId);
     if (item.trackId !== undefined && item.trackId !== null) return String(item.trackId);
     if (item.actionId !== undefined && item.actionId !== null) return String(item.actionId);
     if (item.goalId !== undefined && item.goalId !== null) return String(item.goalId);
     if (item.sessionId !== undefined && item.sessionId !== null) return String(item.sessionId);
     if (item.blockId !== undefined && item.blockId !== null) return String(item.blockId);
+    if (item.groupId !== undefined && item.groupId !== null) return String(item.groupId);
+    if (item.key !== undefined && item.key !== null) return String(item.key);
     if (item.title && item.date) return `${arrayKey}_${item.title}_${item.date}`;
     if (item.name) return `${arrayKey}_${item.name}`;
     if (item.title) return `${arrayKey}_${item.title}`;
@@ -220,8 +229,11 @@ window.reconcileArrays = function(localArr = [], cloudArr = [], tombstones = {},
         const cloudTs = (cloudItem && cloudItem.updatedAt) ? Number(cloudItem.updatedAt) : 0;
         const latestTs = Math.max(localTs, cloudTs);
 
-        if (tombstoneTs > 0 && tombstoneTs >= latestTs) {
-            return;
+        if (tombstoneTs > 0) {
+            if (latestTs <= tombstoneTs || cloudTs <= tombstoneTs || !cloudItem) {
+                console.log(`[RECONCILE] rejected stale cloud item ${id} for key '${arrayKey}' (tombstoneTs: ${tombstoneTs})`);
+                return;
+            }
         }
 
         if (localItem && cloudItem) {
@@ -233,6 +245,7 @@ window.reconcileArrays = function(localArr = [], cloudArr = [], tombstones = {},
         } else if (localItem) {
             result.push(localItem);
         } else if (cloudItem) {
+            console.log(`[RECONCILE] accepted cloud item ${id} for key '${arrayKey}'`);
             result.push(cloudItem);
         }
     });
@@ -252,9 +265,11 @@ window.reconcileArrays = function(localArr = [], cloudArr = [], tombstones = {},
  * Registers an item deletion tombstone to prevent cross-device resurrection.
  */
 window.recordItemDeletion = function(itemId) {
-    if (!itemId) return;
+    if (itemId === undefined || itemId === null || itemId === '') return;
+    const cleanId = String(itemId);
     if (!AppState._tombstones) AppState._tombstones = {};
-    AppState._tombstones[String(itemId)] = Date.now() + (window.serverTimeOffset || 0);
+    AppState._tombstones[cleanId] = Date.now() + (window.serverTimeOffset || 0);
+    console.log(`[TOMBSTONE] registered ${cleanId}`);
 };
 
 /**
@@ -263,14 +278,26 @@ window.recordItemDeletion = function(itemId) {
  */
 window.shouldHydrateField = function(key, cloudValue, currentLocalValue, isExplicitWipe = false) {
     if (isExplicitWipe) return true;
+    
+    const hasTombstones = AppState._tombstones && Object.keys(AppState._tombstones).length > 0;
+    const isDirty = AppState.isLocalDirty === true;
+
     if (Array.isArray(currentLocalValue) && currentLocalValue.length > 0) {
         if (!Array.isArray(cloudValue) || cloudValue.length === 0) {
+            if (isDirty || hasTombstones) {
+                console.log(`[HYDRATION] accepted legitimate empty value for '${key}' due to local deletions/dirty state.`);
+                return true;
+            }
             console.warn(`HYDRATION_GUARD: Rejecting empty cloud value for '${key}' because local state has ${currentLocalValue.length} items.`);
             return false;
         }
     }
     if (currentLocalValue && typeof currentLocalValue === 'object' && !Array.isArray(currentLocalValue) && Object.keys(currentLocalValue).length > 0) {
         if (!cloudValue || typeof cloudValue !== 'object' || Object.keys(cloudValue).length === 0) {
+            if (isDirty || hasTombstones) {
+                console.log(`[HYDRATION] accepted legitimate empty object for '${key}' due to local deletions/dirty state.`);
+                return true;
+            }
             console.warn(`HYDRATION_GUARD: Rejecting empty cloud object for '${key}' because local state is populated.`);
             return false;
         }
@@ -371,7 +398,14 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.programVisibility !== undefined) AppState.programVisibility = data.programVisibility;
-    if (data.subjectTimeLinks !== undefined) AppState.subjectTimeLinks = data.subjectTimeLinks;
+    if (data.subjectTimeLinks !== undefined) {
+        let stl = data.subjectTimeLinks || {};
+        const tombstones = AppState._tombstones || {};
+        Object.keys(stl).forEach(k => {
+            if (tombstones[k] || tombstones[`subjectTimeLinks_${k}`]) delete stl[k];
+        });
+        AppState.subjectTimeLinks = stl;
+    }
 
     if (data.successResults !== undefined) {
         if (window.shouldHydrateField('successResults', data.successResults, AppState.successResults, isExplicitWipe)) {
@@ -397,7 +431,14 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     if (data.timerAnalyticsChartStyle !== undefined) AppState.timerAnalyticsChartStyle = data.timerAnalyticsChartStyle;
     if (data.spectraHeatmapRange !== undefined) AppState.spectraHeatmapRange = data.spectraHeatmapRange;
     if (data.sessionHistoryFilter !== undefined) AppState.sessionHistoryFilter = data.sessionHistoryFilter;
-    if (data.subjectFocusTargets !== undefined) AppState.subjectFocusTargets = data.subjectFocusTargets;
+    if (data.subjectFocusTargets !== undefined) {
+        let sft = data.subjectFocusTargets || {};
+        const tombstones = AppState._tombstones || {};
+        Object.keys(sft).forEach(k => {
+            if (tombstones[k] || tombstones[`subjectFocusTargets_${k}`]) delete sft[k];
+        });
+        AppState.subjectFocusTargets = sft;
+    }
     if (data.dashboardConfig !== undefined) AppState.dashboardConfig = data.dashboardConfig;
     if (data.weeklyTargetsDatabase !== undefined) AppState.weeklyTargetsDatabase = data.weeklyTargetsDatabase;
     if (data.dailyTargetsDatabase !== undefined) AppState.dailyTargetsDatabase = data.dailyTargetsDatabase;

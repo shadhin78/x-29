@@ -463,7 +463,7 @@ window.FirebaseService = {
                         const tombstones = Object.assign({}, AppState._tombstones || {}, cloudData._tombstones || {});
                         AppState._tombstones = tombstones;
 
-                        ['tasks', 'tracks', 'customActions', 'paceGoals', 'timerLogs', 'scheduleBlocks', 'scheduleBlocks2', 'scheduleGroups', 'examSessions', 'examRoutine'].forEach(key => {
+                        ['tasks', 'tracks', 'customActions', 'paceGoals', 'timerLogs', 'scheduleBlocks', 'scheduleBlocks2', 'scheduleGroups', 'examSessions', 'examRoutine', 'successResults'].forEach(key => {
                             const localCount = (AppState[key] || []).length;
                             const cloudCount = (cloudData[key] || []).length;
                             if (Array.isArray(cloudData[key]) || Array.isArray(AppState[key])) {
@@ -472,6 +472,16 @@ window.FirebaseService = {
                             const resultCount = (cloudData[key] || []).length;
                             console.log(`SYNC_DEBUG RECONCILE_RESULT (${key}): Local=${localCount}, Cloud=${cloudCount}, Result=${resultCount}`);
                         });
+
+                        if (cloudData.fiscalLedger || AppState.fiscalLedger) {
+                            const flLocal = AppState.fiscalLedger || { transactions: [], budgets: [], vaults: [] };
+                            const flCloud = cloudData.fiscalLedger || { transactions: [], budgets: [], vaults: [] };
+                            cloudData.fiscalLedger = {
+                                transactions: window.reconcileArrays(flLocal.transactions || [], flCloud.transactions || [], tombstones, 'fiscal_transactions'),
+                                budgets: window.reconcileArrays(flLocal.budgets || [], flCloud.budgets || [], tombstones, 'fiscal_budgets'),
+                                vaults: window.reconcileArrays(flLocal.vaults || [], flCloud.vaults || [], tombstones, 'fiscal_vaults')
+                            };
+                        }
 
                         if (this._saveDebounceTimer) {
                             clearTimeout(this._saveDebounceTimer);
@@ -661,6 +671,21 @@ window.FirebaseService = {
                 subjectColors: AppState.subjectColors || {},
                 _tombstones: tombstones
             };
+
+            if (payload.subjectFocusTargets && tombstones) {
+                Object.keys(payload.subjectFocusTargets).forEach(k => {
+                    if (tombstones[k] || tombstones[`subjectFocusTargets_${k}`]) {
+                        delete payload.subjectFocusTargets[k];
+                    }
+                });
+            }
+            if (payload.subjectTimeLinks && tombstones) {
+                Object.keys(payload.subjectTimeLinks).forEach(k => {
+                    if (tombstones[k] || tombstones[`subjectTimeLinks_${k}`]) {
+                        delete payload.subjectTimeLinks[k];
+                    }
+                });
+            }
 
             const outgoingTaskIds = (payload.tasks || []).map(t => window.generateItemId(t, 'tasks'));
             console.log(`SYNC_DEBUG SAVE_PAYLOAD: Gen=${captureGen}`);
