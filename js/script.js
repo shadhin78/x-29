@@ -7552,7 +7552,7 @@ window.renderDailyTracker = function () {
                             <div>
                                 <h3 class="font-black text-xs sm:text-sm md:text-base tracking-tight">${cfg.title}</h3>
                                 <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                    <p class="text-[8px] sm:text-[9px] md:text-[10px] text-slate-400 uppercase font-bold tracking-wider">${cfg.desc}</p>
+                                    <p class="text-[8px] sm:text-[9px] md:text-[10px] text-slate-400 uppercase font-bold tracking-wider">${cfg.desc || cfg.question || ''}</p>
                                     ${cfg.track ? `
                                         <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 border border-slate-200/50 dark:border-slate-600/30">
                                             ${(window.tracks.find(t => t.id === cfg.track)?.name || 'Track')}
@@ -13214,6 +13214,7 @@ window.appendNewAction = function () {
         id: slug,
         title: title,
         question: desc || `Did you complete ${title}?`,
+        desc: desc,
         color: color,
         icon: icon,
         track: track,
@@ -13231,6 +13232,11 @@ window.appendNewAction = function () {
 
     if (titleEl) titleEl.value = '';
     if (descEl) descEl.value = '';
+    if (trackEl) trackEl.value = '';
+
+    if (typeof window.sortAllCustomData === 'function') {
+        window.sortAllCustomData();
+    }
 
     if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
         window.FirebaseService.saveToCloud();
@@ -13365,36 +13371,6 @@ window.appendNewChapter = function () {
     recalculateTotals(); FirebaseService.saveToCloud(); renderUI();
     document.getElementById('add-ch-num').value = ''; document.getElementById('add-ch-title').value = '';
     showToast("Chapter added and sequenced!", "success");
-};
-
-window.appendNewAction = function () {
-    const title = document.getElementById('add-act-title').value.trim();
-    const desc = document.getElementById('add-act-desc').value.trim();
-    const color = document.getElementById('add-act-color').value;
-    const icon = document.getElementById('add-act-icon').value;
-    const trackSelect = document.getElementById('add-act-track');
-    const trackVal = trackSelect ? trackSelect.value : '';
-
-    if (!title || !desc) return showToast("Please provide a Title and Description.", "error");
-    const newId = 'act_' + title.toLowerCase().replace(/[^a-z0-9]/g, '') + Date.now().toString().slice(-4);
-
-    const nextOrder = window.customActions.length;
-    window.customActions.push({
-        id: newId,
-        title: title,
-        desc: desc,
-        color: color,
-        icon: icon,
-        priority: 3,
-        order: nextOrder,
-        track: trackVal || null
-    });
-    window.sortAllCustomData();
-
-    document.getElementById('add-act-title').value = '';
-    document.getElementById('add-act-desc').value = '';
-    if (trackSelect) trackSelect.value = '';
-    FirebaseService.saveToCloud(); renderUI(); showToast("Daily Action Tracker created!", "success");
 };
 
 // --- Outcomes Program Visibility Logic ---
@@ -16895,7 +16871,7 @@ window.renderPriorityConfig = function () {
                             ${rankBadge(idx + 1, cMap.hex)}
                             <div class="flex flex-col min-w-0">
                                 <span class="text-xs font-black text-slate-800 dark:text-slate-200 truncate">${a.title}</span>
-                                <span class="text-[8px] font-bold text-slate-400 uppercase break-words whitespace-normal mt-0.5">${a.desc}</span>
+                                <span class="text-[8px] font-bold text-slate-400 uppercase break-words whitespace-normal mt-0.5">${a.desc || a.question || ''}</span>
                             </div>
                         </div>
                         <div class="flex items-center gap-1.5 shrink-0 ml-2">
