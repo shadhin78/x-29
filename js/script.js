@@ -4101,8 +4101,7 @@ function updateMetrics() {
             globalDaysLeftStr = '<span class="opacity-50">--</span>';
         } else {
             let projDate = window.latestPaceData.projectedDate;
-            finishDisplay = projDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
-            finishDisplay = projDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            finishDisplay = Utils.formatDateResponsive(projDate);
             const globalDaysLeftNeed = remaining / globalCurPace;
             globalDaysNeededStr = `${Math.ceil(globalDaysLeftNeed)} Days Needed`;
             globalDaysLeftStr = '<span class="text-slate-400 font-bold">No Goal</span>';
@@ -4133,8 +4132,8 @@ function updateMetrics() {
         const dbPassedEl = document.getElementById('db-global-days-passed');
         if (dbPassedEl) dbPassedEl.innerHTML = globalDaysPassedStr;
 
-        let timelineText = earliestDate ? `Started: ${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}` : `Not Started`;
-        let dbTimelineText = earliestDate ? `${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}` : `Not Started`;
+        let timelineText = earliestDate ? `Started: ${Utils.formatDateResponsive(start)}` : `Not Started`;
+        let dbTimelineText = earliestDate ? Utils.formatDateResponsive(start) : `Not Started`;
         safeSetHtml('pace-timeline-info', `<span class="text-slate-500 font-bold">Global Baseline</span> <span class="mx-1 opacity-50">|</span> <span class="tracking-widest text-[9px] uppercase">${timelineText}</span>`);
         safeSetHtml('db-pace-timeline-info', dbTimelineText);
 
@@ -4295,7 +4294,7 @@ function updateMetrics() {
             else globalDaysLeftStr = `<span class="text-red-400">${Math.abs(diffGlobalDaysTG)} Days Overdue</span>`;
             globalDaysPassedStr = `${Utils.formatDaysPassed(Math.max(0, daysElapsed))} Passed`;
         } else {
-            finishDisplay = maxProjectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            finishDisplay = Utils.formatDateResponsive(maxProjectedDate);
 
             if (diffGlobalDaysTG > 0) globalDaysLeftStr = `${diffGlobalDaysTG} Days Left`;
             else if (diffGlobalDaysTG === 0) globalDaysLeftStr = `<span class="text-orange-400">Due Today</span>`;
@@ -4336,8 +4335,8 @@ function updateMetrics() {
         const dbPassedEl = document.getElementById('db-global-days-passed');
         if (dbPassedEl) dbPassedEl.innerHTML = globalDaysPassedStr;
 
-        let timelineText = `${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} &rarr; ${end.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}`;
-        let dbTimelineText = `${start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} &rarr; ${end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+        let timelineText = Utils.formatDateRangeResponsive(start, end, ' &rarr; ');
+        let dbTimelineText = Utils.formatDateRangeResponsive(start, end, ' &rarr; ');
         safeSetHtml('pace-timeline-info', `<span class="text-blue-500 font-bold">Global Baseline</span> <span class="mx-1 opacity-50">|</span> <span class="tracking-widest text-[9px] uppercase">${timelineText}</span>`);
         safeSetHtml('db-pace-timeline-info', dbTimelineText);
 
@@ -4354,10 +4353,10 @@ function updateMetrics() {
                 statusLabel.textContent = "TIMELINE OVERDUE";
             } else if (globalCurPace >= globalReqPace && globalReqPace > 0) {
                 statusLabel.className = "text-[9px] md:text-[10px] font-black text-emerald-500 uppercase tracking-widest drop-shadow-sm";
-                statusLabel.textContent = `TARGET: ${end.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}`;
+                statusLabel.innerHTML = `TARGET: ${Utils.formatDateResponsive(end)}`;
             } else {
                 statusLabel.className = "text-[9px] md:text-[10px] font-black text-red-500 uppercase tracking-widest drop-shadow-sm";
-                statusLabel.textContent = `TARGET: ${end.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}`;
+                statusLabel.innerHTML = `TARGET: ${Utils.formatDateResponsive(end)}`;
             }
         }
 
@@ -4377,7 +4376,7 @@ function updateMetrics() {
                 dbStatusLabel.textContent = "DONE";
             } else {
                 dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-blue-400 dark:text-blue-400 uppercase tracking-wider mt-0.5 truncate";
-                dbStatusLabel.textContent = `Target: ${end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+                dbStatusLabel.innerHTML = `Target: ${Utils.formatDateResponsive(end)}`;
             }
         }
 
@@ -4617,7 +4616,7 @@ window.renderPaceGoals = function (subjectStats) {
             } else {
                 const daysToFinish = remaining / curPaceVal;
                 const projectedDate = new Date(today); projectedDate.setDate(today.getDate() + daysToFinish);
-                finishDisplay = projectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+                finishDisplay = Utils.formatDateResponsive(projectedDate);
                 estDaysNeededStr = `<span class="text-orange-400">${Math.ceil(daysToFinish)} Days Needed</span>`;
             }
 
@@ -4679,7 +4678,7 @@ window.renderPaceGoals = function (subjectStats) {
                             <span class="text-[8px] font-black uppercase tracking-widest text-slate-400">${goal.type} Goal</span>
                         </div>
                         <h4 class="font-black text-sm md:text-base text-slate-800 dark:text-slate-100 truncate tracking-tight">${goal.target}</h4>
-                        <p class="text-[9px] font-bold text-slate-500 tracking-wider mt-0.5">Timeline: <span class="text-indigo-500 dark:text-indigo-400">${startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span> - <span class="text-orange-500">${targetDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span></p>
+                        <p class="text-[9px] font-bold text-slate-500 tracking-wider mt-0.5">Timeline: <span class="text-indigo-500 dark:text-indigo-400">${Utils.formatDateResponsive(startDate)}</span> - <span class="text-orange-500">${Utils.formatDateResponsive(targetDate)}</span></p>
                         ${subText}
                     </div>
                     
@@ -11444,13 +11443,11 @@ window.renderPaceTrendChart = function (goalId) {
         finishDisplay = 'Finished';
     } else if (total > 0 && curPace > 0) {
         finishEl.classList.add('text-orange-700', 'dark:text-orange-400');
-        // On mobile, use a shorter date format to prevent overflow
-        const dateOpts = window.innerWidth < 640 ? { day: '2-digit', month: 'short', year: '2-digit' } : { day: '2-digit', month: 'long', year: 'numeric' };
-        finishDisplay = projectedDate.toLocaleDateString('en-GB', dateOpts);
+        finishDisplay = Utils.formatDateResponsive(projectedDate);
     } else {
         finishEl.classList.add('text-red-500');
     }
-    safeSetText('ptm-est-finish', finishDisplay);
+    safeSetHtml('ptm-est-finish', finishDisplay);
 
     let labels = []; let reqData = []; let actData = []; let estData = [];
 
@@ -11853,10 +11850,9 @@ window.renderSpectraPaceTrendChart = function (goalId) {
     if (total > 0 && completed >= total) {
         finishDisplay = 'Finished';
     } else if (total > 0 && curPace > 0) {
-        const dateOpts = window.innerWidth < 640 ? { day: '2-digit', month: 'short', year: '2-digit' } : { day: '2-digit', month: 'long', year: 'numeric' };
-        finishDisplay = projectedDate.toLocaleDateString('en-GB', dateOpts);
+        finishDisplay = Utils.formatDateResponsive(projectedDate);
     }
-    safeSetText('spectra-pace-finish', finishDisplay);
+    safeSetHtml('spectra-pace-finish', finishDisplay);
 
     let labels = []; let reqData = []; let actData = []; let estData = [];
 
@@ -12103,10 +12099,9 @@ window.renderGlobalPaceTrendChart = function () {
     if (total > 0 && completed >= total) {
         finishDisplay = 'Finished';
     } else if (total > 0 && curPace > 0) {
-        const dateOpts = window.innerWidth < 640 ? { day: '2-digit', month: 'short', year: '2-digit' } : { day: '2-digit', month: 'long', year: 'numeric' };
-        finishDisplay = projDt.toLocaleDateString('en-GB', dateOpts);
+        finishDisplay = Utils.formatDateResponsive(projDt);
     }
-    safeSetText('global-pace-finish', finishDisplay);
+    safeSetHtml('global-pace-finish', finishDisplay);
 
     let labels = []; let reqData = []; let actData = []; let estData = [];
 

@@ -77,6 +77,52 @@ window.Utils = {
     },
 
     /**
+     * Formats Date into DD-MM-YY format for Mobile.
+     */
+    formatDateMobile: function(d) {
+        if (!d) return '';
+        const dateObj = window.Utils.parseDateSafe(d);
+        if (isNaN(dateObj.getTime())) return '';
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const year = String(dateObj.getFullYear()).slice(-2);
+        return `${day}-${month}-${year}`;
+    },
+
+    /**
+     * Formats Date into DD month YYYY format for PC.
+     */
+    formatDatePC: function(d) {
+        if (!d) return '';
+        const dateObj = window.Utils.parseDateSafe(d);
+        if (isNaN(dateObj.getTime())) return '';
+        return dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+    },
+
+    /**
+     * Returns responsive HTML span string for mobile (DD-MM-YY) and PC (DD month YYYY).
+     */
+    formatDateResponsive: function(d) {
+        if (!d) return '';
+        const mobile = window.Utils.formatDateMobile(d);
+        const pc = window.Utils.formatDatePC(d);
+        if (!mobile && !pc) return '';
+        return `<span class="inline md:hidden">${mobile}</span><span class="hidden md:inline">${pc}</span>`;
+    },
+
+    /**
+     * Returns responsive HTML span string for date ranges (start -> end) for mobile and PC.
+     */
+    formatDateRangeResponsive: function(start, end, sep = ' &rarr; ') {
+        if (!start || !end) return '';
+        const mobileStart = window.Utils.formatDateMobile(start);
+        const mobileEnd = window.Utils.formatDateMobile(end);
+        const pcStart = window.Utils.formatDatePC(start);
+        const pcEnd = window.Utils.formatDatePC(end);
+        return `<span class="inline md:hidden">${mobileStart}${sep}${mobileEnd}</span><span class="hidden md:inline">${pcStart}${sep}${pcEnd}</span>`;
+    },
+
+    /**
      * Safely parses any date string or object representation into a Date object.
      */
     parseDateSafe: function(dateStr) {
@@ -230,6 +276,10 @@ window.extractNum = window.Utils.extractNum;
 window.parseStart = window.Utils.parseStart;
 window.formatDaysPassed = window.Utils.formatDaysPassed;
 window.formatDate = window.Utils.formatDate;
+window.formatDateMobile = window.Utils.formatDateMobile;
+window.formatDatePC = window.Utils.formatDatePC;
+window.formatDateResponsive = window.Utils.formatDateResponsive;
+window.formatDateRangeResponsive = window.Utils.formatDateRangeResponsive;
 window.parseDateSafe = window.Utils.parseDateSafe;
 window.mapGradeToNumeric = window.Utils.mapGradeToNumeric;
 window.mapCgpaToGrade = window.Utils.mapCgpaToGrade;
