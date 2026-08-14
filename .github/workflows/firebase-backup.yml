@@ -2,8 +2,8 @@ name: Automatic Firebase Firestore Backup
 
 on:
   schedule:
-    # Test schedule: 05:30 UTC = 11:30 AM Bangladesh Standard Time (BST, UTC+6)
-    - cron: '30 5 * * *'
+    # Test schedule: 05:50 UTC = 11:50 AM Bangladesh Standard Time (BST, UTC+6)
+    - cron: '50 5 * * *'
   workflow_dispatch:
     inputs:
       keep_days:

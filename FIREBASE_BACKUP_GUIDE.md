@@ -87,8 +87,8 @@ To authenticate GitHub Actions with Firebase without exposing credentials:
 ## 4. Schedule & Timezone Conversion
 
 - **Workflow File**: [`.github/workflows/firebase-backup.yml`](file:///d:/X-29%20Project/X-29/X-29-Code/.github/workflows/firebase-backup.yml)
-- **Current Test Schedule**: `30 5 * * *` (UTC)
-- **Bangladesh Standard Time (BST, UTC+6)**: Configured for **11:30 AM BD Time** (05:30 UTC).
+- **Current Test Schedule**: `50 5 * * *` (UTC)
+- **Bangladesh Standard Time (BST, UTC+6)**: Configured for **11:50 AM BD Time** (05:50 UTC).
 - **Production Schedule**: `0 21 * * *` (UTC) = **03:00 AM BD Time**.
 
 ---
