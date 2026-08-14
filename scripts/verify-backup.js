@@ -84,7 +84,7 @@ function scanAvailableBackups() {
     const seenPaths = new Set();
 
     function findBackupFolders(dir, depth = 0) {
-        if (depth > 3 || !fs.existsSync(dir)) return [];
+        if (depth > 5 || !fs.existsSync(dir)) return [];
         const found = [];
         const entries = fs.readdirSync(dir, { withFileTypes: true });
         for (const entry of entries) {

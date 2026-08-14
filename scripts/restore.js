@@ -66,76 +66,100 @@ function loadServiceAccount() {
 
 // Helper to discover all backups across Manual, Automatic, and Legacy directories
 function scanAvailableBackupsForRestore() {
-    const searchDirs = [
-        { path: BACKUP_BASE_DIR, type: 'LOCAL', relSource: 'X-29-Backups' },
-        { path: MANUAL_BACKUPS_DIR, type: 'LOCAL', relSource: 'X-29-Backups\\Manual' }
-    ];
-
     const results = [];
     const seenPaths = new Set();
 
-    for (const searchObj of searchDirs) {
-        const baseDir = searchObj.path;
-        if (!fs.existsSync(baseDir)) continue;
+    if (!fs.existsSync(BACKUP_BASE_DIR)) return results;
 
-        const entries = fs.readdirSync(baseDir, { withFileTypes: true });
+    function findBackupFolders(dir, depth = 0) {
+        if (depth > 5 || !fs.existsSync(dir)) return [];
+        const found = [];
+        let entries = [];
+        try {
+            entries = fs.readdirSync(dir, { withFileTypes: true });
+        } catch (e) {
+            return [];
+        }
+
         for (const entry of entries) {
             if (!entry.isDirectory()) continue;
+            const fullPath = path.join(dir, entry.name);
+            const jsonPath = fs.existsSync(path.join(fullPath, 'firestore-backup.json'))
+                ? path.join(fullPath, 'firestore-backup.json')
+                : fs.existsSync(path.join(fullPath, 'firestore.json'))
+                    ? path.join(fullPath, 'firestore.json')
+                    : null;
 
-            if (baseDir === BACKUP_BASE_DIR && (entry.name === 'Manual' || entry.name === 'Automatic')) {
-                continue;
-            }
-
-            const folderName = entry.name;
-            const fullPath = path.join(baseDir, folderName);
-
-            let jsonPath = path.join(fullPath, 'firestore-backup.json');
-            if (!fs.existsSync(jsonPath)) {
-                jsonPath = path.join(fullPath, 'firestore.json');
-            }
-
-            if (fs.existsSync(jsonPath) && !seenPaths.has(jsonPath)) {
-                seenPaths.add(jsonPath);
-
-                let stats = { size: 0, mtimeMs: 0 };
-                try {
-                    stats = fs.statSync(jsonPath);
-                } catch (e) {}
-
-                let meta = { projectId: EXPECTED_PROJECT_ID, createdAt: null, totalDocuments: 0, totalCollections: 0 };
-
-                try {
-                    const content = fs.readFileSync(jsonPath, 'utf8');
-                    const parsed = JSON.parse(content);
-                    if (parsed && parsed.metadata) {
-                        meta = parsed.metadata;
-                    }
-                } catch (e) {}
-
-                let createdAtMs = stats.mtimeMs || 0;
-                if (meta.createdAt) {
-                    const t = new Date(meta.createdAt).getTime();
-                    if (!isNaN(t) && t > 0) createdAtMs = t;
-                }
-
-                let backupType = searchObj.type;
-                let relSource = searchObj.relSource;
-
-                results.push({
-                    folderName,
-                    fullPath,
-                    jsonPath,
-                    backupType,
-                    relSource,
-                    createdAtMs,
-                    fileSizeBytes: stats.size,
-                    fileSizeKB: (stats.size / 1024).toFixed(2),
-                    totalDocuments: meta.totalDocuments || 0,
-                    totalCollections: meta.totalCollections || 0,
-                    projectId: meta.projectId || EXPECTED_PROJECT_ID
-                });
+            if (jsonPath) {
+                found.push({ fullPath, jsonPath });
+            } else {
+                found.push(...findBackupFolders(fullPath, depth + 1));
             }
         }
+        return found;
+    }
+
+    const backupDirs = findBackupFolders(BACKUP_BASE_DIR);
+
+    for (const { fullPath, jsonPath } of backupDirs) {
+        if (seenPaths.has(jsonPath)) continue;
+        seenPaths.add(jsonPath);
+
+        let stats = { size: 0, mtimeMs: 0 };
+        try {
+            stats = fs.statSync(jsonPath);
+        } catch (e) {}
+
+        let meta = { projectId: EXPECTED_PROJECT_ID, createdAt: null, totalDocuments: 0, totalCollections: 0 };
+
+        try {
+            const content = fs.readFileSync(jsonPath, 'utf8');
+            const parsed = JSON.parse(content);
+            if (parsed && parsed.metadata) {
+                meta = parsed.metadata;
+            }
+        } catch (e) {}
+
+        let createdAtMs = stats.mtimeMs || 0;
+        if (meta.createdAt) {
+            const t = new Date(meta.createdAt).getTime();
+            if (!isNaN(t) && t > 0) createdAtMs = t;
+        }
+
+        const relPath = path.relative(BACKUP_BASE_DIR, fullPath);
+        let backupType = 'LOCAL';
+        let relSource = 'X-29-Backups';
+
+        if (relPath.startsWith('Manual') || relPath.startsWith('Manual' + path.sep)) {
+            backupType = 'MANUAL';
+            relSource = 'X-29-Backups\\Manual';
+        } else if (relPath.startsWith('Automatic') || relPath.startsWith('Automatic' + path.sep)) {
+            backupType = 'AUTOMATIC';
+            relSource = 'X-29-Backups\\Automatic';
+        }
+
+        let folderName = relPath;
+        if (meta.backupFolderTimestamp) {
+            folderName = meta.backupFolderTimestamp;
+        } else if (relPath.startsWith('Manual' + path.sep)) {
+            folderName = relPath.substring(7);
+        } else if (relPath.startsWith('Automatic' + path.sep)) {
+            folderName = relPath.substring(10);
+        }
+
+        results.push({
+            folderName,
+            fullPath,
+            jsonPath,
+            backupType,
+            relSource,
+            createdAtMs,
+            fileSizeBytes: stats.size,
+            fileSizeKB: (stats.size / 1024).toFixed(2),
+            totalDocuments: meta.totalDocuments || 0,
+            totalCollections: meta.totalCollections || 0,
+            projectId: meta.projectId || EXPECTED_PROJECT_ID
+        });
     }
 
     // Sort newest first
