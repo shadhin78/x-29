@@ -262,6 +262,19 @@ window.recordItemDeletion = function(itemId) {
  * Ensures authoritative Firestore cloud payloads are applied cleanly to AppState.
  */
 window.shouldHydrateField = function(key, cloudValue, currentLocalValue, isExplicitWipe = false) {
+    if (isExplicitWipe) return true;
+    if (Array.isArray(currentLocalValue) && currentLocalValue.length > 0) {
+        if (!Array.isArray(cloudValue) || cloudValue.length === 0) {
+            console.warn(`HYDRATION_GUARD: Rejecting empty cloud value for '${key}' because local state has ${currentLocalValue.length} items.`);
+            return false;
+        }
+    }
+    if (currentLocalValue && typeof currentLocalValue === 'object' && !Array.isArray(currentLocalValue) && Object.keys(currentLocalValue).length > 0) {
+        if (!cloudValue || typeof cloudValue !== 'object' || Object.keys(cloudValue).length === 0) {
+            console.warn(`HYDRATION_GUARD: Rejecting empty cloud object for '${key}' because local state is populated.`);
+            return false;
+        }
+    }
     return true;
 };
 

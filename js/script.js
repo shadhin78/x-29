@@ -2958,23 +2958,35 @@ function renderUI() {
     updateSuccessScore();
     renderSubjectNavigation();
     renderTaskList();
-    renderChart();
     updateMetrics();
-    window.updateTrendsBar();
-    renderDailyTracker();
-    renderDailyLogs();
-    if (window.renderSpectraCommitmentsChart) window.renderSpectraCommitmentsChart();
-    renderTrendCharts();
-    window.renderResults();
-    window.renderWeeklyTargets();
-    if (window.autoSyncWeeklyToDailyTargets) window.autoSyncWeeklyToDailyTargets();
-    if (window.renderDashboardWeeklyChecklist) window.renderDashboardWeeklyChecklist();
-    if (window.renderDailyTargets) window.renderDailyTargets();
-    if (window.renderDashboardDailyChecklist) window.renderDashboardDailyChecklist();
-    if (window.renderOutcomeProgramToggles) window.renderOutcomeProgramToggles();
-    if (window.renderSchedulePage) window.renderSchedulePage();
-    if (window.renderDashboardFiscalSummary) window.renderDashboardFiscalSummary();
-    if (window.renderExamPage) window.renderExamPage();
+
+    // Defer heavy chart & analytics rendering to prevent main-thread blocking on mobile boot
+    const deferRender = (fn, delay = 20) => {
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => setTimeout(fn, delay));
+        } else {
+            setTimeout(fn, delay);
+        }
+    };
+
+    deferRender(() => {
+        if (typeof renderChart === 'function') renderChart();
+        if (typeof window.updateTrendsBar === 'function') window.updateTrendsBar();
+        if (typeof renderDailyTracker === 'function') renderDailyTracker();
+        if (typeof renderDailyLogs === 'function') renderDailyLogs();
+        if (typeof window.renderSpectraCommitmentsChart === 'function') window.renderSpectraCommitmentsChart();
+        if (typeof renderTrendCharts === 'function') renderTrendCharts();
+        if (typeof window.renderResults === 'function') window.renderResults();
+        if (typeof window.renderWeeklyTargets === 'function') window.renderWeeklyTargets();
+        if (typeof window.autoSyncWeeklyToDailyTargets === 'function') window.autoSyncWeeklyToDailyTargets();
+        if (typeof window.renderDashboardWeeklyChecklist === 'function') window.renderDashboardWeeklyChecklist();
+        if (typeof window.renderDailyTargets === 'function') window.renderDailyTargets();
+        if (typeof window.renderDashboardDailyChecklist === 'function') window.renderDashboardDailyChecklist();
+        if (typeof window.renderOutcomeProgramToggles === 'function') window.renderOutcomeProgramToggles();
+        if (typeof window.renderSchedulePage === 'function') window.renderSchedulePage();
+        if (typeof window.renderDashboardFiscalSummary === 'function') window.renderDashboardFiscalSummary();
+        if (typeof window.renderExamPage === 'function') window.renderExamPage();
+    }, 20);
 
 
     // Dynamic Form & Manage UI Syncs

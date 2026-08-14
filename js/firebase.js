@@ -97,80 +97,46 @@ window.FirebaseService = {
 
     // 1. Fetch Firebase Configuration from API, fallback to .env or cached settings
     fetchConfig: async function() {
+        if (typeof performance !== 'undefined' && performance.mark) {
+            performance.mark('x29-boot-start');
+        }
         if (window.location.protocol === 'file:') {
             console.log("file:// protocol detected in fetchConfig. Using offline fallback config.");
             return firebaseConfig;
         }
 
+        // Fast local return: use cached or static config to unblock app boot synchronously
         let config;
-        try {
-            const clientSendTime = Date.now();
-            const res = await fetch('/api/config');
-            const clientRecvTime = Date.now();
-            if (!res.ok) throw new Error("API config endpoint not available");
-            config = await res.json();
+        const cachedConfig = safeStorage.getItem('firebaseConfig');
+        if (cachedConfig) {
+            try {
+                const parsed = JSON.parse(cachedConfig);
+                if (parsed && parsed.apiKey) {
+                    config = parsed;
+                }
+            } catch(e) {}
+        }
+        if (!config) {
+            config = firebaseConfig;
+            safeStorage.setItem('firebaseConfig', JSON.stringify(config));
+        }
 
-            if (!config || !config.apiKey) {
-                throw new Error("Invalid or empty configuration from API config endpoint");
+        // Non-blocking background fetch for clock offset & fresh credentials
+        fetch('/api/config').then(async res => {
+            if (!res.ok) return;
+            const freshConfig = await res.json();
+            if (freshConfig && freshConfig.apiKey) {
+                safeStorage.setItem('firebaseConfig', JSON.stringify(freshConfig));
             }
-            
             const serverDateStr = res.headers.get('Date');
             if (serverDateStr) {
                 const serverTime = new Date(serverDateStr).getTime();
-                const latency = (clientRecvTime - clientSendTime) / 2;
-                window.serverTimeOffset = serverTime - (clientSendTime + latency);
-                console.log("Estimated server clock offset (ms):", window.serverTimeOffset);
+                window.serverTimeOffset = serverTime - Date.now();
             }
-            
-            safeStorage.setItem('firebaseConfig', JSON.stringify(config));
-        } catch (err) {
-            console.warn("API config failed, trying static .env fallback...", err);
-            try {
-                const res = await fetch('/.env');
-                if (!res.ok) throw new Error(".env file not available");
-                const envText = await res.text();
-                const env = {};
-                envText.split(/\r?\n/).forEach(line => {
-                    const trimmed = line.trim();
-                    if (trimmed && !trimmed.startsWith('#')) {
-                        const parts = trimmed.split('=');
-                        const key = parts[0].trim();
-                        const val = parts.slice(1).join('=').trim();
-                        env[key] = val;
-                    }
-                });
+        }).catch(err => {
+            console.warn("Background config fetch notice:", err);
+        });
 
-                config = {
-                    apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY || firebaseConfig.apiKey,
-                    authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain,
-                    projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || firebaseConfig.projectId,
-                    storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
-                    messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
-                    appId: env.NEXT_PUBLIC_FIREBASE_APP_ID || firebaseConfig.appId
-                };
-
-                if (!config.apiKey) throw new Error("No API key found in .env");
-                console.log("Loaded Firebase config from static .env fallback successfully!");
-                safeStorage.setItem('firebaseConfig', JSON.stringify(config));
-            } catch (fallbackErr) {
-                console.warn("Network config fetch failed, checking localStorage fallback...", fallbackErr);
-                const cachedConfig = safeStorage.getItem('firebaseConfig');
-                if (cachedConfig) {
-                    try {
-                        const parsed = JSON.parse(cachedConfig);
-                        if (parsed && parsed.projectId === firebaseConfig.projectId) {
-                            config = parsed;
-                            console.log("Loaded Firebase config from localStorage cache for offline boot.");
-                        }
-                    } catch(e) {}
-                }
-                if (!config) {
-                    console.log("Using offline fallback config.");
-                    config = firebaseConfig;
-                    safeStorage.setItem('firebaseConfig', JSON.stringify(config));
-                }
-            }
-        }
         return config || firebaseConfig;
     },
 
@@ -877,47 +843,76 @@ window.FirebaseService = {
             this._saveDebounceTimer = null;
         }
 
-        // Display local cached state temporarily for instant startup UI
+        // FAST CACHE-FIRST: Restore local cached state immediately for sub-50ms rendering
+        let hasValidCache = false;
         const cachedStr = safeStorage.getItem('local_app_state') || safeStorage.getItem('appState');
         if (cachedStr) {
             try {
                 const cachedData = JSON.parse(cachedStr);
                 if (cachedData) {
                     window.applyFullAppState(cachedData, false);
-                    console.log("SYNC: LOCAL_CACHE_USED (Temporary initial rendering)");
+                    hasValidCache = hasUserData(cachedData) || hasUserData(AppState);
+                    console.log("SYNC: FAST_CACHE_LOADED - Initial state restored from localStorage.");
                 }
             } catch (e) {
                 console.warn("Failed to parse cached local app state:", e);
             }
         }
 
+        if (typeof window.ensureConfigDefaults === 'function') window.ensureConfigDefaults();
+        if (typeof window.migrateLegacyData === 'function') window.migrateLegacyData();
+        if (typeof window.sortAllCustomData === 'function') window.sortAllCustomData();
+        if (typeof recalculateTotals === 'function') recalculateTotals();
+
+        // If local cache was restored, dismiss loading screen and render UI shell IMMEDIATELY!
+        if (hasValidCache && AppState.isInitialLoad) {
+            console.log("SYNC: UNBLOCKING_UI_IMMEDIATELY - Cache-first rendering complete.");
+            window.dismissLoadingScreen();
+            if (typeof renderUI === 'function') renderUI();
+            showSync('saving'); // Non-blocking background sync indicator
+        }
+
         const handleDataLoad = (data, meta = { exists: true }) => {
             if (meta && meta.exists === false) {
-                console.log("SYNC: LOCAL_CACHE_DISCARDED - Cloud document does not exist. Initializing EMPTY local workspace.");
-                safeStorage.removeItem('local_app_state');
-                safeStorage.removeItem('appState');
-                this.cloudDocumentExists = false;
-                if (window.AppState) {
-                    window.AppState.cloudDocumentExists = false;
-                    window.AppState.isLocalDirty = false;
+                // DATA SAFETY GUARD: Retain valid local workspace if cloud document is missing/uninitialized
+                if (hasUserData(AppState) || hasUserData(safeStorage.getItem('local_app_state'))) {
+                    console.warn("SYNC: CLOUD_DOC_MISSING_BUT_LOCAL_DATA_EXISTS - Retaining local cached workspace.");
+                    this.cloudDocumentExists = false;
+                    if (window.AppState) window.AppState.cloudDocumentExists = false;
+                    showSync('uninitialized');
+                } else {
+                    console.log("SYNC: LOCAL_CACHE_DISCARDED - Cloud document does not exist & local workspace empty.");
+                    safeStorage.removeItem('local_app_state');
+                    safeStorage.removeItem('appState');
+                    this.cloudDocumentExists = false;
+                    if (window.AppState) {
+                        window.AppState.cloudDocumentExists = false;
+                        window.AppState.isLocalDirty = false;
+                    }
+                    if (typeof window.applyFullAppState === 'function' && typeof window.getDefaultAppState === 'function') {
+                        window.applyFullAppState(window.getDefaultAppState(), false, true);
+                    }
+                    showSync('uninitialized');
                 }
-                if (typeof window.applyFullAppState === 'function' && typeof window.getDefaultAppState === 'function') {
-                    window.applyFullAppState(window.getDefaultAppState(), false, true);
-                }
-                showSync('uninitialized');
             } else if (data) {
                 this.cloudDocumentExists = true;
                 if (window.AppState) {
                     window.AppState.cloudDocumentExists = true;
                     window.AppState.isLocalDirty = false;
                 }
-                window.applyFullAppState(data, false);
-                try {
-                    const jsonStr = JSON.stringify(data);
-                    safeStorage.setItem('local_app_state', jsonStr);
-                    safeStorage.setItem('appState', jsonStr);
-                } catch (e) {}
-                console.log("SYNC: CLOUD_STATE_APPLIED");
+                // DATA SAFETY GUARD: Prevent empty cloud payload from overwriting valid local data
+                if (hasUserData(AppState) && !hasUserData(data)) {
+                    console.warn("SYNC: EMPTY_CLOUD_PAYLOAD_REJECTED - Remote cloud payload is empty, keeping local state.");
+                } else {
+                    window.applyFullAppState(data, false);
+                    try {
+                        const jsonStr = JSON.stringify(data);
+                        safeStorage.setItem('local_app_state', jsonStr);
+                        safeStorage.setItem('appState', jsonStr);
+                    } catch (e) {}
+                    console.log("SYNC: CLOUD_STATE_APPLIED");
+                }
+                showSync('saved');
             }
 
             AppState.hasLoadedFromCloud = true;
@@ -980,6 +975,17 @@ window.dismissLoadingScreen = function() {
     }
     if (wrapperEl) wrapperEl.classList.remove('hidden');
     AppState.isInitialLoad = false;
+
+    if (typeof performance !== 'undefined' && performance.mark) {
+        performance.mark('x29-ui-ready');
+        try {
+            performance.measure('x29-time-to-ui', 'x29-boot-start', 'x29-ui-ready');
+            const measures = performance.getEntriesByName('x29-time-to-ui');
+            if (measures && measures.length > 0) {
+                console.log(`⚡ X-29 Mobile Performance: UI Interactive in ${measures[0].duration.toFixed(1)}ms`);
+            }
+        } catch(e) {}
+    }
 };
 
 // Global compatibility aliases
