@@ -242,17 +242,50 @@ async function restoreCollectionNode(colData, batchQueue, db, stats, isMergeMode
 }
 
 // 5. Recursive Collection Wiping for Full Restore
-async function wipeCollectionNode(colRef, batchQueue, stats) {
-    const snapshot = await colRef.get();
-    for (const doc of snapshot.docs) {
-        const subcollections = await doc.ref.listCollections();
-        for (const subCol of subcollections) {
-            await wipeCollectionNode(subCol, batchQueue, stats);
+async function recursiveWipeCollection(colRef, batchQueue, stats) {
+    if (!colRef || typeof colRef.get !== 'function') {
+        return;
+    }
+
+    try {
+        stats.deletedCollections = (stats.deletedCollections || 0) + 1;
+
+        let snapshot;
+        try {
+            snapshot = await colRef.get();
+        } catch (err) {
+            console.error(`\n❌ ERROR: Failed to fetch documents in collection [${colRef.path}]: ${err.message}`);
+            throw new Error(`Failed to read collection [${colRef.path}]: ${err.message}`);
         }
-        await batchQueue.delete(doc.ref);
-        stats.wipedDocuments++;
+
+        for (const doc of snapshot.docs) {
+            let subcollections = [];
+            try {
+                subcollections = await doc.ref.listCollections();
+            } catch (err) {
+                console.error(`\n❌ ERROR: Failed to list subcollections for document [${doc.ref.path}]: ${err.message}`);
+                throw new Error(`Failed to list subcollections for document [${doc.ref.path}]: ${err.message}`);
+            }
+
+            for (const subCol of subcollections) {
+                await recursiveWipeCollection(subCol, batchQueue, stats);
+            }
+
+            try {
+                await batchQueue.delete(doc.ref);
+                stats.deletedDocuments = (stats.deletedDocuments || 0) + 1;
+            } catch (err) {
+                console.error(`\n❌ ERROR: Failed to delete document [${doc.ref.path}]: ${err.message}`);
+                throw new Error(`Failed to delete document [${doc.ref.path}]: ${err.message}`);
+            }
+        }
+    } catch (err) {
+        throw err;
     }
 }
+
+// Alias for backwards compatibility
+const wipeCollectionNode = recursiveWipeCollection;
 
 // 6. Main Restore Execution Function
 async function runRestore() {
@@ -266,7 +299,7 @@ async function runRestore() {
     const availableBackups = scanAvailableBackupsForRestore();
 
     if (availableBackups.length === 0) {
-        console.error(`❌ ERROR: No valid timestamped backups found in ${REPO_BACKUPS_DIR} or ${BACKUP_BASE_DIR}`);
+        console.error(`❌ ERROR: No valid timestamped backups found in ${MANUAL_BACKUPS_DIR} or ${BACKUP_BASE_DIR}`);
         process.exit(1);
     }
 
@@ -290,6 +323,7 @@ async function runRestore() {
     }
 
     const selectedBackup = availableBackups[selectedIdx];
+    const backupFolderName = selectedBackup.folderName;
     const backupFilePath = selectedBackup.jsonPath;
 
     // Verify backup integrity and parse payload
@@ -365,7 +399,12 @@ async function runRestore() {
             await recursiveWipeCollection(rootColRef, batchQueue, wipeStats);
         }
 
-        await batchQueue.flush();
+        try {
+            await batchQueue.flush();
+        } catch (err) {
+            console.error(`\n❌ ERROR: Failed to flush wipe operations: ${err.message}`);
+            throw new Error(`Wipe flush failed: ${err.message}`);
+        }
         console.log(`🧹 Firestore database wiped. Deleted ${wipeStats.deletedDocuments} documents across ${wipeStats.deletedCollections} collections.`);
     }
 
@@ -380,7 +419,12 @@ async function runRestore() {
         }
     }
 
-    await batchQueue.flush();
+    try {
+        await batchQueue.flush();
+    } catch (err) {
+        console.error(`\n❌ ERROR: Failed to flush restore operations: ${err.message}`);
+        throw new Error(`Restore flush failed: ${err.message}`);
+    }
 
     console.log(`\n==================================================`);
     console.log(`🎉 X-29 RESTORE SUCCESSFUL!`);
