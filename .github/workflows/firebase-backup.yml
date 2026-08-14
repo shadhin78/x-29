@@ -37,8 +37,6 @@ jobs:
       - name: Execute Firebase Backup & Verification
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          KEEP_DAYS: ${{ github.event.inputs.keep_days || '30' }}
-          BACKUP_MODE: 'automatic'
         run: node scripts/backup.js
 
       - name: Commit & Push Backup to Repository
