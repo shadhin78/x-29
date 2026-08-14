@@ -549,6 +549,10 @@
 
         // Populate modal subject selector first
         const select = document.getElementById('modal-target-subject');
+        const hrsInput = document.getElementById('modal-target-hours');
+        const minsInput = document.getElementById('modal-target-minutes');
+        const dateInput = document.getElementById('modal-target-start-date');
+
         if (select) {
             select.innerHTML = buildProgramWiseSubjectOptionsHtml();
 
@@ -562,13 +566,14 @@
             }
         }
 
-        // Set inputs
+        // Set inputs: Default to neutral values for Add mode (1 hour, 0 minutes, Today)
         let hours = 1;
         let minutes = 0;
         let initialDate = new Date();
-        const targetSubject = prefilledSubject || (select ? select.value : 'General Study');
-        if (window.subjectFocusTargets && window.subjectFocusTargets[targetSubject]) {
-            const tgt = window.subjectFocusTargets[targetSubject];
+
+        // Only prefill target data if in explicit EDIT mode (prefilledSubject provided)
+        if (prefilledSubject && window.subjectFocusTargets && window.subjectFocusTargets[prefilledSubject]) {
+            const tgt = window.subjectFocusTargets[prefilledSubject];
             hours = tgt.hours !== undefined ? tgt.hours : 1;
             minutes = tgt.minutes !== undefined ? tgt.minutes : 0;
             if (tgt.createdAt) {
@@ -576,17 +581,45 @@
             }
         }
 
-        const hrsInput = document.getElementById('modal-target-hours');
-        const minsInput = document.getElementById('modal-target-minutes');
         if (hrsInput) hrsInput.value = hours;
         if (minsInput) minsInput.value = minutes;
 
-        const dateInput = document.getElementById('modal-target-start-date');
         if (dateInput) {
             const yyyy = initialDate.getFullYear();
             const mm = String(initialDate.getMonth() + 1).padStart(2, '0');
             const dd = String(initialDate.getDate()).padStart(2, '0');
             dateInput.value = `${yyyy}-${mm}-${dd}`;
+        }
+
+        // In Add mode, update inputs dynamically if user selects a different subject
+        if (select) {
+            select.onchange = function () {
+                if (!prefilledSubject) {
+                    const chosen = select.value;
+                    if (window.subjectFocusTargets && window.subjectFocusTargets[chosen]) {
+                        const tgt = window.subjectFocusTargets[chosen];
+                        if (hrsInput) hrsInput.value = tgt.hours !== undefined ? tgt.hours : 1;
+                        if (minsInput) minsInput.value = tgt.minutes !== undefined ? tgt.minutes : 0;
+                        if (dateInput && tgt.createdAt) {
+                            const d = new Date(tgt.createdAt);
+                            const yyyy = d.getFullYear();
+                            const mm = String(d.getMonth() + 1).padStart(2, '0');
+                            const dd = String(d.getDate()).padStart(2, '0');
+                            dateInput.value = `${yyyy}-${mm}-${dd}`;
+                        }
+                    } else {
+                        if (hrsInput) hrsInput.value = 1;
+                        if (minsInput) minsInput.value = 0;
+                        if (dateInput) {
+                            const today = new Date();
+                            const yyyy = today.getFullYear();
+                            const mm = String(today.getMonth() + 1).padStart(2, '0');
+                            const dd = String(today.getDate()).padStart(2, '0');
+                            dateInput.value = `${yyyy}-${mm}-${dd}`;
+                        }
+                    }
+                }
+            };
         }
 
         // Toggle Delete button based on Edit/Add mode
