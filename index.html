@@ -286,6 +286,16 @@
                             </div>
                         </div>
 
+                        <!-- Manual Backup Button -->
+                        <button id="btn-manual-backup" onclick="window.triggerManualBackup()"
+                            class="w-full bg-slate-50 dark:bg-slate-800/50 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-600 border border-slate-200 dark:border-slate-800 px-4 py-3 rounded-2xl font-black text-xs text-blue-600 dark:text-blue-400 transition-all active:scale-95 flex items-center justify-center gap-2 shadow-sm">
+                            <svg id="manual-backup-icon" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21 3.582 4 8 4s8-1.79 8-4"></path>
+                            </svg>
+                            <span id="manual-backup-text">Manual Backup</span>
+                        </button>
+
                         <!-- Logout Button -->
                         <button id="btn-logout" onclick="window.handleLogout()"
                             class="w-full bg-slate-50 dark:bg-slate-800/50 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600 border border-slate-200 dark:border-slate-800 px-4 py-3 rounded-2xl font-black text-xs text-rose-500 transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-sm">

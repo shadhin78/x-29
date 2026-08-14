@@ -600,6 +600,62 @@ window.handleLogout = function () {
     });
 };
 
+window.triggerManualBackup = async function () {
+    const btn = document.getElementById('btn-manual-backup');
+    const icon = document.getElementById('manual-backup-icon');
+    const text = document.getElementById('manual-backup-text');
+    const originalText = text ? text.textContent : 'Manual Backup';
+
+    if (btn) btn.disabled = true;
+    if (text) text.textContent = 'Backing up...';
+    if (icon) icon.classList.add('animate-spin');
+
+    try {
+        const token = 'x29_manual_backup_secret_key_2026';
+        const response = await fetch('http://127.0.0.1:4729/manual-backup', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.status === 'started') {
+            if (text) text.textContent = 'Backup Complete!';
+            if (typeof showToast === 'function') {
+                showToast('🎉 Manual backup saved successfully!', 'success');
+            } else {
+                alert('🎉 Manual backup completed successfully!\nFolder: ' + (data.directory || 'Manual Backups'));
+            }
+        } else if (response.status === 409) {
+            if (text) text.textContent = 'Already Running!';
+            if (typeof showToast === 'function') {
+                showToast('⚠️ A backup process is already running.', 'warning');
+            } else {
+                alert('⚠️ A backup process is currently in progress.');
+            }
+        } else {
+            throw new Error(data.error || data.message || 'Backup request failed');
+        }
+    } catch (err) {
+        console.error('[BACKUP AGENT] Error:', err);
+        if (text) text.textContent = 'Backup Failed!';
+        if (typeof showToast === 'function') {
+            showToast('❌ Backup agent error: ' + err.message, 'error');
+        } else {
+            alert('❌ Manual backup failed: ' + err.message + '\nMake sure scripts/backup-agent.js is running.');
+        }
+    } finally {
+        setTimeout(() => {
+            if (btn) btn.disabled = false;
+            if (text) text.textContent = originalText;
+            if (icon) icon.classList.remove('animate-spin');
+        }, 3000);
+    }
+};
+
 
 /******************************************************************
  * TIMER (DELEGATED TO TIMER MODULE)
