@@ -13,9 +13,6 @@ const CODE_DIR = path.resolve(__dirname, '..');
 const X29_ROOT_DIR = path.dirname(CODE_DIR);
 const SERVICE_ACCOUNT_PATH = path.join(CODE_DIR, 'firebase-service-account.json');
 const MANUAL_BACKUPS_DIR = path.join(X29_ROOT_DIR, 'X-29-Backups', 'Manual');
-const LOCAL_AUTO_BACKUPS_DIR = path.join(X29_ROOT_DIR, 'X-29-Backups', 'Automatic');
-const REPO_AUTO_BACKUPS_DIR = path.join(CODE_DIR, 'backups', 'Automatic');
-const REPO_BACKUPS_DIR = path.join(CODE_DIR, 'backups');
 const BACKUP_BASE_DIR = path.join(X29_ROOT_DIR, 'X-29-Backups');
 const EXPECTED_PROJECT_ID = 'x-2k29';
 const MAX_BATCH_SIZE = 400;
@@ -70,11 +67,8 @@ function loadServiceAccount() {
 // Helper to discover all backups across Manual, Automatic, and Legacy directories
 function scanAvailableBackupsForRestore() {
     const searchDirs = [
-        { path: MANUAL_BACKUPS_DIR, type: 'MANUAL', relSource: 'X-29-Backups\\Manual' },
-        { path: LOCAL_AUTO_BACKUPS_DIR, type: 'AUTOMATIC', relSource: 'X-29-Backups\\Automatic' },
-        { path: REPO_AUTO_BACKUPS_DIR, type: 'AUTOMATIC', relSource: 'backups\\Automatic' },
-        { path: REPO_BACKUPS_DIR, type: 'LEGACY', relSource: 'backups' },
-        { path: BACKUP_BASE_DIR, type: 'LEGACY', relSource: 'X-29-Backups' }
+        { path: BACKUP_BASE_DIR, type: 'LOCAL', relSource: 'X-29-Backups' },
+        { path: MANUAL_BACKUPS_DIR, type: 'LOCAL', relSource: 'X-29-Backups\\Manual' }
     ];
 
     const results = [];
@@ -88,8 +82,7 @@ function scanAvailableBackupsForRestore() {
         for (const entry of entries) {
             if (!entry.isDirectory()) continue;
 
-            if ((baseDir === BACKUP_BASE_DIR || baseDir === REPO_BACKUPS_DIR) &&
-                (entry.name === 'Manual' || entry.name === 'Automatic')) {
+            if (baseDir === BACKUP_BASE_DIR && (entry.name === 'Manual' || entry.name === 'Automatic')) {
                 continue;
             }
 
@@ -125,19 +118,8 @@ function scanAvailableBackupsForRestore() {
                     if (!isNaN(t) && t > 0) createdAtMs = t;
                 }
 
-                let backupType = 'LEGACY';
-                let relSource = 'X-29-Backups';
-
-                if (fullPath.includes(path.sep + 'Manual' + path.sep) || fullPath.endsWith(path.sep + 'Manual')) {
-                    backupType = 'MANUAL';
-                    relSource = 'X-29-Backups\\Manual';
-                } else if (fullPath.includes(path.sep + 'Automatic' + path.sep) || fullPath.endsWith(path.sep + 'Automatic')) {
-                    backupType = 'AUTOMATIC';
-                    relSource = fullPath.includes('X-29-Code') ? 'backups\\Automatic' : 'X-29-Backups\\Automatic';
-                } else {
-                    backupType = 'LEGACY';
-                    relSource = fullPath.includes('X-29-Code') ? 'backups' : 'X-29-Backups';
-                }
+                let backupType = searchObj.type;
+                let relSource = searchObj.relSource;
 
                 results.push({
                     folderName,

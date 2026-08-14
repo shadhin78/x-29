@@ -1,12 +1,10 @@
 /**
- * X-29 (x-2k29) Automatic Firebase Firestore Backup System
+ * X-29 (x-2k29) Local Firestore Backup System
  * scripts/backup.js
  * 
- * Supports:
- * 1. Manual local backups -> Saved under D:\X-29 Project\X-29\X-29-Backups\Manual\
- * 2. Automatic GitHub Actions backups -> Saved under backups/Automatic/
- * 
+ * Performs local manual backup of X-29 Firebase Cloud Firestore database.
  * Strictly READ-ONLY with respect to Firestore.
+ * Saves backups to: D:\X-29 Project\X-29\X-29-Backups\
  */
 
 const fs = require('fs');
@@ -18,18 +16,9 @@ const { getFirestore, Timestamp, GeoPoint, DocumentReference } = require('fireba
 const CODE_DIR = path.resolve(__dirname, '..');
 const X29_ROOT_DIR = path.dirname(CODE_DIR);
 const SERVICE_ACCOUNT_PATH = path.join(CODE_DIR, 'firebase-service-account.json');
+const BACKUP_BASE_DIR = path.join(X29_ROOT_DIR, 'X-29-Backups');
 const EXPECTED_PROJECT_ID = 'x-2k29';
 const DEFAULT_KEEP_DAYS = 30;
-
-// Determine environment mode: Automatic (GitHub Actions) vs Manual (Local CLI)
-const isAutomaticMode = process.env.GITHUB_ACTIONS === 'true' || process.env.BACKUP_MODE === 'automatic';
-
-// Base target directory:
-// Automatic (GitHub Actions): CODE_DIR/backups/Automatic/
-// Manual (Local CLI): X29_ROOT_DIR/X-29-Backups/Manual/
-const TARGET_BASE_DIR = isAutomaticMode
-    ? path.join(CODE_DIR, 'backups', 'Automatic')
-    : path.join(X29_ROOT_DIR, 'X-29-Backups', 'Manual');
 
 // 1. Generate Bangladesh Timezone Timestamp Format: DD MM YYYY HH MM AM/PM
 function getBangladeshTimestamp() {
@@ -64,8 +53,6 @@ function loadServiceAccount() {
     const rawEnv = process.env.FIREBASE_SERVICE_ACCOUNT ? process.env.FIREBASE_SERVICE_ACCOUNT.trim() : '';
 
     if (rawEnv !== '') {
-        console.log(`SECRET_STATUS=PRESENT`);
-        console.log(`SECRET_LENGTH=${rawEnv.length}`);
         let jsonStr = rawEnv;
         if (!jsonStr.startsWith('{')) {
             try {
@@ -74,22 +61,18 @@ function loadServiceAccount() {
                     jsonStr = decoded;
                 }
             } catch (e) {
-                // Ignore base64 decoding error, fallback to raw string attempt
+                // Fallback to raw string
             }
         }
 
         try {
             serviceAccount = JSON.parse(jsonStr);
         } catch (err) {
-            // Attempt sanitizing raw unescaped newlines if JSON string had unescaped newlines in private key
             try {
                 const sanitizedStr = jsonStr.replace(/\r?\n/g, '\\n');
                 serviceAccount = JSON.parse(sanitizedStr);
             } catch (err2) {
-                console.error(`SECRET_STATUS=PRESENT`);
-                console.error(`CREDENTIAL_FORMAT=INVALID_JSON`);
-                console.error(`[BACKUP] ❌ ERROR: Failed to parse FIREBASE_SERVICE_ACCOUNT environment variable / secret as JSON.`);
-                console.error(`Please ensure the GitHub Repository Secret 'FIREBASE_SERVICE_ACCOUNT' contains valid Service Account JSON.`);
+                console.error(`[BACKUP] ❌ ERROR: Failed to parse FIREBASE_SERVICE_ACCOUNT environment variable as JSON.`);
                 process.exit(1);
             }
         }
@@ -98,49 +81,29 @@ function loadServiceAccount() {
             const fileContent = fs.readFileSync(SERVICE_ACCOUNT_PATH, 'utf8');
             serviceAccount = JSON.parse(fileContent);
         } catch (err) {
-            console.error(`CREDENTIAL_FORMAT=INVALID_JSON`);
             console.error(`[BACKUP] ❌ ERROR: Failed to parse service account JSON file at ${SERVICE_ACCOUNT_PATH}: ${err.message}`);
             process.exit(1);
         }
     } else {
-        console.error(`SECRET_STATUS=EMPTY`);
-        console.error(`[BACKUP] ❌ ERROR: Service account credentials missing.`);
-        if (isAutomaticMode) {
-            console.error(`In GitHub Actions, please ensure the GitHub Repository Secret 'FIREBASE_SERVICE_ACCOUNT' is set under:`);
-            console.error(`Settings -> Secrets and variables -> Actions -> New repository secret`);
-        } else {
-            console.error(`For local PC execution, place 'firebase-service-account.json' at:`);
-            console.error(`${SERVICE_ACCOUNT_PATH}`);
-            console.error(`or set the FIREBASE_SERVICE_ACCOUNT environment variable.`);
-        }
+        console.error(`[BACKUP] ❌ ERROR: Service account credentials file missing at: ${SERVICE_ACCOUNT_PATH}`);
+        console.error(`Please ensure 'firebase-service-account.json' exists in the project root directory.`);
         process.exit(1);
     }
 
     if (!serviceAccount || typeof serviceAccount !== 'object') {
-        console.error(`SECRET_STATUS=PRESENT`);
-        console.error(`CREDENTIAL_FORMAT=INVALID_JSON`);
         console.error(`[BACKUP] ❌ ERROR: Service account payload is not a valid JSON object.`);
         process.exit(1);
     }
 
     const projectId = serviceAccount.project_id || serviceAccount.projectId;
     if (!projectId) {
-        console.error(`SECRET_STATUS=PRESENT`);
-        console.error(`CREDENTIAL_FORMAT=INVALID_JSON`);
-        console.error(`[BACKUP] ❌ ERROR: Service account JSON is missing the required 'project_id' field.`);
+        console.error(`[BACKUP] ❌ ERROR: Service account JSON is missing required 'project_id' field.`);
         process.exit(1);
     }
 
     if (projectId !== EXPECTED_PROJECT_ID) {
         console.error(`[BACKUP] ❌ ERROR: Service account project ID is [${projectId}], expected [${EXPECTED_PROJECT_ID}].`);
         console.error(`Backup aborted to protect wrong project data.`);
-        process.exit(1);
-    }
-
-    if (!serviceAccount.private_key || !serviceAccount.client_email) {
-        console.error(`SECRET_STATUS=PRESENT`);
-        console.error(`CREDENTIAL_FORMAT=INVALID_JSON`);
-        console.error(`[BACKUP] ❌ ERROR: Service account JSON is missing required fields ('private_key' or 'client_email').`);
         process.exit(1);
     }
 
@@ -313,7 +276,7 @@ function validateBackup(backupJsonPath, metadataJsonPath, stats) {
     return parsedData;
 }
 
-// 7. Parse Date from Folder Name (Supports 'DD MM YYYY HH MM AM/PM' and legacy formats)
+// 7. Parse Date from Folder Name
 function parseFolderDate(folderName) {
     // Format: "14 08 2026 10 32 AM"
     const parts = folderName.trim().split(/\s+/);
@@ -328,7 +291,6 @@ function parseFolderDate(folderName) {
         if (ampm === 'PM' && hour < 12) hour += 12;
         if (ampm === 'AM' && hour === 12) hour = 0;
 
-        // Subtract 6 hours for Dhaka UTC+6 to get UTC Date for age calculation
         return new Date(Date.UTC(year, month, day, hour - 6, minute));
     }
 
@@ -341,7 +303,7 @@ function parseFolderDate(folderName) {
     return null;
 }
 
-// 8. Configurable Retention Policy
+// 8. Retention Policy
 function applyRetentionPolicy(baseDir) {
     const keepDaysStr = process.env.KEEP_DAYS || String(DEFAULT_KEEP_DAYS);
     const keepDays = parseInt(keepDaysStr, 10);
@@ -352,7 +314,7 @@ function applyRetentionPolicy(baseDir) {
 
     const entries = fs.readdirSync(baseDir, { withFileTypes: true });
     const backupDirs = entries
-        .filter(entry => entry.isDirectory() && (
+        .filter(entry => entry.isDirectory() && entry.name !== 'Manual' && (
             fs.existsSync(path.join(baseDir, entry.name, 'firestore-backup.json')) ||
             fs.existsSync(path.join(baseDir, entry.name, 'firestore.json'))
         ))
@@ -360,7 +322,7 @@ function applyRetentionPolicy(baseDir) {
         .sort();
 
     if (backupDirs.length <= 1) {
-        return; // Retain at least 1 latest backup
+        return;
     }
 
     const now = Date.now();
@@ -380,10 +342,12 @@ function applyRetentionPolicy(baseDir) {
     }
 }
 
-// 9. Main Backup Execution Entry Point
+// 9. Main Local Backup Function
 async function runBackup() {
-    const modeName = isAutomaticMode ? 'Automatic (Cloud GitHub Actions)' : 'Manual (Local PC)';
-    console.log(`[BACKUP] Starting Firebase backup... [Mode: ${modeName}]`);
+    const startTime = Date.now();
+    console.log(`\n==================================================`);
+    console.log(` X-29 FIRESTORE LOCAL BACKUP SYSTEM`);
+    console.log(`==================================================\n`);
 
     const serviceAccount = loadServiceAccount();
 
@@ -405,6 +369,7 @@ async function runBackup() {
     const collectionsData = [];
 
     for (const colRef of rootCollections) {
+        console.log(` 📦 Backing up root collection: [${colRef.id}]...`);
         const colData = await backupCollection(colRef, stats);
         collectionsData.push(colData);
     }
@@ -420,7 +385,7 @@ async function runBackup() {
     console.log(`[BACKUP] Creating JSON...`);
 
     const timestampFolder = getBangladeshTimestamp();
-    const targetDir = path.join(TARGET_BASE_DIR, timestampFolder);
+    const targetDir = path.join(BACKUP_BASE_DIR, timestampFolder);
     const backupJsonPath = path.join(targetDir, 'firestore-backup.json');
     const metadataJsonPath = path.join(targetDir, 'metadata.json');
 
@@ -444,7 +409,7 @@ async function runBackup() {
     const jsonStr = JSON.stringify(backupPayload, null, 2);
     fs.writeFileSync(backupJsonPath, jsonStr, 'utf8');
 
-    // Also write firestore.json alias
+    // Write firestore.json alias for compatibility
     fs.writeFileSync(path.join(targetDir, 'firestore.json'), jsonStr, 'utf8');
 
     const fileSize = Buffer.byteLength(jsonStr, 'utf8');
@@ -453,7 +418,7 @@ async function runBackup() {
     const metadataPayload = {
         backupDate: nowIso,
         backupFolderTimestamp: timestampFolder,
-        backupMode: isAutomaticMode ? 'automatic' : 'manual',
+        backupMode: 'manual',
         firebaseProject: EXPECTED_PROJECT_ID,
         documentCount: stats.totalDocuments,
         collectionCount: stats.totalCollections,
@@ -474,15 +439,23 @@ async function runBackup() {
     }
 
     // Apply retention policy after verification succeeded
-    applyRetentionPolicy(TARGET_BASE_DIR);
+    applyRetentionPolicy(BACKUP_BASE_DIR);
 
-    console.log(`[BACKUP] Backup completed successfully`);
-    console.log(`[BACKUP] Destination: ${targetDir}`);
+    const fileSizeKB = (fileSize / 1024).toFixed(2);
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+
+    console.log(`\n==================================================`);
+    console.log(`🎉 X-29 BACKUP SUCCESSFUL!`);
+    console.log(`   Project ID:       ${EXPECTED_PROJECT_ID}`);
+    console.log(`   Directory:        D:\\X-29 Project\\X-29\\X-29-Backups\\${timestampFolder}`);
+    console.log(`   Total Collections:${stats.totalCollections}`);
+    console.log(`   Total Documents:  ${stats.totalDocuments}`);
+    console.log(`   File Size:        ${fileSizeKB} KB`);
+    console.log(`   Duration:         ${duration}s`);
+    console.log(`==================================================\n`);
 }
 
 runBackup().catch(err => {
     console.error(`[BACKUP] ❌ BACKUP FAILED WITH EXCEPTION:`, err.message || err);
     process.exit(1);
 });
-
-
