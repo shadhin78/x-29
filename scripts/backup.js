@@ -64,6 +64,8 @@ function loadServiceAccount() {
     const rawEnv = process.env.FIREBASE_SERVICE_ACCOUNT ? process.env.FIREBASE_SERVICE_ACCOUNT.trim() : '';
 
     if (rawEnv !== '') {
+        console.log(`SECRET_STATUS=PRESENT`);
+        console.log(`SECRET_LENGTH=${rawEnv.length}`);
         let jsonStr = rawEnv;
         if (!jsonStr.startsWith('{')) {
             try {
@@ -79,20 +81,29 @@ function loadServiceAccount() {
         try {
             serviceAccount = JSON.parse(jsonStr);
         } catch (err) {
-            console.error(`[BACKUP] ❌ ERROR: Failed to parse FIREBASE_SERVICE_ACCOUNT environment variable / secret as JSON.`);
-            console.error(`Please ensure the GitHub Repository Secret 'FIREBASE_SERVICE_ACCOUNT' contains valid Service Account JSON.`);
-            console.error(`Parse details: ${err.message}`);
-            process.exit(1);
+            // Attempt sanitizing raw unescaped newlines if JSON string had unescaped newlines in private key
+            try {
+                const sanitizedStr = jsonStr.replace(/\r?\n/g, '\\n');
+                serviceAccount = JSON.parse(sanitizedStr);
+            } catch (err2) {
+                console.error(`SECRET_STATUS=PRESENT`);
+                console.error(`CREDENTIAL_FORMAT=INVALID_JSON`);
+                console.error(`[BACKUP] ❌ ERROR: Failed to parse FIREBASE_SERVICE_ACCOUNT environment variable / secret as JSON.`);
+                console.error(`Please ensure the GitHub Repository Secret 'FIREBASE_SERVICE_ACCOUNT' contains valid Service Account JSON.`);
+                process.exit(1);
+            }
         }
     } else if (fs.existsSync(SERVICE_ACCOUNT_PATH)) {
         try {
             const fileContent = fs.readFileSync(SERVICE_ACCOUNT_PATH, 'utf8');
             serviceAccount = JSON.parse(fileContent);
         } catch (err) {
+            console.error(`CREDENTIAL_FORMAT=INVALID_JSON`);
             console.error(`[BACKUP] ❌ ERROR: Failed to parse service account JSON file at ${SERVICE_ACCOUNT_PATH}: ${err.message}`);
             process.exit(1);
         }
     } else {
+        console.error(`SECRET_STATUS=EMPTY`);
         console.error(`[BACKUP] ❌ ERROR: Service account credentials missing.`);
         if (isAutomaticMode) {
             console.error(`In GitHub Actions, please ensure the GitHub Repository Secret 'FIREBASE_SERVICE_ACCOUNT' is set under:`);
@@ -106,12 +117,16 @@ function loadServiceAccount() {
     }
 
     if (!serviceAccount || typeof serviceAccount !== 'object') {
+        console.error(`SECRET_STATUS=PRESENT`);
+        console.error(`CREDENTIAL_FORMAT=INVALID_JSON`);
         console.error(`[BACKUP] ❌ ERROR: Service account payload is not a valid JSON object.`);
         process.exit(1);
     }
 
     const projectId = serviceAccount.project_id || serviceAccount.projectId;
     if (!projectId) {
+        console.error(`SECRET_STATUS=PRESENT`);
+        console.error(`CREDENTIAL_FORMAT=INVALID_JSON`);
         console.error(`[BACKUP] ❌ ERROR: Service account JSON is missing the required 'project_id' field.`);
         process.exit(1);
     }
@@ -123,6 +138,8 @@ function loadServiceAccount() {
     }
 
     if (!serviceAccount.private_key || !serviceAccount.client_email) {
+        console.error(`SECRET_STATUS=PRESENT`);
+        console.error(`CREDENTIAL_FORMAT=INVALID_JSON`);
         console.error(`[BACKUP] ❌ ERROR: Service account JSON is missing required fields ('private_key' or 'client_email').`);
         process.exit(1);
     }

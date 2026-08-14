@@ -31,8 +31,18 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install Project Dependencies
-        run: npm ci
+      - name: Verify Firebase Secret Availability
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        shell: bash
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "SECRET_STATUS=EMPTY"
+            exit 1
+          else
+            echo "SECRET_STATUS=PRESENT"
+            echo "SECRET_LENGTH=${#FIREBASE_SERVICE_ACCOUNT}"
+          fi
 
       - name: Execute Firebase Backup & Verification
         env:
