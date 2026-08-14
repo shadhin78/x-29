@@ -12,6 +12,10 @@ const { getFirestore, Timestamp, GeoPoint, DocumentReference, Bytes } = require(
 const CODE_DIR = path.resolve(__dirname, '..');
 const X29_ROOT_DIR = path.dirname(CODE_DIR);
 const SERVICE_ACCOUNT_PATH = path.join(CODE_DIR, 'firebase-service-account.json');
+const MANUAL_BACKUPS_DIR = path.join(X29_ROOT_DIR, 'X-29-Backups', 'Manual');
+const LOCAL_AUTO_BACKUPS_DIR = path.join(X29_ROOT_DIR, 'X-29-Backups', 'Automatic');
+const REPO_AUTO_BACKUPS_DIR = path.join(CODE_DIR, 'backups', 'Automatic');
+const REPO_BACKUPS_DIR = path.join(CODE_DIR, 'backups');
 const BACKUP_BASE_DIR = path.join(X29_ROOT_DIR, 'X-29-Backups');
 const EXPECTED_PROJECT_ID = 'x-2k29';
 const MAX_BATCH_SIZE = 400;
@@ -30,18 +34,26 @@ function askQuestion(query) {
 
 // 1. Verify Service Account File & Project ID
 function loadServiceAccount() {
-    if (!fs.existsSync(SERVICE_ACCOUNT_PATH)) {
+    let serviceAccount;
+
+    if (process.env.FIREBASE_SERVICE_ACCOUNT && process.env.FIREBASE_SERVICE_ACCOUNT.trim() !== '') {
+        try {
+            serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        } catch (err) {
+            console.error(`\n❌ ERROR: Failed to parse FIREBASE_SERVICE_ACCOUNT env variable JSON: ${err.message}`);
+            process.exit(1);
+        }
+    } else if (fs.existsSync(SERVICE_ACCOUNT_PATH)) {
+        try {
+            const fileContent = fs.readFileSync(SERVICE_ACCOUNT_PATH, 'utf8');
+            serviceAccount = JSON.parse(fileContent);
+        } catch (err) {
+            console.error(`\n❌ ERROR: Failed to parse service account JSON file: ${err.message}\n`);
+            process.exit(1);
+        }
+    } else {
         console.error(`\n❌ ERROR: Service account file not found at: ${SERVICE_ACCOUNT_PATH}`);
         console.error(`Please place your 'firebase-service-account.json' in the project root directory.\n`);
-        process.exit(1);
-    }
-
-    let serviceAccount;
-    try {
-        const fileContent = fs.readFileSync(SERVICE_ACCOUNT_PATH, 'utf8');
-        serviceAccount = JSON.parse(fileContent);
-    } catch (err) {
-        console.error(`\n❌ ERROR: Failed to parse service account JSON file: ${err.message}\n`);
         process.exit(1);
     }
 
@@ -53,6 +65,101 @@ function loadServiceAccount() {
     }
 
     return serviceAccount;
+}
+
+// Helper to discover all backups across Manual, Automatic, and Legacy directories
+function scanAvailableBackupsForRestore() {
+    const searchDirs = [
+        { path: MANUAL_BACKUPS_DIR, type: 'MANUAL', relSource: 'X-29-Backups\\Manual' },
+        { path: LOCAL_AUTO_BACKUPS_DIR, type: 'AUTOMATIC', relSource: 'X-29-Backups\\Automatic' },
+        { path: REPO_AUTO_BACKUPS_DIR, type: 'AUTOMATIC', relSource: 'backups\\Automatic' },
+        { path: REPO_BACKUPS_DIR, type: 'LEGACY', relSource: 'backups' },
+        { path: BACKUP_BASE_DIR, type: 'LEGACY', relSource: 'X-29-Backups' }
+    ];
+
+    const results = [];
+    const seenPaths = new Set();
+
+    for (const searchObj of searchDirs) {
+        const baseDir = searchObj.path;
+        if (!fs.existsSync(baseDir)) continue;
+
+        const entries = fs.readdirSync(baseDir, { withFileTypes: true });
+        for (const entry of entries) {
+            if (!entry.isDirectory()) continue;
+
+            if ((baseDir === BACKUP_BASE_DIR || baseDir === REPO_BACKUPS_DIR) &&
+                (entry.name === 'Manual' || entry.name === 'Automatic')) {
+                continue;
+            }
+
+            const folderName = entry.name;
+            const fullPath = path.join(baseDir, folderName);
+
+            let jsonPath = path.join(fullPath, 'firestore-backup.json');
+            if (!fs.existsSync(jsonPath)) {
+                jsonPath = path.join(fullPath, 'firestore.json');
+            }
+
+            if (fs.existsSync(jsonPath) && !seenPaths.has(jsonPath)) {
+                seenPaths.add(jsonPath);
+
+                let stats = { size: 0, mtimeMs: 0 };
+                try {
+                    stats = fs.statSync(jsonPath);
+                } catch (e) {}
+
+                let meta = { projectId: EXPECTED_PROJECT_ID, createdAt: null, totalDocuments: 0, totalCollections: 0 };
+
+                try {
+                    const content = fs.readFileSync(jsonPath, 'utf8');
+                    const parsed = JSON.parse(content);
+                    if (parsed && parsed.metadata) {
+                        meta = parsed.metadata;
+                    }
+                } catch (e) {}
+
+                let createdAtMs = stats.mtimeMs || 0;
+                if (meta.createdAt) {
+                    const t = new Date(meta.createdAt).getTime();
+                    if (!isNaN(t) && t > 0) createdAtMs = t;
+                }
+
+                let backupType = 'LEGACY';
+                let relSource = 'X-29-Backups';
+
+                if (fullPath.includes(path.sep + 'Manual' + path.sep) || fullPath.endsWith(path.sep + 'Manual')) {
+                    backupType = 'MANUAL';
+                    relSource = 'X-29-Backups\\Manual';
+                } else if (fullPath.includes(path.sep + 'Automatic' + path.sep) || fullPath.endsWith(path.sep + 'Automatic')) {
+                    backupType = 'AUTOMATIC';
+                    relSource = fullPath.includes('X-29-Code') ? 'backups\\Automatic' : 'X-29-Backups\\Automatic';
+                } else {
+                    backupType = 'LEGACY';
+                    relSource = fullPath.includes('X-29-Code') ? 'backups' : 'X-29-Backups';
+                }
+
+                results.push({
+                    folderName,
+                    fullPath,
+                    jsonPath,
+                    backupType,
+                    relSource,
+                    createdAtMs,
+                    fileSizeBytes: stats.size,
+                    fileSizeKB: (stats.size / 1024).toFixed(2),
+                    totalDocuments: meta.totalDocuments || 0,
+                    totalCollections: meta.totalCollections || 0,
+                    projectId: meta.projectId || EXPECTED_PROJECT_ID
+                });
+            }
+        }
+    }
+
+    // Sort newest first
+    results.sort((a, b) => b.createdAtMs - a.createdAtMs);
+
+    return results;
 }
 
 // 2. Deserialize Firestore Data Types safely
@@ -152,21 +259,16 @@ async function restoreCollectionNode(colData, batchQueue, db, stats, isMergeMode
     }
 }
 
-// 5. Recursive Discovery and Deletion of Existing Documents (Full Restore Mode)
-async function recursiveWipeCollection(colRef, batchQueue, stats) {
-    stats.deletedCollections++;
+// 5. Recursive Collection Wiping for Full Restore
+async function wipeCollectionNode(colRef, batchQueue, stats) {
     const snapshot = await colRef.get();
-
     for (const doc of snapshot.docs) {
-        stats.deletedDocuments++;
-
-        // Discover and wipe subcollections first
-        const subColRefs = await doc.ref.listCollections();
-        for (const subColRef of subColRefs) {
-            await recursiveWipeCollection(subColRef, batchQueue, stats);
+        const subcollections = await doc.ref.listCollections();
+        for (const subCol of subcollections) {
+            await wipeCollectionNode(subCol, batchQueue, stats);
         }
-
         await batchQueue.delete(doc.ref);
+        stats.wipedDocuments++;
     }
 }
 
@@ -179,36 +281,20 @@ async function runRestore() {
     console.log(` Connected to X-29 Firebase Project: [${EXPECTED_PROJECT_ID}]`);
     console.log(`==================================================\n`);
 
-    if (!fs.existsSync(BACKUP_BASE_DIR)) {
-        console.error(`❌ ERROR: No backup directory found at: ${BACKUP_BASE_DIR}`);
-        process.exit(1);
-    }
-
-    const entries = fs.readdirSync(BACKUP_BASE_DIR, { withFileTypes: true });
-    const availableBackups = entries
-        .filter(entry => entry.isDirectory() && fs.existsSync(path.join(BACKUP_BASE_DIR, entry.name, 'firestore-backup.json')))
-        .map(entry => entry.name)
-        .sort()
-        .reverse(); // Newest first
+    const availableBackups = scanAvailableBackupsForRestore();
 
     if (availableBackups.length === 0) {
-        console.error(`❌ ERROR: No valid timestamped backups found in ${BACKUP_BASE_DIR}`);
+        console.error(`❌ ERROR: No valid timestamped backups found in ${REPO_BACKUPS_DIR} or ${BACKUP_BASE_DIR}`);
         process.exit(1);
     }
 
     console.log(`📂 Available Local Firestore Backups:\n`);
-    availableBackups.forEach((bName, index) => {
-        const bPath = path.join(BACKUP_BASE_DIR, bName, 'firestore-backup.json');
-        try {
-            const content = fs.readFileSync(bPath, 'utf8');
-            const meta = JSON.parse(content).metadata || {};
-            console.log(`   [${index + 1}] ${bName}  (Docs: ${meta.totalDocuments || 0}, Collections: ${meta.totalCollections || 0})`);
-        } catch (e) {
-            console.log(`   [${index + 1}] ${bName}  (Unreadable)`);
-        }
+    availableBackups.forEach((bItem, index) => {
+        const typeTag = `[${bItem.backupType}]`.padEnd(11, ' ');
+        console.log(` [${index + 1}] ${typeTag} ${bItem.folderName}`);
+        console.log(`     Source: ${bItem.relSource}\n`);
     });
 
-    console.log(``);
     const selectedIdxStr = await askQuestion(`Select a backup to restore (1-${availableBackups.length}) [or ENTER to cancel]: `);
     if (!selectedIdxStr) {
         console.log(`\nOperation cancelled.`);
@@ -221,11 +307,10 @@ async function runRestore() {
         process.exit(1);
     }
 
-    const backupFolderName = availableBackups[selectedIdx];
-    const backupFilePath = path.join(BACKUP_BASE_DIR, backupFolderName, 'firestore-backup.json');
-    console.log(`\nSelected Backup: [${backupFolderName}]`);
+    const selectedBackup = availableBackups[selectedIdx];
+    const backupFilePath = selectedBackup.jsonPath;
 
-    // Verify backup integrity and project ID
+    // Verify backup integrity and parse payload
     const backupRaw = fs.readFileSync(backupFilePath, 'utf8');
     let backupPayload;
     try {
@@ -238,6 +323,29 @@ async function runRestore() {
     if (!backupPayload.metadata || backupPayload.metadata.projectId !== EXPECTED_PROJECT_ID) {
         console.error(`\n❌ ERROR: Backup belongs to project [${backupPayload.metadata?.projectId}], expected [${EXPECTED_PROJECT_ID}].`);
         process.exit(1);
+    }
+
+    // Display Restore Confirmation Summary (Requirement 5)
+    console.log(`\n==================================================`);
+    console.log(` RESTORE CONFIRMATION`);
+    console.log(`==================================================\n`);
+    console.log(` Backup Type: [${selectedBackup.backupType}]`);
+    console.log(` Backup Date: ${selectedBackup.folderName}`);
+    console.log(` Source:`);
+    console.log(` ${selectedBackup.fullPath}\n`);
+    console.log(` Project ID:  ${EXPECTED_PROJECT_ID}`);
+    console.log(` Collections: ${selectedBackup.totalCollections}`);
+    console.log(` Documents:   ${selectedBackup.totalDocuments}`);
+    console.log(` Backup Size: ${selectedBackup.fileSizeKB} KB\n`);
+    console.log(` WARNING:`);
+    console.log(` This operation will WRITE data to Firebase.\n`);
+
+    const confirmAnswer = await askQuestion(`Are you sure you want to continue? (YES/NO): `);
+    const cleanAnswer = (confirmAnswer || '').trim().toUpperCase();
+
+    if (cleanAnswer !== 'YES' && cleanAnswer !== 'Y') {
+        console.log(`\nOperation cancelled. No changes were made to Firebase.\n`);
+        process.exit(0);
     }
 
     console.log(`\nSelect Restore Mode:`);

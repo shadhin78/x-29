@@ -20,7 +20,9 @@ Thumbs.db
 # Agents
 .agents/
 
-# Firebase Service Account Credentials & Backups
+# Firebase Service Account Credentials & Legacy Backups
 firebase-service-account.json
-backup/
+# Note: backups/ directory is intentionally tracked in Git for automatic workflow backups
+!backups/
+
 

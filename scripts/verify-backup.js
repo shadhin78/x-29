@@ -13,6 +13,10 @@ const { getFirestore, Timestamp, GeoPoint, DocumentReference } = require('fireba
 const CODE_DIR = path.resolve(__dirname, '..');
 const X29_ROOT_DIR = path.dirname(CODE_DIR);
 const SERVICE_ACCOUNT_PATH = path.join(CODE_DIR, 'firebase-service-account.json');
+const MANUAL_BACKUPS_DIR = path.join(X29_ROOT_DIR, 'X-29-Backups', 'Manual');
+const LOCAL_AUTO_BACKUPS_DIR = path.join(X29_ROOT_DIR, 'X-29-Backups', 'Automatic');
+const REPO_AUTO_BACKUPS_DIR = path.join(CODE_DIR, 'backups', 'Automatic');
+const REPO_BACKUPS_DIR = path.join(CODE_DIR, 'backups');
 const BACKUP_BASE_DIR = path.join(X29_ROOT_DIR, 'X-29-Backups');
 const EXPECTED_PROJECT_ID = 'x-2k29';
 const PROJECT_NAME = 'X-29';
@@ -40,18 +44,26 @@ function askQuestion(query) {
 // 1. SERVICE ACCOUNT VERIFICATION & CONNECTION
 // -----------------------------------------------------------------------------
 function loadAndVerifyServiceAccount() {
-    if (!fs.existsSync(SERVICE_ACCOUNT_PATH)) {
+    let serviceAccount;
+
+    if (process.env.FIREBASE_SERVICE_ACCOUNT && process.env.FIREBASE_SERVICE_ACCOUNT.trim() !== '') {
+        try {
+            serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        } catch (err) {
+            console.error(`\n❌ ERROR: Failed to parse FIREBASE_SERVICE_ACCOUNT env variable JSON: ${err.message}`);
+            process.exit(1);
+        }
+    } else if (fs.existsSync(SERVICE_ACCOUNT_PATH)) {
+        try {
+            const fileContent = fs.readFileSync(SERVICE_ACCOUNT_PATH, 'utf8');
+            serviceAccount = JSON.parse(fileContent);
+        } catch (err) {
+            console.error(`\n❌ ERROR: Failed to parse service account JSON: ${err.message}`);
+            process.exit(1);
+        }
+    } else {
         console.error(`\n❌ ERROR: Service account file missing at: ${SERVICE_ACCOUNT_PATH}`);
         console.error(`Aborting verification.\n`);
-        process.exit(1);
-    }
-
-    let serviceAccount;
-    try {
-        const fileContent = fs.readFileSync(SERVICE_ACCOUNT_PATH, 'utf8');
-        serviceAccount = JSON.parse(fileContent);
-    } catch (err) {
-        console.error(`\n❌ ERROR: Failed to parse service account JSON: ${err.message}`);
         process.exit(1);
     }
 
@@ -70,58 +82,101 @@ function loadAndVerifyServiceAccount() {
 // 2. BACKUP DISCOVERY & SELECTION
 // -----------------------------------------------------------------------------
 function scanAvailableBackups() {
-    if (!fs.existsSync(BACKUP_BASE_DIR)) {
-        return [];
-    }
-
-    const entries = fs.readdirSync(BACKUP_BASE_DIR, { withFileTypes: true });
-    const backupFolders = entries
-        .filter(entry => entry.isDirectory())
-        .map(entry => entry.name)
-        .sort(); // YYYY-MM-DD_HH-mm-ss format sorts chronologically
+    const searchDirs = [
+        { path: MANUAL_BACKUPS_DIR, type: 'MANUAL', relSource: 'X-29-Backups\\Manual' },
+        { path: LOCAL_AUTO_BACKUPS_DIR, type: 'AUTOMATIC', relSource: 'X-29-Backups\\Automatic' },
+        { path: REPO_AUTO_BACKUPS_DIR, type: 'AUTOMATIC', relSource: 'backups\\Automatic' },
+        { path: REPO_BACKUPS_DIR, type: 'LEGACY', relSource: 'backups' },
+        { path: BACKUP_BASE_DIR, type: 'LEGACY', relSource: 'X-29-Backups' }
+    ];
 
     const results = [];
+    const seenPaths = new Set();
 
-    for (const folderName of backupFolders) {
-        const fullPath = path.join(BACKUP_BASE_DIR, folderName);
-        const jsonPath = path.join(fullPath, 'firestore-backup.json');
+    for (const searchObj of searchDirs) {
+        const baseDir = searchObj.path;
+        if (!fs.existsSync(baseDir)) continue;
 
-        if (fs.existsSync(jsonPath)) {
-            let stats;
-            try {
-                stats = fs.statSync(jsonPath);
-            } catch (e) {
-                stats = { size: 0 };
+        const entries = fs.readdirSync(baseDir, { withFileTypes: true });
+        for (const entry of entries) {
+            if (!entry.isDirectory()) continue;
+
+            if ((baseDir === BACKUP_BASE_DIR || baseDir === REPO_BACKUPS_DIR) &&
+                (entry.name === 'Manual' || entry.name === 'Automatic')) {
+                continue;
             }
 
-            let meta = { projectId: 'UNKNOWN', createdAt: 'UNKNOWN', totalDocuments: 0, totalCollections: 0 };
-            let isReadable = false;
+            const folderName = entry.name;
+            const fullPath = path.join(baseDir, folderName);
 
-            try {
-                const content = fs.readFileSync(jsonPath, 'utf8');
-                const parsed = JSON.parse(content);
-                if (parsed && parsed.metadata) {
-                    meta = parsed.metadata;
-                    isReadable = true;
+            let jsonPath = path.join(fullPath, 'firestore-backup.json');
+            if (!fs.existsSync(jsonPath)) {
+                jsonPath = path.join(fullPath, 'firestore.json');
+            }
+
+            if (fs.existsSync(jsonPath) && !seenPaths.has(jsonPath)) {
+                seenPaths.add(jsonPath);
+
+                let stats = { size: 0, mtimeMs: 0 };
+                try {
+                    stats = fs.statSync(jsonPath);
+                } catch (e) {}
+
+                let meta = { projectId: EXPECTED_PROJECT_ID, createdAt: null, totalDocuments: 0, totalCollections: 0 };
+                let isReadable = false;
+
+                try {
+                    const content = fs.readFileSync(jsonPath, 'utf8');
+                    const parsed = JSON.parse(content);
+                    if (parsed && parsed.metadata) {
+                        meta = parsed.metadata;
+                        isReadable = true;
+                    }
+                } catch (e) {
+                    isReadable = false;
                 }
-            } catch (e) {
-                isReadable = false;
-            }
 
-            results.push({
-                folderName,
-                fullPath,
-                jsonPath,
-                fileSizeBytes: stats.size,
-                fileSizeKB: (stats.size / 1024).toFixed(2),
-                projectId: meta.projectId || 'UNKNOWN',
-                createdAt: meta.createdAt || folderName,
-                totalDocuments: meta.totalDocuments || 0,
-                totalCollections: meta.totalCollections || 0,
-                isReadable
-            });
+                let createdAtMs = stats.mtimeMs || 0;
+                if (meta.createdAt) {
+                    const t = new Date(meta.createdAt).getTime();
+                    if (!isNaN(t) && t > 0) createdAtMs = t;
+                }
+
+                let backupType = 'LEGACY';
+                let relSource = 'X-29-Backups';
+
+                if (fullPath.includes(path.sep + 'Manual' + path.sep) || fullPath.endsWith(path.sep + 'Manual')) {
+                    backupType = 'MANUAL';
+                    relSource = 'X-29-Backups\\Manual';
+                } else if (fullPath.includes(path.sep + 'Automatic' + path.sep) || fullPath.endsWith(path.sep + 'Automatic')) {
+                    backupType = 'AUTOMATIC';
+                    relSource = fullPath.includes('X-29-Code') ? 'backups\\Automatic' : 'X-29-Backups\\Automatic';
+                } else {
+                    backupType = 'LEGACY';
+                    relSource = fullPath.includes('X-29-Code') ? 'backups' : 'X-29-Backups';
+                }
+
+                results.push({
+                    folderName,
+                    fullPath,
+                    jsonPath,
+                    backupType,
+                    relSource,
+                    createdAtMs,
+                    fileSizeBytes: stats.size,
+                    fileSizeKB: (stats.size / 1024).toFixed(2),
+                    projectId: meta.projectId || EXPECTED_PROJECT_ID,
+                    createdAt: meta.createdAt || folderName,
+                    totalDocuments: meta.totalDocuments || 0,
+                    totalCollections: meta.totalCollections || 0,
+                    isReadable
+                });
+            }
         }
     }
+
+    // Sort newest first
+    results.sort((a, b) => b.createdAtMs - a.createdAtMs);
 
     return results;
 }
@@ -134,8 +189,8 @@ async function selectBackupFromCli(backupsList, args) {
 
     // Flag: --latest
     if (args.includes('--latest')) {
-        const latest = backupsList[backupsList.length - 1];
-        console.log(`ℹ️ Flag '--latest' detected. Selected backup: [${latest.folderName}]`);
+        const latest = backupsList[0]; // Index 0 is newest
+        console.log(`ℹ️ Flag '--latest' detected. Selected backup: [${latest.backupType}] ${latest.folderName}`);
         return latest;
     }
 
@@ -154,20 +209,34 @@ async function selectBackupFromCli(backupsList, args) {
             let jsonPath = targetVal;
             if (stat.isDirectory()) {
                 jsonPath = path.join(targetVal, 'firestore-backup.json');
+                if (!fs.existsSync(jsonPath)) jsonPath = path.join(targetVal, 'firestore.json');
             }
 
             const folderName = path.basename(path.dirname(jsonPath));
             const foundByPath = backupsList.find(b => b.jsonPath === jsonPath || b.folderName === folderName);
             if (foundByPath) return foundByPath;
 
-            // Direct file inspect
+            const fullPath = path.dirname(jsonPath);
+            let backupType = 'LEGACY';
+            let relSource = 'X-29-Backups';
+
+            if (fullPath.includes(path.sep + 'Manual' + path.sep) || fullPath.endsWith(path.sep + 'Manual')) {
+                backupType = 'MANUAL';
+                relSource = 'X-29-Backups\\Manual';
+            } else if (fullPath.includes(path.sep + 'Automatic' + path.sep) || fullPath.endsWith(path.sep + 'Automatic')) {
+                backupType = 'AUTOMATIC';
+                relSource = fullPath.includes('X-29-Code') ? 'backups\\Automatic' : 'X-29-Backups\\Automatic';
+            }
+
             return {
                 folderName,
-                fullPath: path.dirname(jsonPath),
+                fullPath,
                 jsonPath,
+                backupType,
+                relSource,
                 fileSizeBytes: stat.size,
                 fileSizeKB: (stat.size / 1024).toFixed(2),
-                projectId: 'UNKNOWN',
+                projectId: EXPECTED_PROJECT_ID,
                 createdAt: folderName,
                 totalDocuments: 0,
                 totalCollections: 0,
@@ -182,26 +251,30 @@ async function selectBackupFromCli(backupsList, args) {
     // Interactive Menu
     console.log(`==================================================`);
     console.log(` AVAILABLE LOCAL FIRESTORE BACKUPS`);
-    console.log(` Primary Location: ${BACKUP_BASE_DIR}`);
+    console.log(` Primary Location:`);
+    console.log(` ${BACKUP_BASE_DIR}`);
     console.log(`==================================================\n`);
 
     backupsList.forEach((b, idx) => {
         const projBadge = b.projectId === EXPECTED_PROJECT_ID ? `[${b.projectId}]` : `[⚠️ ${b.projectId}]`;
-        console.log(` [${idx + 1}] Folder: ${b.folderName}`);
-        console.log(`     Created:     ${b.createdAt}`);
-        console.log(`     Project ID:  ${projBadge}`);
-        console.log(`     Data Stats:  ${b.totalCollections} collections, ${b.totalDocuments} docs`);
-        console.log(`     File Size:   ${b.fileSizeKB} KB`);
+        const typeTag = `[${b.backupType}]`.padEnd(11, ' ');
+        console.log(` [${idx + 1}] ${typeTag} ${b.folderName}`);
+        console.log(`     Source:     ${b.relSource}`);
+        console.log(`     Created:    ${b.createdAt}`);
+        console.log(`     Project ID: ${projBadge}`);
+        console.log(`     Data Stats: ${b.totalCollections} collections, ${b.totalDocuments} docs`);
+        console.log(`     File Size:  ${b.fileSizeKB} KB`);
         console.log(`--------------------------------------------------`);
     });
 
-    console.log(` [L] LATEST BACKUP (${backupsList[backupsList.length - 1].folderName})`);
+    const latest = backupsList[0];
+    console.log(` [L] LATEST BACKUP → [${latest.backupType}] ${latest.folderName}`);
     console.log(` [Q] CANCEL & QUIT\n`);
 
     const answer = await askQuestion(`Select a backup to verify (1-${backupsList.length} or L) [default L]: `);
 
     if (!answer || answer.toUpperCase() === 'L' || answer.toLowerCase() === 'latest') {
-        return backupsList[backupsList.length - 1];
+        return backupsList[0];
     }
 
     if (answer.toUpperCase() === 'Q') {
@@ -969,8 +1042,13 @@ async function runSingleVerification(backupItem, db) {
     console.log(`${EXPECTED_PROJECT_ID}\n`);
 
     console.log(`Backup:`);
-    console.log(`${backupItem.folderName}`);
-    console.log(`Path: ${backupItem.jsonPath}\n`);
+    console.log(`[${backupItem.backupType}] ${backupItem.folderName}\n`);
+
+    console.log(`Source:`);
+    console.log(`${backupItem.backupType}\n`);
+
+    console.log(`Path:`);
+    console.log(`${backupItem.jsonPath}\n`);
 
     const backupRes = loadBackupFile(backupItem);
 

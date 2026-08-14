@@ -1,132 +1,168 @@
-# X-29 (`x-2k29`) Local Firestore Backup, Restore & Verification Guide
+# X-29 (`x-2k29`) Firestore Backup, Restore & Verification Guide
 
-This guide describes how to run, automate, and maintain your free, 100% local, automatic backup, restore, and deep verification system for the X-29 Firebase Cloud Firestore database on Windows.
-
----
-
-## 1. What the System Does
-This backup, restore, and verification system connects to Firebase Cloud Firestore using the **Firebase Admin SDK** locally on your Windows PC. It exports all root-level collections, documents, and nested subcollections into portable, timestamped JSON format without needing Firebase's paid export feature.
-
-- **Automated Recursive Backup**: Discovers all Firestore collections and subcollections recursively.
-- **Type Preservation**: Safely serializes and deserializes Firestore Timestamps, GeoPoints, DocumentReferences, and Binary Data (`Bytes`/`Buffer`).
-- **Data Retention**: Retains the latest 30 backups automatically and purges older ones only after a new backup successfully verifies.
-- **Safe & Full Restoration**: Offers non-destructive merge restore as well as full database restoration after accidental data loss.
-- **Read-Only Deep Verification**: Performs recursive value-level comparisons between Live Firestore and backup snapshots, calculating canonical SHA-256 hashes without modifying any data.
+This guide describes how the automated, cloud-based GitHub Actions daily backup system works alongside your local manual backup, restore, and deep verification system for the X-29 Firebase Cloud Firestore database.
 
 ---
 
-## 2. Installing Node.js
-If Node.js is not already installed on your computer:
-1. Visit [https://nodejs.org/](https://nodejs.org/).
-2. Download the latest **LTS (Long Term Support)** installer for Windows.
-3. Run the installer and keep the default options selected.
-4. Verify installation by opening PowerShell/Command Prompt and running:
-   ```cmd
-   node -v
-   npm -v
-   ```
+## 1. System Architecture: Manual vs Automatic Separation
 
----
+The X-29 backup system strictly separates **local manual backups** and **cloud automatic GitHub Actions backups**:
 
-## 3. Installing Dependencies
-From your project code directory (`D:\X\X-29\X-29-Code`), install the required `firebase-admin` dependency by running:
-```cmd
-npm install
+```text
+[MANUAL BACKUPS] (Local PC Execution)
+Firebase Firestore → node scripts/backup.js → D:\X-29 Project\X-29\X-29-Backups\Manual\DD MM YYYY HH MM AM/
+
+[AUTOMATIC BACKUPS] (Cloud GitHub Actions)
+Firebase Firestore → GitHub Actions Runner → backups/Automatic/DD MM YYYY HH MM AM/ → Git Commit & Push
 ```
-*(Note: `firebase-admin` is listed under `dependencies` in `package.json`.)*
+
+> [!IMPORTANT]
+> **BACKUP-ONLY GUARANTEE**: Both manual and scheduled cloud workflows are strictly **READ-ONLY** with respect to Firestore. They will never modify, overwrite, delete, or restore Firestore data. Restoration is exclusively a separate manual process.
 
 ---
 
-## 4. Obtaining the Firebase Service Account Key
-1. Open the [Firebase Console](https://console.firebase.google.com/).
-2. Select your project: **`x-2k29`**.
-3. Click the **Gear icon (Project Settings)** in the top left menu -> **Service Accounts**.
-4. Click **Generate new private key**.
-5. Confirm by clicking **Generate key**. A `.json` credential file will be downloaded to your computer.
+## 2. Backup Folder Structure & Timestamp Format
+
+### Timestamp Naming Format
+Folder names use 12-hour Bangladesh local time (`Asia/Dhaka` / UTC+6):
+
+`DD MM YYYY HH MM AM` or `DD MM YYYY HH MM PM`
+
+Examples:
+- `14 08 2026 03 00 AM`
+- `14 08 2026 10 32 AM`
+- `14 08 2026 06 45 PM`
+
+### Local / Manual Backups Location
+Local PC manual backups created by running `node scripts/backup.js` are saved to:
+
+`D:\X-29 Project\X-29\X-29-Backups\Manual\`
+
+```text
+X-29-Backups/
+└── Manual/
+    ├── 14 08 2026 10 32 AM/
+    │   ├── firestore-backup.json
+    │   └── metadata.json
+    └── 14 08 2026 06 45 PM/
+        ├── firestore-backup.json
+        └── metadata.json
+```
+
+### Cloud / Automatic Backups Location
+Automatic backups running daily through GitHub Actions are committed to Git under:
+
+`backups/Automatic/`
+
+```text
+backups/
+└── Automatic/
+    ├── 14 08 2026 03 00 AM/
+    │   ├── firestore-backup.json
+    │   └── metadata.json
+    └── 15 08 2026 03 00 AM/
+        ├── firestore-backup.json
+        └── metadata.json
+```
 
 ---
 
-## 5. Service Account Placement & Security
-1. Move the downloaded JSON file to your project code folder:
-   ```
-   D:\X\X-29\X-29-Code\firebase-service-account.json
-   ```
-2. Rename the file exactly to: `firebase-service-account.json`.
+## 3. GitHub Secrets Setup (`FIREBASE_SERVICE_ACCOUNT`)
+
+To authenticate GitHub Actions with Firebase without exposing credentials:
+
+1. Open your GitHub Repository on GitHub.com (`shadhin78/x-29`).
+2. Navigate to **Settings** -> **Secrets and variables** -> **Actions**.
+3. Click **New repository secret**.
+4. Name: `FIREBASE_SERVICE_ACCOUNT`
+5. Value: Copy and paste the complete text contents of your `firebase-service-account.json` file.
+6. Click **Add secret**.
 
 > [!CAUTION]
-> **CRITICAL SECURITY RULES:**
-> - **NEVER** expose `firebase-service-account.json` to frontend JavaScript code.
-> - **NEVER** place `firebase-service-account.json` inside the `public/` directory or static folders.
-> - **NEVER** commit `firebase-service-account.json` or the `X-29-Backups/` directory to Git.
-> - Both entries are strictly protected and blocked with a `403 Forbidden` error on `dev-server.js`.
+> - Never commit `firebase-service-account.json` to Git. It is listed in `.gitignore`.
+> - Never print secrets in workflow step logs.
 
 ---
 
-## 6. How to Run Backup Manually
+## 4. Schedule & Timezone Conversion
 
-### Option A: Double-Click Batch File (Windows)
-Double-click [`backup.bat`](file:///d:/X/X-29/X-29-Code/backup.bat) in the project code directory (`D:\X\X-29\X-29-Code`).
+- **Workflow File**: [`.github/workflows/firebase-backup.yml`](file:///d:/X-29%20Project/X-29/X-29-Code/.github/workflows/firebase-backup.yml)
+- **Current Test Schedule**: `30 5 * * *` (UTC)
+- **Bangladesh Standard Time (BST, UTC+6)**: Configured for **11:30 AM BD Time** (05:30 UTC).
+- **Production Schedule**: `0 21 * * *` (UTC) = **03:00 AM BD Time**.
 
-### Option B: Command Prompt / PowerShell
-Open terminal in `D:\X\X-29\X-29-Code` and execute:
+---
+
+## 5. How to Trigger Backups Manually
+
+### Option A: Local PC CLI Execution
 ```cmd
 node scripts\backup.js
 ```
+*(Creates backup under `D:\X-29 Project\X-29\X-29-Backups\Manual\DD MM YYYY HH MM AM\` using local `firebase-service-account.json`.)*
+
+### Option B: GitHub Actions UI
+1. Open your GitHub repository on GitHub.com.
+2. Click the **Actions** tab.
+3. Select **Automatic Firebase Firestore Backup** from the left sidebar.
+4. Click **Run workflow** -> Select branch `main` -> Click **Run workflow**.
 
 ---
 
-## 7. How to Run Backup Verification (Read-Only)
+## 6. Automated Verification & Failure Protection
 
-### Option A: Double-Click Batch File (Windows)
-Double-click [`verify.bat`](file:///d:/X/X-29/X-29-Code/verify.bat) in the project code directory (`D:\X\X-29\X-29-Code`).
+Before any backup is saved or committed, `scripts/backup.js` performs strict verification:
+1. Validates JSON syntax.
+2. Confirms file existence and non-zero byte size.
+3. **Zero-Document Protection**: If Firestore returns 0 documents, the process aborts immediately with error code `1` to prevent committing an empty database state.
+4. Validates document and collection counts.
+5. Calculates SHA-256 checksum and compares with `metadata.json`.
 
-### Option B: Command Prompt / PowerShell CLI Options
-Open terminal in `D:\X\X-29\X-29-Code` and execute any of the following modes:
-
-1. **Interactive Menu**:
-   ```cmd
-   node scripts\verify-backup.js
-   ```
-   Scans `D:\X\X-29\X-29-Backups` and displays a menu to pick a backup or `LATEST`.
-
-2. **Verify Latest Backup**:
-   ```cmd
-   node scripts\verify-backup.js --latest
-   ```
-
-3. **Verify Specific Backup**:
-   ```cmd
-   node scripts\verify-backup.js --backup "2026-08-13_19-16-19"
-   ```
-
-4. **Audit All Backups Matrix**:
-   ```cmd
-   node scripts\verify-backup.js --all
-   ```
+If verification fails, **the job stops immediately and NO git commit is created**.
 
 ---
 
-## 8. How to Run Restore
+## 7. Retention Policy (`KEEP_DAYS=30`)
 
-### Option A: Double-Click Batch File (Windows)
-Double-click [`restore.bat`](file:///d:/X/X-29/X-29-Code/restore.bat) in the project code directory (`D:\X\X-29\X-29-Code`).
+- Configurable via `KEEP_DAYS` environment variable (default: `30` days).
+- Dated folders older than 30 days are automatically pruned after a new backup successfully verifies.
+- The latest successful backup directory is **always preserved**, regardless of age.
+- If a backup fails, retention pruning is skipped completely.
 
-### Option B: Command Prompt / PowerShell
-Open terminal in `D:\X\X-29\X-29-Code` and execute:
+---
+
+## 8. How to Run Manual Restoration
+
+Restoration is strictly manual and interactive:
+
+1. Open terminal in project code folder.
+2. Run:
+   ```cmd
+   node scripts\restore.js
+   ```
+3. `restore.js` discovers backups across:
+   - `D:\X-29 Project\X-29\X-29-Backups\Manual\`
+   - `D:\X-29 Project\X-29\X-29-Backups\Automatic\`
+   - `backups/Automatic/`
+   - Legacy backup folders
+4. Select desired backup folder from the menu.
+5. Select restoration mode:
+   - **`[1] SAFE RESTORE`**: Merges backup documents into Firestore non-destructively.
+   - **`[2] FULL RESTORE`**: Wipes existing Firestore documents then restores exact backup state (requires typing `RESTORE`).
+
+---
+
+## 9. Read-Only Deep Verification Tool
+
+To compare Live Firestore database against any backup snapshot without modifying any data:
+
 ```cmd
-node scripts\restore.js
+node scripts\verify-backup.js --latest
 ```
-
----
-
-## 9. Difference Between SAFE RESTORE and FULL RESTORE
-
-| Feature | SAFE RESTORE (Option 1) | FULL RESTORE (Option 2) |
-| :--- | :--- | :--- |
-| **Data Handling** | Merges backup documents into Firestore. | Wipes existing Firestore documents, then restores backup. |
-| **Existing Data** | Keeps non-conflicting documents intact. | Permanently deletes current documents in Firestore. |
-| **Safety Level** | Non-destructive (safe default). | Destructive (requires typing `RESTORE` confirmation). |
-| **Use Case** | Recovering missing items or merging data. | Disaster recovery / reverting database to exact snapshot. |
+or
+```cmd
+node scripts\verify-backup.js --backup "14 08 2026 10 32 AM"
+```
 
 ---
 
