@@ -7754,11 +7754,71 @@ window.setDailyState = function (type, state) {
     }
 };
 
+window.actionAnalyticsHeatmapRange = window.actionAnalyticsHeatmapRange || 180;
+
+window.setActionAnalyticsRange = function (days) {
+    window.actionAnalyticsHeatmapRange = days;
+    if (window.currentAnalyticsAction && typeof window.populateAnalyticsModal === 'function') {
+        window.populateAnalyticsModal(window.currentAnalyticsAction);
+    }
+};
+
+window.showActionHeatmapTooltip = function (e, el) {
+    const tooltip = document.getElementById('am-heatmap-tooltip');
+    if (!tooltip) return;
+
+    const date = el.getAttribute('data-date');
+    const status = el.getAttribute('data-status');
+    const isDone = el.getAttribute('data-done') === 'true';
+    const badgeClass = isDone
+        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+        : 'bg-red-500/20 text-red-400 border border-red-500/30';
+    const action = el.getAttribute('data-action') || 'Daily Action';
+
+    tooltip.innerHTML = `
+        <div class="text-[9px] text-slate-400 uppercase tracking-widest font-black">${action}</div>
+        <div class="text-[10px] text-slate-200 font-bold">${date}</div>
+        <div class="flex items-center gap-2 mt-1">
+            <span class="text-xs font-black text-white">${status}</span>
+            <span class="px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider rounded ${badgeClass}">${isDone ? '✓ DONE' : '✕ MISSED'}</span>
+        </div>
+        <div class="text-[8px] text-slate-400 font-bold mt-1 pt-1 border-t border-white/10">Click square to toggle check-in</div>
+    `;
+
+    tooltip.classList.remove('hidden');
+    window.moveActionHeatmapTooltip(e);
+};
+
+window.moveActionHeatmapTooltip = function (e) {
+    const tooltip = document.getElementById('am-heatmap-tooltip');
+    if (!tooltip || tooltip.classList.contains('hidden')) return;
+
+    const tooltipWidth = tooltip.offsetWidth || 180;
+    const tooltipHeight = tooltip.offsetHeight || 60;
+    let x = e.clientX + 12;
+    let y = e.clientY - tooltipHeight - 10;
+
+    if (x + tooltipWidth > window.innerWidth - 10) {
+        x = e.clientX - tooltipWidth - 12;
+    }
+    if (y < 10) {
+        y = e.clientY + 20;
+    }
+
+    tooltip.style.left = `${Math.max(10, x)}px`;
+    tooltip.style.top = `${Math.max(10, y)}px`;
+};
+
+window.hideActionHeatmapTooltip = function () {
+    const tooltip = document.getElementById('am-heatmap-tooltip');
+    if (tooltip) tooltip.classList.add('hidden');
+};
+
 window.populateAnalyticsModal = function (typeKey) {
     window.currentAnalyticsAction = typeKey;
     const cfgAct = window.customActions.find(a => a.id === typeKey);
     if (!cfgAct) return;
-    const cMap = AppState.twColors[cfgAct.color];
+    const cMap = AppState.twColors[cfgAct.color] || AppState.twColors['blue'];
 
     safeSetText('am-title', cfgAct.title + " Analytics");
     safeSetClass('am-icon-box', `p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl md:rounded-2xl shadow-inner shrink-0 ${cMap.bgLt} ${cMap.text}`);
@@ -7791,7 +7851,10 @@ window.populateAnalyticsModal = function (typeKey) {
     let possibleDays = 0;
     let streak = 0;
     let streakActive = true;
+    let longestStreak = 0;
+    let tempStreak = 0;
 
+    // Calculate current streak and total backwards from today
     const checkDate = new Date(today);
     while (checkDate >= statsStartDate) {
         possibleDays++;
@@ -7806,7 +7869,22 @@ window.populateAnalyticsModal = function (typeKey) {
         checkDate.setDate(checkDate.getDate() - 1);
     }
 
-    safeSetText('am-total', total); safeSetText('am-streak', streak + ' Days');
+    // Calculate longest historical streak forward from statsStartDate
+    const streakIter = new Date(statsStartDate);
+    while (streakIter <= today) {
+        const t = window.getTaskForDate(streakIter);
+        const done = t ? Boolean(t[typeKey]) : false;
+        if (done) {
+            tempStreak++;
+            if (tempStreak > longestStreak) longestStreak = tempStreak;
+        } else {
+            tempStreak = 0;
+        }
+        streakIter.setDate(streakIter.getDate() + 1);
+    }
+
+    safeSetText('am-total', total);
+    safeSetText('am-streak', streak + ' Days');
     const pct = possibleDays > 0 ? Math.round((total / possibleDays) * 100) : 0;
     safeSetText('am-percent', pct + '%');
     const valClass = `text-base sm:text-2xl md:text-5xl font-black drop-shadow-sm mt-0.5 sm:mt-1 ${cMap.text}`;
@@ -7814,38 +7892,188 @@ window.populateAnalyticsModal = function (typeKey) {
     safeSetClass('am-streak', valClass);
     safeSetClass('am-percent', valClass);
 
-    const chartLabels = [];
-    const chartData = [];
-    let cumHits = 0;
-
-    const chartDate = new Date(gridStartDate);
-    while (chartDate <= today) {
-        const dStr = Utils.formatDate(chartDate);
-        const t = window.getTaskForDate(chartDate);
-        const done = t ? Boolean(t[typeKey]) : false;
-        if (done) cumHits++;
-        chartLabels.push(dStr);
-        chartData.push(cumHits);
-        chartDate.setDate(chartDate.getDate() + 1);
+    // ==========================================
+    // RENDER GITHUB CONTRIBUTION HEATMAP TREND
+    // ==========================================
+    const heatmapGridEl = document.getElementById('am-heatmap-grid');
+    const pulseDot = document.getElementById('am-heatmap-pulse-dot');
+    if (pulseDot) {
+        pulseDot.style.backgroundColor = cMap.hex;
+    }
+    const legendActive = document.getElementById('am-legend-active');
+    if (legendActive) {
+        legendActive.style.backgroundColor = cMap.hex;
+        legendActive.style.boxShadow = `0 0 6px ${cMap.hex}66`;
     }
 
-    const canvas = document.getElementById('masterLineChart');
-    if (canvas) {
-        if (AppState.masterLineChart) {
-            AppState.masterLineChart.data.labels = chartLabels;
-            AppState.masterLineChart.data.datasets[0].data = chartData;
-            AppState.masterLineChart.data.datasets[0].borderColor = cMap.hex;
-            AppState.masterLineChart.data.datasets[0].backgroundColor = cMap.hex + '25';
-            AppState.masterLineChart.data.datasets[0].pointBackgroundColor = cMap.hex;
-            AppState.masterLineChart.update('none');
-        } else {
-            AppState.masterLineChart = new Chart(canvas.getContext('2d'), {
-                type: 'line', data: { labels: chartLabels, datasets: [{ label: 'Total Hits', data: chartData, borderColor: cMap.hex, tension: 0.4, fill: true, backgroundColor: cMap.hex + '25', borderWidth: window.innerWidth < 640 ? 2 : 3, pointBackgroundColor: cMap.hex, pointRadius: window.innerWidth < 640 ? 0 : 2, pointHoverRadius: 6, pointHoverBackgroundColor: '#fff' }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)', titleColor: '#fff', bodyColor: '#cbd5e1', cornerRadius: 8, padding: 10 } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,0.08)', drawBorder: false, borderDash: [5, 5] }, ticks: { font: { size: window.innerWidth < 640 ? 8 : 10 }, color: '#64748b' } }, x: { grid: { display: false, drawBorder: false }, ticks: { font: { size: window.innerWidth < 640 ? 8 : 10 }, color: '#64748b', maxTicksLimit: window.innerWidth < 640 ? 6 : 12 } } } }
-            });
+    const rangeDays = window.actionAnalyticsHeatmapRange || 180;
+
+    // Update range selector pill styling
+    [90, 180, 365].forEach(r => {
+        const btn = document.getElementById(`am-range-${r}`);
+        if (btn) {
+            if (r === rangeDays) {
+                btn.className = `px-2 sm:px-2.5 py-1 rounded-lg transition-all text-white shadow-sm font-black ${cMap.btn || 'bg-blue-500'}`;
+            } else {
+                btn.className = 'px-2 sm:px-2.5 py-1 rounded-lg transition-all text-slate-500 hover:text-slate-900 dark:hover:text-white font-bold';
+            }
         }
+    });
+
+    if (heatmapGridEl) {
+        const heatmapStartDate = new Date(today);
+        heatmapStartDate.setDate(heatmapStartDate.getDate() - (rangeDays - 1));
+        heatmapStartDate.setHours(0, 0, 0, 0);
+
+        // Align heatmap start date to Sunday (day 0) for consistent 7-row grid alignment
+        const startDayOfWeek = heatmapStartDate.getDay();
+        if (startDayOfWeek !== 0) {
+            heatmapStartDate.setDate(heatmapStartDate.getDate() - startDayOfWeek);
+        }
+
+        const weeks = [];
+        let currentWeek = [];
+        let curr = new Date(heatmapStartDate);
+
+        let totalHitsInRange = 0;
+        let totalDaysInRange = 0;
+
+        while (curr <= today || currentWeek.length > 0) {
+            const key = `${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}-${String(curr.getDate()).padStart(2, '0')}`;
+            const isFuture = curr > today;
+            const isToday = curr.getTime() === today.getTime();
+            const dStr = Utils.formatDate(curr);
+
+            let done = false;
+            let taskIdOrDate = key;
+
+            if (!isFuture) {
+                totalDaysInRange++;
+                const t = window.getTaskForDate(curr);
+                done = t ? Boolean(t[typeKey]) : false;
+                if (t) taskIdOrDate = t.id;
+                if (done) totalHitsInRange++;
+            }
+
+            currentWeek.push({
+                date: new Date(curr),
+                dateKey: key,
+                dStr: dStr,
+                isoLocalDate: key,
+                taskIdOrDate: taskIdOrDate,
+                done: done,
+                isFuture: isFuture,
+                isToday: isToday,
+                dayOfWeek: curr.getDay(),
+                month: curr.getMonth(),
+                dayOfMonth: curr.getDate()
+            });
+
+            if (currentWeek.length === 7) {
+                weeks.push(currentWeek);
+                currentWeek = [];
+            }
+
+            curr.setDate(curr.getDate() + 1);
+            if (isFuture && currentWeek.length === 0) break;
+        }
+
+        // Summary text update
+        const summaryEl = document.getElementById('am-heatmap-summary');
+        if (summaryEl) {
+            const rangePct = totalDaysInRange > 0 ? Math.round((totalHitsInRange / totalDaysInRange) * 100) : 0;
+            summaryEl.innerHTML = `
+                <span><strong class="${cMap.text}">${totalHitsInRange}</strong> / ${totalDaysInRange} days completed (${rangePct}%)</span>
+                <span class="opacity-40">•</span>
+                <span>Best Streak: <strong class="${cMap.text}">${longestStreak}d 🔥</strong></span>
+            `;
+        }
+
+        // Render Month Labels Row
+        let monthLabelsHtml = `<div class="flex items-center text-[10px] font-extrabold text-slate-400 dark:text-slate-500 mb-1 pl-7 gap-1">`;
+        let prevMonth = -1;
+        weeks.forEach((wk) => {
+            const firstDayOfWeek = wk[0].date;
+            const month = firstDayOfWeek.getMonth();
+            if (month !== prevMonth) {
+                const monthName = firstDayOfWeek.toLocaleDateString(undefined, { month: 'short' });
+                monthLabelsHtml += `<span class="shrink-0 text-left text-[9px] font-black uppercase tracking-wider overflow-visible select-none" style="width: 15px;">${monthName}</span>`;
+                prevMonth = month;
+            } else {
+                monthLabelsHtml += `<span class="shrink-0" style="width: 15px;"></span>`;
+            }
+        });
+        monthLabelsHtml += `</div>`;
+
+        // Render 7 Day Rows (Sunday to Saturday)
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        let gridRowsHtml = '';
+
+        for (let d = 0; d < 7; d++) {
+            const dayLabel = (d === 1 || d === 3 || d === 5) ? dayNames[d] : '';
+            gridRowsHtml += `<div class="flex items-center gap-1 my-[1.5px]">`;
+            gridRowsHtml += `<span class="w-6 text-[9px] font-bold text-slate-400 dark:text-slate-500 shrink-0 text-right pr-1 select-none leading-none">${dayLabel}</span>`;
+            gridRowsHtml += `<div class="flex items-center gap-1">`;
+
+            weeks.forEach((wk) => {
+                const dayObj = wk[d];
+                if (!dayObj) {
+                    gridRowsHtml += `<div class="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-[15px] md:h-[15px] rounded-[3px] opacity-0 pointer-events-none shrink-0"></div>`;
+                    return;
+                }
+
+                if (dayObj.isFuture) {
+                    gridRowsHtml += `<div class="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-[15px] md:h-[15px] rounded-[3px] bg-slate-100/30 dark:bg-slate-800/20 border border-slate-200/20 dark:border-slate-800/20 opacity-25 shrink-0 pointer-events-none"></div>`;
+                    return;
+                }
+
+                const done = dayObj.done;
+                let cellStyle = '';
+                let cellClass = '';
+                let innerIcon = '';
+
+                if (done) {
+                    cellClass = `w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-[15px] md:h-[15px] cursor-pointer transition-all duration-150 hover:scale-125 hover:z-20 shrink-0 rounded-[3px] flex items-center justify-center shadow-sm`;
+                    cellStyle = `background-color: ${cMap.hex}; border: 1px solid ${cMap.hex}; box-shadow: 0 0 6px ${cMap.hex}55;`;
+                    innerIcon = `<svg class="w-2 h-2 sm:w-2.5 sm:h-2.5 text-white pointer-events-none drop-shadow-sm" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+                } else {
+                    cellClass = `w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-[15px] md:h-[15px] cursor-pointer transition-all duration-150 hover:scale-125 hover:z-20 shrink-0 rounded-[3px] bg-slate-200/80 dark:bg-slate-800/90 border border-slate-300/50 dark:border-slate-700/60 hover:border-slate-400 dark:hover:border-slate-500 flex items-center justify-center`;
+                    innerIcon = `<span class="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600/70 pointer-events-none"></span>`;
+                }
+
+                if (dayObj.isToday) {
+                    cellClass += ` ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-slate-900`;
+                }
+
+                const formattedDate = dayObj.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                const statusText = done ? 'Completed (YES)' : 'Missed (NO)';
+
+                gridRowsHtml += `<button type="button" class="${cellClass}" style="${cellStyle}"
+                    title="${formattedDate}: ${statusText}"
+                    data-date="${formattedDate}"
+                    data-datekey="${dayObj.dateKey}"
+                    data-status="${statusText}"
+                    data-done="${done}"
+                    data-action="${cfgAct.title}"
+                    onclick="window.toggleModalDay('${dayObj.taskIdOrDate}', '${typeKey}', event)"
+                    onmouseenter="window.showActionHeatmapTooltip(event, this)"
+                    onmousemove="window.moveActionHeatmapTooltip(event)"
+                    onmouseleave="window.hideActionHeatmapTooltip()">${innerIcon}</button>`;
+            });
+
+            gridRowsHtml += `</div></div>`;
+        }
+
+        heatmapGridEl.innerHTML = monthLabelsHtml + gridRowsHtml;
     }
 
+    // Clean up masterLineChart instance if present
+    if (AppState.masterLineChart && typeof AppState.masterLineChart.destroy === 'function') {
+        AppState.masterLineChart.destroy();
+        AppState.masterLineChart = null;
+    }
+
+    // Render Quick Check-ins Grid
     const grid = document.getElementById('am-grid');
     if (grid) {
         let gHtml = '';
@@ -10760,6 +10988,9 @@ window.closeModal = function (modalId) {
     const content = (contents[modalId] && document.getElementById(contents[modalId])) || (modal ? modal.children[1] : null);
     if (!modal || !backdrop || !content) return;
 
+    if (modalId === 'analytics-modal' && typeof window.hideActionHeatmapTooltip === 'function') {
+        window.hideActionHeatmapTooltip();
+    }
     backdrop.classList.remove('opacity-100'); backdrop.classList.add('opacity-0');
     content.classList.remove('scale-100', 'opacity-100', 'translate-y-0'); content.classList.add('scale-95', 'opacity-0', 'translate-y-4');
     setTimeout(() => { modal.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }, 300);
@@ -12840,17 +13071,41 @@ window.toggleModalDay = function (taskIdOrDate, typeKey, evt) {
         const evtTarget = (evt && evt.target) || (window.event && window.event.target) || null;
         const clickedBtn = evtTarget ? evtTarget.closest('button[onclick*="toggleModalDay"]') : null;
         if (clickedBtn) {
-            if (newState) {
-                clickedBtn.classList.remove('from-red-400', 'to-red-500', 'shadow-[0_2px_8px_rgba(239,68,68,0.4)]');
-                clickedBtn.classList.add('from-green-400', 'to-emerald-500', 'shadow-[0_2px_8px_rgba(34,197,94,0.4)]');
-                if (clickedBtn.title) clickedBtn.title = clickedBtn.title.replace(': NO', ': YES');
+            const isHeatmapSquare = clickedBtn.hasAttribute('data-datekey');
+            if (isHeatmapSquare) {
+                const actionObj = (window.customActions || []).find(a => a.id === typeKey);
+                const cMap = actionObj ? (AppState.twColors[actionObj.color] || AppState.twColors['blue']) : AppState.twColors['blue'];
+                const hexColor = (cMap && cMap.hex) || '#10b981';
+
+                if (newState) {
+                    clickedBtn.style.backgroundColor = hexColor;
+                    clickedBtn.style.borderColor = hexColor;
+                    clickedBtn.style.boxShadow = `0 0 6px ${hexColor}55`;
+                    clickedBtn.className = clickedBtn.className.replace(/bg-slate-[^\s]+/g, '').replace(/border-slate-[^\s]+/g, '');
+                    clickedBtn.innerHTML = `<svg class="w-2 h-2 sm:w-2.5 sm:h-2.5 text-white pointer-events-none drop-shadow-sm" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+                    clickedBtn.setAttribute('data-done', 'true');
+                    clickedBtn.setAttribute('data-status', 'Completed (YES)');
+                } else {
+                    clickedBtn.style.backgroundColor = '';
+                    clickedBtn.style.borderColor = '';
+                    clickedBtn.style.boxShadow = '';
+                    clickedBtn.innerHTML = `<span class="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600/70 pointer-events-none"></span>`;
+                    clickedBtn.setAttribute('data-done', 'false');
+                    clickedBtn.setAttribute('data-status', 'Missed (NO)');
+                }
             } else {
-                clickedBtn.classList.remove('from-green-400', 'to-emerald-500', 'shadow-[0_2px_8px_rgba(34,197,94,0.4)]', 'shadow-[0_2px_8px_rgba(16,185,129,0.4)]');
-                clickedBtn.classList.add('from-red-400', 'to-red-500', 'shadow-[0_2px_8px_rgba(239,68,68,0.4)]');
-                if (clickedBtn.title) clickedBtn.title = clickedBtn.title.replace(': YES', ': NO');
+                if (newState) {
+                    clickedBtn.classList.remove('from-red-400', 'to-red-500', 'shadow-[0_2px_8px_rgba(239,68,68,0.4)]');
+                    clickedBtn.classList.add('from-green-400', 'to-emerald-500', 'shadow-[0_2px_8px_rgba(34,197,94,0.4)]');
+                    if (clickedBtn.title) clickedBtn.title = clickedBtn.title.replace(': NO', ': YES');
+                } else {
+                    clickedBtn.classList.remove('from-green-400', 'to-emerald-500', 'shadow-[0_2px_8px_rgba(34,197,94,0.4)]', 'shadow-[0_2px_8px_rgba(16,185,129,0.4)]');
+                    clickedBtn.classList.add('from-red-400', 'to-red-500', 'shadow-[0_2px_8px_rgba(239,68,68,0.4)]');
+                    if (clickedBtn.title) clickedBtn.title = clickedBtn.title.replace(': YES', ': NO');
+                }
             }
-            clickedBtn.classList.add('scale-105');
-            setTimeout(() => clickedBtn.classList.remove('scale-105'), 120);
+            clickedBtn.classList.add('scale-110');
+            setTimeout(() => clickedBtn.classList.remove('scale-110'), 120);
         }
 
         // 2. Schedule debounced full UI & chart updates for 60 FPS performance during fast clicks
