@@ -7180,10 +7180,20 @@ function renderTrendCharts() {
     window.customActions.forEach(a => {
         for (let i = 0; i <= cutoff; i++) {
             let divisor;
-            if (i === todayMidx) { divisor = currentDay; }
-            else {
-                const mDate = new Date(sYear, sMonth + i + 1, 0);
-                divisor = mDate.getDate();
+            const mDate = new Date(sYear, sMonth + i + 1, 0);
+            const daysInM = mDate.getDate();
+
+            if (i === 0 && sYear === chartStart.getFullYear() && sMonth === chartStart.getMonth()) {
+                // First month starts from chartStart (X bar start date)
+                if (i === todayMidx) {
+                    divisor = Math.max(1, currentDay - chartStart.getDate() + 1);
+                } else {
+                    divisor = Math.max(1, daysInM - chartStart.getDate() + 1);
+                }
+            } else if (i === todayMidx) {
+                divisor = Math.max(1, currentDay);
+            } else {
+                divisor = Math.max(1, daysInM);
             }
             actCum[a.id][i] = Math.round((actCum[a.id][i] / divisor) * 100);
         }
@@ -7193,7 +7203,7 @@ function renderTrendCharts() {
         for (let i = 0; i < currentDay; i++) {
             const dayDate = new Date(todayObj.getFullYear(), todayObj.getMonth(), i + 1);
             dayDate.setHours(0, 0, 0, 0);
-            if (dayDate >= AppState.PLAN_START_DATE) {
+            if (dayDate >= chartStart) {
                 validDaysCountThisMonth++;
                 runningTotal += actDaily[a.id][i] || 0;
                 actDaily[a.id][i] = Math.round((runningTotal / validDaysCountThisMonth) * 100);
@@ -7437,18 +7447,45 @@ function renderTrendCharts() {
 function renderHeatmap() {
     const container = document.getElementById('yearly-daily-grid');
     if (!container) return;
+
+    let activeGoalId = window.dashboardConfig.activePaceGoalId;
+    if (!activeGoalId && window.paceGoals && window.paceGoals.length > 0) {
+        activeGoalId = window.paceGoals[0].id;
+    }
+    const activeGoal = activeGoalId ? window.paceGoals.find(g => g.id === activeGoalId) : null;
+    let chartStart = activeGoal && activeGoal.startDate ? Utils.parseDateSafe(activeGoal.startDate) : new Date(AppState.PLAN_START_DATE);
+    if (!chartStart || isNaN(chartStart.getTime())) chartStart = new Date(AppState.PLAN_START_DATE);
+    chartStart.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+
     let html = '';
-    for (let i = AppState.tasks.length - 1; i >= 0; i--) {
-        const t = AppState.tasks[i];
-        if (getTaskDate(t) > new Date()) continue;
-        let c = 0; window.customActions.forEach(a => { if (t[a.id]) c++; });
-        const pct = window.customActions.length > 0 ? Math.round((c / window.customActions.length) * 100) : 0;
+    let cur = new Date(today);
+    cur.setHours(0, 0, 0, 0);
+
+    while (cur >= chartStart) {
+        const t = window.getTaskForDate(cur);
+        const dFormatted = Utils.formatDate(cur);
+        const parts = dFormatted.split(' ');
+        const dayPart = parts[0] || '';
+        const monthPart = parts[1] || '';
+
+        let c = 0;
+        if (t) {
+            window.customActions.forEach(a => { if (t[a.id]) c++; });
+        }
+        const pct = (window.customActions && window.customActions.length > 0) ? Math.round((c / window.customActions.length) * 100) : 0;
+
         let bg = 'bg-white dark:bg-slate-800/60 text-slate-400 border border-slate-200 dark:border-slate-700/60 opacity-70';
         if (pct > 0 && pct <= 25) bg = 'bg-gradient-to-br from-red-400 to-red-600 text-white shadow-[0_2px_8px_rgba(239,68,68,0.3)] border-transparent opacity-100';
         if (pct > 25 && pct <= 50) bg = 'bg-gradient-to-br from-orange-400 to-orange-500 text-white shadow-[0_2px_8px_rgba(249,115,22,0.3)] border-transparent opacity-100';
         if (pct > 50 && pct <= 75) bg = 'bg-gradient-to-br from-lime-400 to-lime-500 text-white shadow-[0_2px_8px_rgba(132,204,22,0.3)] border-transparent opacity-100';
         if (pct > 75) bg = 'bg-gradient-to-br from-green-400 to-green-500 text-white shadow-[0_2px_8px_rgba(34,197,94,0.4)] border-transparent opacity-100';
-        html += `<div class="flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${bg} w-[42px] sm:w-[50px] md:w-[55px] h-[52px] sm:h-[60px] md:h-[65px] shrink-0 font-black hover:-translate-y-1 transition-all cursor-default"><span class="text-[7px] sm:text-[8px] uppercase opacity-90 mb-0.5">${t.date.split(' ')[0]}</span><span class="text-[10px] sm:text-xs md:text-sm">${t.date.split(' ')[1]}</span></div>`;
+
+        html += `<div class="flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${bg} w-[42px] sm:w-[50px] md:w-[55px] h-[52px] sm:h-[60px] md:h-[65px] shrink-0 font-black hover:-translate-y-1 transition-all cursor-default"><span class="text-[7px] sm:text-[8px] uppercase opacity-90 mb-0.5">${dayPart}</span><span class="text-[10px] sm:text-xs md:text-sm">${monthPart}</span></div>`;
+
+        cur.setDate(cur.getDate() - 1);
     }
     container.innerHTML = html;
 }
@@ -7659,61 +7696,83 @@ window.renderDailyTracker = function () {
         gridContainer.innerHTML += cardHtml;
     });
 
-    // Render compact version for Dashboard
+    // Render compact version for Dashboard (Max 4 items per row, auto-fit rows)
     const dashCompactContainer = document.getElementById('dashboard-daily-actions-compact');
     if (dashCompactContainer) {
         dashCompactContainer.innerHTML = '';
+        const count = sortedActions.length;
 
-        if (sortedActions.length <= 4) {
-            const rows = Math.ceil(sortedActions.length / 2) || 1;
-            dashCompactContainer.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
-            dashCompactContainer.style.gridAutoRows = 'unset';
-            dashCompactContainer.style.height = '100%';
+        if (count === 0) {
+            dashCompactContainer.className = 'flex flex-col items-center justify-center flex-1 min-h-0 text-center p-3 text-slate-400 dark:text-slate-500';
+            dashCompactContainer.style.cssText = '';
+            dashCompactContainer.innerHTML = `
+                <span class="text-xl mb-1">🎯</span>
+                <p class="text-[10px] font-bold">No daily actions configured</p>
+                <button onclick="window.switchPage('daily-actions')" class="mt-2 text-[9px] font-black text-blue-500 hover:underline">Add Daily Actions →</button>
+            `;
         } else {
-            dashCompactContainer.style.gridTemplateRows = 'unset';
-            dashCompactContainer.style.gridAutoRows = 'minmax(38px, auto)';
-            dashCompactContainer.style.height = 'auto';
-        }
+            // Maximum 4 daily actions in 1 row
+            const cols = Math.min(4, Math.max(1, count));
+            dashCompactContainer.className = 'grid gap-2 flex-1 min-h-0 overflow-y-auto mt-2 pr-0.5 custom-scrollbar';
+            dashCompactContainer.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
 
-        sortedActions.forEach(cfg => {
-            const state = todayTask ? todayTask[cfg.id] : false;
-            const cMap = AppState.twColors[cfg.color] || AppState.twColors['blue'];
-            const isActive = state === true;
+            if (count <= 4) {
+                // 1 row of up to 4 items - auto fit height
+                dashCompactContainer.style.gridTemplateRows = 'repeat(1, 1fr)';
+                dashCompactContainer.style.gridAutoRows = 'unset';
+                dashCompactContainer.style.height = '100%';
+            } else if (count <= 8) {
+                // 2 rows of up to 4 items (4*2 = 8) - auto fit 2 equal rows without scrollbar
+                dashCompactContainer.style.gridTemplateRows = 'repeat(2, 1fr)';
+                dashCompactContainer.style.gridAutoRows = 'unset';
+                dashCompactContainer.style.height = '100%';
+            } else {
+                // 3+ rows (e.g. 10 items = 4 + 4 + 2) - auto fit rows with smooth scroll
+                dashCompactContainer.style.gridTemplateRows = 'repeat(2, 1fr)';
+                dashCompactContainer.style.gridAutoRows = 'minmax(58px, 1fr)';
+                dashCompactContainer.style.height = '100%';
+            }
 
-            const activeStyle = `background-color: ${cMap.hex}; border-color: ${cMap.hex}; color: white; box-shadow: 0 4px 12px ${cMap.hex}33;`;
-            const cardClass = isActive
-                ? `text-white border-transparent`
-                : 'bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-900/60';
+            sortedActions.forEach(cfg => {
+                const state = todayTask ? todayTask[cfg.id] : false;
+                const cMap = AppState.twColors[cfg.color] || AppState.twColors['blue'];
+                const isActive = state === true;
 
-            const compactHtml = `
+                const activeStyle = `background-color: ${cMap.hex}; border-color: ${cMap.hex}; color: white; box-shadow: 0 4px 12px ${cMap.hex}33;`;
+                const cardClass = isActive
+                    ? `text-white border-transparent`
+                    : 'bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-900/60';
+
+                const compactHtml = `
                     <button id="dashboard-daily-action-btn-${cfg.id}" onclick="window.setDailyState('${cfg.id}')"
-                            class="flex items-center justify-between p-2 md:p-2.5 rounded-xl border font-black transition-all duration-300 active:scale-95 text-left w-full gap-1.5 h-full ${cardClass}"
+                            class="flex flex-col justify-between p-2 sm:p-2.5 rounded-2xl border font-black transition-all duration-300 active:scale-95 text-left w-full h-full min-h-[58px] ${cardClass}"
                             style="${isActive ? activeStyle : ''}">
-                        <div class="flex items-center space-x-1.5 min-w-0">
+                        <div class="flex items-center justify-between w-full mb-1">
                             <div class="p-1 rounded-lg ${isActive ? 'bg-white/20 text-white' : cMap.iconBg + ' ' + cMap.text + ' ' + cMap.borderLt + ' border'} shrink-0">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">${getSVG(cfg.icon, cfg.title)}</svg>
                             </div>
-                            <div class="min-w-0 leading-tight">
-                                <span class="block text-[10px] md:text-xs font-black truncate">${cfg.title}</span>
-                                <div class="flex items-center space-x-1 flex-wrap">
-                                    <span class="dashboard-action-status-text block text-[7px] uppercase tracking-wider font-bold opacity-75 truncate">${isActive ? 'YES' : 'NO'}</span>
-                                    ${cfg.track ? `
-                                        <span class="dashboard-action-track-badge inline-block px-1 rounded-[3px] text-[6px] font-black uppercase tracking-widest ${isActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300'}">
-                                            ${(window.tracks.find(t => t.id === cfg.track)?.name || 'Track')}
-                                        </span>
-                                    ` : ''}
-                                </div>
+                            <div class="dashboard-action-badge shrink-0">
+                                ${isActive
+                                    ? `<span class="flex h-4 w-4 rounded-full bg-white text-emerald-500 items-center justify-center shadow-sm text-[8px] font-black">✓</span>`
+                                    : `<span class="flex h-4 w-4 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 items-center justify-center text-[7px] font-black">✕</span>`
+                                }
                             </div>
                         </div>
-                        <div class="dashboard-action-badge shrink-0">
-                            ${isActive
-                    ? `<span class="flex h-4 w-4 rounded-full bg-white text-emerald-500 items-center justify-center shadow-sm text-[8px] font-black">✓</span>`
-                    : `<span class="flex h-4 w-4 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 items-center justify-center text-[7px] font-black">✕</span>`
-                }
+                        <div class="min-w-0 w-full">
+                            <span class="block text-[10px] sm:text-[11px] font-black truncate leading-tight">${cfg.title}</span>
+                            <div class="flex items-center justify-between mt-0.5">
+                                <span class="dashboard-action-status-text text-[7px] uppercase tracking-wider font-extrabold opacity-80">${isActive ? 'YES' : 'NO'}</span>
+                                ${cfg.track ? `
+                                    <span class="dashboard-action-track-badge inline-block px-1 rounded-[3px] text-[6px] font-black uppercase tracking-widest ${isActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300'}">
+                                        ${(window.tracks.find(t => t.id === cfg.track)?.name || 'Track')}
+                                    </span>
+                                ` : ''}
+                            </div>
                         </div>
                     </button>`;
-            dashCompactContainer.innerHTML += compactHtml;
-        });
+                dashCompactContainer.innerHTML += compactHtml;
+            });
+        }
     }
 
     const dashPercent = document.getElementById('dashboard-daily-actions-percent');
@@ -7859,8 +7918,8 @@ window.setDailyState = function (type, state) {
         const isActive = state === true;
         const activeStyle = `background-color: ${cMap.hex}; border-color: ${cMap.hex}; color: white; box-shadow: 0 4px 12px ${cMap.hex}33;`;
         const cardClass = isActive
-            ? `flex items-center justify-between p-2 md:p-2.5 rounded-xl border font-black transition-all duration-300 active:scale-95 text-left w-full gap-1.5 h-full text-white border-transparent`
-            : 'flex items-center justify-between p-2 md:p-2.5 rounded-xl border font-black transition-all duration-300 active:scale-95 text-left w-full gap-1.5 h-full bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-900/60';
+            ? `flex flex-col justify-between p-2 sm:p-2.5 rounded-2xl border font-black transition-all duration-300 active:scale-95 text-left w-full h-full min-h-[58px] text-white border-transparent`
+            : 'flex flex-col justify-between p-2 sm:p-2.5 rounded-2xl border font-black transition-all duration-300 active:scale-95 text-left w-full h-full min-h-[58px] bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-900/60';
         dashBtn.className = cardClass;
         dashBtn.style.cssText = isActive ? activeStyle : '';
 
@@ -11602,7 +11661,17 @@ window.updateGlobalBtnStyle = function () {
 };
 
 window.openRevisionTrendModal = function () { openModal('revision-trend-modal'); };
-window.openYearlyActionsModal = function () { openModal('yearly-actions-modal'); };
+window.openYearlyActionsModal = function () {
+    if (typeof renderTrendCharts === 'function') renderTrendCharts();
+    if (typeof renderHeatmap === 'function') renderHeatmap();
+    openModal('yearly-actions-modal');
+    setTimeout(() => {
+        if (window.yearlyChartActions && typeof window.yearlyChartActions.resize === 'function') {
+            window.yearlyChartActions.resize();
+            window.yearlyChartActions.update('none');
+        }
+    }, 60);
+};
 
 window.getTargetedSubjectsForGoal = function (goal) {
     let targetedSubjects = new Set();
@@ -13381,8 +13450,8 @@ window.toggleModalDay = function (taskIdOrDate, typeKey, evt) {
                 const isActive = newState === true;
                 const activeStyle = `background-color: ${cMap.hex}; border-color: ${cMap.hex}; color: white; box-shadow: 0 4px 12px ${cMap.hex}33;`;
                 dashBtn.className = isActive
-                    ? `flex items-center justify-between p-2 md:p-2.5 rounded-xl border font-black transition-all duration-300 active:scale-95 text-left w-full gap-1.5 h-full text-white border-transparent`
-                    : 'flex items-center justify-between p-2 md:p-2.5 rounded-xl border font-black transition-all duration-300 active:scale-95 text-left w-full gap-1.5 h-full bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-900/60';
+                    ? `flex flex-col justify-between p-2 sm:p-2.5 rounded-2xl border font-black transition-all duration-300 active:scale-95 text-left w-full h-full min-h-[58px] text-white border-transparent`
+                    : 'flex flex-col justify-between p-2 sm:p-2.5 rounded-2xl border font-black transition-all duration-300 active:scale-95 text-left w-full h-full min-h-[58px] bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-900/60';
                 dashBtn.style.cssText = isActive ? activeStyle : '';
 
                 const statusText = dashBtn.querySelector('.dashboard-action-status-text');
@@ -21930,6 +21999,116 @@ window.onSelectCountdownTarget = function(examId) {
     window.updateExamCountdown();
 };
 
+/* Helper to calculate calendar-accurate remaining time */
+window.calculateExamTimeRemaining = function(fromDate, toDate) {
+    if (!fromDate || !toDate) {
+        return {
+            isPast: true,
+            years: 0,
+            months: 0,
+            days: 0,
+            hours: 0,
+            mins: 0,
+            secs: 0,
+            tier: 'days',
+            totalMs: 0,
+            diffMs: 0
+        };
+    }
+
+    const diffMs = toDate.getTime() - fromDate.getTime();
+    if (diffMs <= 0) {
+        return {
+            isPast: true,
+            years: 0,
+            months: 0,
+            days: 0,
+            hours: 0,
+            mins: 0,
+            secs: 0,
+            tier: 'days',
+            totalMs: 0,
+            diffMs: diffMs
+        };
+    }
+
+    let y1 = fromDate.getFullYear(), m1 = fromDate.getMonth(), d1 = fromDate.getDate();
+    let h1 = fromDate.getHours(), min1 = fromDate.getMinutes(), s1 = fromDate.getSeconds();
+
+    let y2 = toDate.getFullYear(), m2 = toDate.getMonth(), d2 = toDate.getDate();
+    let h2 = toDate.getHours(), min2 = toDate.getMinutes(), s2 = toDate.getSeconds();
+
+    let years = y2 - y1;
+    let months = m2 - m1;
+    let days = d2 - d1;
+    let hours = h2 - h1;
+    let mins = min2 - min1;
+    let secs = s2 - s1;
+
+    if (secs < 0) {
+        secs += 60;
+        mins -= 1;
+    }
+    if (mins < 0) {
+        mins += 60;
+        hours -= 1;
+    }
+    if (hours < 0) {
+        hours += 24;
+        days -= 1;
+    }
+    if (days < 0) {
+        // Borrow days from previous month relative to target month (m2 in year y2)
+        const daysInPrevMonth = new Date(y2, m2, 0).getDate();
+        days += daysInPrevMonth;
+        months -= 1;
+    }
+    if (months < 0) {
+        months += 12;
+        years -= 1;
+    }
+
+    // Determine tier based on remaining time:
+    // 1) >= 1 Year -> tier 'years' -> [ Year Year Month Month Day Day Hr Hr ]
+    // 2) >= 1 Month and < 1 Year -> tier 'months' -> [ Month Month Day Day Hr Hr Min Min ]
+    // 3) < 1 Month -> tier 'days' -> [ DD Hr Hr Min Min Sec Sec ]
+    let tier = 'days';
+    if (years >= 1) {
+        tier = 'years';
+    } else if (months >= 1) {
+        tier = 'months';
+    } else {
+        tier = 'days';
+    }
+
+    return {
+        isPast: false,
+        years,
+        months,
+        days,
+        hours,
+        mins,
+        secs,
+        tier,
+        totalMs: diffMs,
+        diffMs: diffMs
+    };
+};
+
+window.formatExamCountdownString = function(rem) {
+    if (!rem || rem.isPast) return 'Ended';
+    if (rem.tier === 'years') {
+        // More than 1 year: Year Year Month Month Day day Hr hr
+        return `${String(rem.years).padStart(2, '0')}y ${String(rem.months).padStart(2, '0')}mo ${String(rem.days).padStart(2, '0')}d ${String(rem.hours).padStart(2, '0')}h`;
+    } else if (rem.tier === 'months') {
+        // 1 month to 1 year: month month day day Hr Hr Min min
+        return `${String(rem.months).padStart(2, '0')}mo ${String(rem.days).padStart(2, '0')}d ${String(rem.hours).padStart(2, '0')}h ${String(rem.mins).padStart(2, '0')}m`;
+    } else {
+        // Below 1 month: DD Hr Hr Min Min sec sec
+        return `${String(rem.days).padStart(2, '0')}d ${String(rem.hours).padStart(2, '0')}h ${String(rem.mins).padStart(2, '0')}m ${String(rem.secs).padStart(2, '0')}s`;
+    }
+};
+
 window.updateExamCountdown = function() {
     const heroTitle = document.getElementById('exam-hero-title');
     const heroSub = document.getElementById('exam-hero-subject-badge');
@@ -21938,10 +22117,27 @@ window.updateExamCountdown = function() {
     const heroDateTime = document.getElementById('exam-hero-datetime');
     const targetSelect = document.getElementById('exam-hero-select-target');
 
-    const cdDays = document.getElementById('exam-cd-days');
-    const cdHours = document.getElementById('exam-cd-hours');
-    const cdMins = document.getElementById('exam-cd-mins');
-    const cdSecs = document.getElementById('exam-cd-secs');
+    const cdVal1 = document.getElementById('exam-cd-val-1') || document.getElementById('exam-cd-days');
+    const cdVal2 = document.getElementById('exam-cd-val-2') || document.getElementById('exam-cd-hours');
+    const cdVal3 = document.getElementById('exam-cd-val-3') || document.getElementById('exam-cd-mins');
+    const cdVal4 = document.getElementById('exam-cd-val-4') || document.getElementById('exam-cd-secs');
+
+    const cdLbl1 = document.getElementById('exam-cd-lbl-1');
+    const cdLbl2 = document.getElementById('exam-cd-lbl-2');
+    const cdLbl3 = document.getElementById('exam-cd-lbl-3');
+    const cdLbl4 = document.getElementById('exam-cd-lbl-4');
+
+    const setCountdownBoxes = (v1, l1, v2, l2, v3, l3, v4, l4) => {
+        if (cdVal1) cdVal1.textContent = String(v1).padStart(2, '0');
+        if (cdVal2) cdVal2.textContent = String(v2).padStart(2, '0');
+        if (cdVal3) cdVal3.textContent = String(v3).padStart(2, '0');
+        if (cdVal4) cdVal4.textContent = String(v4).padStart(2, '0');
+
+        if (cdLbl1) cdLbl1.textContent = l1;
+        if (cdLbl2) cdLbl2.textContent = l2;
+        if (cdLbl3) cdLbl3.textContent = l3;
+        if (cdLbl4) cdLbl4.textContent = l4;
+    };
 
     const hdrSubject = document.getElementById('hdr-exam-cd-subject');
     const hdrTimer = document.getElementById('hdr-exam-cd-timer');
@@ -22009,74 +22205,130 @@ window.updateExamCountdown = function() {
         if (heroVenue) heroVenue.style.display = 'none';
         if (heroDateTime) heroDateTime.textContent = "Date: --";
 
-        if (cdDays) cdDays.textContent = "00";
-        if (cdHours) cdHours.textContent = "00";
-        if (cdMins) cdMins.textContent = "00";
-        if (cdSecs) cdSecs.textContent = "00";
+        setCountdownBoxes('00', 'Days', '00', 'Hours', '00', 'Mins', '00', 'Secs');
 
         if (hdrSubject) hdrSubject.textContent = "No Exam Scheduled";
-        if (hdrTimer) hdrTimer.textContent = "--";
+        if (hdrTimer) hdrTimer.innerHTML = `<span class="font-countdown text-slate-400 dark:text-slate-500 font-bold text-sm md:text-base">--</span>`;
         if (hdrSubjectMobile) hdrSubjectMobile.textContent = "No Exam";
         if (hdrTimerMobile) hdrTimerMobile.textContent = "--";
-        return;
-    }
-
-    const parentSession = sessions.find(s => s.id === nextExam.sessionId);
-    const diff = nextExam.timeMs - now;
-
-    const subjectDisplayName = nextExam.title && nextExam.title.toLowerCase() !== nextExam.subject.toLowerCase() 
-        ? `${nextExam.subject} — ${nextExam.title}` 
-        : nextExam.subject;
-
-    if (heroTitle) heroTitle.textContent = subjectDisplayName;
-
-    if (heroSub) {
-        const sessionNameStr = parentSession 
-            ? (parentSession.name ? `${parentSession.name} (${parentSession.program})` : `${parentSession.program} Session`)
-            : (nextExam.program || 'Session Exam');
-        heroSub.textContent = sessionNameStr;
-        const color = typeof getSubjectColor === 'function' ? getSubjectColor(nextExam.subject) : '#ef4444';
-        heroSub.style.backgroundColor = typeof hexToRgba === 'function' ? hexToRgba(color, 0.3) : 'rgba(244, 63, 94, 0.3)';
-    }
-
-    if (heroVenue) heroVenue.style.display = 'none';
-
-    const dateObj = new Date(nextExam.timeMs);
-    const dateFormatted = dateObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    if (heroDateTime) heroDateTime.textContent = `Date: ${dateFormatted}`;
-
-    if (diff <= 0) {
-        if (heroDetails) heroDetails.innerHTML = `<span class="text-emerald-400 font-black flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>${nextExam.subject.toUpperCase()} EXAM IS IN PROGRESS NOW!</span>`;
-        if (cdDays) cdDays.textContent = "00";
-        if (cdHours) cdHours.textContent = "00";
-        if (cdMins) cdMins.textContent = "00";
-        if (cdSecs) cdSecs.textContent = "00";
-
-        if (hdrSubject) hdrSubject.textContent = nextExam.subject;
-        if (hdrTimer) hdrTimer.textContent = "Live Now!";
-        if (hdrSubjectMobile) hdrSubjectMobile.textContent = nextExam.subject;
-        if (hdrTimerMobile) hdrTimerMobile.textContent = "Live Now";
     } else {
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const secs = Math.floor((diff % (1000 * 60)) / 1000);
+        const parentSession = sessions.find(s => s.id === nextExam.sessionId);
+        const targetDate = new Date(nextExam.timeMs);
+        const currentDate = new Date(now);
+        const rem = window.calculateExamTimeRemaining(currentDate, targetDate);
 
-        if (heroDetails) {
-            heroDetails.innerHTML = `<svg class="w-4 h-4 text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>Target Subject Exam: <strong class="text-white font-black">${nextExam.subject}</strong> (${dateFormatted})</span>`;
+        const subjectDisplayName = nextExam.title && nextExam.title.toLowerCase() !== nextExam.subject.toLowerCase() 
+            ? `${nextExam.subject} — ${nextExam.title}` 
+            : nextExam.subject;
+
+        if (heroTitle) heroTitle.textContent = subjectDisplayName;
+
+        if (heroSub) {
+            const sessionNameStr = parentSession 
+                ? (parentSession.name ? `${parentSession.name} (${parentSession.program})` : `${parentSession.program} Session`)
+                : (nextExam.program || 'Session Exam');
+            heroSub.textContent = sessionNameStr;
+            const color = typeof getSubjectColor === 'function' ? getSubjectColor(nextExam.subject) : '#ef4444';
+            heroSub.style.backgroundColor = typeof hexToRgba === 'function' ? hexToRgba(color, 0.3) : 'rgba(244, 63, 94, 0.3)';
         }
 
-        if (cdDays) cdDays.textContent = String(days).padStart(2, '0');
-        if (cdHours) cdHours.textContent = String(hours).padStart(2, '0');
-        if (cdMins) cdMins.textContent = String(mins).padStart(2, '0');
-        if (cdSecs) cdSecs.textContent = String(secs).padStart(2, '0');
+        if (heroVenue) heroVenue.style.display = 'none';
 
-        const compactTimerStr = `${String(days).padStart(2, '0')}d ${String(hours).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
-        const compactTimerStrMobile = `${String(days).padStart(2, '0')}d ${String(hours).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m`;
-        if (hdrSubject) hdrSubject.textContent = nextExam.subject;
-        if (hdrTimer) hdrTimer.textContent = compactTimerStr;
-        if (hdrSubjectMobile) hdrSubjectMobile.textContent = nextExam.subject;
-        if (hdrTimerMobile) hdrTimerMobile.textContent = compactTimerStrMobile;
+        const dateFormatted = targetDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + targetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (heroDateTime) heroDateTime.textContent = `Date: ${dateFormatted}`;
+
+        if (rem.isPast) {
+            if (heroDetails) heroDetails.innerHTML = `<span class="text-emerald-400 font-black flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>${nextExam.subject.toUpperCase()} EXAM IS IN PROGRESS NOW!</span>`;
+            setCountdownBoxes('00', 'Days', '00', 'Hours', '00', 'Mins', '00', 'Secs');
+
+            if (hdrSubject) hdrSubject.textContent = nextExam.subject;
+            if (hdrTimer) hdrTimer.innerHTML = `<span class="font-countdown text-emerald-500 dark:text-emerald-400 font-black text-sm md:text-base flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>Live Now!</span>`;
+            if (hdrSubjectMobile) hdrSubjectMobile.textContent = nextExam.subject;
+            if (hdrTimerMobile) hdrTimerMobile.textContent = "Live Now";
+        } else {
+            if (heroDetails) {
+                heroDetails.innerHTML = `<svg class="w-4 h-4 text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>Target Subject Exam: <strong class="text-white font-black">${nextExam.subject}</strong> (${dateFormatted})</span>`;
+            }
+
+            const formatHdrCountdownHtml = (segments) => {
+                return segments.map((seg, idx) => `
+                    <span class="inline-flex items-baseline font-countdown ${idx > 0 ? 'ml-1 sm:ml-1.5 md:ml-2' : ''}">
+                        <span class="hdr-countdown-num font-black text-xl sm:text-2xl md:text-[27px] lg:text-[29px] leading-none tracking-tight text-rose-600 dark:text-rose-400 tabular-nums">${seg.val}</span>
+                        <span class="hdr-countdown-unit text-[11px] md:text-[13px] font-extrabold text-white dark:text-white ml-0.5 leading-none select-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">${seg.lbl}</span>
+                    </span>
+                `).join('').trim();
+            };
+
+            let compactTimerStrMobile = '';
+
+            if (rem.tier === 'years') {
+                // >= 1 Year: [ Year Year Month Month Day Day Hr Hr ]
+                setCountdownBoxes(rem.years, 'Years', rem.months, 'Months', rem.days, 'Days', rem.hours, 'Hours');
+                if (hdrTimer) {
+                    hdrTimer.innerHTML = formatHdrCountdownHtml([
+                        { val: String(rem.years).padStart(2, '0'), lbl: 'y' },
+                        { val: String(rem.months).padStart(2, '0'), lbl: 'mo' },
+                        { val: String(rem.days).padStart(2, '0'), lbl: 'd' },
+                        { val: String(rem.hours).padStart(2, '0'), lbl: 'h' }
+                    ]);
+                }
+                compactTimerStrMobile = `${String(rem.years).padStart(2, '0')}y ${String(rem.months).padStart(2, '0')}mo ${String(rem.days).padStart(2, '0')}d`;
+            } else if (rem.tier === 'months') {
+                // 1 Month to 1 Year: [ Month Month Day Day Hr Hr Min Min ]
+                setCountdownBoxes(rem.months, 'Months', rem.days, 'Days', rem.hours, 'Hours', rem.mins, 'Mins');
+                if (hdrTimer) {
+                    hdrTimer.innerHTML = formatHdrCountdownHtml([
+                        { val: String(rem.months).padStart(2, '0'), lbl: 'mo' },
+                        { val: String(rem.days).padStart(2, '0'), lbl: 'd' },
+                        { val: String(rem.hours).padStart(2, '0'), lbl: 'h' },
+                        { val: String(rem.mins).padStart(2, '0'), lbl: 'm' }
+                    ]);
+                }
+                compactTimerStrMobile = `${String(rem.months).padStart(2, '0')}mo ${String(rem.days).padStart(2, '0')}d ${String(rem.hours).padStart(2, '0')}h`;
+            } else {
+                // < 1 Month: [ DD Hr Hr Min Min Sec Sec ]
+                setCountdownBoxes(rem.days, 'Days', rem.hours, 'Hours', rem.mins, 'Mins', rem.secs, 'Secs');
+                if (hdrTimer) {
+                    hdrTimer.innerHTML = formatHdrCountdownHtml([
+                        { val: String(rem.days).padStart(2, '0'), lbl: 'd' },
+                        { val: String(rem.hours).padStart(2, '0'), lbl: 'h' },
+                        { val: String(rem.mins).padStart(2, '0'), lbl: 'm' },
+                        { val: String(rem.secs).padStart(2, '0'), lbl: 's' }
+                    ]);
+                }
+                compactTimerStrMobile = `${String(rem.days).padStart(2, '0')}d ${String(rem.hours).padStart(2, '0')}h ${String(rem.mins).padStart(2, '0')}m`;
+            }
+
+            if (hdrSubject) hdrSubject.textContent = nextExam.subject;
+            if (hdrSubjectMobile) hdrSubjectMobile.textContent = nextExam.subject;
+            if (hdrTimerMobile) hdrTimerMobile.textContent = compactTimerStrMobile;
+        }
+    }
+
+    // Live update all subject exam countdown cards inside session blocks
+    const cardCdElements = document.querySelectorAll('[data-exam-target-time]');
+    if (cardCdElements.length > 0) {
+        const nowDt = new Date(now);
+        cardCdElements.forEach(el => {
+            const timeMs = parseInt(el.getAttribute('data-exam-target-time'), 10);
+            if (!isNaN(timeMs)) {
+                const cRem = window.calculateExamTimeRemaining(nowDt, new Date(timeMs));
+                if (!cRem.isPast) {
+                    const cStr = window.formatExamCountdownString(cRem);
+                    if (el.textContent !== cStr) {
+                        el.textContent = cStr;
+                    }
+                } else if (cRem.diffMs > -7200000) {
+                    if (el.textContent !== 'Live Exam Today') {
+                        el.textContent = 'Live Exam Today';
+                    }
+                } else {
+                    if (el.textContent !== 'Ended') {
+                        el.textContent = 'Ended';
+                    }
+                }
+            }
+        });
     }
 };
 
@@ -22367,28 +22619,19 @@ window.renderExamRoutine = function() {
                     return new Date(yr, mo - 1, dy, hr || 0, mn || 0).getTime();
                 })(ex.date, ex.time);
 
-                const diffMs = isNaN(exTimeMs) ? NaN : exTimeMs - now;
+                const targetExamDt = !isNaN(exTimeMs) ? new Date(exTimeMs) : null;
+                const rem = targetExamDt ? window.calculateExamTimeRemaining(new Date(now), targetExamDt) : null;
 
                 let countdownBadge = '';
                 if (isCompleted) {
                     countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">✓ Completed</span>`;
-                } else if (!isNaN(diffMs) && diffMs < 0 && diffMs > -7200000) {
+                } else if (!rem || isNaN(exTimeMs)) {
+                    countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-700/60 text-slate-500">No Date</span>`;
+                } else if (rem.isPast && rem.diffMs > -7200000) {
                     countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500 text-white animate-pulse">● Live Exam Today</span>`;
-                } else if (!isNaN(diffMs) && diffMs > 0) {
-                    const cdD = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-                    const cdH = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                    const cdM = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                    
-                    let countdownStr = '';
-                    if (cdD > 0) {
-                        countdownStr = `${cdD}d ${cdH}h ${cdM}m remaining`;
-                    } else if (cdH > 0) {
-                        countdownStr = `${cdH}h ${cdM}m remaining`;
-                    } else {
-                        countdownStr = `${cdM}m remaining`;
-                    }
-
-                    countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1.5"><svg class="w-3 h-3 text-rose-500 animate-spin" style="animation-duration: 4s;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>${countdownStr}</span></span>`;
+                } else if (!rem.isPast) {
+                    const countdownStr = window.formatExamCountdownString(rem);
+                    countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1.5"><svg class="w-3 h-3 text-rose-500 animate-spin" style="animation-duration: 4s;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span id="exam-card-cd-${ex.id}" data-exam-target-time="${exTimeMs}">${countdownStr}</span></span>`;
                 } else {
                     countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-700/60 text-slate-500">Ended</span>`;
                 }

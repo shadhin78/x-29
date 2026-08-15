@@ -14,6 +14,10 @@
     <meta name="apple-mobile-web-app-title" content="X-29">
     <link rel="apple-touch-icon" href="icons/logo-x.png">
     <link rel="icon" type="image/png" href="icons/logo-x.png">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700;800&family=Rajdhani:wght@600;700;800&family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js -->
@@ -80,11 +84,11 @@
                 </button>
                 <div class="flex flex-col min-w-0">
                     <div id="header-exam-countdown-compact-mobile" class="flex items-center">
-                        <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-rose-500/10 dark:bg-rose-950/40 border border-rose-500/20 dark:border-rose-500/30 text-[10px] font-bold">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 dark:bg-rose-950/40 border border-rose-500/20 dark:border-rose-500/30 text-[10px] font-bold">
                             <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
                             <span id="hdr-exam-cd-subject-mobile" class="text-rose-600 dark:text-rose-400 font-extrabold truncate max-w-[100px]">Exam</span>
-                            <span class="text-slate-300 dark:text-slate-600">•</span>
-                            <span id="hdr-exam-cd-timer-mobile" class="font-mono font-black text-slate-800 dark:text-slate-200">00d 00h</span>
+                            <span class="text-slate-300 dark:text-slate-600 font-black">•</span>
+                            <span id="hdr-exam-cd-timer-mobile" class="font-countdown font-bold text-slate-800 dark:text-slate-100 tracking-tight tabular-nums">00d 00h</span>
                         </div>
                     </div>
                 </div>
@@ -311,21 +315,25 @@
                 class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 lg:gap-6 border-b border-slate-100 dark:border-slate-800 pb-6 shrink-0">
                 <!-- Exam Countdown Widget Container (Matching Stats Widget Size & Card Styling) -->
                 <div id="header-exam-countdown-compact"
-                    class="hidden md:flex items-center bg-white dark:bg-slate-800/80 px-4 py-3 md:px-5 md:py-3.5 rounded-2xl md:rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-700/60 min-h-[64px] shrink-0 justify-center md:justify-start">
-                    <div class="flex items-center space-x-3 md:space-x-4">
-                        <div class="p-2.5 md:p-3 bg-rose-50 dark:bg-rose-950/40 rounded-xl md:rounded-2xl border border-rose-100 dark:border-rose-800/50 shadow-sm text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-                            <svg class="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-rose-600 dark:text-rose-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="hidden md:flex items-center bg-white dark:bg-slate-800/80 px-4 py-2.5 md:px-5 md:py-3 rounded-2xl md:rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-700/60 h-[64px] min-h-[64px] shrink-0 justify-center md:justify-start hover:border-rose-300 dark:hover:border-rose-800/60 transition-all duration-300">
+                    <div class="flex items-center space-x-3 md:space-x-3.5">
+                        <div class="p-2 md:p-2.5 bg-gradient-to-br from-rose-50 to-rose-100/60 dark:from-rose-950/50 dark:to-rose-900/30 rounded-xl md:rounded-2xl border border-rose-200/70 dark:border-rose-800/50 shadow-[0_0_15px_rgba(244,63,94,0.15)] text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                            <svg class="w-5 h-5 md:w-5.5 md:h-5.5 text-rose-600 dark:text-rose-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
                         </div>
-                        <div class="flex items-center gap-2.5 text-base sm:text-lg md:text-xl lg:text-2xl tracking-tight font-black leading-none">
-                            <span id="hdr-exam-cd-subject" class="text-slate-900 dark:text-white font-black truncate max-w-[200px] sm:max-w-[320px]">
-                                Exam Name
+                        <div class="flex items-center gap-2 md:gap-2.5 leading-none">
+                            <span class="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]"></span>
                             </span>
-                            <span class="text-rose-500 dark:text-rose-400 font-black shrink-0 px-0.5">-</span>
-                            <span id="hdr-exam-cd-timer" class="text-rose-600 dark:text-rose-400 font-mono font-black tracking-wide shrink-0">
+                            <span id="hdr-exam-cd-subject" class="font-outfit font-black text-lg sm:text-xl md:text-2xl lg:text-[25px] text-slate-800 dark:text-slate-100 tracking-tight truncate max-w-[140px] lg:max-w-[210px] leading-none">
+                                Exam
+                            </span>
+                            <span class="text-slate-300 dark:text-slate-600 font-black text-lg md:text-2xl select-none px-0.5 leading-none">-</span>
+                            <div id="hdr-exam-cd-timer" class="font-countdown flex items-baseline leading-none">
                                 00d 00h 00m 00s
-                            </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -668,7 +676,7 @@
                         </div>
 
                         <div id="dashboard-daily-actions-compact"
-                            class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2 flex-1 min-h-0 overflow-y-auto mt-2 pr-0.5">
+                            class="grid gap-2 flex-1 min-h-0 overflow-y-auto mt-2 pr-0.5 custom-scrollbar">
                             <!-- Populated dynamically via JS -->
                         </div>
                     </div>
@@ -3778,20 +3786,20 @@
                             <span class="text-[9px] font-black uppercase tracking-widest text-rose-300/80 mb-3">Time Remaining</span>
                             <div class="grid grid-cols-4 gap-2 sm:gap-3 text-center">
                                 <div class="bg-white/10 border border-white/15 p-3 rounded-2xl min-w-[65px] sm:min-w-[75px]">
-                                    <div id="exam-cd-days" class="text-2xl sm:text-3xl font-black text-white tracking-wider">00</div>
-                                    <div class="text-[9px] font-black uppercase text-rose-300 mt-1">Days</div>
+                                    <div id="exam-cd-val-1" class="text-2xl sm:text-3xl font-black text-white tracking-wider">00</div>
+                                    <div id="exam-cd-lbl-1" class="text-[9px] font-black uppercase text-rose-300 mt-1">Days</div>
                                 </div>
                                 <div class="bg-white/10 border border-white/15 p-3 rounded-2xl min-w-[65px] sm:min-w-[75px]">
-                                    <div id="exam-cd-hours" class="text-2xl sm:text-3xl font-black text-white tracking-wider">00</div>
-                                    <div class="text-[9px] font-black uppercase text-rose-300 mt-1">Hours</div>
+                                    <div id="exam-cd-val-2" class="text-2xl sm:text-3xl font-black text-white tracking-wider">00</div>
+                                    <div id="exam-cd-lbl-2" class="text-[9px] font-black uppercase text-rose-300 mt-1">Hours</div>
                                 </div>
                                 <div class="bg-white/10 border border-white/15 p-3 rounded-2xl min-w-[65px] sm:min-w-[75px]">
-                                    <div id="exam-cd-mins" class="text-2xl sm:text-3xl font-black text-white tracking-wider">00</div>
-                                    <div class="text-[9px] font-black uppercase text-rose-300 mt-1">Mins</div>
+                                    <div id="exam-cd-val-3" class="text-2xl sm:text-3xl font-black text-white tracking-wider">00</div>
+                                    <div id="exam-cd-lbl-3" class="text-[9px] font-black uppercase text-rose-300 mt-1">Mins</div>
                                 </div>
                                 <div class="bg-white/10 border border-white/15 p-3 rounded-2xl min-w-[65px] sm:min-w-[75px]">
-                                    <div id="exam-cd-secs" class="text-2xl sm:text-3xl font-black text-rose-400 tracking-wider">00</div>
-                                    <div class="text-[9px] font-black uppercase text-rose-300 mt-1">Secs</div>
+                                    <div id="exam-cd-val-4" class="text-2xl sm:text-3xl font-black text-rose-400 tracking-wider">00</div>
+                                    <div id="exam-cd-lbl-4" class="text-[9px] font-black uppercase text-rose-300 mt-1">Secs</div>
                                 </div>
                             </div>
                         </div>
