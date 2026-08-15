@@ -159,11 +159,10 @@ node scripts\backup.js
 
 ## 5. Automated Schedule in Windows Task Scheduler
 
-Configured via `scripts/setup-task.ps1` with 5 daily triggers:
+Configured via `scripts/setup-task.ps1` with 4 daily triggers:
 - **11:00 AM**
 - **02:30 PM**
 - **07:30 PM**
-- **10:05 PM**
 - **11:00 PM**
 
 Command executed:
