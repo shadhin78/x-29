@@ -176,12 +176,12 @@
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Start Date *</label>
-                    <input type="date" id="session-start-date" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none">
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Start Date (Optional)</label>
+                    <input type="date" id="session-start-date" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">End Date *</label>
-                    <input type="date" id="session-end-date" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none">
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">End Date (Optional)</label>
+                    <input type="date" id="session-end-date" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none">
                 </div>
             </div>
 
@@ -705,12 +705,8 @@ window.openSessionModal = function(sessionId = null) {
         if (idInput) idInput.value = '';
         if (progSelect) progSelect.value = '';
         if (nameInput) nameInput.value = '';
-        if (startInput) startInput.value = new Date().toISOString().split('T')[0];
-        if (endInput) {
-            const nextWeek = new Date();
-            nextWeek.setDate(nextWeek.getDate() + 7);
-            endInput.value = nextWeek.toISOString().split('T')[0];
-        }
+        if (startInput) startInput.value = '';
+        if (endInput) endInput.value = '';
     }
 
     modal.classList.remove('hidden');
@@ -733,6 +729,13 @@ window.saveSessionForm = function(event) {
     const name = document.getElementById('session-name')?.value.trim() || '';
     const startDate = document.getElementById('session-start-date')?.value || '';
     const endDate = document.getElementById('session-end-date')?.value || '';
+
+    if (startDate && endDate && startDate > endDate) {
+        if (typeof showToast === 'function') {
+            showToast("Start date cannot be after end date.", "warning");
+        }
+        return;
+    }
 
     if (!Array.isArray(AppState.examSessions)) {
         AppState.examSessions = [];
@@ -767,7 +770,7 @@ window.saveSessionForm = function(event) {
 
 window.deleteSession = function(sessionId) {
     const session = (AppState.examSessions || []).find(s => s.id === sessionId);
-    const sessionName = session ? (session.name ? `${session.name} (${session.program})` : session.program) : 'this session';
+    const sessionName = session ? (session.name ? `${session.program} - ${session.name}` : session.program) : 'this session';
 
     window.openConfirmModal(
         "Delete Exam Session",
@@ -794,7 +797,12 @@ window.renderExamRoutine = function() {
     const sessions = (AppState.examSessions || []).slice();
     let exams = (AppState.examRoutine || []).slice();
 
-    sessions.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    sessions.sort((a, b) => {
+        if (!a.startDate && !b.startDate) return (b.createdAt || 0) - (a.createdAt || 0);
+        if (!a.startDate) return 1;
+        if (!b.startDate) return -1;
+        return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+    });
 
     exams.sort((a, b) => {
         const ta = new Date(`${a.date}T${a.time || '00:00'}:00`).getTime();
@@ -851,8 +859,17 @@ window.renderExamRoutine = function() {
         const upcomingCount = totalCount - completedCount;
 
         const isNonProgramSession = session.program === 'Non-Program';
-        const sessionDisplayName = session.name ? `${session.name} (${session.program})` : `${session.program} Session`;
+        const sessionDisplayName = session.name ? `${session.program} - ${session.name}` : session.program;
         const sessionIcon = isNonProgramSession ? '⚙️' : '🎓';
+
+        let dateRangeBadge = '';
+        if (session.startDate && session.endDate) {
+            dateRangeBadge = `<span class="text-xs font-mono text-slate-400 font-bold">(${formatSessionDate(session.startDate)} - ${formatSessionDate(session.endDate)})</span>`;
+        } else if (session.startDate) {
+            dateRangeBadge = `<span class="text-xs font-mono text-slate-400 font-bold">(${formatSessionDate(session.startDate)})</span>`;
+        } else if (session.endDate) {
+            dateRangeBadge = `<span class="text-xs font-mono text-slate-400 font-bold">(Until ${formatSessionDate(session.endDate)})</span>`;
+        }
 
         let examsGridHtml = '';
 
@@ -942,9 +959,9 @@ window.renderExamRoutine = function() {
                             ${sessionIcon}
                         </div>
                         <div>
-                            <h4 class="text-base sm:text-lg font-black text-slate-800 dark:text-white leading-tight flex items-center gap-2">
+                            <h4 class="text-base sm:text-lg font-black text-slate-800 dark:text-white leading-tight flex flex-wrap items-center gap-2">
                                 <span>${sessionDisplayName}</span>
-                                <span class="text-xs font-mono text-slate-400 font-bold">(${session.startDate} to ${session.endDate})</span>
+                                ${dateRangeBadge}
                             </h4>
                             <div class="flex items-center gap-2 mt-1">
                                 <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60">
@@ -1006,6 +1023,7 @@ window.openExamModal = function(examId = null, sessionId = null) {
         const programs = typeof window.getAllPrograms === 'function' ? window.getAllPrograms() : [];
         const progNames = Array.from(new Set(programs.map(p => p.name || p))).sort();
         let progHtml = `<option value="">-- Select Program --</option>`;
+        progHtml += `<option value="Non-Program">⚙️ Non-Program Wise (Custom)</option>`;
         progNames.forEach(pName => {
             progHtml += `<option value="${pName}">${pName}</option>`;
         });
@@ -1028,8 +1046,16 @@ window.openExamModal = function(examId = null, sessionId = null) {
 
     if (sessIdInput) sessIdInput.value = session.id;
     if (infoDisplay) {
-        const displayName = session.name ? `${session.name} (${session.program})` : session.program;
-        infoDisplay.innerHTML = `<span class="text-rose-500 font-black">Active Session:</span> ${displayName} (${session.startDate} to ${session.endDate})`;
+        const displayName = session.name ? `${session.program} - ${session.name}` : session.program;
+        let dateRangeText = '';
+        if (session.startDate && session.endDate) {
+            dateRangeText = ` (${formatSessionDate(session.startDate)} - ${formatSessionDate(session.endDate)})`;
+        } else if (session.startDate) {
+            dateRangeText = ` (${formatSessionDate(session.startDate)})`;
+        } else if (session.endDate) {
+            dateRangeText = ` (Until ${formatSessionDate(session.endDate)})`;
+        }
+        infoDisplay.innerHTML = `<span class="text-rose-500 font-black">Active Session:</span> ${displayName}${dateRangeText}`;
         infoDisplay.classList.remove('hidden');
     }
 
@@ -1113,9 +1139,15 @@ window.saveExamForm = function(event) {
         return;
     }
 
-    if (date < session.startDate || date > session.endDate) {
+    if (session.startDate && date < session.startDate) {
         if (typeof showToast === 'function') {
-            showToast(`Exam date must be within session range: ${session.startDate} to ${session.endDate}`, "warning");
+            showToast(`Exam date cannot be earlier than session start date (${session.startDate})`, "warning");
+        }
+        return;
+    }
+    if (session.endDate && date > session.endDate) {
+        if (typeof showToast === 'function') {
+            showToast(`Exam date cannot be later than session end date (${session.endDate})`, "warning");
         }
         return;
     }
