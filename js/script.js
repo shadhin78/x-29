@@ -58,10 +58,42 @@ function safeSetHtml(id, html) { const el = document.getElementById(id); if (el)
 function safeSetClass(id, className) { const el = document.getElementById(id); if (el) el.className = className; }
 
 function getTaskDate(task) {
-    const baseDate = new Date(AppState.PLAN_START_DATE.getTime());
-    baseDate.setDate(baseDate.getDate() + (task.id - 1));
-    return baseDate;
+    if (!task) return new Date(NaN);
+    if (typeof task.id === 'number') {
+        const baseDate = new Date(AppState.PLAN_START_DATE.getTime());
+        baseDate.setDate(baseDate.getDate() + (task.id - 1));
+        return baseDate;
+    }
+    if (task.date) {
+        const d = Utils.parseDateSafe(task.date);
+        if (d && !isNaN(d.getTime())) return d;
+    }
+    return new Date(NaN);
 }
+
+window.getTaskForDate = function(d) {
+    if (!d || isNaN(d.getTime())) return null;
+    const dStr = Utils.formatDate(d);
+    const targetY = d.getFullYear();
+    const targetM = d.getMonth();
+    const targetD = d.getDate();
+
+    return (AppState.tasks || []).find(t => {
+        if (!t) return false;
+        if (typeof t.id === 'number') {
+            const taskD = getTaskDate(t);
+            if (taskD && !isNaN(taskD.getTime())) {
+                return taskD.getFullYear() === targetY && taskD.getMonth() === targetM && taskD.getDate() === targetD;
+            }
+        }
+        if (t.date === dStr) return true;
+        const taskD = getTaskDate(t);
+        if (taskD && !isNaN(taskD.getTime())) {
+            return taskD.getFullYear() === targetY && taskD.getMonth() === targetM && taskD.getDate() === targetD;
+        }
+        return false;
+    });
+};
 
 window.onCgpaBlur = function (inputEl) {
     const formatted = Utils.validateAndFormatCgpa(inputEl.value);
@@ -497,12 +529,12 @@ window.normalizePriorities = function () {
 };
 
 window.populateTrackDropdowns = function () {
-    const trackDropdowns = ['add-ch-track', 'add-sub-track', 'add-prog-track', 'manage-track', 'esm-track', 'add-act-track', 'adt-todo-track'];
+    const trackDropdowns = ['add-ch-track', 'add-sub-track', 'add-prog-track', 'manage-track', 'esm-track', 'add-act-track', 'edam-action-track', 'adt-todo-track'];
     trackDropdowns.forEach(id => {
         const select = document.getElementById(id);
         if (!select) return;
         const currentVal = select.value;
-        if (id === 'add-act-track' || id === 'adt-todo-track') {
+        if (id === 'add-act-track' || id === 'edam-action-track' || id === 'adt-todo-track') {
             select.innerHTML = '<option value="">-- No Track (Optional) --</option>' + window.tracks.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
         } else {
             select.innerHTML = window.tracks.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
@@ -7546,6 +7578,11 @@ window.renderDailyTracker = function () {
                                 <h3 class="font-black text-xs sm:text-sm md:text-base tracking-tight">${cfg.title}</h3>
                                 <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                     <p class="text-[8px] sm:text-[9px] md:text-[10px] text-slate-400 uppercase font-bold tracking-wider">${cfg.desc || cfg.question || ''}</p>
+                                    ${cfg.startDate ? `
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800/50">
+                                            Start: ${cfg.startDate}
+                                        </span>
+                                    ` : ''}
                                     ${cfg.track ? `
                                         <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 border border-slate-200/50 dark:border-slate-600/30">
                                             ${(window.tracks.find(t => t.id === cfg.track)?.name || 'Track')}
@@ -7554,7 +7591,10 @@ window.renderDailyTracker = function () {
                                 </div>
                             </div>
                         </div>
-                        <button onclick="openModal('analytics-modal', '${cfg.id}')" class="group flex items-center justify-center p-2 md:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/80 hover:bg-white dark:hover:bg-slate-800 active:scale-95 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 shrink-0"><svg class="w-3.5 h-3.5 md:w-4 md:h-4 text-slate-400 group-hover:${cMap.iconColor} transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></button>
+                        <div class="flex items-center space-x-1 shrink-0">
+                            <button onclick="openModal('analytics-modal', '${cfg.id}')" class="group flex items-center justify-center p-2 md:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/80 hover:bg-white dark:hover:bg-slate-800 active:scale-95 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 shrink-0" title="Analytics"><svg class="w-3.5 h-3.5 md:w-4 md:h-4 text-slate-400 group-hover:${cMap.iconColor} transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></button>
+                            <button onclick="window.openEditDailyActionModal('${cfg.id}')" class="group flex items-center justify-center p-2 md:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/80 hover:bg-white dark:hover:bg-slate-800 active:scale-95 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 shrink-0" title="Edit Action"><svg class="w-3.5 h-3.5 md:w-4 md:h-4 text-slate-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                        </div>
                     </div>
                     <div class="flex gap-2 mb-3 sm:mb-4 p-1 md:p-1.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
                         <button class="flex-1 py-1.5 sm:py-2 md:py-2.5 text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 active:scale-90 ${state === true ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-[0_4px_12px_rgba(16,185,129,0.5)] scale-105' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'}" onclick="setDailyState('${cfg.id}', true)">YES</button>
@@ -7637,29 +7677,43 @@ window.renderDailyTracker = function () {
 };
 
 window.renderDailyLogs = function () {
-    const todayStr = Utils.formatDate(new Date());
-    let idx = AppState.tasks.findIndex(t => t.date === todayStr);
-    if (idx === -1) idx = AppState.tasks.length - 1;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    const cutoffDate = new Date(AppState.PLAN_START_DATE);
-    cutoffDate.setHours(0, 0, 0, 0);
-
-    const fill = (elId, key) => {
+    const fill = (elId, actionObj) => {
         const el = document.getElementById(elId); if (!el) return;
-        let html = '<div class="grid grid-cols-4 gap-1.5 md:gap-2 overflow-y-auto custom-scrollbar flex-1 pr-1 pb-1 content-start mt-2" style="max-height: 180px; min-height: 150px;">';
-        for (let i = idx; i >= 0; i--) {
-            const t = AppState.tasks[i];
-            const tDate = getTaskDate(t);
-            if (tDate < cutoffDate) break; // Stop rendering if before AppState.PLAN_START_DATE
+        const key = typeof actionObj === 'object' ? actionObj.id : actionObj;
+        const cfgAct = typeof actionObj === 'object' ? actionObj : (window.customActions || []).find(a => a.id === key);
 
-            const val = t[key];
-            const bgClass = val ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-[0_2px_8px_rgba(16,185,129,0.4)] border-transparent' : 'bg-gradient-to-br from-red-400 to-red-500 text-white shadow-[0_2px_8px_rgba(239,68,68,0.4)] border-transparent';
-            html += `<button onclick="toggleModalDay(${t.id}, '${key}')" class="flex flex-col items-center justify-center p-1.5 md:p-2 rounded-xl border active:scale-90 transition-all duration-300 hover:scale-105 ${bgClass} w-full aspect-square focus:outline-none"><span class="text-[7px] md:text-[8px] uppercase font-black opacity-90 mb-0.5">${t.date.split(' ')[0]}</span><span class="text-xs md:text-sm font-black leading-none">${t.date.split(' ')[1]}</span></button>`;
+        let actStartDate = (cfgAct && cfgAct.startDate) ? Utils.parseDateSafe(cfgAct.startDate) : null;
+        if (actStartDate && isNaN(actStartDate.getTime())) actStartDate = null;
+        if (actStartDate) actStartDate.setHours(0, 0, 0, 0);
+
+        const minGridDate = new Date(today);
+        minGridDate.setDate(minGridDate.getDate() - 179);
+        minGridDate.setHours(0, 0, 0, 0);
+
+        let gridStartDate = minGridDate;
+        if (actStartDate && actStartDate > minGridDate) {
+            gridStartDate = actStartDate;
+        }
+
+        let html = '<div class="grid grid-cols-4 gap-1.5 md:gap-2 overflow-y-auto custom-scrollbar flex-1 pr-1 pb-1 content-start mt-2" style="max-height: 180px; min-height: 150px;">';
+        const currDate = new Date(today);
+        while (currDate >= gridStartDate) {
+            const dStr = Utils.formatDate(currDate);
+            const isoLocalDate = `${currDate.getFullYear()}-${String(currDate.getMonth() + 1).padStart(2, '0')}-${String(currDate.getDate()).padStart(2, '0')}`;
+            const t = window.getTaskForDate(currDate);
+            const done = t ? Boolean(t[key]) : false;
+            const taskIdOrDate = t ? t.id : isoLocalDate;
+            const bgClass = done ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-[0_2px_8px_rgba(16,185,129,0.4)] border-transparent' : 'bg-gradient-to-br from-red-400 to-red-500 text-white shadow-[0_2px_8px_rgba(239,68,68,0.4)] border-transparent';
+            html += `<button onclick="toggleModalDay('${taskIdOrDate}', '${key}', event)" title="${dStr}: ${done ? 'YES' : 'NO'}" class="flex flex-col items-center justify-center p-1.5 md:p-2 rounded-xl border active:scale-90 transition-all duration-300 hover:scale-105 ${bgClass} w-full aspect-square focus:outline-none"><span class="text-[7px] md:text-[8px] uppercase font-black opacity-90 mb-0.5">${dStr.split(' ')[0]}</span><span class="text-xs md:text-sm font-black leading-none">${dStr.split(' ')[1]}</span></button>`;
+            currDate.setDate(currDate.getDate() - 1);
         }
         html += '</div>'; el.innerHTML = html; el.className = "flex flex-col flex-1 min-h-0 pt-2 border-t border-slate-100 dark:border-slate-700/60 mt-2";
     };
     const sortedActions = [...window.customActions].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
-    sortedActions.forEach(a => fill(`dt-log-${a.id}`, a.id));
+    sortedActions.forEach(a => fill(`dt-log-${a.id}`, a));
 };
 
 window.setDailyState = function (type, state) {
@@ -7715,23 +7769,41 @@ window.populateAnalyticsModal = function (typeKey) {
     const statLabels = ['am-stat-label-1', 'am-stat-label-2', 'am-stat-label-3'];
     statLabels.forEach(id => safeSetClass(id, `block text-[7px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-0.5 sm:mb-1 md:mb-1.5 leading-tight ${cMap.text}`));
 
-    const todayStr = Utils.formatDate(new Date());
-    let idx = AppState.tasks.findIndex(t => t.date === todayStr); if (idx === -1) idx = AppState.tasks.length - 1;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let actStartDate = cfgAct.startDate ? Utils.parseDateSafe(cfgAct.startDate) : null;
+    if (actStartDate && isNaN(actStartDate.getTime())) actStartDate = null;
+    if (actStartDate) actStartDate.setHours(0, 0, 0, 0);
+
+    const minGridDate = new Date(today);
+    minGridDate.setDate(minGridDate.getDate() - 179);
+    minGridDate.setHours(0, 0, 0, 0);
+
+    let gridStartDate = minGridDate;
+    if (actStartDate && actStartDate > minGridDate) {
+        gridStartDate = actStartDate;
+    }
+
+    let statsStartDate = actStartDate || gridStartDate;
 
     let total = 0;
     let possibleDays = 0;
-    AppState.tasks.forEach((t, i) => {
-        if (i <= idx && getTaskDate(t) >= AppState.PLAN_START_DATE) {
-            possibleDays++;
-            if (t[typeKey]) total++;
-        }
-    });
-
     let streak = 0;
-    for (let i = idx; i >= 0; i--) {
-        if (getTaskDate(AppState.tasks[i]) < AppState.PLAN_START_DATE) break;
-        if (AppState.tasks[i][typeKey]) streak++;
-        else break;
+    let streakActive = true;
+
+    const checkDate = new Date(today);
+    while (checkDate >= statsStartDate) {
+        possibleDays++;
+        const t = window.getTaskForDate(checkDate);
+        const done = t ? Boolean(t[typeKey]) : false;
+        if (done) {
+            total++;
+            if (streakActive) streak++;
+        } else {
+            streakActive = false;
+        }
+        checkDate.setDate(checkDate.getDate() - 1);
     }
 
     safeSetText('am-total', total); safeSetText('am-streak', streak + ' Days');
@@ -7742,38 +7814,33 @@ window.populateAnalyticsModal = function (typeKey) {
     safeSetClass('am-streak', valClass);
     safeSetClass('am-percent', valClass);
 
-    const sYear = AppState.globalStartDate ? AppState.globalStartDate.getFullYear() : AppState.PLAN_START_DATE.getFullYear();
-    const sMonth = AppState.globalStartDate ? AppState.globalStartDate.getMonth() : AppState.PLAN_START_DATE.getMonth();
-    const eYear = AppState.globalEndDate ? AppState.globalEndDate.getFullYear() : AppState.PLAN_END_DATE.getFullYear();
-    const eMonth = AppState.globalEndDate ? AppState.globalEndDate.getMonth() : AppState.PLAN_END_DATE.getMonth();
-    const totalMonths = Math.max(1, (eYear - sYear) * 12 + (eMonth - sMonth) + 1);
+    const chartLabels = [];
+    const chartData = [];
+    let cumHits = 0;
 
-    const months = [];
-    for (let i = 0; i < totalMonths; i++) {
-        const d = new Date(sYear, sMonth + i, 1);
-        months.push(d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }));
+    const chartDate = new Date(gridStartDate);
+    while (chartDate <= today) {
+        const dStr = Utils.formatDate(chartDate);
+        const t = window.getTaskForDate(chartDate);
+        const done = t ? Boolean(t[typeKey]) : false;
+        if (done) cumHits++;
+        chartLabels.push(dStr);
+        chartData.push(cumHits);
+        chartDate.setDate(chartDate.getDate() + 1);
     }
-
-    let data = Array(totalMonths).fill(0);
-    AppState.tasks.forEach(t => {
-        const taskDate = getTaskDate(t);
-        const tYear = taskDate.getFullYear();
-        const tMonth = taskDate.getMonth();
-        const mIdx = (tYear - sYear) * 12 + (tMonth - sMonth);
-        if (mIdx >= 0 && mIdx < totalMonths && t[typeKey]) data[mIdx]++;
-    });
 
     const canvas = document.getElementById('masterLineChart');
     if (canvas) {
         if (AppState.masterLineChart) {
-            AppState.masterLineChart.data.datasets[0].data = data;
+            AppState.masterLineChart.data.labels = chartLabels;
+            AppState.masterLineChart.data.datasets[0].data = chartData;
             AppState.masterLineChart.data.datasets[0].borderColor = cMap.hex;
             AppState.masterLineChart.data.datasets[0].backgroundColor = cMap.hex + '25';
             AppState.masterLineChart.data.datasets[0].pointBackgroundColor = cMap.hex;
             AppState.masterLineChart.update('none');
         } else {
             AppState.masterLineChart = new Chart(canvas.getContext('2d'), {
-                type: 'line', data: { labels: months, datasets: [{ data, borderColor: cMap.hex, tension: 0.4, fill: true, backgroundColor: cMap.hex + '25', borderWidth: window.innerWidth < 640 ? 2 : 3, pointBackgroundColor: cMap.hex, pointRadius: window.innerWidth < 640 ? 0 : 3, pointHoverRadius: 6, pointHoverBackgroundColor: '#fff' }] },
+                type: 'line', data: { labels: chartLabels, datasets: [{ label: 'Total Hits', data: chartData, borderColor: cMap.hex, tension: 0.4, fill: true, backgroundColor: cMap.hex + '25', borderWidth: window.innerWidth < 640 ? 2 : 3, pointBackgroundColor: cMap.hex, pointRadius: window.innerWidth < 640 ? 0 : 2, pointHoverRadius: 6, pointHoverBackgroundColor: '#fff' }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)', titleColor: '#fff', bodyColor: '#cbd5e1', cornerRadius: 8, padding: 10 } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,0.08)', drawBorder: false, borderDash: [5, 5] }, ticks: { font: { size: window.innerWidth < 640 ? 8 : 10 }, color: '#64748b' } }, x: { grid: { display: false, drawBorder: false }, ticks: { font: { size: window.innerWidth < 640 ? 8 : 10 }, color: '#64748b', maxTicksLimit: window.innerWidth < 640 ? 6 : 12 } } } }
             });
         }
@@ -7782,12 +7849,16 @@ window.populateAnalyticsModal = function (typeKey) {
     const grid = document.getElementById('am-grid');
     if (grid) {
         let gHtml = '';
-        for (let i = idx; i >= Math.max(0, idx - 179); i--) {
-            const t = AppState.tasks[i];
-            if (getTaskDate(t) < AppState.PLAN_START_DATE) break;
-            const done = t[typeKey];
+        const currDate = new Date(today);
+        while (currDate >= gridStartDate) {
+            const dStr = Utils.formatDate(currDate);
+            const isoLocalDate = `${currDate.getFullYear()}-${String(currDate.getMonth() + 1).padStart(2, '0')}-${String(currDate.getDate()).padStart(2, '0')}`;
+            const t = window.getTaskForDate(currDate);
+            const done = t ? Boolean(t[typeKey]) : false;
+            const taskIdOrDate = t ? t.id : isoLocalDate;
             const btnClass = done ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-[0_2px_8px_rgba(34,197,94,0.4)] border-transparent' : 'bg-gradient-to-br from-red-400 to-red-500 text-white shadow-[0_2px_8px_rgba(239,68,68,0.4)] border-transparent';
-            gHtml += `<button onclick="toggleModalDay(${t.id}, '${typeKey}')" class="flex flex-col items-center justify-center p-1 sm:p-1.5 md:p-2 rounded-lg sm:rounded-xl ${btnClass} transition-all duration-300 w-full aspect-square shrink-0 hover:scale-105 active:scale-90 focus:outline-none snap-start"><span class="text-[6px] sm:text-[7px] md:text-[9px] uppercase font-black opacity-90 mb-0.5">${t.date.split(' ')[0]}</span><span class="text-[9px] sm:text-[11px] md:text-sm font-black leading-none">${t.date.split(' ')[1]}</span></button>`;
+            gHtml += `<button onclick="toggleModalDay('${taskIdOrDate}', '${typeKey}', event)" title="${dStr}: ${done ? 'YES' : 'NO'}" class="flex flex-col items-center justify-center p-1 sm:p-1.5 md:p-2 rounded-lg sm:rounded-xl ${btnClass} transition-all duration-300 w-full aspect-square shrink-0 hover:scale-105 active:scale-90 focus:outline-none snap-start"><span class="text-[6px] sm:text-[7px] md:text-[9px] uppercase font-black opacity-90 mb-0.5">${dStr.split(' ')[0]}</span><span class="text-[9px] sm:text-[11px] md:text-sm font-black leading-none">${dStr.split(' ')[1]}</span></button>`;
+            currDate.setDate(currDate.getDate() - 1);
         }
         grid.innerHTML = gHtml;
     }
@@ -10541,14 +10612,24 @@ window.openDailyActionsDBModal = function () {
     const sortedActions = [...window.customActions].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
     sortedActions.forEach(a => {
         const stat = actionStats[a.id];
-        const actPct = validDaysCount > 0 ? Math.round((stat.count / validDaysCount) * 100) : 0;
+        let actStart = a.startDate ? Utils.parseDateSafe(a.startDate) : cutoffDate;
+        if (!actStart || isNaN(actStart.getTime())) actStart = cutoffDate;
+        actStart.setHours(0, 0, 0, 0);
+
+        let actValidDays = 0;
+        for (let i = AppState.tasks.length - 1; i >= 0; i--) {
+            const tDate = getTaskDate(AppState.tasks[i]);
+            if (tDate <= today && tDate >= actStart) actValidDays++;
+        }
+
+        const actPct = actValidDays > 0 ? Math.round((stat.count / actValidDays) * 100) : 0;
         const cMap = AppState.twColors[a.color];
 
         htmlAction += `
                     <div class="p-4 rounded-xl border ${cMap.borderLt} ${cMap.bgLt} shadow-sm flex flex-col gap-2">
                         <div class="flex justify-between items-center">
                             <span class="text-xs md:text-sm font-black ${cMap.text} truncate">${a.title}</span>
-                            <span class="text-[10px] font-black px-2 py-0.5 rounded bg-white dark:bg-slate-800 shadow-sm ${cMap.text}">${stat.count} / ${validDaysCount} Days</span>
+                            <span class="text-[10px] font-black px-2 py-0.5 rounded bg-white dark:bg-slate-800 shadow-sm ${cMap.text}">${stat.count} / ${actValidDays} Days</span>
                         </div>
                         <div class="w-full bg-slate-200/50 dark:bg-slate-800/50 h-2 rounded-full overflow-hidden shadow-inner">
                             <div class="h-full rounded-full ${cMap.btn} transition-all duration-700" style="width: ${actPct}%"></div>
@@ -10623,8 +10704,8 @@ window.switchDadbTab = function (tab) {
 
 window.openModal = function (modalId, typeKey = null) {
     if (modalId === 'analytics-modal' && typeKey) populateAnalyticsModal(typeKey);
-    const backdrops = { 'edit-timeline-entry-modal': 'etem-backdrop', 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-backdrop', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop', 'fiscal-tx-modal': 'fiscal-tx-backdrop', 'fiscal-budget-modal': 'fiscal-budget-backdrop', 'fiscal-vault-modal': 'fiscal-vault-backdrop', 'fiscal-deposit-modal': 'fiscal-deposit-backdrop', 'fiscal-vault-transfer-modal': 'fiscal-vault-transfer-backdrop', 'fiscal-vault-to-budget-modal': 'fiscal-vault-to-budget-backdrop', 'fiscal-delete-modal': 'fiscal-delete-backdrop' };
-    const contents = { 'edit-timeline-entry-modal': 'etem-content', 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content', 'fiscal-tx-modal': 'fiscal-tx-content', 'fiscal-budget-modal': 'fiscal-budget-content', 'fiscal-vault-modal': 'fiscal-vault-content', 'fiscal-deposit-modal': 'fiscal-deposit-content', 'fiscal-vault-transfer-modal': 'fiscal-vault-transfer-content', 'fiscal-vault-to-budget-modal': 'fiscal-vault-to-budget-content', 'fiscal-delete-modal': 'fiscal-delete-content' };
+    const backdrops = { 'edit-timeline-entry-modal': 'etem-backdrop', 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-backdrop', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'edit-daily-action-modal': 'edam-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop', 'fiscal-tx-modal': 'fiscal-tx-backdrop', 'fiscal-budget-modal': 'fiscal-budget-backdrop', 'fiscal-vault-modal': 'fiscal-vault-backdrop', 'fiscal-deposit-modal': 'fiscal-deposit-backdrop', 'fiscal-vault-transfer-modal': 'fiscal-vault-transfer-backdrop', 'fiscal-vault-to-budget-modal': 'fiscal-vault-to-budget-backdrop', 'fiscal-delete-modal': 'fiscal-delete-backdrop' };
+    const contents = { 'edit-timeline-entry-modal': 'etem-content', 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'edit-daily-action-modal': 'edam-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content', 'fiscal-tx-modal': 'fiscal-tx-content', 'fiscal-budget-modal': 'fiscal-budget-content', 'fiscal-vault-modal': 'fiscal-vault-content', 'fiscal-deposit-modal': 'fiscal-deposit-content', 'fiscal-vault-transfer-modal': 'fiscal-vault-transfer-content', 'fiscal-vault-to-budget-modal': 'fiscal-vault-to-budget-content', 'fiscal-delete-modal': 'fiscal-delete-content' };
     const modal = document.getElementById(modalId);
     const backdrop = (backdrops[modalId] && document.getElementById(backdrops[modalId])) || (modal ? modal.children[0] : null);
     const content = (contents[modalId] && document.getElementById(contents[modalId])) || (modal ? modal.children[1] : null);
@@ -10672,8 +10753,8 @@ window.openModal = function (modalId, typeKey = null) {
 };
 
 window.closeModal = function (modalId) {
-    const backdrops = { 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-backdrop', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop', 'fiscal-tx-modal': 'fiscal-tx-backdrop', 'fiscal-budget-modal': 'fiscal-budget-backdrop', 'fiscal-vault-modal': 'fiscal-vault-backdrop', 'fiscal-deposit-modal': 'fiscal-deposit-backdrop', 'fiscal-vault-transfer-modal': 'fiscal-vault-transfer-backdrop', 'fiscal-vault-to-budget-modal': 'fiscal-vault-to-budget-backdrop', 'fiscal-delete-modal': 'fiscal-delete-backdrop' };
-    const contents = { 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content', 'fiscal-tx-modal': 'fiscal-tx-content', 'fiscal-budget-modal': 'fiscal-budget-content', 'fiscal-vault-modal': 'fiscal-vault-content', 'fiscal-deposit-modal': 'fiscal-deposit-content', 'fiscal-vault-transfer-modal': 'fiscal-vault-transfer-content', 'fiscal-vault-to-budget-modal': 'fiscal-vault-to-budget-content', 'fiscal-delete-modal': 'fiscal-delete-content' };
+    const backdrops = { 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-backdrop', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'edit-daily-action-modal': 'edam-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop', 'fiscal-tx-modal': 'fiscal-tx-backdrop', 'fiscal-budget-modal': 'fiscal-budget-backdrop', 'fiscal-vault-modal': 'fiscal-vault-backdrop', 'fiscal-deposit-modal': 'fiscal-deposit-backdrop', 'fiscal-vault-transfer-modal': 'fiscal-vault-transfer-backdrop', 'fiscal-vault-to-budget-modal': 'fiscal-vault-to-budget-backdrop', 'fiscal-delete-modal': 'fiscal-delete-backdrop' };
+    const contents = { 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'edit-daily-action-modal': 'edam-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content', 'fiscal-tx-modal': 'fiscal-tx-backdrop', 'fiscal-budget-modal': 'fiscal-budget-content', 'fiscal-vault-modal': 'fiscal-vault-content', 'fiscal-deposit-modal': 'fiscal-deposit-content', 'fiscal-vault-transfer-modal': 'fiscal-vault-transfer-content', 'fiscal-vault-to-budget-modal': 'fiscal-vault-to-budget-content', 'fiscal-delete-modal': 'fiscal-delete-content' };
     const modal = document.getElementById(modalId);
     const backdrop = (backdrops[modalId] && document.getElementById(backdrops[modalId])) || (modal ? modal.children[0] : null);
     const content = (contents[modalId] && document.getElementById(contents[modalId])) || (modal ? modal.children[1] : null);
@@ -12715,17 +12796,82 @@ window.savePaceEdit = function () {
     FirebaseService.saveToCloud(); renderUI(); closeModal('edit-pace-modal'); showToast("Pace Goal timeline updated!", "success");
 };
 
-window.toggleModalDay = function (taskId, typeKey) {
-    const taskIndex = AppState.tasks.findIndex(t => t.id === taskId);
+window.toggleModalDay = function (taskIdOrDate, typeKey, evt) {
+    if (!taskIdOrDate || !typeKey) return;
+
+    let taskIndex = AppState.tasks.findIndex(t => t && (String(t.id) === String(taskIdOrDate) || t.date === taskIdOrDate));
+    let newState = true;
+
+    if (taskIndex === -1 && typeof taskIdOrDate === 'string' && taskIdOrDate.trim()) {
+        const dObj = Utils.parseDateSafe(taskIdOrDate);
+        if (dObj && !isNaN(dObj.getTime())) {
+            const existingTask = window.getTaskForDate(dObj);
+            if (existingTask) {
+                taskIndex = AppState.tasks.indexOf(existingTask);
+                if (taskIndex > -1) {
+                    newState = !Boolean(AppState.tasks[taskIndex][typeKey]);
+                    AppState.tasks[taskIndex][typeKey] = newState;
+                }
+            } else {
+                const dateStr = Utils.formatDate(dObj);
+                const newTask = {
+                    id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    date: dateStr,
+                    note: ''
+                };
+                if (Array.isArray(window.customActions)) {
+                    window.customActions.forEach(a => { newTask[a.id] = false; });
+                }
+                newTask[typeKey] = true;
+                newState = true;
+                AppState.tasks.push(newTask);
+                taskIndex = AppState.tasks.length - 1;
+            }
+        }
+    } else if (taskIndex > -1) {
+        newState = !Boolean(AppState.tasks[taskIndex][typeKey]);
+        AppState.tasks[taskIndex][typeKey] = newState;
+    }
+
     if (taskIndex > -1) {
-        AppState.tasks[taskIndex][typeKey] = !AppState.tasks[taskIndex][typeKey]; FirebaseService.saveToCloud();
-        requestAnimationFrame(() => {
-            renderTrendCharts(); renderDailyTracker(); renderDailyLogs();
-            const modal = document.getElementById('analytics-modal');
-            if (modal && !modal.classList.contains('hidden')) populateAnalyticsModal(typeKey);
-            const dbModal = document.getElementById('daily-actions-db-modal');
-            if (dbModal && !dbModal.classList.contains('hidden')) window.openDailyActionsDBModal();
-        });
+        AppState.isLocalDirty = true;
+
+        // 1. Instant Optimistic DOM Update — target ONLY the exact clicked button via event
+        const evtTarget = (evt && evt.target) || (window.event && window.event.target) || null;
+        const clickedBtn = evtTarget ? evtTarget.closest('button[onclick*="toggleModalDay"]') : null;
+        if (clickedBtn) {
+            if (newState) {
+                clickedBtn.classList.remove('from-red-400', 'to-red-500', 'shadow-[0_2px_8px_rgba(239,68,68,0.4)]');
+                clickedBtn.classList.add('from-green-400', 'to-emerald-500', 'shadow-[0_2px_8px_rgba(34,197,94,0.4)]');
+                if (clickedBtn.title) clickedBtn.title = clickedBtn.title.replace(': NO', ': YES');
+            } else {
+                clickedBtn.classList.remove('from-green-400', 'to-emerald-500', 'shadow-[0_2px_8px_rgba(34,197,94,0.4)]', 'shadow-[0_2px_8px_rgba(16,185,129,0.4)]');
+                clickedBtn.classList.add('from-red-400', 'to-red-500', 'shadow-[0_2px_8px_rgba(239,68,68,0.4)]');
+                if (clickedBtn.title) clickedBtn.title = clickedBtn.title.replace(': YES', ': NO');
+            }
+            clickedBtn.classList.add('scale-105');
+            setTimeout(() => clickedBtn.classList.remove('scale-105'), 120);
+        }
+
+        // 2. Schedule debounced full UI & chart updates for 60 FPS performance during fast clicks
+        if (window._gridToggleDebounce) clearTimeout(window._gridToggleDebounce);
+        window._gridToggleDebounce = setTimeout(() => {
+            requestAnimationFrame(() => {
+                if (typeof renderTrendCharts === 'function') renderTrendCharts();
+                if (typeof renderDailyTracker === 'function') renderDailyTracker();
+                if (typeof renderDailyLogs === 'function') renderDailyLogs();
+                if (typeof window.renderSpectraCommitmentsChart === 'function') window.renderSpectraCommitmentsChart();
+                const modal = document.getElementById('analytics-modal');
+                if (modal && !modal.classList.contains('hidden') && typeof populateAnalyticsModal === 'function') populateAnalyticsModal(typeKey);
+                const dbModal = document.getElementById('daily-actions-db-modal');
+                if (dbModal && !dbModal.classList.contains('hidden') && typeof window.openDailyActionsDBModal === 'function') window.openDailyActionsDBModal();
+            });
+        }, 120);
+
+        // 3. Realtime Cross-Device Cloud Synchronization (auto-batched Firestore write)
+        if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
+            window.FirebaseService.saveToCloud(false);
+        }
     }
 };
 
@@ -13283,12 +13429,14 @@ window.updateSubProgDropdown = function () {
 window.appendNewAction = function () {
     const titleEl = document.getElementById('add-act-title');
     const descEl = document.getElementById('add-act-desc');
+    const startDateEl = document.getElementById('add-act-start-date');
     const colorEl = document.getElementById('add-act-color');
     const iconEl = document.getElementById('add-act-icon');
     const trackEl = document.getElementById('add-act-track');
 
     const title = titleEl ? titleEl.value.trim() : '';
     const desc = descEl ? descEl.value.trim() : '';
+    const startDate = startDateEl ? startDateEl.value : '';
     const color = colorEl ? colorEl.value : 'indigo';
     const icon = iconEl ? iconEl.value : 'generic';
     const track = trackEl ? trackEl.value : '';
@@ -13311,6 +13459,7 @@ window.appendNewAction = function () {
         title: title,
         question: desc || `Did you complete ${title}?`,
         desc: desc,
+        startDate: startDate,
         color: color,
         icon: icon,
         track: track,
@@ -13328,6 +13477,7 @@ window.appendNewAction = function () {
 
     if (titleEl) titleEl.value = '';
     if (descEl) descEl.value = '';
+    if (startDateEl) startDateEl.value = '';
     if (trackEl) trackEl.value = '';
 
     if (typeof window.sortAllCustomData === 'function') {
@@ -13340,6 +13490,107 @@ window.appendNewAction = function () {
 
     renderUI();
     showToast("Daily Action Tracker created & added to The X Commitments!", "success");
+};
+
+window.openEditDailyActionModal = function (actionId) {
+    const act = (window.customActions || []).find(a => a.id === actionId);
+    if (!act) return showToast("Action not found", "error");
+
+    const idEl = document.getElementById('edam-action-id');
+    const titleEl = document.getElementById('edam-action-title');
+    const descEl = document.getElementById('edam-action-desc');
+    const startDateEl = document.getElementById('edam-action-start-date');
+    const colorEl = document.getElementById('edam-action-color');
+    const iconEl = document.getElementById('edam-action-icon');
+    const trackEl = document.getElementById('edam-action-track');
+
+    if (idEl) idEl.value = act.id;
+    if (titleEl) titleEl.value = act.title || '';
+    if (descEl) descEl.value = act.desc || act.question || '';
+    if (startDateEl) startDateEl.value = act.startDate || '';
+    if (colorEl) colorEl.value = act.color || 'indigo';
+    if (iconEl) iconEl.value = act.icon || 'generic';
+
+    if (typeof window.populateTrackDropdowns === 'function') {
+        window.populateTrackDropdowns();
+    }
+    if (trackEl) trackEl.value = act.track || '';
+
+    window.openModal('edit-daily-action-modal');
+};
+
+window.saveDailyActionEditModal = function () {
+    const idEl = document.getElementById('edam-action-id');
+    const titleEl = document.getElementById('edam-action-title');
+    const descEl = document.getElementById('edam-action-desc');
+    const startDateEl = document.getElementById('edam-action-start-date');
+    const colorEl = document.getElementById('edam-action-color');
+    const iconEl = document.getElementById('edam-action-icon');
+    const trackEl = document.getElementById('edam-action-track');
+
+    const actionId = idEl ? idEl.value : '';
+    const title = titleEl ? titleEl.value.trim() : '';
+    const desc = descEl ? descEl.value.trim() : '';
+    const startDate = startDateEl ? startDateEl.value : '';
+    const color = colorEl ? colorEl.value : 'indigo';
+    const icon = iconEl ? iconEl.value : 'generic';
+    const track = trackEl ? trackEl.value : '';
+
+    if (!title) return showToast("Action title is required.", "error");
+
+    const actIndex = (window.customActions || []).findIndex(a => a.id === actionId);
+    if (actIndex === -1) return showToast("Action not found.", "error");
+
+    if (window.customActions.some((a, idx) => idx !== actIndex && (a.title || '').toLowerCase() === title.toLowerCase())) {
+        return showToast("Daily Action Tracker with this title already exists.", "error");
+    }
+
+    const act = window.customActions[actIndex];
+    act.title = title;
+    act.desc = desc;
+    act.question = desc || `Did you complete ${title}?`;
+    act.startDate = startDate;
+    act.color = color;
+    act.icon = icon;
+    act.track = track;
+
+    if (typeof window.sortAllCustomData === 'function') {
+        window.sortAllCustomData();
+    }
+
+    if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
+        window.FirebaseService.saveToCloud();
+    }
+
+    window.closeModal('edit-daily-action-modal');
+    renderUI();
+    showToast("Daily Action updated successfully!", "success");
+};
+
+window.requestDeleteDailyActionFromModal = function () {
+    const idEl = document.getElementById('edam-action-id');
+    const actionId = idEl ? idEl.value : '';
+    const actIndex = (window.customActions || []).findIndex(a => a.id === actionId);
+    if (actIndex === -1) return showToast("Action not found.", "error");
+
+    const act = window.customActions[actIndex];
+    if (!confirm(`Are you sure you want to delete the Daily Action "${act.title}"? This action cannot be undone.`)) {
+        return;
+    }
+
+    window.customActions.splice(actIndex, 1);
+
+    if (typeof window.sortAllCustomData === 'function') {
+        window.sortAllCustomData();
+    }
+
+    if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
+        window.FirebaseService.saveToCloud();
+    }
+
+    window.closeModal('edit-daily-action-modal');
+    renderUI();
+    showToast("Daily Action deleted successfully!", "success");
 };
 
 window.appendNewProgram = function () {

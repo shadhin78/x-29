@@ -132,17 +132,36 @@ window.Utils = {
             if (typeof dateStr.toDate === 'function') return dateStr.toDate();
             if (dateStr.seconds !== undefined) return new Date(dateStr.seconds * 1000);
         }
-        let parsed = new Date(dateStr);
-        if (!isNaN(parsed.getTime())) return parsed;
-        if (typeof dateStr === 'string' && dateStr.includes('-')) {
-            const parts = dateStr.split('T')[0].split('-');
-            if (parts.length === 3) {
-                const [y, m, d] = parts.map(Number);
-                if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
-                    return new Date(y, m - 1, d);
+        if (typeof dateStr === 'string') {
+            const trimmed = dateStr.trim();
+            if (trimmed.includes('-')) {
+                const parts = trimmed.split('T')[0].split('-');
+                if (parts.length === 3) {
+                    const [y, m, d] = parts.map(Number);
+                    if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+                        return new Date(y, m - 1, d);
+                    }
+                }
+            }
+            if (trimmed.includes('/')) {
+                const parts = trimmed.split('/');
+                if (parts.length === 3) {
+                    let [p1, p2, p3] = parts.map(Number);
+                    if (!isNaN(p1) && !isNaN(p2) && !isNaN(p3)) {
+                        let y = p3 < 100 ? 2000 + p3 : p3;
+                        let m = p1;
+                        let d = p2;
+                        if (m > 12 && d <= 12) {
+                            m = p2;
+                            d = p1;
+                        }
+                        return new Date(y, m - 1, d);
+                    }
                 }
             }
         }
+        let parsed = new Date(dateStr);
+        if (!isNaN(parsed.getTime())) return parsed;
         return new Date();
     },
 
