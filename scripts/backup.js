@@ -2,7 +2,7 @@
  * X-29 (x-2k29) Local Firestore Backup System
  * scripts/backup.js
  * 
- * Performs local manual backup of X-29 Firebase Cloud Firestore database.
+ * Performs local manual and automatic backup of X-29 Firebase Cloud Firestore database.
  * Strictly READ-ONLY with respect to Firestore.
  * Saves backups to: D:\X-29 Project\X-29\X-29-Backups\
  */
@@ -10,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { initializeApp, cert } = require('firebase-admin/app');
+const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, Timestamp, GeoPoint, DocumentReference } = require('firebase-admin/firestore');
 
 const CODE_DIR = path.resolve(__dirname, '..');
@@ -276,7 +276,7 @@ function validateBackup(backupJsonPath, metadataJsonPath, stats) {
         throw new Error(`SHA-256 checksum mismatch: metadata (${metadataData.sha256}) vs calculated (${computedSHA})`);
     }
 
-    console.log(`[BACKUP] Verification successful`);
+    console.log(`[BACKUP] Initial file verification successful`);
     return parsedData;
 }
 
@@ -349,9 +349,12 @@ async function runBackup() {
     try {
         const serviceAccount = loadServiceAccount();
 
-        initializeApp({
-            credential: cert(serviceAccount)
-        });
+        const apps = getApps ? getApps() : [];
+        if (apps.length === 0) {
+            initializeApp({
+                credential: cert(serviceAccount)
+            });
+        }
 
         const db = getFirestore();
         console.log(`[BACKUP] Connected to Firebase (Project: ${EXPECTED_PROJECT_ID})`);
@@ -440,7 +443,7 @@ async function runBackup() {
 
         fs.writeFileSync(metadataJsonPath, JSON.stringify(metadataPayload, null, 2), 'utf8');
 
-        // Run verification
+        // Run local file integrity verification
         try {
             validateBackup(backupJsonPath, metadataJsonPath, stats);
         } catch (valErr) {
@@ -466,8 +469,53 @@ async function runBackup() {
         console.log(`==================================================\n`);
 
         logBackupEvent('SUCCESS', backupMode, `Folder: ${targetDir}`);
+
+        // AUTOMATIC POST-BACKUP VERIFICATION AGAINST LIVE FIRESTORE
+        if (isAutomatic || process.argv.includes('--verify')) {
+            console.log(`==================================================`);
+            console.log(` AUTOMATIC POST-BACKUP VERIFICATION`);
+            console.log(`==================================================\n`);
+            console.log(`[BACKUP] 🔍 Verifying newly created backup against LIVE Firestore...`);
+
+            try {
+                const { verifySpecificBackup } = require('./verify-backup');
+                const verifyResult = await verifySpecificBackup(targetDir, {
+                    db,
+                    serviceAccount,
+                    isAutomatic,
+                    logToVerificationFile: true,
+                    logToBackupLog: true
+                });
+
+                if (!verifyResult.success || !verifyResult.isExactMatch) {
+                    console.warn(`\n[BACKUP] ⚠️ Post-backup verification detected ${verifyResult.diffCount !== undefined ? verifyResult.diffCount : 'some'} difference(s).`);
+                    console.warn(`[BACKUP] Backup folder is safely preserved at: ${targetDir}`);
+                } else {
+                    console.log(`\n[BACKUP] ✅ Automatic Post-Backup Verification PASSED (EXACT MATCH).`);
+                }
+            } catch (verifyErr) {
+                console.error(`\n[BACKUP] ❌ Post-backup verification encountered an error:`, verifyErr.message || verifyErr);
+                try {
+                    const { appendVerificationLog, appendBackupLog, getBangladeshTimestamp } = require('./verify-backup');
+                    const ts = getBangladeshTimestamp().formatted;
+                    const modeUpper = backupMode.toUpperCase();
+                    appendVerificationLog(
+                        `[${ts}] ${modeUpper} BACKUP VERIFICATION ERROR\n` +
+                        `Backup: ${targetDir}\n` +
+                        `Status: ERROR\n` +
+                        `Error: ${verifyErr.name || 'Error'}: ${verifyErr.message || String(verifyErr)}\n` +
+                        `Result: VERIFICATION ERROR`
+                    );
+                    appendBackupLog(`[${ts}] ${modeUpper} BACKUP VERIFICATION ERROR - ${verifyErr.message || String(verifyErr)}`);
+                } catch (e) {}
+            }
+        }
     } catch (err) {
         logBackupEvent('FAILED', backupMode, err.message || String(err));
+        try {
+            const { logBackupFailedInVerificationLog } = require('./verify-backup');
+            logBackupFailedInVerificationLog(backupMode, err.message || String(err));
+        } catch (e) {}
         throw err;
     }
 }

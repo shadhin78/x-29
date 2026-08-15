@@ -5,11 +5,9 @@ $Triggers = @(
     (New-ScheduledTaskTrigger -Daily -At "11:00AM"),
     (New-ScheduledTaskTrigger -Daily -At "02:30PM"),
     (New-ScheduledTaskTrigger -Daily -At "07:30PM"),
+    (New-ScheduledTaskTrigger -Daily -At "10:05PM"),
     (New-ScheduledTaskTrigger -Daily -At "11:00PM")
 )
 $Settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Triggers -Settings $Settings -User $env:USERNAME -Force
-Write-Host "Task '$TaskName' updated with 4 daily triggers (11:00 AM, 02:30 PM, 07:30 PM, 11:00 PM) successfully."
-
-
-
+Write-Host "Task '$TaskName' updated with 5 daily triggers (11:00 AM, 02:30 PM, 07:30 PM, 10:05 PM, 11:00 PM) successfully."

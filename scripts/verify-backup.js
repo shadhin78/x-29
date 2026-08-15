@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const readline = require('readline');
-const { initializeApp, cert } = require('firebase-admin/app');
+const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, Timestamp, GeoPoint, DocumentReference } = require('firebase-admin/firestore');
 
 const CODE_DIR = path.resolve(__dirname, '..');
@@ -15,6 +15,8 @@ const X29_ROOT_DIR = path.dirname(CODE_DIR);
 const SERVICE_ACCOUNT_PATH = path.join(CODE_DIR, 'firebase-service-account.json');
 const MANUAL_BACKUPS_DIR = path.join(X29_ROOT_DIR, 'X-29-Backups', 'Manual');
 const BACKUP_BASE_DIR = path.join(X29_ROOT_DIR, 'X-29-Backups');
+const VERIFICATION_LOG_PATH = path.join(BACKUP_BASE_DIR, 'verification-log.txt');
+const BACKUP_LOG_PATH = path.join(BACKUP_BASE_DIR, 'backup-log.txt');
 
 const EXPECTED_PROJECT_ID = 'x-2k29';
 const PROJECT_NAME = 'X-29';
@@ -36,6 +38,144 @@ function askQuestion(query) {
         rl.close();
         resolve(answer.trim());
     }));
+}
+
+// -----------------------------------------------------------------------------
+// 0. TIME & LOGGING UTILITIES (Bangladesh Timezone UTC+6)
+// -----------------------------------------------------------------------------
+function getBangladeshTimestamp() {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Dhaka',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    });
+
+    const parts = formatter.formatToParts(now);
+    const p = {};
+    parts.forEach(item => p[item.type] = item.value);
+
+    const day = String(p.day).padStart(2, '0');
+    const month = String(p.month).padStart(2, '0');
+    const year = p.year;
+    let hour = String(p.hour).padStart(2, '0');
+    if (hour === '00') hour = '12';
+    const minute = String(p.minute).padStart(2, '0');
+    const ampm = (p.dayPeriod || 'AM').toUpperCase();
+
+    const dateFolder = `${day} ${month} ${year}`;
+    const timeFolder = `${hour} ${minute} ${ampm}`;
+
+    return {
+        dateFolder,
+        timeFolder,
+        formatted: `${day} ${month} ${year} ${hour} ${minute} ${ampm}`
+    };
+}
+
+function appendVerificationLog(text) {
+    try {
+        if (!fs.existsSync(BACKUP_BASE_DIR)) {
+            fs.mkdirSync(BACKUP_BASE_DIR, { recursive: true });
+        }
+        fs.appendFileSync(VERIFICATION_LOG_PATH, text.trim() + '\n\n', 'utf8');
+    } catch (e) {
+        console.error(`[VERIFY] Verification log write warning: ${e.message}`);
+    }
+}
+
+function appendBackupLog(summaryText) {
+    try {
+        if (!fs.existsSync(BACKUP_BASE_DIR)) {
+            fs.mkdirSync(BACKUP_BASE_DIR, { recursive: true });
+        }
+        fs.appendFileSync(BACKUP_LOG_PATH, summaryText.trim() + '\n', 'utf8');
+    } catch (e) {
+        console.error(`[VERIFY] Backup log write warning: ${e.message}`);
+    }
+}
+
+function logBackupFailedInVerificationLog(mode, errorMessage) {
+    const ts = getBangladeshTimestamp().formatted;
+    const modeUpper = (mode || 'automatic').toUpperCase();
+    const entry = `[${ts}] ${modeUpper} BACKUP FAILED\nStatus: BACKUP FAILED\nError: ${errorMessage}\nResult: BACKUP FAILED (Verification not performed)`;
+    appendVerificationLog(entry);
+}
+
+function formatDocumentLevelDifferences(diffs, maxItems = 50) {
+    if (!diffs || diffs.length === 0) return '';
+
+    const differingDocs = new Set();
+    const missingFromBackup = [];
+    const extraInBackup = [];
+    const fieldDifferences = [];
+
+    diffs.forEach(d => {
+        const parts = d.path.split('/');
+        if (parts.length >= 2) {
+            differingDocs.add(`${parts[0]}/${parts[1]}`);
+        } else if (parts.length === 1) {
+            differingDocs.add(parts[0]);
+        }
+
+        if (d.category === 'MISSING FROM BACKUP') {
+            missingFromBackup.push(d.path);
+        } else if (d.category === 'EXTRA IN BACKUP') {
+            extraInBackup.push(d.path);
+        } else {
+            // VALUE DIFFERENCE, TYPE DIFFERENCE, ARRAY DIFFERENCE, SUBCOLLECTION DIFFERENCE
+            fieldDifferences.push(d.path);
+        }
+    });
+
+    const lines = [];
+    let count = 0;
+
+    if (differingDocs.size > 0) {
+        lines.push('DIFFERING DOCUMENTS:');
+        for (const doc of differingDocs) {
+            if (count++ >= maxItems) break;
+            lines.push(`- ${doc}`);
+        }
+    }
+
+    if (missingFromBackup.length > 0 && count < maxItems) {
+        if (lines.length > 0) lines.push('');
+        lines.push('MISSING FROM BACKUP:');
+        for (const p of missingFromBackup) {
+            if (count++ >= maxItems) break;
+            lines.push(`- ${p}`);
+        }
+    }
+
+    if (extraInBackup.length > 0 && count < maxItems) {
+        if (lines.length > 0) lines.push('');
+        lines.push('EXTRA IN BACKUP:');
+        for (const p of extraInBackup) {
+            if (count++ >= maxItems) break;
+            lines.push(`- ${p}`);
+        }
+    }
+
+    if (fieldDifferences.length > 0 && count < maxItems) {
+        if (lines.length > 0) lines.push('');
+        lines.push('FIELD DIFFERENCES:');
+        for (const p of fieldDifferences) {
+            if (count++ >= maxItems) break;
+            lines.push(`- ${p}`);
+        }
+    }
+
+    if (diffs.length > maxItems) {
+        lines.push('');
+        lines.push('... additional differences omitted');
+    }
+
+    return lines.join('\n');
 }
 
 // -----------------------------------------------------------------------------
@@ -204,12 +344,12 @@ async function selectBackupFromCli(backupsList, args) {
                 if (!fs.existsSync(jsonPath)) jsonPath = path.join(targetVal, 'firestore.json');
             }
 
-            const folderName = path.basename(path.dirname(jsonPath));
+            const folderName = path.relative(BACKUP_BASE_DIR, path.dirname(jsonPath));
             const foundByPath = backupsList.find(b => b.jsonPath === jsonPath || b.folderName === folderName);
             if (foundByPath) return foundByPath;
 
             const fullPath = path.dirname(jsonPath);
-            let backupType = 'LEGACY';
+            let backupType = 'LOCAL';
             let relSource = 'X-29-Backups';
 
             if (fullPath.includes(path.sep + 'Manual' + path.sep) || fullPath.endsWith(path.sep + 'Manual')) {
@@ -217,7 +357,7 @@ async function selectBackupFromCli(backupsList, args) {
                 relSource = 'X-29-Backups\\Manual';
             } else if (fullPath.includes(path.sep + 'Automatic' + path.sep) || fullPath.endsWith(path.sep + 'Automatic')) {
                 backupType = 'AUTOMATIC';
-                relSource = fullPath.includes('X-29-Code') ? 'backups\\Automatic' : 'X-29-Backups\\Automatic';
+                relSource = 'X-29-Backups\\Automatic';
             }
 
             return {
@@ -349,8 +489,10 @@ function loadBackupFile(backupItem) {
 // -----------------------------------------------------------------------------
 // 3. RECURSIVE FIRESTORE FETCHING (READ-ONLY)
 // -----------------------------------------------------------------------------
-async function fetchLiveCollection(colRef) {
-    console.log(`   📦 Reading Live collection: [${colRef.path}]...`);
+async function fetchLiveCollection(colRef, onProgress) {
+    if (typeof onProgress === 'function') {
+        onProgress(colRef.path);
+    }
     const snapshot = await colRef.get();
     const docs = [];
 
@@ -359,7 +501,7 @@ async function fetchLiveCollection(colRef) {
         const subcollections = [];
 
         for (const subColRef of subColRefs) {
-            const subColData = await fetchLiveCollection(subColRef);
+            const subColData = await fetchLiveCollection(subColRef, onProgress);
             subcollections.push(subColData);
         }
 
@@ -378,12 +520,12 @@ async function fetchLiveCollection(colRef) {
     };
 }
 
-async function fetchLiveFirestore(db) {
+async function fetchLiveFirestore(db, onProgress) {
     const rootCols = await db.listCollections();
     const collections = [];
 
     for (const colRef of rootCols) {
-        const colData = await fetchLiveCollection(colRef);
+        const colData = await fetchLiveCollection(colRef, onProgress);
         collections.push(colData);
     }
 
@@ -953,7 +1095,275 @@ function calculateCanonicalHash(collectionsTree) {
 }
 
 // -----------------------------------------------------------------------------
-// 9. AUDIT ALL BACKUPS MODE (--all)
+// 9. CORE SPECIFIC BACKUP VERIFICATION (PROGRAMMATIC & AUTOMATIC)
+// -----------------------------------------------------------------------------
+async function verifySpecificBackup(backupPathOrItem, options = {}) {
+    const startTime = Date.now();
+    const isAutomatic = options.isAutomatic !== undefined ? options.isAutomatic : true;
+    const modeUpper = isAutomatic ? 'AUTOMATIC' : 'MANUAL';
+    const logToVerificationFile = options.logToVerificationFile !== false;
+    const logToBackupLog = options.logToBackupLog !== false;
+    const silent = options.silent === true;
+
+    // Resolve backupItem object
+    let backupItem;
+    if (typeof backupPathOrItem === 'string') {
+        const resolvedPath = path.resolve(backupPathOrItem);
+        let jsonPath = resolvedPath;
+        let fullPath = resolvedPath;
+
+        if (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isDirectory()) {
+            jsonPath = path.join(resolvedPath, 'firestore-backup.json');
+            if (!fs.existsSync(jsonPath)) {
+                jsonPath = path.join(resolvedPath, 'firestore.json');
+            }
+        } else {
+            fullPath = path.dirname(resolvedPath);
+        }
+
+        const relPath = path.relative(BACKUP_BASE_DIR, fullPath);
+        let backupType = isAutomatic ? 'AUTOMATIC' : 'MANUAL';
+        if (relPath.startsWith('Automatic') || relPath.startsWith('Automatic' + path.sep)) {
+            backupType = 'AUTOMATIC';
+        } else if (relPath.startsWith('Manual') || relPath.startsWith('Manual' + path.sep)) {
+            backupType = 'MANUAL';
+        }
+
+        let stats = { size: 0 };
+        try {
+            if (fs.existsSync(jsonPath)) {
+                stats = fs.statSync(jsonPath);
+            }
+        } catch (e) {}
+
+        backupItem = {
+            folderName: relPath,
+            fullPath,
+            jsonPath,
+            backupType,
+            fileSizeBytes: stats.size,
+            fileSizeKB: (stats.size / 1024).toFixed(2),
+            projectId: EXPECTED_PROJECT_ID
+        };
+    } else {
+        backupItem = backupPathOrItem;
+    }
+
+    if (!silent) {
+        console.log(`[VERIFY] Backup: [${backupItem.backupType}] ${backupItem.folderName || backupItem.fullPath}`);
+        console.log(`[VERIFY] Path:   ${backupItem.jsonPath}`);
+    }
+
+    // 1. Load and parse backup JSON file
+    const backupRes = loadBackupFile(backupItem);
+    if (!backupRes.valid) {
+        const durationSec = ((Date.now() - startTime) / 1000).toFixed(2);
+        const ts = getBangladeshTimestamp().formatted;
+
+        const logEntry = `[${ts}] ${modeUpper} BACKUP VERIFICATION\n` +
+            `Backup: ${backupItem.fullPath}\n` +
+            `Status: INVALID BACKUP\n` +
+            `Error: ${backupRes.reason}\n` +
+            `Result: VERIFICATION FAILED\n` +
+            `Duration: ${durationSec}s`;
+
+        if (logToVerificationFile) {
+            appendVerificationLog(logEntry);
+        }
+        if (logToBackupLog) {
+            appendBackupLog(`[${ts}] ${modeUpper} BACKUP VERIFICATION FAILED - INVALID BACKUP`);
+        }
+
+        if (!silent) {
+            console.error(`[VERIFY] ❌ INVALID BACKUP: ${backupRes.reason}`);
+        }
+
+        return {
+            success: false,
+            isExactMatch: false,
+            verdict: 'INVALID BACKUP',
+            reason: backupRes.reason,
+            diffCount: -1,
+            durationSec
+        };
+    }
+
+    const backupData = backupRes.parsed;
+
+    // 2. Ensure Firestore DB connection
+    let db = options.db;
+    if (!db) {
+        const apps = getApps ? getApps() : [];
+        if (apps.length === 0) {
+            const serviceAccount = options.serviceAccount || loadAndVerifyServiceAccount();
+            initializeApp({
+                credential: cert(serviceAccount)
+            });
+        }
+        db = getFirestore();
+    }
+
+    if (!silent) {
+        console.log(`[VERIFY] 🚀 Reading Live Firestore database (strictly read-only)...`);
+    }
+
+    // 3. Fetch Live Firestore
+    const liveRawCols = await fetchLiveFirestore(db, colPath => {
+        if (!silent) {
+            process.stdout.write(`[VERIFY]    📦 Reading Live collection: [${colPath}]...\r`);
+        }
+    });
+
+    if (!silent) {
+        console.log(`[VERIFY]    ✅ Live Firestore snapshot fetched successfully.`);
+    }
+
+    // 4. Normalize trees
+    const liveNormalized = normalizeCollectionTree(liveRawCols);
+    const backupNormalized = normalizeCollectionTree(backupData.collections);
+
+    // 5. Compute stats
+    const liveStats = computeStats(liveNormalized);
+    const backupStats = computeStats(backupNormalized);
+
+    // 6. Compute Canonical SHA-256 Hashes
+    const liveHash = calculateCanonicalHash(liveNormalized);
+    const backupHash = calculateCanonicalHash(backupNormalized);
+
+    // 7. Deep value comparison
+    const diffs = [];
+    compareCollections(liveNormalized, backupNormalized, diffs);
+
+    const missingFromBackupCount = diffs.filter(d => d.category === 'MISSING FROM BACKUP').length;
+    const extraInBackupCount = diffs.filter(d => d.category === 'EXTRA IN BACKUP').length;
+    const valueDiffCount = diffs.filter(d => d.category === 'VALUE DIFFERENCE').length;
+    const typeDiffCount = diffs.filter(d => d.category === 'TYPE DIFFERENCE').length;
+    const arrayDiffCount = diffs.filter(d => d.category === 'ARRAY DIFFERENCE').length;
+    const subcolDiffCount = diffs.filter(d => d.category === 'SUBCOLLECTION DIFFERENCE').length;
+
+    const isExactMatch = diffs.length === 0 && liveHash === backupHash;
+    const durationSec = ((Date.now() - startTime) / 1000).toFixed(2);
+    const ts = getBangladeshTimestamp().formatted;
+
+    let verdict = 'UNKNOWN';
+    if (isExactMatch) {
+        verdict = 'EXACT MATCH';
+    } else {
+        const onlyLiveNewer = extraInBackupCount === 0 &&
+            typeDiffCount === 0 &&
+            subcolDiffCount === 0 &&
+            missingFromBackupCount >= 0;
+        verdict = onlyLiveNewer ? 'VALID BUT OUTDATED BACKUP' : 'BACKUP DATA MISMATCH';
+    }
+
+    // 8. Format log entries
+    let logEntry;
+    let backupLogSummary;
+
+    if (isExactMatch) {
+        logEntry = `[${ts}] ${modeUpper} BACKUP VERIFICATION\n` +
+            `Backup: ${backupItem.fullPath}\n` +
+            `Status: EXACT MATCH\n` +
+            `Collections: ${liveStats.rootCollections}\n` +
+            `Documents: ${liveStats.documents}\n` +
+            `Fields: ${liveStats.totalFields}\n` +
+            `Arrays: ${liveStats.arrays}\n` +
+            `Objects: ${liveStats.objects}\n` +
+            `Differences: 0\n` +
+            `SHA-256: MATCH\n` +
+            `Result: VERIFIED SUCCESSFULLY\n` +
+            `Duration: ${durationSec}s`;
+
+        backupLogSummary = `[${ts}] ${modeUpper} BACKUP VERIFIED - EXACT MATCH`;
+    } else {
+        const colDiff = Math.abs(liveStats.rootCollections - backupStats.rootCollections);
+        const docDiff = Math.abs(liveStats.documents - backupStats.documents);
+        const fieldDiff = Math.abs(liveStats.totalFields - backupStats.totalFields);
+        const arrayDiff = Math.abs(liveStats.arrays - backupStats.arrays);
+        const objDiff = Math.abs(liveStats.objects - backupStats.objects);
+        const shaStatus = liveHash === backupHash ? 'MATCH' : 'MISMATCH';
+
+        const diffDetails = formatDocumentLevelDifferences(diffs, 50);
+
+        logEntry = `[${ts}] ${modeUpper} BACKUP VERIFICATION\n` +
+            `Backup: ${backupItem.fullPath}\n` +
+            `Status: MISMATCH\n\n` +
+            `Collections:\n` +
+            `Expected: ${liveStats.rootCollections}\n` +
+            `Backup: ${backupStats.rootCollections}\n` +
+            `Difference: ${colDiff}\n\n` +
+            `Documents:\n` +
+            `Expected: ${liveStats.documents}\n` +
+            `Backup: ${backupStats.documents}\n` +
+            `Difference: ${docDiff}\n\n` +
+            `Fields:\n` +
+            `Expected: ${liveStats.totalFields}\n` +
+            `Backup: ${backupStats.totalFields}\n` +
+            `Difference: ${fieldDiff}\n\n` +
+            `Arrays:\n` +
+            `Expected: ${liveStats.arrays}\n` +
+            `Backup: ${backupStats.arrays}\n` +
+            `Difference: ${arrayDiff}\n\n` +
+            `Objects:\n` +
+            `Expected: ${liveStats.objects}\n` +
+            `Backup: ${backupStats.objects}\n` +
+            `Difference: ${objDiff}\n\n` +
+            `SHA-256:\n` +
+            `Expected: ${liveHash}\n` +
+            `Backup: ${backupHash}\n` +
+            `Status: ${shaStatus}\n\n` +
+            `Total Differences: ${diffs.length}\n` +
+            `Result: VERIFICATION FAILED\n` +
+            `Duration: ${durationSec}s` +
+            (diffDetails ? `\n\n${diffDetails}` : '');
+
+        backupLogSummary = `[${ts}] ${modeUpper} BACKUP VERIFICATION FAILED - ${diffs.length} DIFFERENCES`;
+    }
+
+    if (logToVerificationFile) {
+        appendVerificationLog(logEntry);
+    }
+    if (logToBackupLog) {
+        appendBackupLog(backupLogSummary);
+    }
+
+    if (!silent) {
+        console.log(`[VERIFY] Collections: Live=${liveStats.rootCollections}, Backup=${backupStats.rootCollections}`);
+        console.log(`[VERIFY] Documents:   Live=${liveStats.documents}, Backup=${backupStats.documents}`);
+        console.log(`[VERIFY] Fields:      Live=${liveStats.totalFields}, Backup=${backupStats.totalFields}`);
+        console.log(`[VERIFY] Arrays:      Live=${liveStats.arrays}, Backup=${backupStats.arrays}`);
+        console.log(`[VERIFY] Objects:     Live=${liveStats.objects}, Backup=${backupStats.objects}`);
+        console.log(`[VERIFY] Differences: ${diffs.length}`);
+        console.log(`[VERIFY] SHA-256 Live:   ${liveHash.substring(0, 16)}...`);
+        console.log(`[VERIFY] SHA-256 Backup: ${backupHash.substring(0, 16)}...`);
+        console.log(`[VERIFY] Status: ${isExactMatch ? '✅ EXACT MATCH' : '❌ MISMATCH'}`);
+    }
+
+    return {
+        success: true,
+        isExactMatch,
+        verdict,
+        liveStats,
+        backupStats,
+        liveHash,
+        backupHash,
+        diffs,
+        diffCount: diffs.length,
+        missingFromBackupCount,
+        extraInBackupCount,
+        valueDiffCount,
+        typeDiffCount,
+        arrayDiffCount,
+        subcolDiffCount,
+        durationSec,
+        timestamp: ts,
+        backupItem,
+        backupData
+    };
+}
+
+// -----------------------------------------------------------------------------
+// 10. AUDIT ALL BACKUPS MODE (--all)
 // -----------------------------------------------------------------------------
 async function runAuditAllBackups(db) {
     console.log(`\n==================================================`);
@@ -996,7 +1406,6 @@ async function runAuditAllBackups(db) {
             if (diffs.length === 0 && liveHash === backupHash) {
                 statusStr = '✅ EXACT MATCH';
             } else {
-                // Check if differences are purely newer activity in Live Firestore
                 const isOnlyNewerLive = diffs.every(d => d.category === 'MISSING FROM BACKUP' || d.category === 'VALUE DIFFERENCE');
                 if (isOnlyNewerLive) {
                     statusStr = '⚠️ OUTDATED';
@@ -1020,7 +1429,7 @@ async function runAuditAllBackups(db) {
 }
 
 // -----------------------------------------------------------------------------
-// 10. SINGLE BACKUP VERIFICATION REPORT
+// 11. SINGLE BACKUP VERIFICATION REPORT (CLI)
 // -----------------------------------------------------------------------------
 async function runSingleVerification(backupItem, db) {
     console.log(`\n==================================================`);
@@ -1042,64 +1451,59 @@ async function runSingleVerification(backupItem, db) {
     console.log(`Path:`);
     console.log(`${backupItem.jsonPath}\n`);
 
-    const backupRes = loadBackupFile(backupItem);
+    const result = await verifySpecificBackup(backupItem, {
+        db,
+        silent: true,
+        isAutomatic: backupItem.backupType === 'AUTOMATIC',
+        logToVerificationFile: true,
+        logToBackupLog: false
+    });
 
-    if (!backupRes.valid) {
+    if (!result.success) {
         console.log(`Backup Created:`);
         console.log(`${backupItem.createdAt}\n`);
         console.log(`==================================================`);
         console.log(`FINAL VERDICT`);
         console.log(`==================================================\n`);
         console.log(`❌ INVALID BACKUP`);
-        console.log(`Reason: ${backupRes.reason}\n`);
+        console.log(`Reason: ${result.reason}\n`);
         process.exit(1);
     }
 
-    const backupData = backupRes.parsed;
     console.log(`Backup Created:`);
-    console.log(`${backupData.metadata.createdAt}\n`);
-
-    console.log(`🚀 Recursively reading Live Firestore database...`);
-    const liveRawCols = await fetchLiveFirestore(db);
-
-    const liveNormalized = normalizeCollectionTree(liveRawCols);
-    const backupNormalized = normalizeCollectionTree(backupData.collections);
-
-    // Compute Summary Statistics
-    const liveStats = computeStats(liveNormalized);
-    const backupStats = computeStats(backupNormalized);
+    console.log(`${result.backupData.metadata.createdAt}\n`);
 
     console.log(`\n==================================================`);
     console.log(`FIRESTORE`);
     console.log(`==================================================`);
-    console.log(`Collections:            ${liveStats.rootCollections}`);
-    console.log(`Documents:              ${liveStats.documents}`);
-    console.log(`Nested subcollections:  ${liveStats.nestedSubcollections}`);
-    console.log(`Fields:                 ${liveStats.totalFields}`);
-    console.log(`Arrays:                 ${liveStats.arrays}`);
-    console.log(`Objects:                ${liveStats.objects}`);
-    console.log(`Timestamps:             ${liveStats.timestamps}`);
-    console.log(`GeoPoints:              ${liveStats.geopoints}`);
-    console.log(`References:             ${liveStats.references}`);
-    console.log(`Bytes:                  ${liveStats.bytes}`);
+    console.log(`Collections:            ${result.liveStats.rootCollections}`);
+    console.log(`Documents:              ${result.liveStats.documents}`);
+    console.log(`Nested subcollections:  ${result.liveStats.nestedSubcollections}`);
+    console.log(`Fields:                 ${result.liveStats.totalFields}`);
+    console.log(`Arrays:                 ${result.liveStats.arrays}`);
+    console.log(`Objects:                ${result.liveStats.objects}`);
+    console.log(`Timestamps:             ${result.liveStats.timestamps}`);
+    console.log(`GeoPoints:              ${result.liveStats.geopoints}`);
+    console.log(`References:             ${result.liveStats.references}`);
+    console.log(`Bytes:                  ${result.liveStats.bytes}`);
 
     console.log(`\n==================================================`);
     console.log(`BACKUP`);
     console.log(`==================================================`);
-    console.log(`Collections:            ${backupStats.rootCollections}`);
-    console.log(`Documents:              ${backupStats.documents}`);
-    console.log(`Nested subcollections:  ${backupStats.nestedSubcollections}`);
-    console.log(`Fields:                 ${backupStats.totalFields}`);
-    console.log(`Arrays:                 ${backupStats.arrays}`);
-    console.log(`Objects:                ${backupStats.objects}`);
-    console.log(`Timestamps:             ${backupStats.timestamps}`);
-    console.log(`GeoPoints:              ${backupStats.geopoints}`);
-    console.log(`References:             ${backupStats.references}`);
-    console.log(`Bytes:                  ${backupStats.bytes}`);
+    console.log(`Collections:            ${result.backupStats.rootCollections}`);
+    console.log(`Documents:              ${result.backupStats.documents}`);
+    console.log(`Nested subcollections:  ${result.backupStats.nestedSubcollections}`);
+    console.log(`Fields:                 ${result.backupStats.totalFields}`);
+    console.log(`Arrays:                 ${result.backupStats.arrays}`);
+    console.log(`Objects:                ${result.backupStats.objects}`);
+    console.log(`Timestamps:             ${result.backupStats.timestamps}`);
+    console.log(`GeoPoints:              ${result.backupStats.geopoints}`);
+    console.log(`References:             ${result.backupStats.references}`);
+    console.log(`Bytes:                  ${result.backupStats.bytes}`);
 
     // X-29 Domain Checks
-    const liveDomain = extractX29Metrics(liveNormalized);
-    const backupDomain = extractX29Metrics(backupNormalized);
+    const liveDomain = extractX29Metrics(normalizeCollectionTree(result.backupData.collections));
+    const backupDomain = extractX29Metrics(normalizeCollectionTree(result.backupData.collections));
 
     console.log(`\n==================================================`);
     console.log(`X-29 DATA CHECK`);
@@ -1120,73 +1524,46 @@ async function runSingleVerification(backupItem, db) {
     console.log(`  Live:   ${liveDomain.updatedAt ? (typeof liveDomain.updatedAt === 'object' ? JSON.stringify(liveDomain.updatedAt) : liveDomain.updatedAt) : 'N/A'}`);
     console.log(`  Backup: ${backupDomain.updatedAt ? (typeof backupDomain.updatedAt === 'object' ? JSON.stringify(backupDomain.updatedAt) : backupDomain.updatedAt) : 'N/A'}`);
 
-    // Deep Comparison
-    const diffs = [];
-    compareCollections(liveNormalized, backupNormalized, diffs);
-
-    const missingFromBackupCount = diffs.filter(d => d.category === 'MISSING FROM BACKUP').length;
-    const extraInBackupCount = diffs.filter(d => d.category === 'EXTRA IN BACKUP').length;
-    const valueDiffCount = diffs.filter(d => d.category === 'VALUE DIFFERENCE').length;
-    const typeDiffCount = diffs.filter(d => d.category === 'TYPE DIFFERENCE').length;
-    const arrayDiffCount = diffs.filter(d => d.category === 'ARRAY DIFFERENCE').length;
-    const subcolDiffCount = diffs.filter(d => d.category === 'SUBCOLLECTION DIFFERENCE').length;
-
     console.log(`\n==================================================`);
     console.log(`DEEP COMPARISON`);
     console.log(`==================================================`);
-    console.log(`Differences:              ${diffs.length}`);
-    console.log(`Missing from Backup:      ${missingFromBackupCount}`);
-    console.log(`Extra in Backup:          ${extraInBackupCount}`);
-    console.log(`Changed values:           ${valueDiffCount}`);
-    console.log(`Type differences:         ${typeDiffCount}`);
-    console.log(`Array differences:        ${arrayDiffCount}`);
-    console.log(`Subcollection differences:${subcolDiffCount}`);
+    console.log(`Differences:              ${result.diffs.length}`);
+    console.log(`Missing from Backup:      ${result.missingFromBackupCount}`);
+    console.log(`Extra in Backup:          ${result.extraInBackupCount}`);
+    console.log(`Changed values:           ${result.valueDiffCount}`);
+    console.log(`Type differences:         ${result.typeDiffCount}`);
+    console.log(`Array differences:        ${result.arrayDiffCount}`);
+    console.log(`Subcollection differences:${result.subcolDiffCount}`);
 
-    // SHA-256 Hash
     console.log(`\n==================================================`);
     console.log(`HASH`);
     console.log(`==================================================`);
-    const liveHash = calculateCanonicalHash(liveNormalized);
-    const backupHash = calculateCanonicalHash(backupNormalized);
-
     console.log(`LIVE CANONICAL SHA-256:`);
-    console.log(liveHash);
+    console.log(result.liveHash);
     console.log(`BACKUP CANONICAL SHA-256:`);
-    console.log(backupHash);
+    console.log(result.backupHash);
 
-    // Final Verdict Classification
     console.log(`\n==================================================`);
     console.log(`FINAL VERDICT`);
     console.log(`==================================================`);
 
-    let verdict = 'UNKNOWN';
-
-    if (diffs.length === 0 && liveHash === backupHash) {
-        verdict = 'EXACT MATCH';
+    if (result.isExactMatch) {
         console.log(`\n✅ EXACT MATCH\n`);
         console.log(`Live Firestore and selected backup are 100% identical in structure, data, and SHA-256 hash.`);
     } else {
-        // Evaluate if differences are purely newer activity in Live Firestore
-        const onlyLiveNewer = extraInBackupCount === 0 &&
-            typeDiffCount === 0 &&
-            subcolDiffCount === 0 &&
-            missingFromBackupCount >= 0;
-
-        if (onlyLiveNewer) {
-            verdict = 'VALID BUT OUTDATED BACKUP';
+        if (result.verdict === 'VALID BUT OUTDATED BACKUP') {
             console.log(`\n⚠️ VALID BUT OUTDATED BACKUP\n`);
             console.log(`Backup belongs to X-29 (${EXPECTED_PROJECT_ID}) and is structurally valid, but Live Firestore contains newer updates created after the backup snapshot.`);
         } else {
-            verdict = 'BACKUP DATA MISMATCH';
             console.log(`\n❌ BACKUP DATA MISMATCH\n`);
             console.log(`There are unexpected data/structural differences between Live Firestore and the selected backup.`);
         }
 
         console.log(`\n--------------------------------------------------`);
-        console.log(`EXACT DIFFERENCES DETECTED (${diffs.length}):`);
+        console.log(`EXACT DIFFERENCES DETECTED (${result.diffs.length}):`);
         console.log(`--------------------------------------------------`);
 
-        diffs.forEach((d, idx) => {
+        result.diffs.forEach((d, idx) => {
             console.log(`\n[${idx + 1}] ${d.category}`);
             console.log(`Path:`);
             console.log(`  ${d.path}`);
@@ -1208,7 +1585,7 @@ async function runSingleVerification(backupItem, db) {
 }
 
 // -----------------------------------------------------------------------------
-// MAIN EXECUTION ENTRYPOINT
+// 12. MAIN CLI ENTRYPOINT
 // -----------------------------------------------------------------------------
 async function main() {
     const args = process.argv.slice(2);
@@ -1216,9 +1593,12 @@ async function main() {
     // 1. Verify Service Account & Project ID
     const serviceAccount = loadAndVerifyServiceAccount();
 
-    initializeApp({
-        credential: cert(serviceAccount)
-    });
+    const apps = getApps ? getApps() : [];
+    if (apps.length === 0) {
+        initializeApp({
+            credential: cert(serviceAccount)
+        });
+    }
 
     const db = getFirestore();
 
@@ -1236,7 +1616,35 @@ async function main() {
     process.exit(0);
 }
 
-main().catch(err => {
-    console.error(`\n❌ VERIFICATION SYSTEM EXCEPTION:`, err);
-    process.exit(1);
-});
+if (require.main === module) {
+    main().catch(err => {
+        console.error(`\n❌ VERIFICATION SYSTEM EXCEPTION:`, err);
+        process.exit(1);
+    });
+}
+
+module.exports = {
+    verifySpecificBackup,
+    loadAndVerifyServiceAccount,
+    scanAvailableBackups,
+    loadBackupFile,
+    fetchLiveFirestore,
+    normalizeValue,
+    normalizeCollectionTree,
+    compareValues,
+    compareCollections,
+    computeStats,
+    extractX29Metrics,
+    calculateCanonicalHash,
+    getBangladeshTimestamp,
+    appendVerificationLog,
+    appendBackupLog,
+    logBackupFailedInVerificationLog,
+    formatDocumentLevelDifferences,
+    runAuditAllBackups,
+    runSingleVerification,
+    VERIFICATION_LOG_PATH,
+    BACKUP_LOG_PATH,
+    EXPECTED_PROJECT_ID,
+    BACKUP_BASE_DIR
+};
