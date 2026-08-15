@@ -697,12 +697,12 @@
             AppState.subjectFocusTargets[subject] = window.subjectFocusTargets[subject];
         }
 
-        if (window.FirebaseService) {
-            window.FirebaseService.saveToCloud(true);
-        }
-
         window.closeSubjectTargetModal();
         updateSubjectTargetUI();
+
+        if (window.FirebaseService) {
+            window.FirebaseService.saveToCloud(false);
+        }
     };
 
     window.deleteSubjectTarget = function (subject) {
@@ -718,15 +718,15 @@
                 if (window.subjectFocusTargets) {
                     delete window.subjectFocusTargets[subject];
                 }
-                if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
-                    window.FirebaseService.saveToCloud(true);
-                }
                 updateSubjectTargetUI();
                 if (typeof showToast === 'function') {
                     showToast(`Target for ${subject} deleted.`, "success");
                 }
                 if (typeof window.closeSubjectTargetModal === 'function') {
                     window.closeSubjectTargetModal();
+                }
+                if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
+                    window.FirebaseService.saveToCloud(true);
                 }
             }
         };
@@ -1282,11 +1282,12 @@
         }
 
         saveActiveStateToStore();
-        FirebaseService.saveToCloud(true);
-        FirebaseService.saveTimerToCloud();
         window.TimerService.restore();
         window.TimerService.updateDisplay();
         showToast(`Saved session: ${Math.floor(elapsedSeconds / 60)}m ${elapsedSeconds % 60}s for ${subject}.`, "success");
+        if (window.FirebaseService) {
+            window.FirebaseService.saveToCloud(false);
+        }
     };
 
     window.deleteTimerLog = function (logId) {
@@ -1299,9 +1300,11 @@
                     window.recordItemDeletion(logId);
                 }
                 AppState.timerLogs = AppState.timerLogs.filter(log => log.id !== logId);
-                FirebaseService.saveToCloud(true);
                 window.TimerService.updateDisplay();
                 showToast("Study session deleted.", "success");
+                if (window.FirebaseService) {
+                    window.FirebaseService.saveToCloud(true);
+                }
             }
         );
     };

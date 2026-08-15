@@ -14858,9 +14858,9 @@ window.deleteWeeklyTarget = function (idx) {
         }
 
         window.weeklyTargetsDatabase[selectedWeekKey].splice(idx, 1);
-        FirebaseService.saveToCloud();
         renderUI();
         showToast("Weekly target removed.", "success");
+        FirebaseService.saveToCloud(true);
     }
 };
 
@@ -14887,10 +14887,9 @@ window.toggleWeeklyTargetCompletion = function (idx, isCompleted) {
 
     window.syncTaskChapterCompletion(target.track, target.subject, target.chapter, isCompleted, target.completedAt);
     recalculateTotals();
-
-    FirebaseService.saveToCloud();
     renderUI();
     showToast("Chapter completion state synchronized!", "success");
+    FirebaseService.saveToCloud(false);
 };
 
 window.navigateWeek = function (mode) {
@@ -15926,9 +15925,9 @@ window.deleteDailyTarget = function (idx) {
             }
         }
 
-        FirebaseService.saveToCloud();
         renderUI();
         showToast("Daily target removed.", "success");
+        FirebaseService.saveToCloud(true);
     }
 };
 
@@ -15943,9 +15942,9 @@ window.toggleDailyTargetCompletion = function (idx, isCompleted) {
     target.completedAt = isCompleted ? new Date().toISOString() : null;
 
     if (target.isTodo) {
-        FirebaseService.saveToCloud();
         renderUI();
         showToast("To-Do task updated!", "success");
+        FirebaseService.saveToCloud(false);
         return;
     }
 
@@ -15981,9 +15980,9 @@ window.toggleDailyTargetCompletion = function (idx, isCompleted) {
     }
     recalculateTotals();
 
-    FirebaseService.saveToCloud();
     renderUI();
     showToast("Daily target completion state synchronized!", "success");
+    FirebaseService.saveToCloud(false);
 };
 
 window.navigateDay = function (mode) {

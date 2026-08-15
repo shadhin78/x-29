@@ -23,12 +23,26 @@ function showSync(state) {
         icon.classList.remove('animate-spin', 'text-blue-500', 'text-red-500', 'text-amber-500', 'text-rose-500');
         icon.classList.add('text-emerald-500');
         text.textContent = 'Saved'; text.className = 'text-[9px] font-black uppercase tracking-widest text-emerald-500';
-        setTimeout(() => { el.classList.remove('opacity-100', 'scale-100'); el.classList.add('opacity-0', 'scale-95', 'pointer-events-none'); }, 2000);
+        if (window._syncFadeTimer) clearTimeout(window._syncFadeTimer);
+        window._syncFadeTimer = setTimeout(() => {
+            el.classList.remove('opacity-100', 'scale-100');
+            el.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+        }, 1800);
+    } else if (state === 'local') {
+        icon.innerHTML = `<circle cx="12" cy="12" r="4" fill="currentColor" />`;
+        icon.classList.remove('animate-spin', 'text-red-500', 'text-amber-500', 'text-rose-500');
+        icon.classList.add('text-blue-400');
+        text.textContent = 'Saved Locally'; text.className = 'text-[9px] font-black uppercase tracking-widest text-blue-400';
+    } else if (state === 'offline') {
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m-2.828-2.828a5 5 0 000-7.072m-2.828 2.828a1 1 0 010 1.414M3 3l18 18" />`;
+        icon.classList.remove('animate-spin', 'text-blue-500', 'text-emerald-500', 'text-red-500', 'text-rose-500');
+        icon.classList.add('text-amber-500');
+        text.textContent = 'Offline (Queued)'; text.className = 'text-[9px] font-black uppercase tracking-widest text-amber-500';
     } else if (state === 'error') {
         icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />`;
         icon.classList.remove('animate-spin', 'text-blue-500', 'text-emerald-500', 'text-amber-500', 'text-rose-500');
         icon.classList.add('text-red-500');
-        text.textContent = 'Error'; text.className = 'text-[9px] font-black uppercase tracking-widest text-red-500';
+        text.textContent = 'Sync Error'; text.className = 'text-[9px] font-black uppercase tracking-widest text-red-500';
     } else if (state === 'uninitialized') {
         icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />`;
         icon.classList.remove('animate-spin', 'text-blue-500', 'text-emerald-500', 'text-red-500', 'text-rose-500');
@@ -92,8 +106,52 @@ window.FirebaseService = {
     _authListeners: [],
     _firestoreInitialized: false,
     _isSaving: false,
+    _hasPendingWriteInFlight: false,
+    _lastCommittedRevision: 0,
+    _debounceDurationMs: 180,
+    _retryCount: 0,
+    _retryTimer: null,
     _lastLocalEditTime: 0,
     cloudDocumentExists: null,
+
+    notifyLocalMutation: function(reason = "") {
+        this._lastLocalEditTime = Date.now() + (window.serverTimeOffset || 0);
+        AppState.isLocalDirty = true;
+        AppState.saveStatus = 'local';
+        this._fastPersistLocalStorage();
+    },
+
+    _fastPersistLocalStorage: function() {
+        try {
+            const currentCache = {
+                tasks: AppState.tasks || [],
+                tracks: window.tracks || [],
+                customActions: window.customActions || [],
+                paceGoals: window.paceGoals || [],
+                passedItems: window.passedItems || { programs: [], subjects: [] },
+                revisionData: window.revisionData || { active: [], progress: {} },
+                timerLogs: window.timerLogs || [],
+                fiscalLedger: AppState.fiscalLedger || { transactions: [], budgets: [], vaults: [] },
+                dashboardConfig: window.dashboardConfig || {},
+                weeklyTargetsDatabase: window.weeklyTargetsDatabase || {},
+                dailyTargetsDatabase: window.dailyTargetsDatabase || {},
+                subjectFocusTargets: window.subjectFocusTargets || {},
+                scheduleBlocks: window.scheduleBlocks || [],
+                scheduleBlocks2: window.scheduleBlocks2 || [],
+                scheduleGroups: window.scheduleGroups || [],
+                examSessions: window.examSessions || [],
+                examRoutine: window.examRoutine || [],
+                selectedCountdownExamId: window.selectedCountdownExamId || 'auto',
+                activeTimerState: window.activeTimerState || {},
+                activeRoutineSet: window.activeRoutineSet || 1,
+                subjectColors: window.subjectColors || {},
+                _tombstones: AppState._tombstones || {}
+            };
+            const jsonStr = JSON.stringify(currentCache);
+            safeStorage.setItem('local_app_state', jsonStr);
+            safeStorage.setItem('appState', jsonStr);
+        } catch(e) {}
+    },
 
     // 1. Fetch Firebase Configuration from API, fallback to .env or cached settings
     fetchConfig: async function() {
@@ -515,10 +573,11 @@ window.FirebaseService = {
                             cloudData.subjectFocusTargets = mergedSft;
                         }
 
-                        if (this._saveDebounceTimer) {
-                            clearTimeout(this._saveDebounceTimer);
-                            this._saveDebounceTimer = null;
-                            console.log("SYNC: SAVE_CANCELLED (Reconciled with newer cloud snapshot)");
+                        if ((AppState.localRevision || 0) <= (AppState.lastCommittedRevision || 0)) {
+                            if (this._saveDebounceTimer) {
+                                clearTimeout(this._saveDebounceTimer);
+                                this._saveDebounceTimer = null;
+                            }
                         }
                         console.log(`SYNC_DEBUG SNAPSHOT_APPLYING: Reconciled dirty state`);
                         showSync('saved');
@@ -526,10 +585,11 @@ window.FirebaseService = {
                             onData(cloudData, { exists: true, reconciled: true });
                         }
                     } else {
-                        if (this._saveDebounceTimer) {
-                            clearTimeout(this._saveDebounceTimer);
-                            this._saveDebounceTimer = null;
-                            console.log("SYNC: SAVE_CANCELLED (Clean state snapshot applied)");
+                        if ((AppState.localRevision || 0) <= (AppState.lastCommittedRevision || 0)) {
+                            if (this._saveDebounceTimer) {
+                                clearTimeout(this._saveDebounceTimer);
+                                this._saveDebounceTimer = null;
+                            }
                         }
                         console.log(`SYNC_DEBUG SNAPSHOT_APPLYING: Clean state raw payload`);
                         showSync('saved');
@@ -587,10 +647,12 @@ window.FirebaseService = {
         return diagnosticPayload._syncDiagnostic;
     },
 
-    // 8. Save AppState to Cloud & Local Storage
+    // 8. Save AppState to Cloud & Local Storage (Centralized SaveQueue & Coalescing Engine)
     saveToCloud: async function(immediate = false, isExplicitInitialization = false, isUserInitiated = false) {
+        if (!AppState.localRevision) AppState.localRevision = 0;
+        AppState.localRevision++;
         AppState.isLocalDirty = true;
-        this._lastLocalEditTime = Date.now();
+        this._lastLocalEditTime = Date.now() + (window.serverTimeOffset || 0);
 
         const user = this.getCurrentUser();
         const gen = AppState.syncGeneration || 0;
@@ -613,50 +675,42 @@ window.FirebaseService = {
             }
         }
 
-        if (this._saveDebounceTimer) {
-            clearTimeout(this._saveDebounceTimer);
-            this._saveDebounceTimer = null;
-            console.log("SYNC: SAVE_CANCELLED (Superseded by new local edit)");
-        }
-
         // Fast synchronous local storage persist (0ms latency local safety)
-        try {
-            const currentCache = {
-                tasks: AppState.tasks || [],
-                tracks: window.tracks || [],
-                customActions: window.customActions || [],
-                paceGoals: window.paceGoals || [],
-                passedItems: window.passedItems || { programs: [], subjects: [] },
-                revisionData: window.revisionData || { active: [], progress: {} },
-                timerLogs: window.timerLogs || [],
-                fiscalLedger: AppState.fiscalLedger || { transactions: [], budgets: [], vaults: [] },
-                dashboardConfig: window.dashboardConfig || {},
-                _tombstones: AppState._tombstones || {}
-            };
-            const jsonStr = JSON.stringify(currentCache);
-            safeStorage.setItem('local_app_state', jsonStr);
-            safeStorage.setItem('appState', jsonStr);
-        } catch(e) {}
-
-        const captureGen = AppState.syncGeneration || 0;
-        console.log(`SYNC: SAVE_SCHEDULED (Immediate: ${immediate}, ExplicitInit: ${isExplicitInitialization}, Gen: ${captureGen})`);
-
-        showSync('saving');
+        this._fastPersistLocalStorage();
 
         if (immediate) {
-            await this._executeSave(isExplicitInitialization, isUserInitiated, captureGen);
+            if (this._saveDebounceTimer) {
+                clearTimeout(this._saveDebounceTimer);
+                this._saveDebounceTimer = null;
+            }
+            if (this._isSaving) {
+                this._hasPendingWriteInFlight = true;
+                return;
+            }
+            // Execute save non-blocking in background
+            this._executeSave(isExplicitInitialization, isUserInitiated, gen);
         } else {
-            this._saveDebounceTimer = setTimeout(async () => {
-                await this._executeSave(isExplicitInitialization, isUserInitiated, captureGen);
-            }, 250);
+            if (this._saveDebounceTimer) {
+                clearTimeout(this._saveDebounceTimer);
+                this._saveDebounceTimer = null;
+            }
+            if (this._isSaving) {
+                this._hasPendingWriteInFlight = true;
+                return;
+            }
+            this._saveDebounceTimer = setTimeout(() => {
+                this._saveDebounceTimer = null;
+                this._executeSave(isExplicitInitialization, isUserInitiated, gen);
+            }, this._debounceDurationMs);
         }
     },
 
     _executeSave: async function(isExplicitInitialization = false, isUserInitiated = false, captureGen = null) {
         if (captureGen === null) captureGen = AppState.syncGeneration || 0;
         const captureSessionId = AppState.syncSessionId || "";
+        const targetRevision = AppState.localRevision || 0;
 
-        console.log(`SYNC_DEBUG SAVE_START: Gen=${captureGen}, Session=${captureSessionId}`);
+        console.log(`SYNC_DEBUG SAVE_START: Gen=${captureGen}, Session=${captureSessionId}, Rev=${targetRevision}`);
 
         // GUARD 1: Verify sync generation
         if (captureGen !== (AppState.syncGeneration || 0)) {
@@ -674,13 +728,10 @@ window.FirebaseService = {
             return;
         }
 
-        console.log("SYNC: AUTH_READY", { uid: user.uid, email: user.email || 'ris2k29@gmail.com' });
-        console.log(`SYNC_DEBUG SAVE_UID: ${user.uid}`);
-        console.log(`SYNC_DEBUG SAVE_GENERATION: ${captureGen}`);
-        console.log(`SYNC_DEBUG SAVE_SESSION: ${captureSessionId}`);
-        console.log(`SYNC_DEBUG FIRESTORE_PATH: users/${user.uid}`);
-
         this._isSaving = true;
+        AppState.saveStatus = 'saving';
+        showSync('saving');
+
         try {
             const tombstones = AppState._tombstones || {};
 
@@ -738,12 +789,7 @@ window.FirebaseService = {
                 });
             }
 
-            const outgoingTaskIds = (payload.tasks || []).map(t => window.generateItemId(t, 'tasks'));
-            console.log(`SYNC_DEBUG SAVE_PAYLOAD: Gen=${captureGen}`);
-            console.log(`SYNC_DEBUG SAVE_TASK_COUNT: ${(payload.tasks || []).length}`);
-            console.log(`SYNC_DEBUG OUTGOING_TASK_IDS: ${JSON.stringify(outgoingTaskIds)}`);
-
-            // Cache state locally for offline fallback
+            // Cache state locally for instant offline fallback
             window.appState = payload;
             let jsonStr = '';
             try {
@@ -753,108 +799,107 @@ window.FirebaseService = {
             } catch(e) {}
 
             if (AppState.db && user && user.uid && window.location.protocol !== 'file:') {
-                try {
-                    const cleanPayload = jsonStr ? JSON.parse(jsonStr) : JSON.parse(JSON.stringify(payload));
-                    if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
-                        cleanPayload.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-                        if (tombstones && typeof tombstones === 'object') {
-                            if (!cleanPayload.subjectFocusTargets) cleanPayload.subjectFocusTargets = {};
-                            if (!cleanPayload._tombstones) cleanPayload._tombstones = tombstones;
+                const cleanPayload = jsonStr ? JSON.parse(jsonStr) : JSON.parse(JSON.stringify(payload));
+                if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
+                    cleanPayload.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+                    if (tombstones && typeof tombstones === 'object') {
+                        if (!cleanPayload.subjectFocusTargets) cleanPayload.subjectFocusTargets = {};
+                        if (!cleanPayload._tombstones) cleanPayload._tombstones = tombstones;
 
-                            // Process subjectFocusTargets tombstones vs active targets based on timestamps
-                            Object.keys(cleanPayload.subjectFocusTargets).forEach(sub => {
-                                const target = cleanPayload.subjectFocusTargets[sub];
-                                if (target && target !== firebase.firestore.FieldValue.delete()) {
-                                    const targetTime = target.updatedAt || (target.createdAt ? new Date(target.createdAt).getTime() : 0);
-                                    const tombstoneVal = tombstones[`subjectFocusTargets_${sub}`] || tombstones[sub];
-                                    const tombstoneTime = (typeof tombstoneVal === 'number') ? tombstoneVal : (tombstoneVal === true ? Number.MAX_SAFE_INTEGER : 0);
+                        // Process subjectFocusTargets tombstones vs active targets based on timestamps
+                        Object.keys(cleanPayload.subjectFocusTargets).forEach(sub => {
+                            const target = cleanPayload.subjectFocusTargets[sub];
+                            if (target && target !== firebase.firestore.FieldValue.delete()) {
+                                const targetTime = target.updatedAt || (target.createdAt ? new Date(target.createdAt).getTime() : 0);
+                                const tombstoneVal = tombstones[`subjectFocusTargets_${sub}`] || tombstones[sub];
+                                const tombstoneTime = (typeof tombstoneVal === 'number') ? tombstoneVal : (tombstoneVal === true ? Number.MAX_SAFE_INTEGER : 0);
 
-                                    if (targetTime > tombstoneTime) {
-                                        delete tombstones[`subjectFocusTargets_${sub}`];
-                                        delete tombstones[sub];
-                                        delete cleanPayload._tombstones[`subjectFocusTargets_${sub}`];
-                                        delete cleanPayload._tombstones[sub];
-                                        if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
-                                            cleanPayload._tombstones[`subjectFocusTargets_${sub}`] = firebase.firestore.FieldValue.delete();
-                                            cleanPayload._tombstones[sub] = firebase.firestore.FieldValue.delete();
-                                        }
+                                if (targetTime > tombstoneTime) {
+                                    delete tombstones[`subjectFocusTargets_${sub}`];
+                                    delete tombstones[sub];
+                                    delete cleanPayload._tombstones[`subjectFocusTargets_${sub}`];
+                                    delete cleanPayload._tombstones[sub];
+                                    if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
+                                        cleanPayload._tombstones[`subjectFocusTargets_${sub}`] = firebase.firestore.FieldValue.delete();
+                                        cleanPayload._tombstones[sub] = firebase.firestore.FieldValue.delete();
+                                    }
+                                } else {
+                                    delete cleanPayload.subjectFocusTargets[sub];
+                                    if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
+                                        cleanPayload.subjectFocusTargets[sub] = firebase.firestore.FieldValue.delete();
+                                    }
+                                }
+                            }
+                        });
+
+                        Object.keys(tombstones).forEach(tKey => {
+                            if (tKey.startsWith('subjectFocusTargets_')) {
+                                const subKey = tKey.substring('subjectFocusTargets_'.length);
+                                if (!cleanPayload.subjectFocusTargets[subKey] || cleanPayload.subjectFocusTargets[subKey] === firebase.firestore.FieldValue.delete()) {
+                                    if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
+                                        cleanPayload.subjectFocusTargets[subKey] = firebase.firestore.FieldValue.delete();
                                     } else {
-                                        delete cleanPayload.subjectFocusTargets[sub];
-                                        if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
-                                            cleanPayload.subjectFocusTargets[sub] = firebase.firestore.FieldValue.delete();
-                                        }
+                                        delete cleanPayload.subjectFocusTargets[subKey];
                                     }
                                 }
-                            });
-
-                            Object.keys(tombstones).forEach(tKey => {
-                                if (tKey.startsWith('subjectFocusTargets_')) {
-                                    const subKey = tKey.substring('subjectFocusTargets_'.length);
-                                    if (!cleanPayload.subjectFocusTargets[subKey] || cleanPayload.subjectFocusTargets[subKey] === firebase.firestore.FieldValue.delete()) {
-                                        if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
-                                            cleanPayload.subjectFocusTargets[subKey] = firebase.firestore.FieldValue.delete();
-                                        } else {
-                                            delete cleanPayload.subjectFocusTargets[subKey];
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                    } else {
-                        cleanPayload.updatedAt = Date.now();
+                            }
+                        });
                     }
+                } else {
+                    cleanPayload.updatedAt = Date.now();
+                }
 
-                    const arrayLengths = {
-                        tasks: (cleanPayload.tasks || []).length,
-                        tracks: (cleanPayload.tracks || []).length,
-                        customActions: (cleanPayload.customActions || []).length,
-                        paceGoals: (cleanPayload.paceGoals || []).length
-                    };
-                    console.log(`SYNC: EXECUTE_SAVE - UID: ${user.uid}, SaveGen: ${captureGen}, ArrayLengths: ${JSON.stringify(arrayLengths)}`);
-                    console.log("SYNC: WRITE_ATTEMPT", {
-                        uid: user.uid,
-                        generation: captureGen,
-                        sessionId: captureSessionId,
-                        cloudDocumentExists: this.cloudDocumentExists,
-                        isLocalDirty: AppState.isLocalDirty,
-                        documentPath: `users/${user.uid}`,
-                        payloadKeys: Object.keys(cleanPayload)
-                    });
-                    console.log(`SYNC_DEBUG SAVE_UPDATED_AT: ${cleanPayload.updatedAt}`);
-                    console.log(`SYNC_DEBUG FIRESTORE_WRITE_START: UID=${user.uid}`);
+                console.log(`SYNC: WRITE_ATTEMPT - UID: ${user.uid}, SaveGen: ${captureGen}, Rev: ${targetRevision}`);
+                await AppState.db.collection('users').doc(user.uid).set(cleanPayload, { merge: true });
 
-                    await AppState.db.collection('users').doc(user.uid).set(cleanPayload, { merge: true });
+                // Re-verify generation after async write
+                if (captureGen !== (AppState.syncGeneration || 0)) {
+                    console.warn(`SYNC_DEBUG SAVE_COMMITTED_BUT_GENERATION_STALE: Capture=${captureGen}, Current=${AppState.syncGeneration}`);
+                    return;
+                }
 
-                    // Re-verify generation after async write
-                    if (captureGen !== (AppState.syncGeneration || 0)) {
-                        console.warn(`SYNC_DEBUG SAVE_COMMITTED_BUT_GENERATION_STALE: Capture=${captureGen}, Current=${AppState.syncGeneration}`);
-                        return;
-                    }
+                this.cloudDocumentExists = true;
+                if (window.AppState) {
+                    window.AppState.cloudDocumentExists = true;
+                }
+                this._lastCommittedRevision = targetRevision;
+                AppState.lastCommittedRevision = targetRevision;
+                this._retryCount = 0;
 
-                    this.cloudDocumentExists = true;
-                    if (window.AppState) {
-                        window.AppState.cloudDocumentExists = true;
-                        window.AppState.isLocalDirty = false;
-                    }
-                    console.log("SYNC: WRITE_SUCCESS", {
-                        uid: user.uid,
-                        documentPath: `users/${user.uid}`,
-                        timestamp: Date.now()
-                    });
-                    console.log(`SYNC_DEBUG FIRESTORE_WRITE_SUCCESS: UID=${user.uid}, Timestamp=${Date.now()}`);
+                // Check if new local edits arrived while the write was in-flight
+                if ((AppState.localRevision || 0) > targetRevision || this._hasPendingWriteInFlight) {
+                    this._hasPendingWriteInFlight = false;
+                    AppState.isLocalDirty = true;
+                    console.log(`SYNC: COALESCED_NEXT_WRITE - Scheduling follow-up write for Revision ${AppState.localRevision}`);
+                    setTimeout(() => {
+                        this._executeSave(isExplicitInitialization, isUserInitiated, captureGen);
+                    }, 50);
+                } else {
+                    AppState.isLocalDirty = false;
+                    AppState.saveStatus = 'saved';
                     showSync('saved');
-                } catch (err) {
-                    console.error("SYNC: WRITE_FAILED", {
-                        uid: user.uid,
-                        documentPath: `users/${user.uid}`,
-                        error: err
-                    });
-                    console.error(`SYNC_DEBUG FIRESTORE_WRITE_FAILED: UID=${user.uid}`, err);
-                    showSync('error');
+                    console.log(`SYNC: WRITE_SUCCESS - Revision ${targetRevision} committed cleanly.`);
                 }
             } else {
                 if (window.AppState) window.AppState.isLocalDirty = false;
+                AppState.saveStatus = 'saved';
                 showSync('saved');
+            }
+        } catch (err) {
+            console.error("SYNC: WRITE_FAILED", { uid: user.uid, error: err });
+            if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                AppState.saveStatus = 'offline';
+                showSync('offline');
+            } else {
+                AppState.saveStatus = 'error';
+                showSync('error');
+                this._retryCount++;
+                const delay = Math.min(30000, Math.pow(2, this._retryCount) * 1000);
+                console.log(`SYNC: AUTO_RETRY_SCHEDULED in ${delay}ms (Attempt ${this._retryCount})`);
+                if (this._retryTimer) clearTimeout(this._retryTimer);
+                this._retryTimer = setTimeout(() => {
+                    this._executeSave(isExplicitInitialization, isUserInitiated, captureGen);
+                }, delay);
             }
         } finally {
             this._isSaving = false;
@@ -1017,13 +1062,15 @@ window.FirebaseService = {
                 this.cloudDocumentExists = true;
                 if (window.AppState) {
                     window.AppState.cloudDocumentExists = true;
-                    window.AppState.isLocalDirty = false;
+                    if (!meta.reconciled && (AppState.localRevision || 0) <= (AppState.lastCommittedRevision || 0)) {
+                        window.AppState.isLocalDirty = false;
+                    }
                 }
-                // DATA SAFETY GUARD: Prevent empty cloud payload from overwriting valid local data
-                if (hasUserData(AppState) && !hasUserData(data)) {
-                    console.warn("SYNC: EMPTY_CLOUD_PAYLOAD_REJECTED - Remote cloud payload is empty, keeping local state.");
+                // DATA SAFETY GUARD: Prevent empty cloud payload from overwriting valid local data during initial bootstrap
+                if (hasUserData(AppState) && !hasUserData(data) && !AppState.hasLoadedFromCloud) {
+                    console.warn("SYNC: EMPTY_CLOUD_PAYLOAD_REJECTED - Remote cloud payload is empty during boot, keeping local state.");
                 } else {
-                    window.applyFullAppState(data, false);
+                    window.applyFullAppState(data, false, false, true);
                     try {
                         const jsonStr = JSON.stringify(data);
                         safeStorage.setItem('local_app_state', jsonStr);

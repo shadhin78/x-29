@@ -126,6 +126,10 @@ window.AppState = {
     syncGeneration: 0,
     lastAppliedCloudTimestamp: 0,
     isLocalDirty: false,
+    localRevision: 0,
+    lastCommittedRevision: 0,
+    lastLocalEditTime: 0,
+    saveStatus: 'saved',
     syncSessionId: "",
     _tombstones: {},
     _tasksDateMap: new Map()
@@ -152,7 +156,9 @@ const stateKeys = [
     'syllabusStructure', 'customSyllabus', 'customPrograms', 'programVisibility', 'weeklyTargetsDatabase',
     'dailyTargetsDatabase', 'scheduleBlocks', 'scheduleBlocks2', 'scheduleGroups',
     'hasLoadedFromCloud', 'cloudDocumentExists',
-    'syncGeneration', 'lastAppliedCloudTimestamp', 'isLocalDirty', 'syncSessionId', '_tombstones'
+    'syncGeneration', 'lastAppliedCloudTimestamp', 'isLocalDirty',
+    'localRevision', 'lastCommittedRevision', 'lastLocalEditTime', 'saveStatus',
+    'syncSessionId', '_tombstones'
 ];
 
 stateKeys.forEach(key => {
@@ -348,43 +354,59 @@ window.recordItemDeletion = function(itemId) {
     const cleanId = String(itemId);
     if (!AppState._tombstones) AppState._tombstones = {};
     AppState._tombstones[cleanId] = Date.now() + (window.serverTimeOffset || 0);
+    if (typeof window.markLocalMutation === 'function') {
+        window.markLocalMutation(`delete_${cleanId}`);
+    }
     console.log(`[TOMBSTONE] registered ${cleanId}`);
 };
 
 /**
- * Safe Hydration Guard
- * Ensures authoritative Firestore cloud payloads are applied cleanly to AppState.
+ * Tracks a local user mutation, increments the monotonic revision counter, and marks local state dirty.
  */
-window.shouldHydrateField = function(key, cloudValue, currentLocalValue, isExplicitWipe = false) {
-    if (isExplicitWipe) return true;
+window.markLocalMutation = function(reason = "") {
+    if (!AppState.localRevision) AppState.localRevision = 0;
+    AppState.localRevision++;
+    AppState.lastLocalEditTime = Date.now() + (window.serverTimeOffset || 0);
+    AppState.isLocalDirty = true;
+    if (window.FirebaseService && typeof window.FirebaseService.notifyLocalMutation === 'function') {
+        window.FirebaseService.notifyLocalMutation(reason);
+    }
+    return AppState.localRevision;
+};
+
+/**
+ * Safe Hydration Guard
+ * Ensures authoritative Firestore cloud payloads are applied cleanly to AppState
+ * without reviving deleted items or discarding populated state during uninitialized boots.
+ */
+window.shouldHydrateField = function(key, cloudValue, currentLocalValue, isExplicitWipe = false, isCloudAuthoritative = false) {
+    if (isExplicitWipe || isCloudAuthoritative) return true;
     
     const hasTombstones = AppState._tombstones && Object.keys(AppState._tombstones).length > 0;
     const isDirty = AppState.isLocalDirty === true;
 
     if (Array.isArray(currentLocalValue) && currentLocalValue.length > 0) {
         if (!Array.isArray(cloudValue) || cloudValue.length === 0) {
-            if (isDirty || hasTombstones) {
-                console.log(`[HYDRATION] accepted legitimate empty value for '${key}' due to local deletions/dirty state.`);
+            if (isDirty || hasTombstones || AppState.hasLoadedFromCloud) {
                 return true;
             }
-            console.warn(`HYDRATION_GUARD: Rejecting empty cloud value for '${key}' because local state has ${currentLocalValue.length} items.`);
+            console.warn(`HYDRATION_GUARD: Retaining local cached array for '${key}' during initial boot.`);
             return false;
         }
     }
     if (currentLocalValue && typeof currentLocalValue === 'object' && !Array.isArray(currentLocalValue) && Object.keys(currentLocalValue).length > 0) {
         if (!cloudValue || typeof cloudValue !== 'object' || Object.keys(cloudValue).length === 0) {
-            if (isDirty || hasTombstones) {
-                console.log(`[HYDRATION] accepted legitimate empty object for '${key}' due to local deletions/dirty state.`);
+            if (isDirty || hasTombstones || AppState.hasLoadedFromCloud) {
                 return true;
             }
-            console.warn(`HYDRATION_GUARD: Rejecting empty cloud object for '${key}' because local state is populated.`);
+            console.warn(`HYDRATION_GUARD: Retaining local cached object for '${key}' during initial boot.`);
             return false;
         }
     }
     return true;
 };
 
-window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = false) {
+window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = false, isSilent = false) {
     if (!data || typeof data !== 'object') return false;
     delete data._metadata;
 
@@ -392,6 +414,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
         AppState._tombstones = Object.assign({}, AppState._tombstones || {}, data._tombstones);
     }
 
+    let isCloudAuthoritative = false;
     if (data.updatedAt) {
         let t = 0;
         if (typeof data.updatedAt === 'number') {
@@ -401,14 +424,19 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
         } else if (typeof data.updatedAt.seconds === 'number') {
             t = data.updatedAt.seconds * 1000;
         }
-        if (t > 0) AppState.lastAppliedCloudTimestamp = t;
+        if (t > 0) {
+            AppState.lastAppliedCloudTimestamp = Math.max(AppState.lastAppliedCloudTimestamp || 0, t);
+            isCloudAuthoritative = true;
+        }
     }
-    AppState.isLocalDirty = false;
+    if (!AppState.isLocalDirty) {
+        AppState.isLocalDirty = false;
+    }
 
     let rejectedAnyField = false;
 
     if (data.tasks !== undefined) {
-        if (window.shouldHydrateField('tasks', data.tasks, AppState.tasks, isExplicitWipe)) {
+        if (window.shouldHydrateField('tasks', data.tasks, AppState.tasks, isExplicitWipe, isCloudAuthoritative)) {
             AppState.tasks = data.tasks;
         } else {
             rejectedAnyField = true;
@@ -416,7 +444,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.tracks !== undefined) {
-        if (window.shouldHydrateField('tracks', data.tracks, AppState.tracks, isExplicitWipe)) {
+        if (window.shouldHydrateField('tracks', data.tracks, AppState.tracks, isExplicitWipe, isCloudAuthoritative)) {
             AppState.tracks = data.tracks;
         } else {
             rejectedAnyField = true;
@@ -425,7 +453,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
 
     if (data.customSyllabus !== undefined || data.syllabusStructure !== undefined) {
         const syl = data.syllabusStructure || data.customSyllabus;
-        if (window.shouldHydrateField('syllabusStructure', syl, AppState.syllabusStructure, isExplicitWipe)) {
+        if (window.shouldHydrateField('syllabusStructure', syl, AppState.syllabusStructure, isExplicitWipe, isCloudAuthoritative)) {
             AppState.syllabusStructure = syl;
             AppState.customSyllabus = syl;
         } else {
@@ -434,7 +462,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.customPrograms !== undefined) {
-        if (window.shouldHydrateField('customPrograms', data.customPrograms, AppState.customPrograms, isExplicitWipe)) {
+        if (window.shouldHydrateField('customPrograms', data.customPrograms, AppState.customPrograms, isExplicitWipe, isCloudAuthoritative)) {
             AppState.customPrograms = data.customPrograms;
         } else {
             rejectedAnyField = true;
@@ -442,7 +470,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.customActions !== undefined) {
-        if (window.shouldHydrateField('customActions', data.customActions, AppState.customActions, isExplicitWipe)) {
+        if (window.shouldHydrateField('customActions', data.customActions, AppState.customActions, isExplicitWipe, isCloudAuthoritative)) {
             AppState.customActions = data.customActions;
         } else {
             rejectedAnyField = true;
@@ -450,7 +478,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.paceGoals !== undefined) {
-        if (window.shouldHydrateField('paceGoals', data.paceGoals, AppState.paceGoals, isExplicitWipe)) {
+        if (window.shouldHydrateField('paceGoals', data.paceGoals, AppState.paceGoals, isExplicitWipe, isCloudAuthoritative)) {
             AppState.paceGoals = data.paceGoals;
         } else {
             rejectedAnyField = true;
@@ -458,7 +486,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.passedItems !== undefined) {
-        if (window.shouldHydrateField('passedItems', data.passedItems, AppState.passedItems, isExplicitWipe)) {
+        if (window.shouldHydrateField('passedItems', data.passedItems, AppState.passedItems, isExplicitWipe, isCloudAuthoritative)) {
             AppState.passedItems = {
                 programs: Array.isArray(data.passedItems.programs) ? data.passedItems.programs : [],
                 subjects: Array.isArray(data.passedItems.subjects) ? data.passedItems.subjects : []
@@ -469,7 +497,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.revisionData !== undefined) {
-        if (window.shouldHydrateField('revisionData', data.revisionData, AppState.revisionData, isExplicitWipe)) {
+        if (window.shouldHydrateField('revisionData', data.revisionData, AppState.revisionData, isExplicitWipe, isCloudAuthoritative)) {
             AppState.revisionData = data.revisionData;
         } else {
             rejectedAnyField = true;
@@ -487,7 +515,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.successResults !== undefined) {
-        if (window.shouldHydrateField('successResults', data.successResults, AppState.successResults, isExplicitWipe)) {
+        if (window.shouldHydrateField('successResults', data.successResults, AppState.successResults, isExplicitWipe, isCloudAuthoritative)) {
             AppState.successResults = data.successResults;
         } else {
             rejectedAnyField = true;
@@ -495,7 +523,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.timerLogs !== undefined) {
-        if (window.shouldHydrateField('timerLogs', data.timerLogs, AppState.timerLogs, isExplicitWipe)) {
+        if (window.shouldHydrateField('timerLogs', data.timerLogs, AppState.timerLogs, isExplicitWipe, isCloudAuthoritative)) {
             AppState.timerLogs = data.timerLogs;
         } else {
             rejectedAnyField = true;
@@ -511,7 +539,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     if (data.spectraHeatmapRange !== undefined) AppState.spectraHeatmapRange = data.spectraHeatmapRange;
     if (data.sessionHistoryFilter !== undefined) AppState.sessionHistoryFilter = data.sessionHistoryFilter;
     if (data.subjectFocusTargets !== undefined) {
-        if (window.shouldHydrateField('subjectFocusTargets', data.subjectFocusTargets, AppState.subjectFocusTargets, isExplicitWipe)) {
+        if (window.shouldHydrateField('subjectFocusTargets', data.subjectFocusTargets, AppState.subjectFocusTargets, isExplicitWipe, isCloudAuthoritative)) {
             let sft = Object.assign({}, data.subjectFocusTargets || {});
             const tombstones = AppState._tombstones || {};
             const localTargets = AppState.subjectFocusTargets || {};
@@ -560,7 +588,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     if (data.dailyTargetsDatabase !== undefined) AppState.dailyTargetsDatabase = data.dailyTargetsDatabase;
 
     if (data.scheduleBlocks !== undefined) {
-        if (window.shouldHydrateField('scheduleBlocks', data.scheduleBlocks, AppState.scheduleBlocks, isExplicitWipe)) {
+        if (window.shouldHydrateField('scheduleBlocks', data.scheduleBlocks, AppState.scheduleBlocks, isExplicitWipe, isCloudAuthoritative)) {
             AppState.scheduleBlocks = data.scheduleBlocks;
         } else {
             rejectedAnyField = true;
@@ -568,7 +596,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.scheduleBlocks2 !== undefined) {
-        if (window.shouldHydrateField('scheduleBlocks2', data.scheduleBlocks2, AppState.scheduleBlocks2, isExplicitWipe)) {
+        if (window.shouldHydrateField('scheduleBlocks2', data.scheduleBlocks2, AppState.scheduleBlocks2, isExplicitWipe, isCloudAuthoritative)) {
             AppState.scheduleBlocks2 = data.scheduleBlocks2;
         } else {
             rejectedAnyField = true;
@@ -576,7 +604,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.scheduleGroups !== undefined) {
-        if (window.shouldHydrateField('scheduleGroups', data.scheduleGroups, AppState.scheduleGroups, isExplicitWipe)) {
+        if (window.shouldHydrateField('scheduleGroups', data.scheduleGroups, AppState.scheduleGroups, isExplicitWipe, isCloudAuthoritative)) {
             AppState.scheduleGroups = data.scheduleGroups;
         } else {
             rejectedAnyField = true;
@@ -584,7 +612,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.fiscalLedger !== undefined) {
-        if (window.shouldHydrateField('fiscalLedger', data.fiscalLedger, AppState.fiscalLedger, isExplicitWipe)) {
+        if (window.shouldHydrateField('fiscalLedger', data.fiscalLedger, AppState.fiscalLedger, isExplicitWipe, isCloudAuthoritative)) {
             AppState.fiscalLedger = data.fiscalLedger;
         } else {
             rejectedAnyField = true;
@@ -592,7 +620,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.examSessions !== undefined) {
-        if (window.shouldHydrateField('examSessions', data.examSessions, AppState.examSessions, isExplicitWipe)) {
+        if (window.shouldHydrateField('examSessions', data.examSessions, AppState.examSessions, isExplicitWipe, isCloudAuthoritative)) {
             AppState.examSessions = data.examSessions;
         } else {
             rejectedAnyField = true;
@@ -600,7 +628,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.examRoutine !== undefined) {
-        if (window.shouldHydrateField('examRoutine', data.examRoutine, AppState.examRoutine, isExplicitWipe)) {
+        if (window.shouldHydrateField('examRoutine', data.examRoutine, AppState.examRoutine, isExplicitWipe, isCloudAuthoritative)) {
             AppState.examRoutine = data.examRoutine;
         } else {
             rejectedAnyField = true;
@@ -621,7 +649,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     if (typeof window.rebuildTaskDateMap === 'function') window.rebuildTaskDateMap();
     if (typeof window.updateSubjectTargetUI === 'function') window.updateSubjectTargetUI();
     if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
-    if (typeof window.renderUI === 'function') window.renderUI();
+    if (!isSilent && typeof window.renderUI === 'function') window.renderUI();
     return !rejectedAnyField;
 };
 
