@@ -7084,24 +7084,38 @@ function renderTrendCharts() {
         });
     }
 
-    // 2. Scan AppState.tasks for custom action calculations
-    AppState.tasks.forEach(t => {
-        const taskDate = getTaskDate(t);
-        if (taskDate < chartStart) return; // Sync baseline start date!
-        const tYear = taskDate.getFullYear();
-        const tMonth = taskDate.getMonth();
-        const rawMidx = (tYear - sYear) * 12 + (tMonth - sMonth);
+    // 2. Scan tasks for custom action calculations using window.getTaskForDate for 100% daily action card sync
+    // A. Populate actDaily for the current month
+    for (let d = 1; d <= daysInMonth; d++) {
+        const cellDate = new Date(todayObj.getFullYear(), currentMonth, d);
+        if (cellDate < chartStart) continue;
+        const task = window.getTaskForDate(cellDate);
+        if (task) {
+            window.customActions.forEach(a => {
+                if (task[a.id]) actDaily[a.id][d - 1] = 1;
+            });
+        }
+    }
 
-        if (rawMidx < totalMonths) {
-            if (rawMidx >= 0) {
-                window.customActions.forEach(a => { if (t[a.id]) actCum[a.id][rawMidx]++; });
+    // B. Populate actCum across all months in the trend chart range
+    for (let mIdx = 0; mIdx < totalMonths; mIdx++) {
+        const mYear = sYear + Math.floor((sMonth + mIdx) / 12);
+        const mMonth = (sMonth + mIdx) % 12;
+        const daysInThatMonth = new Date(mYear, mMonth + 1, 0).getDate();
+        const maxDay = (mIdx === todayMidx) ? currentDay : daysInThatMonth;
+
+        for (let d = 1; d <= maxDay; d++) {
+            const cellDate = new Date(mYear, mMonth, d);
+            if (cellDate < chartStart) continue;
+            if (cellDate > todayObj) break;
+            const task = window.getTaskForDate(cellDate);
+            if (task) {
+                window.customActions.forEach(a => {
+                    if (task[a.id]) actCum[a.id][mIdx]++;
+                });
             }
         }
-        if (tYear === todayObj.getFullYear() && tMonth === currentMonth) {
-            const dIdx = taskDate.getDate() - 1;
-            window.customActions.forEach(a => { if (t[a.id]) actDaily[a.id][dIdx] = 1; });
-        }
-    });
+    }
 
     // 3. Populate subject and program completion trends
     completedChaptersMap.forEach((compDate, uniqueKey) => {
@@ -7262,15 +7276,16 @@ function renderTrendCharts() {
             let totalPossible = window.customActions.length * elapsedDays;
             let completedCount = 0;
 
-            AppState.tasks.forEach(t => {
-                const taskDate = getTaskDate(t);
-                if (taskDate < chartStart) return; // Skip if before start date
-                if (taskDate.getFullYear() === todayObj.getFullYear() && taskDate.getMonth() === todayObj.getMonth()) {
+            for (let d = 1; d <= currentDay; d++) {
+                const cellDate = new Date(todayObj.getFullYear(), todayObj.getMonth(), d);
+                if (cellDate < chartStart) continue;
+                const t = window.getTaskForDate(cellDate);
+                if (t) {
                     window.customActions.forEach(a => {
                         if (t[a.id]) completedCount++;
                     });
                 }
-            });
+            }
 
             let avgPct = totalPossible > 0 ? Math.round((completedCount / totalPossible) * 100) : 0;
 
@@ -7920,9 +7935,12 @@ window.setDailyState = function (type, state) {
         dashBar.className = `h-full rounded-full transition-all duration-500 ease-out ${clr}`;
     }
 
-    // 4b. Instant The X Commitments Habit Radar chart sync
+    // 4b. Instant The X Commitments Habit Radar & Trend Line Charts sync
     if (typeof window.renderSpectraCommitmentsChart === 'function') {
         window.renderSpectraCommitmentsChart();
+    }
+    if (typeof renderTrendCharts === 'function') {
+        renderTrendCharts();
     }
 
     // 5. Broadcast to other open tabs for <2ms local synchronization
@@ -13417,9 +13435,12 @@ window.toggleModalDay = function (taskIdOrDate, typeKey, evt) {
             }
         }
 
-        // Instant The X Commitments Habit Radar chart sync
+        // Instant The X Commitments Habit Radar & Trend Line Charts sync
         if (typeof window.renderSpectraCommitmentsChart === 'function') {
             window.renderSpectraCommitmentsChart();
+        }
+        if (typeof renderTrendCharts === 'function') {
+            renderTrendCharts();
         }
 
         // 2. Broadcast to other open browser tabs for <2ms instant sync
@@ -22704,6 +22725,7 @@ if (typeof window.BroadcastChannel !== 'undefined') {
                 if (typeof renderDailyTracker === 'function') renderDailyTracker();
                 if (typeof renderDailyLogs === 'function') renderDailyLogs();
                 if (typeof window.renderSpectraCommitmentsChart === 'function') window.renderSpectraCommitmentsChart();
+                if (typeof renderTrendCharts === 'function') renderTrendCharts();
                 const modal = document.getElementById('analytics-modal');
                 if (modal && !modal.classList.contains('hidden') && typeof populateAnalyticsModal === 'function') {
                     populateAnalyticsModal(window.currentAnalyticsAction || ev.data.actionId);
