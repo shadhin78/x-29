@@ -73,26 +73,48 @@ function getTaskDate(task) {
 
 window.getTaskForDate = function(d) {
     if (!d || isNaN(d.getTime())) return null;
-    const dStr = Utils.formatDate(d);
+
+    if (!AppState._tasksDateMap || AppState._tasksDateMap.size === 0) {
+        if (typeof window.rebuildTaskDateMap === 'function') window.rebuildTaskDateMap();
+    }
+
+    const dStr = (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function') ? Utils.formatDate(d) : null;
+    const isoKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const ymdKey = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+
+    if (AppState._tasksDateMap) {
+        let task = (dStr && AppState._tasksDateMap.get(dStr)) || AppState._tasksDateMap.get(isoKey) || AppState._tasksDateMap.get(ymdKey);
+        if (task) return task;
+    }
+
+    // Fast fallback scan if not found in cache map
     const targetY = d.getFullYear();
     const targetM = d.getMonth();
     const targetD = d.getDate();
 
-    return (AppState.tasks || []).find(t => {
-        if (!t) return false;
-        if (typeof t.id === 'number') {
-            const taskD = getTaskDate(t);
-            if (taskD && !isNaN(taskD.getTime())) {
-                return taskD.getFullYear() === targetY && taskD.getMonth() === targetM && taskD.getDate() === targetD;
+    const tasks = AppState.tasks || [];
+    for (let i = 0; i < tasks.length; i++) {
+        const t = tasks[i];
+        if (!t) continue;
+        if (t.date === dStr) {
+            if (AppState._tasksDateMap) {
+                AppState._tasksDateMap.set(dStr, t);
+                AppState._tasksDateMap.set(isoKey, t);
             }
+            return t;
         }
-        if (t.date === dStr) return true;
         const taskD = getTaskDate(t);
         if (taskD && !isNaN(taskD.getTime())) {
-            return taskD.getFullYear() === targetY && taskD.getMonth() === targetM && taskD.getDate() === targetD;
+            if (taskD.getFullYear() === targetY && taskD.getMonth() === targetM && taskD.getDate() === targetD) {
+                if (AppState._tasksDateMap) {
+                    if (dStr) AppState._tasksDateMap.set(dStr, t);
+                    AppState._tasksDateMap.set(isoKey, t);
+                }
+                return t;
+            }
         }
-        return false;
-    });
+    }
+    return null;
 };
 
 window.onCgpaBlur = function (inputEl) {
@@ -5986,19 +6008,10 @@ window.getCommitmentMonthData = function (dateObj) {
         ? [...window.customActions].sort((a, b) => (a.priority ?? 3) - (b.priority ?? 3) || (a.order ?? 999) - (b.order ?? 999))
         : [];
 
-    const tasksList = (typeof AppState !== 'undefined' && Array.isArray(AppState.tasks) && AppState.tasks.length > 0)
-        ? AppState.tasks
-        : (Array.isArray(window.tasks) ? window.tasks : []);
-
     for (let d = 1; d <= daysInMonth; d++) {
         const dayKey = String(d);
         const cellDate = new Date(y, m, d);
-        const dFormatted = (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function')
-            ? Utils.formatDate(cellDate)
-            : null;
-        const dISO = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-
-        const task = tasksList.find(t => t.date === dFormatted || t.date === dISO);
+        const task = window.getTaskForDate(cellDate);
 
         if (task) {
             if (!result[dayKey]) result[dayKey] = {};
@@ -6022,10 +6035,6 @@ window.toggleCommitmentCell = function (dayNum, habitIndex) {
     const y = activeDate.getFullYear();
     const m = activeDate.getMonth();
     const cellDate = new Date(y, m, dayNum);
-    const dFormatted = (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function')
-        ? Utils.formatDate(cellDate)
-        : null;
-    const dISO = `${y}-${String(m + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
 
     if (!Array.isArray(window.customActions)) {
         window.customActions = [];
@@ -6038,43 +6047,74 @@ window.toggleCommitmentCell = function (dayNum, habitIndex) {
     }
 
     const targetAction = sortedActions[habitIndex];
+    const today = new Date();
+    const isToday = (today.getFullYear() === y && today.getMonth() === m && today.getDate() === dayNum);
 
-    if (typeof AppState !== 'undefined') {
-        if (!Array.isArray(AppState.tasks)) AppState.tasks = [];
-        window.tasks = AppState.tasks;
-    } else if (!Array.isArray(window.tasks)) {
-        window.tasks = [];
+    if (isToday) {
+        // Delegate to setDailyState for 100% unified multi-interface synchronization:
+        // Updates Daily Action page YES/NO buttons & card, Dashboard compact button & badge, dt-log today box, progress bars, multi-tab sync, cloud save, and commitments chart.
+        if (typeof window.setDailyState === 'function') {
+            window.setDailyState(targetAction.id);
+        }
+        return;
     }
 
-    const targetArray = (typeof AppState !== 'undefined' && Array.isArray(AppState.tasks)) ? AppState.tasks : window.tasks;
+    // Historical / other day toggle
+    let task = window.getTaskForDate(cellDate);
+    const dFormatted = (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function')
+        ? Utils.formatDate(cellDate)
+        : null;
+    const dISO = `${y}-${String(m + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
 
-    let task = targetArray.find(t => t.date === dFormatted || t.date === dISO);
     if (!task) {
         task = {
             id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
             date: dFormatted || dISO,
-            note: ''
+            note: '',
+            updatedAt: Date.now() + (window.serverTimeOffset || 0)
         };
         window.customActions.forEach(a => { task[a.id] = false; });
-        targetArray.push(task);
+        AppState.tasks.push(task);
     }
 
-    task[targetAction.id] = !task[targetAction.id];
+    const newState = !Boolean(task[targetAction.id]);
+    task[targetAction.id] = newState;
+    task.updatedAt = Date.now() + (window.serverTimeOffset || 0);
+
+    if (typeof AppState !== 'undefined') {
+        AppState.isLocalDirty = true;
+        if (AppState._tasksDateMap) {
+            if (task.date) AppState._tasksDateMap.set(task.date, task);
+            AppState._tasksDateMap.set(dISO, task);
+            if (dFormatted) AppState._tasksDateMap.set(dFormatted, task);
+            if (task.id) AppState._tasksDateMap.set(String(task.id), task);
+        }
+    }
 
     // Fast synchronous targeted updates (< 2ms execution time)
     if (typeof window.renderSpectraCommitmentsChart === 'function') {
         window.renderSpectraCommitmentsChart();
     }
-    if (typeof window.renderDailyTracker === 'function') {
-        window.renderDailyTracker();
-    }
     if (typeof window.renderDailyLogs === 'function') {
         window.renderDailyLogs();
     }
 
+    // Broadcast to other open browser tabs
+    if (window.X29SyncChannel) {
+        try {
+            window.X29SyncChannel.postMessage({
+                type: 'DAILY_ACTION_UPDATE',
+                actionId: targetAction.id,
+                dateStr: dFormatted || dISO,
+                newState: newState,
+                timestamp: Date.now()
+            });
+        } catch (e) {}
+    }
+
     // Cloud Save
     if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
-        window.FirebaseService.saveToCloud();
+        window.FirebaseService.saveToCloud(false);
     }
 
     // Debounce non-critical heavy chart updates
@@ -6361,9 +6401,10 @@ window.renderSpectraCommitmentsChart = function () {
                 <path d="${pathData}"
                     fill="${fillColor}"
                     ${strokeAttr}
-                    class="${cellClass}"
+                    class="${cellClass} cursor-pointer"
                     data-day="${dayNum}"
                     data-habit="${h}"
+                    onclick="window.toggleCommitmentCell(${dayNum}, ${h})"
                     onmouseenter="window.showCommitmentTooltip(event, '${safeEscapeHtml(labelText)}', ${dayNum}, '${monthName} ${dayNum}, ${year}', ${isCompleted})"
                     onmouseleave="window.hideCommitmentTooltip()"
                 />
@@ -6527,6 +6568,7 @@ window.showCommitmentTooltip = function (event, habitName, dayNum, formattedDate
             <span>Status:</span>
             ${statusBadge}
         </div>
+        <div class="text-[8.5px] text-slate-400 font-bold mt-1 pt-1 border-t border-white/10">Click to toggle check-in</div>
     `;
 
     tooltip.classList.remove('hidden');
@@ -7237,15 +7279,13 @@ function renderTrendCharts() {
             let checkDate = new Date();
             checkDate.setHours(0, 0, 0, 0);
 
-            const tTodayStr = Utils.formatDate(checkDate);
-            const tTodayObj = AppState.tasks.find(t => t.date === tTodayStr);
+            const tTodayObj = window.getTaskForDate(checkDate);
             let todayHasAction = false;
             window.customActions.forEach(a => { if (tTodayObj && tTodayObj[a.id]) todayHasAction = true; });
 
             if (!todayHasAction) {
                 let yesterday = new Date(checkDate.getTime() - 24 * 60 * 60 * 1000);
-                const yestStr = Utils.formatDate(yesterday);
-                const yestTaskObj = AppState.tasks.find(t => t.date === yestStr);
+                const yestTaskObj = window.getTaskForDate(yesterday);
                 let yestHasAction = false;
                 window.customActions.forEach(a => { if (yestTaskObj && yestTaskObj[a.id]) yestHasAction = true; });
                 if (yestHasAction) {
@@ -7254,8 +7294,7 @@ function renderTrendCharts() {
             }
 
             while (true) {
-                const dStr = Utils.formatDate(checkDate);
-                const tObj = AppState.tasks.find(t => t.date === dStr);
+                const tObj = window.getTaskForDate(checkDate);
                 if (checkDate < chartStart) break; // Streak cannot start before AppState.PLAN_START_DATE
                 let hasAction = false;
                 window.customActions.forEach(a => { if (tObj && tObj[a.id]) hasAction = true; });
@@ -7526,7 +7565,7 @@ window.updateLegends = function () {
 
 window.renderDailyTracker = function () {
     const todayStr = Utils.formatDate(new Date());
-    const todayTask = AppState.tasks.find(t => t.date === todayStr);
+    const todayTask = window.getTaskForDate(new Date()) || AppState.tasks.find(t => t.date === todayStr);
     let c = 0; window.customActions.forEach(a => { if (todayTask && todayTask[a.id]) c++; });
     const dailyPct = window.customActions.length > 0 ? Math.round((c / window.customActions.length) * 100) : 0;
 
@@ -7565,10 +7604,10 @@ window.renderDailyTracker = function () {
     const sortedActions = [...window.customActions].sort((a, b) => (a.priority ?? 3) - (b.priority ?? 3) || (a.order ?? 999) - (b.order ?? 999));
     sortedActions.forEach(cfg => {
         const state = todayTask ? todayTask[cfg.id] : false;
-        const cMap = AppState.twColors[cfg.color];
+        const cMap = AppState.twColors[cfg.color] || AppState.twColors['blue'];
 
         const cardHtml = `
-                <div class="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-3xl md:rounded-[2rem] shadow-sm flex flex-col transition-all duration-300 min-h-[300px] border-2 ${state === true ? cMap.border + ' shadow-lg' : (state === false ? 'border-red-500 shadow-lg shadow-red-500/10' : 'border-slate-200 dark:border-slate-700')}">
+                <div id="daily-action-card-${cfg.id}" data-action-id="${cfg.id}" class="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-3xl md:rounded-[2rem] shadow-sm flex flex-col transition-all duration-300 min-h-[300px] border-2 ${state === true ? cMap.border + ' shadow-lg' : (state === false ? 'border-red-500 shadow-lg shadow-red-500/10' : 'border-slate-200 dark:border-slate-700')}">
                     <div class="flex justify-between items-start mb-3 sm:mb-4">
                         <div class="flex items-center space-x-2 sm:space-x-3">
                             <div class="p-2 md:p-3 rounded-lg sm:rounded-xl md:rounded-2xl border ${cMap.iconBg} ${cMap.text} ${cMap.borderLt}">
@@ -7597,8 +7636,8 @@ window.renderDailyTracker = function () {
                         </div>
                     </div>
                     <div class="flex gap-2 mb-3 sm:mb-4 p-1 md:p-1.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                        <button class="flex-1 py-1.5 sm:py-2 md:py-2.5 text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 active:scale-90 ${state === true ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-[0_4px_12px_rgba(16,185,129,0.5)] scale-105' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'}" onclick="setDailyState('${cfg.id}', true)">YES</button>
-                        <button class="flex-1 py-1.5 sm:py-2 md:py-2.5 text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 active:scale-90 ${state === false ? 'bg-gradient-to-br from-red-400 to-red-500 text-white shadow-[0_4px_12px_rgba(239,68,68,0.4)] scale-105' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'}" onclick="setDailyState('${cfg.id}', false)">NO</button>
+                        <button id="btn-action-yes-${cfg.id}" class="flex-1 py-1.5 sm:py-2 md:py-2.5 text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 active:scale-90 ${state === true ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-[0_4px_12px_rgba(16,185,129,0.5)] scale-105' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'}" onclick="setDailyState('${cfg.id}', true)">YES</button>
+                        <button id="btn-action-no-${cfg.id}" class="flex-1 py-1.5 sm:py-2 md:py-2.5 text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 active:scale-90 ${state === false ? 'bg-gradient-to-br from-red-400 to-red-500 text-white shadow-[0_4px_12px_rgba(239,68,68,0.4)] scale-105' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'}" onclick="setDailyState('${cfg.id}', false)">NO</button>
                     </div>
                     <div id="dt-log-${cfg.id}"></div>
                 </div>`;
@@ -7623,7 +7662,7 @@ window.renderDailyTracker = function () {
 
         sortedActions.forEach(cfg => {
             const state = todayTask ? todayTask[cfg.id] : false;
-            const cMap = AppState.twColors[cfg.color];
+            const cMap = AppState.twColors[cfg.color] || AppState.twColors['blue'];
             const isActive = state === true;
 
             const activeStyle = `background-color: ${cMap.hex}; border-color: ${cMap.hex}; color: white; box-shadow: 0 4px 12px ${cMap.hex}33;`;
@@ -7632,7 +7671,7 @@ window.renderDailyTracker = function () {
                 : 'bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-900/60';
 
             const compactHtml = `
-                    <button onclick="window.setDailyState('${cfg.id}', ${!isActive})"
+                    <button id="dashboard-daily-action-btn-${cfg.id}" onclick="window.setDailyState('${cfg.id}')"
                             class="flex items-center justify-between p-2 md:p-2.5 rounded-xl border font-black transition-all duration-300 active:scale-95 text-left w-full gap-1.5 h-full ${cardClass}"
                             style="${isActive ? activeStyle : ''}">
                         <div class="flex items-center space-x-1.5 min-w-0">
@@ -7642,16 +7681,16 @@ window.renderDailyTracker = function () {
                             <div class="min-w-0 leading-tight">
                                 <span class="block text-[10px] md:text-xs font-black truncate">${cfg.title}</span>
                                 <div class="flex items-center space-x-1 flex-wrap">
-                                    <span class="block text-[7px] uppercase tracking-wider font-bold opacity-75 truncate">${isActive ? 'YES' : 'NO'}</span>
+                                    <span class="dashboard-action-status-text block text-[7px] uppercase tracking-wider font-bold opacity-75 truncate">${isActive ? 'YES' : 'NO'}</span>
                                     ${cfg.track ? `
-                                        <span class="inline-block px-1 rounded-[3px] text-[6px] font-black uppercase tracking-widest ${isActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300'}">
+                                        <span class="dashboard-action-track-badge inline-block px-1 rounded-[3px] text-[6px] font-black uppercase tracking-widest ${isActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300'}">
                                             ${(window.tracks.find(t => t.id === cfg.track)?.name || 'Track')}
                                         </span>
                                     ` : ''}
                                 </div>
                             </div>
                         </div>
-                        <div class="shrink-0">
+                        <div class="dashboard-action-badge shrink-0">
                             ${isActive
                     ? `<span class="flex h-4 w-4 rounded-full bg-white text-emerald-500 items-center justify-center shadow-sm text-[8px] font-black">✓</span>`
                     : `<span class="flex h-4 w-4 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 items-center justify-center text-[7px] font-black">✕</span>`
@@ -7682,6 +7721,9 @@ window.renderDailyLogs = function () {
 
     const fill = (elId, actionObj) => {
         const el = document.getElementById(elId); if (!el) return;
+        const scrollBox = el.querySelector('.overflow-y-auto');
+        const prevScrollTop = scrollBox ? scrollBox.scrollTop : (el._lastScrollTop || 0);
+
         const key = typeof actionObj === 'object' ? actionObj.id : actionObj;
         const cfgAct = typeof actionObj === 'object' ? actionObj : (window.customActions || []).find(a => a.id === key);
 
@@ -7706,52 +7748,213 @@ window.renderDailyLogs = function () {
             const t = window.getTaskForDate(currDate);
             const done = t ? Boolean(t[key]) : false;
             const taskIdOrDate = t ? t.id : isoLocalDate;
-            const bgClass = done ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-[0_2px_8px_rgba(16,185,129,0.4)] border-transparent' : 'bg-gradient-to-br from-red-400 to-red-500 text-white shadow-[0_2px_8px_rgba(239,68,68,0.4)] border-transparent';
-            html += `<button onclick="toggleModalDay('${taskIdOrDate}', '${key}', event)" title="${dStr}: ${done ? 'YES' : 'NO'}" class="flex flex-col items-center justify-center p-1.5 md:p-2 rounded-xl border active:scale-90 transition-all duration-300 hover:scale-105 ${bgClass} w-full aspect-square focus:outline-none"><span class="text-[7px] md:text-[8px] uppercase font-black opacity-90 mb-0.5">${dStr.split(' ')[0]}</span><span class="text-xs md:text-sm font-black leading-none">${dStr.split(' ')[1]}</span></button>`;
+            const bgClass = done
+                ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-[0_2px_8px_rgba(16,185,129,0.4)] border-transparent'
+                : 'bg-gradient-to-br from-red-400 to-red-500 text-white shadow-[0_2px_8px_rgba(239,68,68,0.4)] border-transparent';
+            html += `<button type="button" onclick="toggleModalDay('${taskIdOrDate}', '${key}', event)" title="${dStr}: ${done ? 'YES' : 'NO'}" data-date="${dStr}" data-key="${key}" class="flex flex-col items-center justify-center p-1.5 md:p-2 rounded-xl border active:scale-90 transition-all duration-200 hover:scale-105 ${bgClass} w-full aspect-square focus:outline-none"><span class="text-[7px] md:text-[8px] uppercase font-black opacity-90 mb-0.5 select-none pointer-events-none">${dStr.split(' ')[0]}</span><span class="text-xs md:text-sm font-black leading-none select-none pointer-events-none">${dStr.split(' ')[1]}</span></button>`;
             currDate.setDate(currDate.getDate() - 1);
         }
-        html += '</div>'; el.innerHTML = html; el.className = "flex flex-col flex-1 min-h-0 pt-2 border-t border-slate-100 dark:border-slate-700/60 mt-2";
+        html += '</div>';
+        el.innerHTML = html;
+        el.className = "flex flex-col flex-1 min-h-0 pt-2 border-t border-slate-100 dark:border-slate-700/60 mt-2";
+
+        const newScrollBox = el.querySelector('.overflow-y-auto');
+        if (newScrollBox && prevScrollTop > 0) {
+            newScrollBox.scrollTop = prevScrollTop;
+            newScrollBox.addEventListener('scroll', () => { el._lastScrollTop = newScrollBox.scrollTop; }, { passive: true });
+        } else if (newScrollBox) {
+            newScrollBox.addEventListener('scroll', () => { el._lastScrollTop = newScrollBox.scrollTop; }, { passive: true });
+        }
     };
     const sortedActions = [...window.customActions].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
     sortedActions.forEach(a => fill(`dt-log-${a.id}`, a));
 };
 
 window.setDailyState = function (type, state) {
-    const todayStr = Utils.formatDate(new Date());
-    let idx = AppState.tasks.findIndex(t => t.date === todayStr);
+    if (!type) return;
+    const now = new Date();
+    const todayStr = (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function') ? Utils.formatDate(now) : null;
+    const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
+    // 1. Locate today's task reliably via getTaskForDate or AppState lookup
+    let task = window.getTaskForDate(now);
+    let idx = -1;
+    if (task) {
+        idx = AppState.tasks.indexOf(task);
+    }
     if (idx === -1) {
+        idx = AppState.tasks.findIndex(t => t && (t.date === todayStr || t.date === todayISO));
+        if (idx > -1) task = AppState.tasks[idx];
+    }
+
+    if (!task || idx === -1) {
         const newTask = {
             id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-            date: todayStr,
-            note: ''
+            date: todayStr || todayISO,
+            note: '',
+            updatedAt: Date.now() + (window.serverTimeOffset || 0)
         };
         if (Array.isArray(window.customActions)) {
             window.customActions.forEach(a => { newTask[a.id] = false; });
         }
         AppState.tasks.push(newTask);
         idx = AppState.tasks.length - 1;
+        task = newTask;
     }
 
-    if (idx > -1) {
-        AppState.tasks[idx][type] = state;
-        if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
-            window.FirebaseService.saveToCloud();
-        }
-        if (typeof renderDailyTracker === 'function') renderDailyTracker();
-        if (typeof renderDailyLogs === 'function') renderDailyLogs();
-        if (typeof window.renderSpectraCommitmentsChart === 'function') window.renderSpectraCommitmentsChart();
-
-        const dbModal = document.getElementById('daily-actions-db-modal');
-        if (dbModal && !dbModal.classList.contains('hidden') && typeof window.openDailyActionsDBModal === 'function') {
-            window.openDailyActionsDBModal();
-        }
-
-        if (window.chartDebounce) clearTimeout(window.chartDebounce);
-        window.chartDebounce = setTimeout(() => {
-            if (typeof renderTrendCharts === 'function') requestAnimationFrame(renderTrendCharts);
-        }, 500);
+    // Toggle state if not explicitly boolean
+    if (typeof state !== 'boolean') {
+        state = !Boolean(task[type]);
     }
+
+    task[type] = state;
+    task.updatedAt = Date.now() + (window.serverTimeOffset || 0);
+    AppState.isLocalDirty = true;
+
+    if (AppState._tasksDateMap) {
+        if (task.id) AppState._tasksDateMap.set(String(task.id), task);
+        if (task.date) AppState._tasksDateMap.set(task.date, task);
+        if (todayStr) AppState._tasksDateMap.set(todayStr, task);
+        AppState._tasksDateMap.set(todayISO, task);
+    }
+
+    // 1. Instant Optimistic DOM Update for Action Card YES/NO buttons
+    const actionObj = (window.customActions || []).find(a => a.id === type);
+    const cMap = actionObj ? (AppState.twColors[actionObj.color] || AppState.twColors['blue']) : AppState.twColors['blue'];
+    const cardEl = document.getElementById(`daily-action-card-${type}`);
+    const btnYes = document.getElementById(`btn-action-yes-${type}`);
+    const btnNo = document.getElementById(`btn-action-no-${type}`);
+
+    if (cardEl) {
+        cardEl.className = `bg-white dark:bg-slate-800 p-5 md:p-6 rounded-3xl md:rounded-[2rem] shadow-sm flex flex-col transition-all duration-300 min-h-[300px] border-2 ${state === true ? cMap.border + ' shadow-lg' : (state === false ? 'border-red-500 shadow-lg shadow-red-500/10' : 'border-slate-200 dark:border-slate-700')}`;
+    }
+    if (btnYes && btnNo) {
+        if (state === true) {
+            btnYes.className = 'flex-1 py-1.5 sm:py-2 md:py-2.5 text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 active:scale-90 bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-[0_4px_12px_rgba(16,185,129,0.5)] scale-105';
+            btnNo.className = 'flex-1 py-1.5 sm:py-2 md:py-2.5 text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 active:scale-90 bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600';
+        } else if (state === false) {
+            btnYes.className = 'flex-1 py-1.5 sm:py-2 md:py-2.5 text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 active:scale-90 bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600';
+            btnNo.className = 'flex-1 py-1.5 sm:py-2 md:py-2.5 text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 active:scale-90 bg-gradient-to-br from-red-400 to-red-500 text-white shadow-[0_4px_12px_rgba(239,68,68,0.4)] scale-105';
+        }
+    }
+
+    // 2. Instant Optimistic DOM Update for Dashboard Compact Card
+    const dashBtn = document.getElementById(`dashboard-daily-action-btn-${type}`);
+    if (dashBtn) {
+        const isActive = state === true;
+        const activeStyle = `background-color: ${cMap.hex}; border-color: ${cMap.hex}; color: white; box-shadow: 0 4px 12px ${cMap.hex}33;`;
+        const cardClass = isActive
+            ? `flex items-center justify-between p-2 md:p-2.5 rounded-xl border font-black transition-all duration-300 active:scale-95 text-left w-full gap-1.5 h-full text-white border-transparent`
+            : 'flex items-center justify-between p-2 md:p-2.5 rounded-xl border font-black transition-all duration-300 active:scale-95 text-left w-full gap-1.5 h-full bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-900/60';
+        dashBtn.className = cardClass;
+        dashBtn.style.cssText = isActive ? activeStyle : '';
+
+        const statusText = dashBtn.querySelector('.dashboard-action-status-text');
+        if (statusText) statusText.textContent = isActive ? 'YES' : 'NO';
+
+        const badge = dashBtn.querySelector('.dashboard-action-badge');
+        if (badge) {
+            badge.innerHTML = isActive
+                ? `<span class="flex h-4 w-4 rounded-full bg-white text-emerald-500 items-center justify-center shadow-sm text-[8px] font-black">✓</span>`
+                : `<span class="flex h-4 w-4 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 items-center justify-center text-[7px] font-black">✕</span>`;
+        }
+
+        const iconContainer = dashBtn.querySelector('.p-1.rounded-lg');
+        if (iconContainer) {
+            iconContainer.className = `p-1 rounded-lg ${isActive ? 'bg-white/20 text-white' : cMap.iconBg + ' ' + cMap.text + ' ' + cMap.borderLt + ' border'} shrink-0`;
+        }
+
+        const trackBadge = dashBtn.querySelector('.dashboard-action-track-badge');
+        if (trackBadge) {
+            trackBadge.className = `dashboard-action-track-badge inline-block px-1 rounded-[3px] text-[6px] font-black uppercase tracking-widest ${isActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300'}`;
+        }
+    }
+
+    // 3. Instant Optimistic DOM Update for Today's Box in dt-log
+    const logBox = document.getElementById(`dt-log-${type}`);
+    if (logBox) {
+        const todayLogBtn = (todayStr && logBox.querySelector(`button[data-date="${todayStr}"]`)) ||
+            logBox.querySelector(`button[data-date="${todayISO}"]`) ||
+            logBox.querySelector('button');
+        if (todayLogBtn) {
+            if (state === true) {
+                todayLogBtn.classList.remove('from-red-400', 'to-red-500', 'shadow-[0_2px_8px_rgba(239,68,68,0.4)]');
+                todayLogBtn.classList.add('from-green-400', 'to-emerald-500', 'shadow-[0_2px_8px_rgba(16,185,129,0.4)]');
+                todayLogBtn.title = `${todayStr || todayISO}: YES`;
+            } else {
+                todayLogBtn.classList.remove('from-green-400', 'to-emerald-500', 'shadow-[0_2px_8px_rgba(16,185,129,0.4)]');
+                todayLogBtn.classList.add('from-red-400', 'to-red-500', 'shadow-[0_2px_8px_rgba(239,68,68,0.4)]');
+                todayLogBtn.title = `${todayStr || todayISO}: NO`;
+            }
+            todayLogBtn.classList.add('scale-110');
+            setTimeout(() => todayLogBtn.classList.remove('scale-110'), 120);
+        }
+    }
+
+    // 4. Instant Progress Bar & Percentage Updates
+    let c = 0;
+    (window.customActions || []).forEach(a => { if (task && task[a.id]) c++; });
+    const dailyPct = (window.customActions && window.customActions.length > 0) ? Math.round((c / window.customActions.length) * 100) : 0;
+
+    const bar = document.getElementById('daily-actions-progress');
+    if (bar) {
+        bar.style.width = dailyPct + '%';
+        safeSetText('daily-actions-percent', dailyPct + '%');
+        let clr = 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.8)]';
+        if (dailyPct >= 25) clr = 'bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.8)]';
+        if (dailyPct >= 50) clr = 'bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.8)]';
+        if (dailyPct >= 75) clr = 'bg-lime-500 shadow-[0_0_15px_rgba(132,204,22,0.8)]';
+        if (dailyPct === 100) clr = 'bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.8)]';
+        bar.className = `h-full rounded-full transition-all duration-500 ease-out ${clr}`;
+    }
+    const dashPercent = document.getElementById('dashboard-daily-actions-percent');
+    const dashBar = document.getElementById('dashboard-daily-actions-progress');
+    if (dashPercent && dashBar) {
+        dashPercent.textContent = dailyPct + '%';
+        dashBar.style.width = dailyPct + '%';
+        let clr = 'bg-red-500';
+        if (dailyPct >= 25) clr = 'bg-orange-500';
+        if (dailyPct >= 50) clr = 'bg-yellow-400';
+        if (dailyPct >= 75) clr = 'bg-lime-500';
+        if (dailyPct === 100) clr = 'bg-green-500';
+        dashBar.className = `h-full rounded-full transition-all duration-500 ease-out ${clr}`;
+    }
+
+    // 4b. Instant The X Commitments Habit Radar chart sync
+    if (typeof window.renderSpectraCommitmentsChart === 'function') {
+        window.renderSpectraCommitmentsChart();
+    }
+
+    // 5. Broadcast to other open tabs for <2ms local synchronization
+    if (window.X29SyncChannel) {
+        try {
+            window.X29SyncChannel.postMessage({
+                type: 'DAILY_ACTION_UPDATE',
+                actionId: type,
+                state: state,
+                dateStr: todayStr || todayISO,
+                timestamp: Date.now()
+            });
+        } catch(e) {}
+    }
+
+    // 6. Fast Cross-Device Cloud Save (auto-batched Firestore write)
+    if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
+        window.FirebaseService.saveToCloud(false);
+    }
+
+    // 7. Debounced background UI & charts refresh
+    if (window._gridToggleDebounce) clearTimeout(window._gridToggleDebounce);
+    window._gridToggleDebounce = setTimeout(() => {
+        requestAnimationFrame(() => {
+            if (typeof window.renderSpectraCommitmentsChart === 'function') window.renderSpectraCommitmentsChart();
+            const dbModal = document.getElementById('daily-actions-db-modal');
+            if (dbModal && !dbModal.classList.contains('hidden') && typeof window.openDailyActionsDBModal === 'function') {
+                window.openDailyActionsDBModal();
+            }
+            if (typeof renderTrendCharts === 'function') renderTrendCharts();
+        });
+    }, 120);
 };
 
 window.actionAnalyticsHeatmapRange = window.actionAnalyticsHeatmapRange || 180;
@@ -13032,6 +13235,7 @@ window.toggleModalDay = function (taskIdOrDate, typeKey, evt) {
 
     let taskIndex = AppState.tasks.findIndex(t => t && (String(t.id) === String(taskIdOrDate) || t.date === taskIdOrDate));
     let newState = true;
+    let taskDateStr = '';
 
     if (taskIndex === -1 && typeof taskIdOrDate === 'string' && taskIdOrDate.trim()) {
         const dObj = Utils.parseDateSafe(taskIdOrDate);
@@ -13042,13 +13246,16 @@ window.toggleModalDay = function (taskIdOrDate, typeKey, evt) {
                 if (taskIndex > -1) {
                     newState = !Boolean(AppState.tasks[taskIndex][typeKey]);
                     AppState.tasks[taskIndex][typeKey] = newState;
+                    taskDateStr = AppState.tasks[taskIndex].date || Utils.formatDate(dObj);
                 }
             } else {
                 const dateStr = Utils.formatDate(dObj);
+                taskDateStr = dateStr;
                 const newTask = {
                     id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
                     date: dateStr,
-                    note: ''
+                    note: '',
+                    updatedAt: Date.now() + (window.serverTimeOffset || 0)
                 };
                 if (Array.isArray(window.customActions)) {
                     window.customActions.forEach(a => { newTask[a.id] = false; });
@@ -13062,10 +13269,25 @@ window.toggleModalDay = function (taskIdOrDate, typeKey, evt) {
     } else if (taskIndex > -1) {
         newState = !Boolean(AppState.tasks[taskIndex][typeKey]);
         AppState.tasks[taskIndex][typeKey] = newState;
+        taskDateStr = AppState.tasks[taskIndex].date || '';
     }
 
     if (taskIndex > -1) {
+        const updatedTask = AppState.tasks[taskIndex];
+        updatedTask.updatedAt = Date.now() + (window.serverTimeOffset || 0);
         AppState.isLocalDirty = true;
+
+        if (AppState._tasksDateMap) {
+            if (updatedTask.id) AppState._tasksDateMap.set(String(updatedTask.id), updatedTask);
+            if (updatedTask.date) {
+                AppState._tasksDateMap.set(updatedTask.date, updatedTask);
+                const d = Utils.parseDateSafe(updatedTask.date);
+                if (d && !isNaN(d.getTime())) {
+                    const isoKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    AppState._tasksDateMap.set(isoKey, updatedTask);
+                }
+            }
+        }
 
         // 1. Instant Optimistic DOM Update — target ONLY the exact clicked button via event
         const evtTarget = (evt && evt.target) || (window.event && window.event.target) || null;
@@ -13096,10 +13318,10 @@ window.toggleModalDay = function (taskIdOrDate, typeKey, evt) {
             } else {
                 if (newState) {
                     clickedBtn.classList.remove('from-red-400', 'to-red-500', 'shadow-[0_2px_8px_rgba(239,68,68,0.4)]');
-                    clickedBtn.classList.add('from-green-400', 'to-emerald-500', 'shadow-[0_2px_8px_rgba(34,197,94,0.4)]');
+                    clickedBtn.classList.add('from-green-400', 'to-emerald-500', 'shadow-[0_2px_8px_rgba(16,185,129,0.4)]');
                     if (clickedBtn.title) clickedBtn.title = clickedBtn.title.replace(': NO', ': YES');
                 } else {
-                    clickedBtn.classList.remove('from-green-400', 'to-emerald-500', 'shadow-[0_2px_8px_rgba(34,197,94,0.4)]', 'shadow-[0_2px_8px_rgba(16,185,129,0.4)]');
+                    clickedBtn.classList.remove('from-green-400', 'to-emerald-500', 'shadow-[0_2px_8px_rgba(16,185,129,0.4)]');
                     clickedBtn.classList.add('from-red-400', 'to-red-500', 'shadow-[0_2px_8px_rgba(239,68,68,0.4)]');
                     if (clickedBtn.title) clickedBtn.title = clickedBtn.title.replace(': YES', ': NO');
                 }
@@ -13108,13 +13330,121 @@ window.toggleModalDay = function (taskIdOrDate, typeKey, evt) {
             setTimeout(() => clickedBtn.classList.remove('scale-110'), 120);
         }
 
-        // 2. Schedule debounced full UI & chart updates for 60 FPS performance during fast clicks
+        // If today was updated, also update today's buttons optimistically
+        const today = new Date();
+        const taskD = getTaskDate(updatedTask);
+        const isToday = taskD && !isNaN(taskD.getTime()) &&
+            taskD.getFullYear() === today.getFullYear() &&
+            taskD.getMonth() === today.getMonth() &&
+            taskD.getDate() === today.getDate();
+
+        if (isToday) {
+            const actionObj = (window.customActions || []).find(a => a.id === typeKey);
+            const cMap = actionObj ? (AppState.twColors[actionObj.color] || AppState.twColors['blue']) : AppState.twColors['blue'];
+            const cardEl = document.getElementById(`daily-action-card-${typeKey}`);
+            const btnYes = document.getElementById(`btn-action-yes-${typeKey}`);
+            const btnNo = document.getElementById(`btn-action-no-${typeKey}`);
+
+            if (cardEl) {
+                cardEl.className = `bg-white dark:bg-slate-800 p-5 md:p-6 rounded-3xl md:rounded-[2rem] shadow-sm flex flex-col transition-all duration-300 min-h-[300px] border-2 ${newState === true ? cMap.border + ' shadow-lg' : (newState === false ? 'border-red-500 shadow-lg shadow-red-500/10' : 'border-slate-200 dark:border-slate-700')}`;
+            }
+            if (btnYes && btnNo) {
+                if (newState === true) {
+                    btnYes.className = 'flex-1 py-1.5 sm:py-2 md:py-2.5 text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 active:scale-90 bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-[0_4px_12px_rgba(16,185,129,0.5)] scale-105';
+                    btnNo.className = 'flex-1 py-1.5 sm:py-2 md:py-2.5 text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 active:scale-90 bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600';
+                } else if (newState === false) {
+                    btnYes.className = 'flex-1 py-1.5 sm:py-2 md:py-2.5 text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 active:scale-90 bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600';
+                    btnNo.className = 'flex-1 py-1.5 sm:py-2 md:py-2.5 text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 active:scale-90 bg-gradient-to-br from-red-400 to-red-500 text-white shadow-[0_4px_12px_rgba(239,68,68,0.4)] scale-105';
+                }
+            }
+
+            const dashBtn = document.getElementById(`dashboard-daily-action-btn-${typeKey}`);
+            if (dashBtn) {
+                const isActive = newState === true;
+                const activeStyle = `background-color: ${cMap.hex}; border-color: ${cMap.hex}; color: white; box-shadow: 0 4px 12px ${cMap.hex}33;`;
+                dashBtn.className = isActive
+                    ? `flex items-center justify-between p-2 md:p-2.5 rounded-xl border font-black transition-all duration-300 active:scale-95 text-left w-full gap-1.5 h-full text-white border-transparent`
+                    : 'flex items-center justify-between p-2 md:p-2.5 rounded-xl border font-black transition-all duration-300 active:scale-95 text-left w-full gap-1.5 h-full bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-900/60';
+                dashBtn.style.cssText = isActive ? activeStyle : '';
+
+                const statusText = dashBtn.querySelector('.dashboard-action-status-text');
+                if (statusText) statusText.textContent = isActive ? 'YES' : 'NO';
+
+                const badge = dashBtn.querySelector('.dashboard-action-badge');
+                if (badge) {
+                    badge.innerHTML = isActive
+                        ? `<span class="flex h-4 w-4 rounded-full bg-white text-emerald-500 items-center justify-center shadow-sm text-[8px] font-black">✓</span>`
+                        : `<span class="flex h-4 w-4 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 items-center justify-center text-[7px] font-black">✕</span>`;
+                }
+
+                const iconContainer = dashBtn.querySelector('.p-1.rounded-lg');
+                if (iconContainer) {
+                    iconContainer.className = `p-1 rounded-lg ${isActive ? 'bg-white/20 text-white' : cMap.iconBg + ' ' + cMap.text + ' ' + cMap.borderLt + ' border'} shrink-0`;
+                }
+
+                const trackBadge = dashBtn.querySelector('.dashboard-action-track-badge');
+                if (trackBadge) {
+                    trackBadge.className = `dashboard-action-track-badge inline-block px-1 rounded-[3px] text-[6px] font-black uppercase tracking-widest ${isActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300'}`;
+                }
+            }
+
+            // Update Progress Bar
+            let c = 0;
+            (window.customActions || []).forEach(a => { if (updatedTask[a.id]) c++; });
+            const dailyPct = (window.customActions && window.customActions.length > 0) ? Math.round((c / window.customActions.length) * 100) : 0;
+            const bar = document.getElementById('daily-actions-progress');
+            if (bar) {
+                bar.style.width = dailyPct + '%';
+                safeSetText('daily-actions-percent', dailyPct + '%');
+                let clr = 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.8)]';
+                if (dailyPct >= 25) clr = 'bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.8)]';
+                if (dailyPct >= 50) clr = 'bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.8)]';
+                if (dailyPct >= 75) clr = 'bg-lime-500 shadow-[0_0_15px_rgba(132,204,22,0.8)]';
+                if (dailyPct === 100) clr = 'bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.8)]';
+                bar.className = `h-full rounded-full transition-all duration-500 ease-out ${clr}`;
+            }
+            const dashPercent = document.getElementById('dashboard-daily-actions-percent');
+            const dashBar = document.getElementById('dashboard-daily-actions-progress');
+            if (dashPercent && dashBar) {
+                dashPercent.textContent = dailyPct + '%';
+                dashBar.style.width = dailyPct + '%';
+                let clr = 'bg-red-500';
+                if (dailyPct >= 25) clr = 'bg-orange-500';
+                if (dailyPct >= 50) clr = 'bg-yellow-400';
+                if (dailyPct >= 75) clr = 'bg-lime-500';
+                if (dailyPct === 100) clr = 'bg-green-500';
+                dashBar.className = `h-full rounded-full transition-all duration-500 ease-out ${clr}`;
+            }
+        }
+
+        // Instant The X Commitments Habit Radar chart sync
+        if (typeof window.renderSpectraCommitmentsChart === 'function') {
+            window.renderSpectraCommitmentsChart();
+        }
+
+        // 2. Broadcast to other open browser tabs for <2ms instant sync
+        if (window.X29SyncChannel) {
+            try {
+                window.X29SyncChannel.postMessage({
+                    type: 'DAILY_ACTION_UPDATE',
+                    actionId: typeKey,
+                    taskIdOrDate: taskIdOrDate,
+                    newState: newState,
+                    timestamp: Date.now()
+                });
+            } catch(e) {}
+        }
+
+        // 3. Realtime Cross-Device Cloud Synchronization (auto-batched Firestore write)
+        if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
+            window.FirebaseService.saveToCloud(false);
+        }
+
+        // 4. Schedule debounced full UI & chart updates for 60 FPS performance during fast clicks
         if (window._gridToggleDebounce) clearTimeout(window._gridToggleDebounce);
         window._gridToggleDebounce = setTimeout(() => {
             requestAnimationFrame(() => {
                 if (typeof renderTrendCharts === 'function') renderTrendCharts();
-                if (typeof renderDailyTracker === 'function') renderDailyTracker();
-                if (typeof renderDailyLogs === 'function') renderDailyLogs();
                 if (typeof window.renderSpectraCommitmentsChart === 'function') window.renderSpectraCommitmentsChart();
                 const modal = document.getElementById('analytics-modal');
                 if (modal && !modal.classList.contains('hidden') && typeof populateAnalyticsModal === 'function') populateAnalyticsModal(typeKey);
@@ -13122,11 +13452,6 @@ window.toggleModalDay = function (taskIdOrDate, typeKey, evt) {
                 if (dbModal && !dbModal.classList.contains('hidden') && typeof window.openDailyActionsDBModal === 'function') window.openDailyActionsDBModal();
             });
         }, 120);
-
-        // 3. Realtime Cross-Device Cloud Synchronization (auto-batched Firestore write)
-        if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
-            window.FirebaseService.saveToCloud(false);
-        }
     }
 };
 
@@ -22368,6 +22693,28 @@ setInterval(() => {
     window.updateExamCountdown();
 }, 1000);
 
-
-
-
+// Multi-Tab Fast Synchronization Listener for Daily Actions & Heat Maps
+if (typeof window.BroadcastChannel !== 'undefined') {
+    try {
+        window.X29SyncChannel = new BroadcastChannel('x29_action_sync');
+        window.X29SyncChannel.onmessage = function (ev) {
+            if (!ev || !ev.data) return;
+            if (ev.data.type === 'DAILY_ACTION_UPDATE') {
+                if (typeof window.rebuildTaskDateMap === 'function') window.rebuildTaskDateMap();
+                if (typeof renderDailyTracker === 'function') renderDailyTracker();
+                if (typeof renderDailyLogs === 'function') renderDailyLogs();
+                if (typeof window.renderSpectraCommitmentsChart === 'function') window.renderSpectraCommitmentsChart();
+                const modal = document.getElementById('analytics-modal');
+                if (modal && !modal.classList.contains('hidden') && typeof populateAnalyticsModal === 'function') {
+                    populateAnalyticsModal(window.currentAnalyticsAction || ev.data.actionId);
+                }
+                const dbModal = document.getElementById('daily-actions-db-modal');
+                if (dbModal && !dbModal.classList.contains('hidden') && typeof window.openDailyActionsDBModal === 'function') {
+                    window.openDailyActionsDBModal();
+                }
+            }
+        };
+    } catch (e) {
+        console.warn("BroadcastChannel error:", e);
+    }
+}

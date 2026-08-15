@@ -127,7 +127,8 @@ window.AppState = {
     lastAppliedCloudTimestamp: 0,
     isLocalDirty: false,
     syncSessionId: "",
-    _tombstones: {}
+    _tombstones: {},
+    _tasksDateMap: new Map()
 };
 
 // Define transparent properties on window to alias AppState keys
@@ -196,6 +197,62 @@ window.generateItemId = function(item, arrayKey = 'items') {
 };
 
 /**
+ * Rebuilds the O(1) in-memory task date lookup map for ultra-fast instant rendering.
+ */
+window.rebuildTaskDateMap = function() {
+    if (!AppState._tasksDateMap) AppState._tasksDateMap = new Map();
+    AppState._tasksDateMap.clear();
+
+    const taskList = AppState.tasks || [];
+    for (let i = 0; i < taskList.length; i++) {
+        const t = taskList[i];
+        if (!t) continue;
+
+        if (t.id !== undefined && t.id !== null) {
+            AppState._tasksDateMap.set(String(t.id), t);
+        }
+
+        let taskD = null;
+        if (typeof getTaskDate === 'function') {
+            taskD = getTaskDate(t);
+        } else if (typeof t.id === 'number' && AppState.PLAN_START_DATE) {
+            const baseDate = new Date(AppState.PLAN_START_DATE.getTime());
+            baseDate.setDate(baseDate.getDate() + (t.id - 1));
+            taskD = baseDate;
+        } else if (t.date && typeof Utils !== 'undefined' && typeof Utils.parseDateSafe === 'function') {
+            taskD = Utils.parseDateSafe(t.date);
+        }
+
+        if (t.date) {
+            const rawDate = String(t.date);
+            AppState._tasksDateMap.set(rawDate, t);
+            const trimmedDate = rawDate.trim();
+            AppState._tasksDateMap.set(trimmedDate, t);
+        }
+
+        if (taskD && !isNaN(taskD.getTime())) {
+            const isoKey = `${taskD.getFullYear()}-${String(taskD.getMonth() + 1).padStart(2, '0')}-${String(taskD.getDate()).padStart(2, '0')}`;
+            const ymdKey = `${taskD.getFullYear()}-${taskD.getMonth() + 1}-${taskD.getDate()}`;
+            AppState._tasksDateMap.set(isoKey, t);
+            AppState._tasksDateMap.set(ymdKey, t);
+            if (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function') {
+                const formatted = Utils.formatDate(taskD);
+                AppState._tasksDateMap.set(formatted, t);
+            }
+        }
+    }
+};
+
+/**
+ * Invalidates the task date lookup cache.
+ */
+window.invalidateTaskDateMap = function() {
+    if (AppState._tasksDateMap) {
+        AppState._tasksDateMap.clear();
+    }
+};
+
+/**
  * Deterministic 3-Way Array Reconciliation Algorithm.
  * Merges local and cloud arrays by stable ID, respecting tombstones and timestamps.
  */
@@ -237,7 +294,29 @@ window.reconcileArrays = function(localArr = [], cloudArr = [], tombstones = {},
         }
 
         if (localItem && cloudItem) {
-            if (localTs > cloudTs) {
+            if (arrayKey === 'tasks') {
+                // Smart Field-level merge for tasks across devices
+                const merged = Object.assign({}, cloudItem, localItem);
+                const knownActionIds = new Set((window.customActions || []).map(a => a && a.id).filter(Boolean));
+                if (localTs > cloudTs) {
+                    // Local task is newer, preserve local fields and attach any missing cloud action fields
+                    Object.keys(cloudItem).forEach(k => {
+                        if (merged[k] === undefined) merged[k] = cloudItem[k];
+                    });
+                    merged.updatedAt = localTs;
+                } else if (cloudTs > localTs) {
+                    // Cloud task is newer, but preserve local action toggle if dirty
+                    if (AppState.isLocalDirty) {
+                        Object.keys(localItem).forEach(k => {
+                            if (localItem[k] !== undefined && (knownActionIds.has(k) || k.startsWith('action_') || k.startsWith('act_') || k.includes('Action'))) {
+                                merged[k] = localItem[k];
+                            }
+                        });
+                    }
+                    merged.updatedAt = cloudTs;
+                }
+                result.push(merged);
+            } else if (localTs > cloudTs) {
                 result.push(localItem);
             } else {
                 result.push(cloudItem);
@@ -539,6 +618,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     else if (typeof window.renderSpectraFocusHeatmap === 'function') window.renderSpectraFocusHeatmap();
     if (typeof window.setSessionHistoryFilterUI === 'function') window.setSessionHistoryFilterUI(AppState.sessionHistoryFilter);
 
+    if (typeof window.rebuildTaskDateMap === 'function') window.rebuildTaskDateMap();
     if (typeof window.updateSubjectTargetUI === 'function') window.updateSubjectTargetUI();
     if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
     if (typeof window.renderUI === 'function') window.renderUI();

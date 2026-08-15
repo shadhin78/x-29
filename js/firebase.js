@@ -619,6 +619,25 @@ window.FirebaseService = {
             console.log("SYNC: SAVE_CANCELLED (Superseded by new local edit)");
         }
 
+        // Fast synchronous local storage persist (0ms latency local safety)
+        try {
+            const currentCache = {
+                tasks: AppState.tasks || [],
+                tracks: window.tracks || [],
+                customActions: window.customActions || [],
+                paceGoals: window.paceGoals || [],
+                passedItems: window.passedItems || { programs: [], subjects: [] },
+                revisionData: window.revisionData || { active: [], progress: {} },
+                timerLogs: window.timerLogs || [],
+                fiscalLedger: AppState.fiscalLedger || { transactions: [], budgets: [], vaults: [] },
+                dashboardConfig: window.dashboardConfig || {},
+                _tombstones: AppState._tombstones || {}
+            };
+            const jsonStr = JSON.stringify(currentCache);
+            safeStorage.setItem('local_app_state', jsonStr);
+            safeStorage.setItem('appState', jsonStr);
+        } catch(e) {}
+
         const captureGen = AppState.syncGeneration || 0;
         console.log(`SYNC: SAVE_SCHEDULED (Immediate: ${immediate}, ExplicitInit: ${isExplicitInitialization}, Gen: ${captureGen})`);
 
@@ -629,7 +648,7 @@ window.FirebaseService = {
         } else {
             this._saveDebounceTimer = setTimeout(async () => {
                 await this._executeSave(isExplicitInitialization, isUserInitiated, captureGen);
-            }, 800);
+            }, 250);
         }
     },
 

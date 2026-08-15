@@ -821,9 +821,8 @@ select optgroup {
 }
 
 .commitment-cell {
-    transition: fill 0.18s ease, opacity 0.18s ease, filter 0.18s ease;
-    cursor: default;
-    stroke: none !important;
+    transition: fill 0.18s ease, opacity 0.18s ease, filter 0.18s ease, transform 0.1s ease;
+    cursor: pointer;
 }
 
 .commitment-checkbox-group rect,
@@ -834,6 +833,10 @@ select optgroup {
 .commitment-cell:hover {
     opacity: 0.92;
     filter: brightness(1.15) drop-shadow(0 0 6px rgba(99, 102, 241, 0.45));
+}
+
+.commitment-cell:active {
+    filter: brightness(0.85);
 }
 
 /* Dynamic Dark/Light Theme Integration for Commitment Chart */
@@ -938,3 +941,60 @@ body.dark #spectra-commitments-chart-wrapper .commitment-hub-digit {
     line-height: 1;
     filter: drop-shadow(0 2px 8px rgba(99, 102, 241, 0.3));
 }
+
+/* ==========================================================================
+   Daily Action Cards & Heat Map UI Enhancements (High Performance & GPU)
+   ========================================================================== */
+#daily-actions-grid > div {
+    will-change: transform, box-shadow, border-color;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+/* Day log box buttons inside Action Cards */
+div[id^="dt-log-"] button {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    will-change: transform, box-shadow, background-color;
+    user-select: none;
+}
+
+div[id^="dt-log-"] button:active {
+    transform: scale(0.92) translateZ(0);
+}
+
+/* Custom scrollbar for action card heatmap container */
+div[id^="dt-log-"] .overflow-y-auto {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+div[id^="dt-log-"] .overflow-y-auto::-webkit-scrollbar {
+    width: 4px;
+}
+
+div[id^="dt-log-"] .overflow-y-auto::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+div[id^="dt-log-"] .overflow-y-auto::-webkit-scrollbar-thumb {
+    background-color: rgba(148, 163, 184, 0.4);
+    border-radius: 9999px;
+}
+
+.dark div[id^="dt-log-"] .overflow-y-auto::-webkit-scrollbar-thumb {
+    background-color: rgba(148, 163, 184, 0.25);
+}
+
+/* GitHub style Analytics Modal Heatmap grid squares */
+#am-heatmap-grid button {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    will-change: transform, box-shadow;
+}
+
+#am-heatmap-grid button:active {
+    transform: scale(0.9) translateZ(0);
+}
