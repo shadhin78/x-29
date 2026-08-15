@@ -11777,22 +11777,8 @@ window.openPaceCandleChartModal = function (goalId) {
     // 1. Calculate subject completion map for subjects targeted by this goal
     const targetedSubjects = window.getTargetedSubjectsForGoal(goal);
     const subsList = Array.from(targetedSubjects);
+    const subjectStats = window.lastSubjectStats || {};
 
-    let completedPerDate = {};
-    AppState.tasks.forEach(t => {
-        if (t.type === 'study') {
-            let count = 0;
-            window.tracks.forEach(track => {
-                const key = track.id + 'Tasks';
-                if (Array.isArray(t[key])) {
-                    t[key].forEach(b => { if (b.completed && subsList.includes(b.subject)) count++; });
-                }
-            });
-            completedPerDate[t.date] = (completedPerDate[t.date] || 0) + count;
-        }
-    });
-
-    // 2. Loop from startDate to today day-by-day to build daily pace stats
     const startDate = goal.startDate ? Utils.parseDateSafe(goal.startDate) : new Date(AppState.PLAN_START_DATE);
     startDate.setHours(0, 0, 0, 0);
 
@@ -11802,20 +11788,71 @@ window.openPaceCandleChartModal = function (goalId) {
     const msPerDay = 1000 * 60 * 60 * 24;
     const daysElapsed = Math.max(1, Math.floor((today - startDate) / msPerDay) + 1);
 
-    let cumulativeAct = 0;
+    // Collect daily chapter completions accurately
+    const dailyCompletedMap = new Map();
+    let baselineCompleted = 0;
+
+    if (window.passedItems) {
+        subsList.forEach(sub => {
+            const sObj = window.getAllSubjects ? window.getAllSubjects().find(s => s.subject === sub) : null;
+            const isFrozen = (window.passedItems.subjects && window.passedItems.subjects.includes(sub)) ||
+                             (window.passedItems.programs && sObj && window.passedItems.programs.includes(sObj.program));
+            if (isFrozen && subjectStats[sub]) {
+                baselineCompleted += (subjectStats[sub].totalChapters || 0);
+            }
+        });
+    }
+
+    if (Array.isArray(AppState.tasks)) {
+        AppState.tasks.forEach(t => {
+            if (t.type !== 'study') return;
+            const taskDate = getTaskDate(t);
+            window.tracks.forEach(track => {
+                const key = track.id + 'Tasks';
+                if (Array.isArray(t[key])) {
+                    t[key].forEach(b => {
+                        if (b.completed && subsList.includes(b.subject)) {
+                            const sObj = window.getAllSubjects ? window.getAllSubjects().find(s => s.subject === b.subject) : null;
+                            const isFrozen = window.passedItems && ((window.passedItems.subjects && window.passedItems.subjects.includes(b.subject)) || (window.passedItems.programs && sObj && window.passedItems.programs.includes(sObj.program)));
+                            if (isFrozen) return;
+
+                            const stats = subjectStats[b.subject] || { totalChapters: 0, tasksAssigned: 1 };
+                            const weight = (stats.tasksAssigned > 0) ? (stats.totalChapters / stats.tasksAssigned) : 0;
+
+                            let compDate = b.completedAt ? Utils.parseDateSafe(b.completedAt) : taskDate;
+                            if (!compDate || isNaN(compDate.getTime())) compDate = taskDate;
+                            if (!compDate || isNaN(compDate.getTime())) compDate = new Date(today);
+
+                            const dayDate = new Date(compDate.getFullYear(), compDate.getMonth(), compDate.getDate());
+                            const timeKey = dayDate.getTime();
+
+                            dailyCompletedMap.set(timeKey, (dailyCompletedMap.get(timeKey) || 0) + weight);
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    let cumulativeAct = baselineCompleted;
+    dailyCompletedMap.forEach((val, timeKey) => {
+        if (timeKey < startDate.getTime()) {
+            cumulativeAct += val;
+        }
+    });
+
     let dailyPaces = [];
     let currentDt = new Date(startDate);
 
     for (let i = 1; i <= daysElapsed; i++) {
-        let dStr = Utils.formatDate(currentDt);
-        let completedToday = completedPerDate[dStr] || 0;
-        cumulativeAct += completedToday;
+        let compToday = dailyCompletedMap.get(currentDt.getTime()) || 0;
+        cumulativeAct += compToday;
         let pace = cumulativeAct / i;
         dailyPaces.push({
             dayIdx: i,
             dateStr: currentDt.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }),
             pace: pace,
-            completedToday: completedToday
+            completedToday: compToday
         });
         currentDt.setDate(currentDt.getDate() + 1);
     }
@@ -11842,7 +11879,6 @@ window.openPaceCandleChartModal = function (goalId) {
 
         let open = openVal;
         let close = closeVal;
-        // Add wick variation based on completion activity
         let high = Math.max(open, close, maxPaceInChunk) + (completedInChunk > 0 ? 0.05 * completedInChunk : 0.01);
         let low = Math.max(0, Math.min(open, close, minPaceInChunk) - (completedInChunk === 0 ? 0.02 : 0.005));
 
@@ -11857,7 +11893,7 @@ window.openPaceCandleChartModal = function (goalId) {
             close: close,
             high: high,
             low: low,
-            completed: completedInChunk
+            completed: Math.round(completedInChunk * 10) / 10
         });
     }
 
@@ -11956,7 +11992,6 @@ window.openPaceCandleChartModal = function (goalId) {
         }
     });
 
-    // Force resize after the modal transitions open
     setTimeout(() => {
         if (window.paceCandleChartInstance) {
             window.paceCandleChartInstance.resize();
@@ -11969,14 +12004,302 @@ window.openPaceTrendModal = function (goalId) {
     const targetId = goalId || (globalGoal ? globalGoal.id : null);
     window.activeTrendGoalId = targetId;
     openModal('pace-trend-modal');
-    window.renderPaceTrendChart(targetId); // Initial render setup
-    // Critical Fix: Force the chart to recalculate its dimensions strictly AFTER the 300ms CSS transition completes.
-    // This perfectly syncs the canvas to the newly visible layout dimensions, preventing squishing/blurring.
+    window.renderPaceTrendChart(targetId);
     setTimeout(() => {
         if (window.paceTrendChartInstance) {
             window.paceTrendChartInstance.resize();
         }
     }, 320);
+};
+
+/**
+ * Universal Dataset Builder for Burn-up Pace Trend Charts.
+ * Accurately tracks daily completed chapters (weighted and baseline) and seamless projections.
+ */
+window.buildPaceChartDatasets = function (paceData) {
+    if (!paceData) return null;
+    const { total, completed, start, end, today, reqPace, curPace, projectedDate, subjects } = paceData;
+
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const startDate = new Date(start); startDate.setHours(0, 0, 0, 0);
+    const targetDate = new Date(end); targetDate.setHours(0, 0, 0, 0);
+    const todayDate = new Date(today); todayDate.setHours(0, 0, 0, 0);
+    const projDt = projectedDate ? new Date(projectedDate) : new Date(0); projDt.setHours(0, 0, 0, 0);
+
+    const subjectStats = window.lastSubjectStats || {};
+    const subsList = Array.isArray(subjects) ? subjects : (window.getAllSubjects ? window.getAllSubjects().map(s => s.subject) : []);
+
+    // 1. Collect chapter completions by date timestamp
+    const dailyCompletedMap = new Map();
+    let baselineCompleted = 0;
+
+    // Check passed / frozen items (counted as completed at baseline)
+    if (window.passedItems) {
+        subsList.forEach(sub => {
+            const sObj = window.getAllSubjects ? window.getAllSubjects().find(s => s.subject === sub) : null;
+            const isFrozen = (window.passedItems.subjects && window.passedItems.subjects.includes(sub)) ||
+                             (window.passedItems.programs && sObj && window.passedItems.programs.includes(sObj.program));
+            if (isFrozen && subjectStats[sub]) {
+                baselineCompleted += (subjectStats[sub].totalChapters || 0);
+            }
+        });
+    }
+
+    // Scan study tasks for chapter weights
+    if (Array.isArray(AppState.tasks)) {
+        AppState.tasks.forEach(t => {
+            if (t.type !== 'study') return;
+            const taskDate = getTaskDate(t);
+            window.tracks.forEach(track => {
+                const key = track.id + 'Tasks';
+                if (Array.isArray(t[key])) {
+                    t[key].forEach(b => {
+                        if (b.completed && subsList.includes(b.subject)) {
+                            const sObj = window.getAllSubjects ? window.getAllSubjects().find(s => s.subject === b.subject) : null;
+                            const isFrozen = window.passedItems && ((window.passedItems.subjects && window.passedItems.subjects.includes(b.subject)) || (window.passedItems.programs && sObj && window.passedItems.programs.includes(sObj.program)));
+                            if (isFrozen) return; // already in baseline
+
+                            const stats = subjectStats[b.subject] || { totalChapters: 0, tasksAssigned: 1 };
+                            const weight = (stats.tasksAssigned > 0) ? (stats.totalChapters / stats.tasksAssigned) : 0;
+
+                            let compDate = b.completedAt ? Utils.parseDateSafe(b.completedAt) : taskDate;
+                            if (!compDate || isNaN(compDate.getTime())) compDate = taskDate;
+                            if (!compDate || isNaN(compDate.getTime())) compDate = new Date(todayDate);
+
+                            const dayDate = new Date(compDate.getFullYear(), compDate.getMonth(), compDate.getDate());
+                            const timeKey = dayDate.getTime();
+
+                            dailyCompletedMap.set(timeKey, (dailyCompletedMap.get(timeKey) || 0) + weight);
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    let loopStart = new Date(Math.min(startDate.getTime(), todayDate.getTime()));
+    loopStart.setHours(0, 0, 0, 0);
+
+    let maxDt = new Date(targetDate);
+    if (projDt.getTime() > 0 && projDt > maxDt) maxDt = new Date(projDt);
+    if (todayDate > maxDt) maxDt = new Date(todayDate);
+
+    const capDt = new Date(targetDate);
+    capDt.setFullYear(capDt.getFullYear() + 1);
+    if (maxDt > capDt) maxDt = new Date(capDt);
+
+    let daysBuffer = Math.ceil((maxDt - loopStart) / msPerDay * 0.05);
+    maxDt.setDate(maxDt.getDate() + Math.max(3, daysBuffer));
+
+    const totalDaysTarget = Math.max(1, Math.ceil((targetDate - startDate) / msPerDay));
+    const reqPacePerDay = total / totalDaysTarget;
+
+    let cumulativeAct = baselineCompleted;
+    dailyCompletedMap.forEach((val, timeKey) => {
+        if (timeKey < loopStart.getTime()) {
+            cumulativeAct += val;
+        }
+    });
+
+    let labels = [];
+    let reqData = [];
+    let actData = [];
+    let estData = [];
+
+    let currentDt = new Date(loopStart);
+    while (currentDt <= maxDt) {
+        labels.push(currentDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+
+        // 1. Required Target
+        if (currentDt < startDate) {
+            reqData.push(0);
+        } else if (currentDt >= targetDate) {
+            reqData.push(total);
+        } else {
+            let daysSinceStart = Math.max(0, Math.floor((currentDt - startDate) / msPerDay));
+            let rVal = daysSinceStart * reqPacePerDay;
+            if (rVal > total) rVal = total;
+            reqData.push(rVal);
+        }
+
+        // 2. Actual Progression & Estimated Trajectory
+        if (currentDt <= todayDate) {
+            const timeKey = currentDt.getTime();
+            cumulativeAct += (dailyCompletedMap.get(timeKey) || 0);
+
+            let plotAct = cumulativeAct;
+            if (currentDt.getTime() === todayDate.getTime()) {
+                plotAct = completed;
+            } else {
+                plotAct = Math.min(plotAct, completed);
+            }
+            if (plotAct > total) plotAct = total;
+            actData.push(plotAct);
+
+            if (currentDt.getTime() === todayDate.getTime()) {
+                estData.push(plotAct);
+            } else {
+                estData.push(null);
+            }
+        } else {
+            actData.push(null);
+            let daysFromToday = Math.ceil((currentDt.getTime() - todayDate.getTime()) / msPerDay);
+            let eVal = completed + (curPace * daysFromToday);
+            if (eVal > total) eVal = total;
+            estData.push(eVal);
+        }
+
+        currentDt.setDate(currentDt.getDate() + 1);
+    }
+
+    return {
+        labels,
+        reqData,
+        actData,
+        estData,
+        total
+    };
+};
+
+/**
+ * Universal Chart.js instance creator for burn-up pace line charts
+ */
+window.createOrUpdatePaceChart = function (canvas, chartData) {
+    if (!canvas || !chartData) return null;
+    let chartCtx = canvas.getContext('2d');
+
+    let actGradient = chartCtx.createLinearGradient(0, 0, 0, 450);
+    actGradient.addColorStop(0, 'rgba(99, 102, 241, 0.6)');
+    actGradient.addColorStop(0.5, 'rgba(99, 102, 241, 0.15)');
+    actGradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
+
+    let estGradient = chartCtx.createLinearGradient(0, 0, 0, 450);
+    estGradient.addColorStop(0, 'rgba(245, 158, 11, 0.2)');
+    estGradient.addColorStop(1, 'rgba(245, 158, 11, 0.0)');
+
+    const isMobile = window.innerWidth < 640;
+
+    return new Chart(chartCtx, {
+        type: 'line',
+        data: {
+            labels: chartData.labels,
+            datasets: [
+                {
+                    label: 'Required Target',
+                    data: chartData.reqData,
+                    borderColor: '#10b981',
+                    borderWidth: isMobile ? 2 : 2.5,
+                    borderDash: [8, 6],
+                    pointRadius: 0,
+                    pointHitRadius: 15,
+                    fill: false,
+                    tension: 0,
+                    z: 2
+                },
+                {
+                    label: 'Actual Progression',
+                    data: chartData.actData,
+                    borderColor: '#6366f1',
+                    backgroundColor: actGradient,
+                    borderWidth: isMobile ? 3 : 4,
+                    pointRadius: 0,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: '#6366f1',
+                    pointHoverBackgroundColor: '#ffffff',
+                    pointHoverBorderColor: '#6366f1',
+                    pointHoverBorderWidth: 3,
+                    fill: true,
+                    tension: 0.3,
+                    z: 3
+                },
+                {
+                    label: 'Estimated Trajectory',
+                    data: chartData.estData,
+                    borderColor: '#f59e0b',
+                    backgroundColor: estGradient,
+                    borderWidth: isMobile ? 2 : 2.5,
+                    borderDash: [4, 4],
+                    pointRadius: 0,
+                    pointHitRadius: 15,
+                    fill: true,
+                    tension: 0.3,
+                    z: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    align: isMobile ? 'center' : 'end',
+                    labels: {
+                        color: '#94a3b8',
+                        font: { family: 'Inter', weight: '800', size: isMobile ? 9 : 11 },
+                        usePointStyle: true,
+                        boxWidth: isMobile ? 6 : 10,
+                        padding: isMobile ? 10 : 20
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    titleColor: '#f8fafc',
+                    titleFont: { size: isMobile ? 11 : 13, weight: 'bold' },
+                    bodyColor: '#cbd5e1',
+                    bodyFont: { size: isMobile ? 10 : 12 },
+                    borderColor: 'rgba(99, 102, 241, 0.2)',
+                    borderWidth: 1,
+                    padding: isMobile ? 10 : 14,
+                    cornerRadius: 12,
+                    usePointStyle: true,
+                    boxPadding: 8,
+                    callbacks: {
+                        label: c => {
+                            if (c.parsed.y === null) return null;
+                            return ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)} Ch`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: chartData.total > 0 ? Math.ceil(chartData.total * 1.1) : 10,
+                    ticks: {
+                        font: { size: isMobile ? 8 : 10, weight: 'bold' },
+                        color: '#64748b',
+                        padding: isMobile ? 4 : 8
+                    },
+                    grid: {
+                        color: 'rgba(148, 163, 184, 0.08)',
+                        drawBorder: false,
+                        borderDash: [5, 5]
+                    },
+                    border: { display: false }
+                },
+                x: {
+                    ticks: {
+                        font: { size: isMobile ? 8 : 10, weight: 'bold' },
+                        color: '#64748b',
+                        maxTicksLimit: isMobile ? 5 : 12,
+                        maxRotation: 0,
+                        padding: isMobile ? 4 : 8
+                    },
+                    grid: {
+                        display: true,
+                        color: 'rgba(148, 163, 184, 0.03)',
+                        drawBorder: false
+                    },
+                    border: { display: false }
+                }
+            }
+        }
+    });
 };
 
 window.renderPaceTrendChart = function (goalId) {
@@ -12148,7 +12471,7 @@ window.renderPaceTrendChart = function (goalId) {
     const ctx = document.getElementById('paceTrendCanvas');
     if (!ctx) return;
 
-    const { total, completed, start, end, today, reqPace, curPace, projectedDate, subjects, title, description } = paceData;
+    const { total, completed, reqPace, curPace, projectedDate, title, description } = paceData;
 
     safeSetText('ptm-title', title);
     safeSetText('ptm-desc', description);
@@ -12172,224 +12495,11 @@ window.renderPaceTrendChart = function (goalId) {
     }
     safeSetHtml('ptm-est-finish', finishDisplay);
 
-    let labels = []; let reqData = []; let actData = []; let estData = [];
-
-    let completedPerDate = {};
-    AppState.tasks.forEach(t => {
-        if (t.type === 'study') {
-            let count = 0;
-            window.tracks.forEach(track => {
-                const key = track.id + 'Tasks';
-                if (Array.isArray(t[key])) {
-                    t[key].forEach(b => { if (b.completed && subjects.includes(b.subject)) count++; });
-                }
-            });
-            completedPerDate[t.date] = (completedPerDate[t.date] || 0) + count;
-        }
-    });
-
-    let loopStart = new Date(Math.min(start.getTime(), today.getTime()));
-    loopStart.setHours(0, 0, 0, 0);
-
-    let maxDt = new Date(end);
-    if (projectedDate.getTime() > 0 && projectedDate > maxDt) maxDt = new Date(projectedDate);
-    if (today > maxDt) maxDt = new Date(today);
-
-    const capDt = new Date(end);
-    capDt.setFullYear(capDt.getFullYear() + 1);
-    if (maxDt > capDt) maxDt = new Date(capDt);
-
-    let daysBuffer = Math.ceil((maxDt - loopStart) / (1000 * 60 * 60 * 24) * 0.05);
-    maxDt.setDate(maxDt.getDate() + Math.max(3, daysBuffer));
-
-    let currentDt = new Date(loopStart);
-    let cumulativeAct = 0;
-    // Calculate baseline completions before loopStart
-    AppState.tasks.forEach(t => {
-        const taskDate = getTaskDate(t);
-        if (taskDate < loopStart) {
-            if (t.type === 'study') {
-                window.tracks.forEach(track => {
-                    const key = track.id + 'Tasks';
-                    if (Array.isArray(t[key])) {
-                        t[key].forEach(b => { if (b.completed && subjects.includes(b.subject)) cumulativeAct++; });
-                    }
-                });
-            }
-        }
-    });
-    const totalDaysTarget = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
-    const reqPacePerDay = total / totalDaysTarget;
-
-    while (currentDt <= maxDt) {
-        labels.push(currentDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-
-        if (currentDt < start) {
-            reqData.push(0);
-        } else {
-            let daysSinceStart = Math.max(0, Math.floor((currentDt - start) / (1000 * 60 * 60 * 24)));
-            let rVal = daysSinceStart * reqPacePerDay;
-            if (rVal > total) rVal = total;
-            reqData.push(rVal);
-        }
-
-        if (currentDt <= today) {
-            let dStr = Utils.formatDate(currentDt);
-            cumulativeAct += (completedPerDate[dStr] || 0);
-            actData.push(cumulativeAct);
-
-            if (currentDt.getTime() === today.getTime()) {
-                estData.push(cumulativeAct);
-            } else {
-                estData.push(null);
-            }
-        } else {
-            actData.push(null);
-            let daysFromToday = Math.ceil((currentDt - today) / (1000 * 60 * 60 * 24));
-            let eVal = cumulativeAct + (curPace * daysFromToday);
-            if (eVal > total) eVal = total;
-            estData.push(eVal);
-        }
-
-        currentDt.setDate(currentDt.getDate() + 1);
-    }
+    const chartData = window.buildPaceChartDatasets(paceData);
+    if (!chartData) return;
 
     if (window.paceTrendChartInstance) window.paceTrendChartInstance.destroy();
-
-    let chartCtx = ctx.getContext('2d');
-
-    let actGradient = chartCtx.createLinearGradient(0, 0, 0, 450);
-    actGradient.addColorStop(0, 'rgba(99, 102, 241, 0.6)');
-    actGradient.addColorStop(0.5, 'rgba(99, 102, 241, 0.15)');
-    actGradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
-
-    let estGradient = chartCtx.createLinearGradient(0, 0, 0, 450);
-    estGradient.addColorStop(0, 'rgba(245, 158, 11, 0.2)');
-    estGradient.addColorStop(1, 'rgba(245, 158, 11, 0.0)');
-
-    const isMobile = window.innerWidth < 640;
-
-    window.paceTrendChartInstance = new Chart(chartCtx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Required Target',
-                    data: reqData,
-                    borderColor: '#10b981',
-                    borderWidth: isMobile ? 2 : 2.5,
-                    borderDash: [8, 6],
-                    pointRadius: 0,
-                    pointHitRadius: 15,
-                    fill: false,
-                    tension: 0,
-                    z: 2
-                },
-                {
-                    label: 'Actual Progression',
-                    data: actData,
-                    borderColor: '#6366f1',
-                    backgroundColor: actGradient,
-                    borderWidth: isMobile ? 3 : 4,
-                    pointRadius: 0,
-                    pointHoverRadius: 7,
-                    pointBackgroundColor: '#6366f1',
-                    pointHoverBackgroundColor: '#ffffff',
-                    pointHoverBorderColor: '#6366f1',
-                    pointHoverBorderWidth: 3,
-                    fill: true,
-                    tension: 0.3,
-                    z: 3
-                },
-                {
-                    label: 'Estimated Trajectory',
-                    data: estData,
-                    borderColor: '#f59e0b',
-                    backgroundColor: estGradient,
-                    borderWidth: isMobile ? 2 : 2.5,
-                    borderDash: [4, 4],
-                    pointRadius: 0,
-                    pointHitRadius: 15,
-                    fill: true,
-                    tension: 0.3,
-                    z: 1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false
-            },
-            plugins: {
-                legend: {
-                    position: 'top',
-                    align: isMobile ? 'center' : 'end',
-                    labels: {
-                        color: '#94a3b8',
-                        font: { family: 'Inter', weight: '800', size: isMobile ? 9 : 11 },
-                        usePointStyle: true,
-                        boxWidth: isMobile ? 6 : 10,
-                        padding: isMobile ? 10 : 20
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                    titleColor: '#f8fafc',
-                    titleFont: { size: isMobile ? 11 : 13, weight: 'bold' },
-                    bodyColor: '#cbd5e1',
-                    bodyFont: { size: isMobile ? 10 : 12 },
-                    borderColor: 'rgba(99, 102, 241, 0.2)',
-                    borderWidth: 1,
-                    padding: isMobile ? 10 : 14,
-                    cornerRadius: 12,
-                    usePointStyle: true,
-                    boxPadding: 8,
-                    callbacks: {
-                        label: c => {
-                            if (c.parsed.y === null) return null;
-                            return ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)} Ch`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: total > 0 ? Math.ceil(total * 1.1) : 10,
-                    ticks: {
-                        font: { size: isMobile ? 8 : 10, weight: 'bold' },
-                        color: '#64748b',
-                        padding: isMobile ? 4 : 8
-                    },
-                    grid: {
-                        color: 'rgba(148, 163, 184, 0.08)',
-                        drawBorder: false,
-                        borderDash: [5, 5]
-                    },
-                    border: { display: false }
-                },
-                x: {
-                    ticks: {
-                        font: { size: isMobile ? 8 : 10, weight: 'bold' },
-                        color: '#64748b',
-                        maxTicksLimit: isMobile ? 5 : 12,
-                        maxRotation: 0,
-                        padding: isMobile ? 4 : 8
-                    },
-                    grid: {
-                        display: true,
-                        color: 'rgba(148, 163, 184, 0.03)',
-                        drawBorder: false
-                    },
-                    border: { display: false }
-                }
-            }
-        }
-    });
+    window.paceTrendChartInstance = window.createOrUpdatePaceChart(ctx, chartData);
 };
 
 window.renderSpectraPaceTrendChart = function (goalId) {
@@ -12561,7 +12671,7 @@ window.renderSpectraPaceTrendChart = function (goalId) {
     const canvas = document.getElementById('spectraPaceTrendCanvas');
     if (!canvas) return;
 
-    const { total, completed, start, end, today, reqPace, curPace, projectedDate, subjects, title, description } = paceData;
+    const { total, completed, reqPace, curPace, projectedDate, title, description } = paceData;
 
     safeSetText('spectra-pace-title', title + ' (X Bar)');
     safeSetText('spectra-pace-desc', description);
@@ -12577,224 +12687,11 @@ window.renderSpectraPaceTrendChart = function (goalId) {
     }
     safeSetHtml('spectra-pace-finish', finishDisplay);
 
-    let labels = []; let reqData = []; let actData = []; let estData = [];
-
-    let completedPerDate = {};
-    AppState.tasks.forEach(t => {
-        if (t.type === 'study') {
-            let count = 0;
-            window.tracks.forEach(track => {
-                const key = track.id + 'Tasks';
-                if (Array.isArray(t[key])) {
-                    t[key].forEach(b => { if (b.completed && subjects.includes(b.subject)) count++; });
-                }
-            });
-            completedPerDate[t.date] = (completedPerDate[t.date] || 0) + count;
-        }
-    });
-
-    let loopStart = new Date(Math.min(start.getTime(), today.getTime()));
-    loopStart.setHours(0, 0, 0, 0);
-
-    let maxDt = new Date(end);
-    if (projectedDate.getTime() > 0 && projectedDate > maxDt) maxDt = new Date(projectedDate);
-    if (today > maxDt) maxDt = new Date(today);
-
-    const capDt = new Date(end);
-    capDt.setFullYear(capDt.getFullYear() + 1);
-    if (maxDt > capDt) maxDt = new Date(capDt);
-
-    let daysBuffer = Math.ceil((maxDt - loopStart) / (1000 * 60 * 60 * 24) * 0.05);
-    maxDt.setDate(maxDt.getDate() + Math.max(3, daysBuffer));
-
-    let currentDt = new Date(loopStart);
-    let cumulativeAct = 0;
-    // Calculate baseline completions before loopStart
-    AppState.tasks.forEach(t => {
-        const taskDate = getTaskDate(t);
-        if (taskDate < loopStart) {
-            if (t.type === 'study') {
-                window.tracks.forEach(track => {
-                    const key = track.id + 'Tasks';
-                    if (Array.isArray(t[key])) {
-                        t[key].forEach(b => { if (b.completed && subjects.includes(b.subject)) cumulativeAct++; });
-                    }
-                });
-            }
-        }
-    });
-    const totalDaysTarget = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
-    const reqPacePerDay = total / totalDaysTarget;
-
-    while (currentDt <= maxDt) {
-        labels.push(currentDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-
-        if (currentDt < start) {
-            reqData.push(0);
-        } else {
-            let daysSinceStart = Math.max(0, Math.floor((currentDt - start) / (1000 * 60 * 60 * 24)));
-            let rVal = daysSinceStart * reqPacePerDay;
-            if (rVal > total) rVal = total;
-            reqData.push(rVal);
-        }
-
-        if (currentDt <= today) {
-            let dStr = Utils.formatDate(currentDt);
-            cumulativeAct += (completedPerDate[dStr] || 0);
-            actData.push(cumulativeAct);
-
-            if (currentDt.getTime() === today.getTime()) {
-                estData.push(cumulativeAct);
-            } else {
-                estData.push(null);
-            }
-        } else {
-            actData.push(null);
-            let daysFromToday = Math.ceil((currentDt - today) / (1000 * 60 * 60 * 24));
-            let eVal = cumulativeAct + (curPace * daysFromToday);
-            if (eVal > total) eVal = total;
-            estData.push(eVal);
-        }
-
-        currentDt.setDate(currentDt.getDate() + 1);
-    }
+    const chartData = window.buildPaceChartDatasets(paceData);
+    if (!chartData) return;
 
     if (window.spectraPaceTrendChartInstance) window.spectraPaceTrendChartInstance.destroy();
-
-    let chartCtx = canvas.getContext('2d');
-
-    let actGradient = chartCtx.createLinearGradient(0, 0, 0, 450);
-    actGradient.addColorStop(0, 'rgba(99, 102, 241, 0.6)');
-    actGradient.addColorStop(0.5, 'rgba(99, 102, 241, 0.15)');
-    actGradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
-
-    let estGradient = chartCtx.createLinearGradient(0, 0, 0, 450);
-    estGradient.addColorStop(0, 'rgba(245, 158, 11, 0.2)');
-    estGradient.addColorStop(1, 'rgba(245, 158, 11, 0.0)');
-
-    const isMobile = window.innerWidth < 640;
-
-    window.spectraPaceTrendChartInstance = new Chart(chartCtx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Required Target',
-                    data: reqData,
-                    borderColor: '#10b981',
-                    borderWidth: isMobile ? 2 : 2.5,
-                    borderDash: [8, 6],
-                    pointRadius: 0,
-                    pointHitRadius: 15,
-                    fill: false,
-                    tension: 0,
-                    z: 2
-                },
-                {
-                    label: 'Actual Progression',
-                    data: actData,
-                    borderColor: '#6366f1',
-                    backgroundColor: actGradient,
-                    borderWidth: isMobile ? 3 : 4,
-                    pointRadius: 0,
-                    pointHoverRadius: 7,
-                    pointBackgroundColor: '#6366f1',
-                    pointHoverBackgroundColor: '#ffffff',
-                    pointHoverBorderColor: '#6366f1',
-                    pointHoverBorderWidth: 3,
-                    fill: true,
-                    tension: 0.3,
-                    z: 3
-                },
-                {
-                    label: 'Estimated Trajectory',
-                    data: estData,
-                    borderColor: '#f59e0b',
-                    backgroundColor: estGradient,
-                    borderWidth: isMobile ? 2 : 2.5,
-                    borderDash: [4, 4],
-                    pointRadius: 0,
-                    pointHitRadius: 15,
-                    fill: true,
-                    tension: 0.3,
-                    z: 1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false
-            },
-            plugins: {
-                legend: {
-                    position: 'top',
-                    align: isMobile ? 'center' : 'end',
-                    labels: {
-                        color: '#94a3b8',
-                        font: { family: 'Inter', weight: '800', size: isMobile ? 9 : 11 },
-                        usePointStyle: true,
-                        boxWidth: isMobile ? 6 : 10,
-                        padding: isMobile ? 10 : 20
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                    titleColor: '#f8fafc',
-                    titleFont: { size: isMobile ? 11 : 13, weight: 'bold' },
-                    bodyColor: '#cbd5e1',
-                    bodyFont: { size: isMobile ? 10 : 12 },
-                    borderColor: 'rgba(99, 102, 241, 0.2)',
-                    borderWidth: 1,
-                    padding: isMobile ? 10 : 14,
-                    cornerRadius: 12,
-                    usePointStyle: true,
-                    boxPadding: 8,
-                    callbacks: {
-                        label: c => {
-                            if (c.parsed.y === null) return null;
-                            return ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)} Ch`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: total > 0 ? Math.ceil(total * 1.1) : 10,
-                    ticks: {
-                        font: { size: isMobile ? 8 : 10, weight: 'bold' },
-                        color: '#64748b',
-                        padding: isMobile ? 4 : 8
-                    },
-                    grid: {
-                        color: 'rgba(148, 163, 184, 0.08)',
-                        drawBorder: false,
-                        borderDash: [5, 5]
-                    },
-                    border: { display: false }
-                },
-                x: {
-                    ticks: {
-                        font: { size: isMobile ? 8 : 10, weight: 'bold' },
-                        color: '#64748b',
-                        maxTicksLimit: isMobile ? 5 : 12,
-                        maxRotation: 0,
-                        padding: isMobile ? 4 : 8
-                    },
-                    grid: {
-                        display: true,
-                        color: 'rgba(148, 163, 184, 0.03)',
-                        drawBorder: false
-                    },
-                    border: { display: false }
-                }
-            }
-        }
-    });
+    window.spectraPaceTrendChartInstance = window.createOrUpdatePaceChart(canvas, chartData);
 };
 
 
@@ -12810,7 +12707,7 @@ window.renderGlobalPaceTrendChart = function () {
     let paceData = window.latestPaceData;
     if (!paceData) return;
 
-    const { total, completed, start: startDate, end: targetDate, today, reqPace, curPace, projectedDate: projDt, subjects } = paceData;
+    const { total, completed, reqPace, curPace, projectedDate: projDt } = paceData;
 
     safeSetText('global-pace-title', "Global Scope Trend");
     safeSetText('global-pace-desc', "Burn-up comparison of Required vs Actual trajectories for global scope.");
@@ -12826,223 +12723,11 @@ window.renderGlobalPaceTrendChart = function () {
     }
     safeSetHtml('global-pace-finish', finishDisplay);
 
-    let labels = []; let reqData = []; let actData = []; let estData = [];
-
-    let completedPerDate = {};
-    AppState.tasks.forEach(t => {
-        if (t.type === 'study') {
-            let count = 0;
-            window.tracks.forEach(track => {
-                const key = track.id + 'Tasks';
-                if (Array.isArray(t[key])) {
-                    t[key].forEach(b => { if (b.completed && paceData.subjects.includes(b.subject)) count++; });
-                }
-            });
-            completedPerDate[t.date] = (completedPerDate[t.date] || 0) + count;
-        }
-    });
-
-    let loopStart = new Date(Math.min(startDate.getTime(), today.getTime()));
-    loopStart.setHours(0, 0, 0, 0);
-
-    let maxDt = new Date(targetDate);
-    if (projDt.getTime() > 0 && projDt > maxDt) maxDt = new Date(projDt);
-    if (today > maxDt) maxDt = new Date(today);
-
-    const capDt = new Date(targetDate);
-    capDt.setFullYear(capDt.getFullYear() + 1);
-    if (maxDt > capDt) maxDt = new Date(capDt);
-
-    let daysBuffer = Math.ceil((maxDt - loopStart) / (1000 * 60 * 60 * 24) * 0.05);
-    maxDt.setDate(maxDt.getDate() + Math.max(3, daysBuffer));
-
-    let currentDt = new Date(loopStart);
-    let cumulativeAct = 0;
-    AppState.tasks.forEach(t => {
-        const taskDate = getTaskDate(t);
-        if (taskDate < loopStart) {
-            if (t.type === 'study') {
-                window.tracks.forEach(track => {
-                    const key = track.id + 'Tasks';
-                    if (Array.isArray(t[key])) {
-                        t[key].forEach(b => { if (b.completed && paceData.subjects.includes(b.subject)) cumulativeAct++; });
-                    }
-                });
-            }
-        }
-    });
-    const totalDaysTarget = Math.max(1, Math.ceil((targetDate - startDate) / (1000 * 60 * 60 * 24)));
-    const reqPacePerDay = total / totalDaysTarget;
-
-    while (currentDt <= maxDt) {
-        labels.push(currentDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-
-        if (currentDt < startDate) {
-            reqData.push(0);
-        } else {
-            let daysSinceStart = Math.max(0, Math.floor((currentDt - startDate) / (1000 * 60 * 60 * 24)));
-            let rVal = daysSinceStart * reqPacePerDay;
-            if (rVal > total) rVal = total;
-            reqData.push(rVal);
-        }
-
-        if (currentDt <= today) {
-            let dStr = Utils.formatDate(currentDt);
-            cumulativeAct += (completedPerDate[dStr] || 0);
-            actData.push(cumulativeAct);
-
-            if (currentDt.getTime() === today.getTime()) {
-                estData.push(cumulativeAct);
-            } else {
-                estData.push(null);
-            }
-        } else {
-            actData.push(null);
-            let daysFromToday = Math.ceil((currentDt - today) / (1000 * 60 * 60 * 24));
-            let eVal = cumulativeAct + (curPace * daysFromToday);
-            if (eVal > total) eVal = total;
-            estData.push(eVal);
-        }
-
-        currentDt.setDate(currentDt.getDate() + 1);
-    }
+    const chartData = window.buildPaceChartDatasets(paceData);
+    if (!chartData) return;
 
     if (window.globalPaceTrendChartInstance) window.globalPaceTrendChartInstance.destroy();
-
-    let chartCtx = canvas.getContext('2d');
-
-    let actGradient = chartCtx.createLinearGradient(0, 0, 0, 450);
-    actGradient.addColorStop(0, 'rgba(99, 102, 241, 0.6)');
-    actGradient.addColorStop(0.5, 'rgba(99, 102, 241, 0.15)');
-    actGradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
-
-    let estGradient = chartCtx.createLinearGradient(0, 0, 0, 450);
-    estGradient.addColorStop(0, 'rgba(245, 158, 11, 0.2)');
-    estGradient.addColorStop(1, 'rgba(245, 158, 11, 0.0)');
-
-    const isMobile = window.innerWidth < 640;
-
-    window.globalPaceTrendChartInstance = new Chart(chartCtx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Required Target',
-                    data: reqData,
-                    borderColor: '#10b981',
-                    borderWidth: isMobile ? 2 : 2.5,
-                    borderDash: [8, 6],
-                    pointRadius: 0,
-                    pointHitRadius: 15,
-                    fill: false,
-                    tension: 0,
-                    z: 2
-                },
-                {
-                    label: 'Actual Progression',
-                    data: actData,
-                    borderColor: '#6366f1',
-                    backgroundColor: actGradient,
-                    borderWidth: isMobile ? 3 : 4,
-                    pointRadius: 0,
-                    pointHoverRadius: 7,
-                    pointBackgroundColor: '#6366f1',
-                    pointHoverBackgroundColor: '#ffffff',
-                    pointHoverBorderColor: '#6366f1',
-                    pointHoverBorderWidth: 3,
-                    fill: true,
-                    tension: 0.3,
-                    z: 3
-                },
-                {
-                    label: 'Estimated Trajectory',
-                    data: estData,
-                    borderColor: '#f59e0b',
-                    backgroundColor: estGradient,
-                    borderWidth: isMobile ? 2 : 2.5,
-                    borderDash: [4, 4],
-                    pointRadius: 0,
-                    pointHitRadius: 15,
-                    fill: true,
-                    tension: 0.3,
-                    z: 1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false
-            },
-            plugins: {
-                legend: {
-                    position: 'top',
-                    align: isMobile ? 'center' : 'end',
-                    labels: {
-                        color: '#94a3b8',
-                        font: { family: 'Inter', weight: '800', size: isMobile ? 9 : 11 },
-                        usePointStyle: true,
-                        boxWidth: isMobile ? 6 : 10,
-                        padding: isMobile ? 10 : 20
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                    titleColor: '#f8fafc',
-                    titleFont: { size: isMobile ? 11 : 13, weight: 'bold' },
-                    bodyColor: '#cbd5e1',
-                    bodyFont: { size: isMobile ? 10 : 12 },
-                    borderColor: 'rgba(99, 102, 241, 0.2)',
-                    borderWidth: 1,
-                    padding: isMobile ? 10 : 14,
-                    cornerRadius: 12,
-                    usePointStyle: true,
-                    boxPadding: 8,
-                    callbacks: {
-                        label: c => {
-                            if (c.parsed.y === null) return null;
-                            return ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)} Ch`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: total > 0 ? Math.ceil(total * 1.1) : 10,
-                    ticks: {
-                        font: { size: isMobile ? 8 : 10, weight: 'bold' },
-                        color: '#64748b',
-                        padding: isMobile ? 4 : 8
-                    },
-                    grid: {
-                        color: 'rgba(148, 163, 184, 0.08)',
-                        drawBorder: false,
-                        borderDash: [5, 5]
-                    },
-                    border: { display: false }
-                },
-                x: {
-                    ticks: {
-                        font: { size: isMobile ? 8 : 10, weight: 'bold' },
-                        color: '#64748b',
-                        maxTicksLimit: isMobile ? 5 : 12,
-                        maxRotation: 0,
-                        padding: isMobile ? 4 : 8
-                    },
-                    grid: {
-                        display: true,
-                        color: 'rgba(148, 163, 184, 0.03)',
-                        drawBorder: false
-                    },
-                    border: { display: false }
-                }
-            }
-        }
-    });
+    window.globalPaceTrendChartInstance = window.createOrUpdatePaceChart(canvas, chartData);
 };
 
 window.renderRevisionTrendChart = function () {
