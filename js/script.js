@@ -14413,8 +14413,14 @@ window.updateWeeklyTargetSubjectDropdown = function () {
     if (subs.length === 0) {
         subSelect.innerHTML = '<option value="">No Subjects</option>';
     } else {
+        const passedItems = window.passedItems || (window.AppState && window.AppState.passedItems) || { programs: [], subjects: [] };
         subs.forEach(s => {
-            subSelect.innerHTML += `<option value="${s.subject}">${s.subject}</option>`;
+            const isPassed = Boolean(
+                (Array.isArray(passedItems.subjects) && passedItems.subjects.includes(s.subject)) ||
+                (Array.isArray(passedItems.programs) && passedItems.programs.includes(s.program || progName))
+            );
+            const label = isPassed ? `🏆 ${s.subject} (Passed)` : s.subject;
+            subSelect.innerHTML += `<option value="${s.subject}">${label}</option>`;
         });
     }
     window.updateWeeklyTargetChapterDropdown();
@@ -14859,8 +14865,14 @@ window.updateDailyTargetSubjectDropdown = function () {
     if (subs.length === 0) {
         subSelect.innerHTML = '<option value="">No Subjects</option>';
     } else {
+        const passedItems = window.passedItems || (window.AppState && window.AppState.passedItems) || { programs: [], subjects: [] };
         subs.forEach(s => {
-            subSelect.innerHTML += `<option value="${s.subject}">${s.subject}</option>`;
+            const isPassed = Boolean(
+                (Array.isArray(passedItems.subjects) && passedItems.subjects.includes(s.subject)) ||
+                (Array.isArray(passedItems.programs) && passedItems.programs.includes(s.program || progName))
+            );
+            const label = isPassed ? `🏆 ${s.subject} (Passed)` : s.subject;
+            subSelect.innerHTML += `<option value="${s.subject}">${label}</option>`;
         });
     }
     window.updateDailyTargetChapterDropdown();
@@ -15708,9 +15720,15 @@ window.renderDailyTargets = function () {
         const weekKey = window.formatDateRangeKey(range.start, range.end);
         const wtList = (window.weeklyTargetsDatabase && window.weeklyTargetsDatabase[weekKey]) || [];
 
+        const passedItems = window.passedItems || (window.AppState && window.AppState.passedItems) || { programs: [], subjects: [] };
         wtList.forEach(wt => {
             let displaySub = wt.subject.replace(wt.program + ' - ', '').replace(wt.program + ' ', '');
-            wtDropdown.innerHTML += `<option value="${wt.track}|${wt.program}|${wt.subject}|${wt.chapter}">${wt.chapter}: ${displaySub} (${wt.program})</option>`;
+            const isPassed = Boolean(
+                (Array.isArray(passedItems.subjects) && passedItems.subjects.includes(wt.subject)) ||
+                (Array.isArray(passedItems.programs) && passedItems.programs.includes(wt.program))
+            );
+            const passedTag = isPassed ? ' 🏆 (Passed)' : '';
+            wtDropdown.innerHTML += `<option value="${wt.track}|${wt.program}|${wt.subject}|${wt.chapter}">${wt.chapter}: ${displaySub} (${wt.program})${passedTag}</option>`;
         });
         wtDropdown.value = prevVal;
     }
@@ -16223,8 +16241,14 @@ window.updateWtdbAddSubjectDropdown = function () {
     if (subs.length === 0) {
         subSelect.innerHTML = '<option value="">No Subjects</option>';
     } else {
+        const passedItems = window.passedItems || (window.AppState && window.AppState.passedItems) || { programs: [], subjects: [] };
         subs.forEach(s => {
-            subSelect.innerHTML += `<option value="${s.subject}">${s.subject}</option>`;
+            const isPassed = Boolean(
+                (Array.isArray(passedItems.subjects) && passedItems.subjects.includes(s.subject)) ||
+                (Array.isArray(passedItems.programs) && passedItems.programs.includes(s.program || progName))
+            );
+            const label = isPassed ? `🏆 ${s.subject} (Passed)` : s.subject;
+            subSelect.innerHTML += `<option value="${s.subject}">${label}</option>`;
         });
     }
     window.updateWtdbAddChapterDropdown();
