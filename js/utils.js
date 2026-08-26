@@ -159,6 +159,17 @@ window.Utils = {
                     }
                 }
             }
+            // Parse Month Name strings like 'Aug 26' or 'August 26, 2026'
+            const monthMap = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+            const mMatch = trimmed.match(/^([A-Za-z]{3,})\s+(\d{1,2})(?:[,\s]+(\d{4}))?$/);
+            if (mMatch) {
+                const mon = monthMap[mMatch[1].toLowerCase().slice(0, 3)];
+                const day = parseInt(mMatch[2], 10);
+                const yr = mMatch[3] ? parseInt(mMatch[3], 10) : new Date().getFullYear();
+                if (mon !== undefined && !isNaN(day)) {
+                    return new Date(yr, mon, day);
+                }
+            }
         }
         let parsed = new Date(dateStr);
         if (!isNaN(parsed.getTime())) return parsed;
