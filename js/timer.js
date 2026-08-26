@@ -3002,6 +3002,9 @@
         const historyTableBody = document.getElementById('timer-history-table-body');
         const historyContainer = document.getElementById('timer-history-container');
         const countBadge = document.getElementById('timer-history-count-badge');
+        const totalTimeText = document.getElementById('timer-history-total-time-text');
+        const totalTimeBadge = document.getElementById('timer-history-total-time-badge');
+        const historyTableFoot = document.getElementById('timer-history-table-foot');
 
         if (historyTableBody) {
             let historyHtml = '';
@@ -3021,15 +3024,41 @@
                     return diffDays >= 0 && diffDays <= 7;
                 } else if (filter === 'month') {
                     return logDate.getMonth() === now.getMonth() && logDate.getFullYear() === now.getFullYear();
+                } else if (filter === 'year') {
+                    return logDate.getFullYear() === now.getFullYear();
                 }
                 return true; // 'all'
             });
+
+            // Calculate filter-wise total focus time in seconds
+            const totalFilterSeconds = filteredLogs.reduce((acc, log) => acc + (parseInt(log.duration, 10) || 0), 0);
+            const totalFilterMinutes = Math.floor(totalFilterSeconds / 60);
+            const filterHrs = Math.floor(totalFilterMinutes / 60);
+            const filterMins = totalFilterMinutes % 60;
+            const filterSecs = totalFilterSeconds % 60;
+
+            let formattedTotalTime = "0 min";
+            if (filterHrs > 0) {
+                formattedTotalTime = `${filterHrs} hr ${filterMins > 0 ? filterMins + ' min' : ''}`.trim();
+            } else if (filterMins > 0) {
+                formattedTotalTime = `${filterMins} min`;
+            } else if (filterSecs > 0) {
+                formattedTotalTime = `${filterSecs}s`;
+            }
 
             // Update badge text
             if (countBadge) {
                 countBadge.textContent = filteredLogs.length > 20 ?
                     `${filteredLogs.length} Sessions (Scrollable)` :
                     `${filteredLogs.length} Sessions`;
+            }
+
+            // Update filter-wise total focus time badge
+            if (totalTimeText) {
+                totalTimeText.textContent = `Total: ${formattedTotalTime}`;
+            }
+            if (totalTimeBadge) {
+                totalTimeBadge.title = `Total focus time for ${filter.toUpperCase()} filter: ${formattedTotalTime}`;
             }
 
             // After 20 sessions, container becomes scrollable (15 sessions visible at once)
@@ -3042,7 +3071,7 @@
             }
 
             if (filteredLogs.length === 0) {
-                const labelMap = { all: 'recorded yet', day: 'recorded today', week: 'recorded this week', month: 'recorded this month' };
+                const labelMap = { all: 'recorded yet', day: 'recorded today', week: 'recorded this week', month: 'recorded this month', year: 'recorded this year' };
                 historyHtml = `
                     <tr>
                         <td colspan="5" class="py-8 text-center text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-[10px]">
@@ -3050,6 +3079,10 @@
                         </td>
                     </tr>
                 `;
+                if (historyTableFoot) {
+                    historyTableFoot.innerHTML = '';
+                    historyTableFoot.classList.add('hidden');
+                }
             } else {
                 filteredLogs.forEach(log => {
                     const dateObj = new Date(log.date);
@@ -3057,9 +3090,9 @@
                     const dayStr = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
                     const dateStr = `${dayStr}, ${timeStr}`;
 
-                    const totalMins = Math.floor(log.duration / 60);
-                    const hrs = Math.floor(totalMins / 60);
-                    const mins = totalMins % 60;
+                    const rowTotalMins = Math.floor(log.duration / 60);
+                    const hrs = Math.floor(rowTotalMins / 60);
+                    const mins = rowTotalMins % 60;
                     const durStr = `${String(hrs).padStart(2, '0')} hr : ${String(mins).padStart(2, '0')} min`;
 
                     const modeBadge = log.mode === 'timer' ?
@@ -3091,6 +3124,18 @@
                         </tr>
                     `;
                 });
+
+                if (historyTableFoot) {
+                    historyTableFoot.classList.remove('hidden');
+                    const durSumStr = `${String(filterHrs).padStart(2, '0')} hr : ${String(filterMins).padStart(2, '0')} min`;
+                    historyTableFoot.innerHTML = `
+                        <tr class="border-t-2 border-slate-200/80 dark:border-slate-700/80 bg-slate-50/80 dark:bg-slate-900/40 text-slate-700 dark:text-slate-200 font-bold">
+                            <td class="py-3 font-black uppercase tracking-wider text-[10px]" colspan="2">Filtered Total Focus Time</td>
+                            <td class="py-3 font-mono font-black text-emerald-600 dark:text-emerald-400 text-xs">${durSumStr}</td>
+                            <td colspan="2" class="py-3 text-right text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">${filteredLogs.length} session${filteredLogs.length === 1 ? '' : 's'}</td>
+                        </tr>
+                    `;
+                }
             }
             historyTableBody.innerHTML = historyHtml;
         }
@@ -3100,7 +3145,8 @@
 
     window.setSessionHistoryFilterUI = function (filter) {
         window.sessionHistoryFilter = filter;
-        ['all', 'day', 'week', 'month'].forEach(f => {
+        if (window.AppState) window.AppState.sessionHistoryFilter = filter;
+        ['all', 'day', 'week', 'month', 'year'].forEach(f => {
             const btn = document.getElementById(`sh-filter-${f}`);
             if (btn) {
                 if (f === filter) {
