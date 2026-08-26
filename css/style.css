@@ -1049,4 +1049,35 @@ div[id^="dt-log-"] .overflow-y-auto::-webkit-scrollbar-thumb {
 
 #am-heatmap-grid button:active {
     transform: scale(0.9) translateZ(0);
+}
+
+/* Pace Management Passed Subject Styling */
+.pace-passed-item {
+    cursor: not-allowed !important;
+    opacity: 0.65;
+    background-color: rgba(241, 245, 249, 0.7) !important;
+    border-color: rgba(226, 232, 240, 0.8) !important;
+    user-select: none;
+}
+
+.dark .pace-passed-item {
+    background-color: rgba(15, 23, 42, 0.4) !important;
+    border-color: rgba(51, 65, 85, 0.6) !important;
+}
+
+.pace-passed-item del {
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+    text-decoration-color: currentColor;
+    opacity: 0.85;
+}
+
+.pace-passed-included-item {
+    user-select: none;
+}
+
+.pace-passed-included-item del {
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+    text-decoration-color: currentColor;
 }

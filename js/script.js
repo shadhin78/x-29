@@ -6718,16 +6718,51 @@ window.renderSubjectTrendCircle = function () {
         window.selectedSubjectsTrend.push(subjectName);
     }
 
-    // Generate subject checkbox items for custom dropdown
+    // Generate subject checkbox items for custom dropdown (program-wise sorting)
     let subjectCheckboxItemsHtml = '';
-    for (const track of window.tracks) {
-        if (syllabusStructure[track.id]) {
-            syllabusStructure[track.id].forEach(s => {
+    const allProgs = window.getAllPrograms ? window.getAllPrograms() : [];
+    const allSubs = window.getAllSubjects ? window.getAllSubjects() : [];
+    
+    // Group subjects by program
+    const programMap = new Map();
+    // 1. Initialize programs from getAllPrograms()
+    allProgs.forEach(p => {
+        const pName = p.name || p;
+        if (!programMap.has(pName)) {
+            programMap.set(pName, { name: pName, trackName: p._trackName || '', subjects: [] });
+        }
+    });
+
+    // 2. Put subjects into their corresponding program
+    const unassignedSubs = [];
+    allSubs.forEach(s => {
+        const progName = s.program;
+        if (progName && programMap.has(progName)) {
+            programMap.get(progName).subjects.push(s);
+        } else if (progName) {
+            if (!programMap.has(progName)) {
+                programMap.set(progName, { name: progName, trackName: '', subjects: [] });
+            }
+            programMap.get(progName).subjects.push(s);
+        } else {
+            unassignedSubs.push(s);
+        }
+    });
+
+    // 3. Render program groups
+    programMap.forEach(progGroup => {
+        if (progGroup.subjects.length > 0) {
+            subjectCheckboxItemsHtml += `
+                <div class="px-2.5 py-1 mt-2 mb-1 text-[8.5px] font-black uppercase tracking-widest text-indigo-400 bg-slate-800/90 rounded-lg flex items-center justify-between border border-slate-700/60 sticky top-0 z-10 backdrop-blur-md shadow-sm">
+                    <span class="truncate">${progGroup.name}</span>
+                    <span class="text-[7.5px] text-slate-400 font-bold bg-slate-900/80 px-1.5 py-0.5 rounded border border-slate-700/40 shrink-0">${progGroup.subjects.length} Subs</span>
+                </div>`;
+            progGroup.subjects.forEach(s => {
                 const isChecked = window.selectedSubjectsTrend.includes(s.subject);
                 const isActive = s.subject === subjectName;
                 const checkedAttr = isChecked ? 'checked' : '';
-                const activeBg = isActive ? 'bg-indigo-500/15 border-indigo-500/30' : 'bg-transparent border-transparent hover:bg-slate-800';
-                const activeIndicator = isActive ? '<div class="w-1 h-4 rounded-full bg-indigo-500 shrink-0"></div>' : '';
+                const activeBg = isActive ? 'bg-indigo-500/20 border-indigo-500/40 text-white shadow-sm' : 'bg-transparent border-transparent hover:bg-slate-800/80 text-slate-200';
+                const activeIndicator = isActive ? '<div class="w-1.5 h-4 rounded-full bg-indigo-500 shrink-0 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div>' : '';
                 subjectCheckboxItemsHtml += `
                     <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border ${activeBg} transition-all cursor-pointer group"
                          onclick="window.stmSelectSubject('${s.subject.replace(/'/g, "\\'")}')">
@@ -6735,10 +6770,35 @@ window.renderSubjectTrendCircle = function () {
                         <input type="checkbox" ${checkedAttr}
                             class="w-3.5 h-3.5 rounded accent-indigo-500 cursor-pointer shrink-0"
                             onclick="event.stopPropagation(); window.stmToggleSubjectCheck('${s.subject.replace(/'/g, "\\'")}')" />
-                        <span class="text-[10px] font-bold text-slate-200 uppercase tracking-wider truncate group-hover:text-white transition-colors">${s.subject}</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider truncate group-hover:text-white transition-colors flex-1" title="${s.subject}">${s.subject}</span>
                     </div>`;
             });
         }
+    });
+
+    // 4. Render unassigned subjects if any
+    if (unassignedSubs.length > 0) {
+        subjectCheckboxItemsHtml += `
+            <div class="px-2.5 py-1 mt-2 mb-1 text-[8.5px] font-black uppercase tracking-widest text-slate-400 bg-slate-800/90 rounded-lg flex items-center justify-between border border-slate-700/60 sticky top-0 z-10 backdrop-blur-md shadow-sm">
+                <span class="truncate">Other Subjects</span>
+                <span class="text-[7.5px] text-slate-400 font-bold bg-slate-900/80 px-1.5 py-0.5 rounded border border-slate-700/40 shrink-0">${unassignedSubs.length} Subs</span>
+            </div>`;
+        unassignedSubs.forEach(s => {
+            const isChecked = window.selectedSubjectsTrend.includes(s.subject);
+            const isActive = s.subject === subjectName;
+            const checkedAttr = isChecked ? 'checked' : '';
+            const activeBg = isActive ? 'bg-indigo-500/20 border-indigo-500/40 text-white shadow-sm' : 'bg-transparent border-transparent hover:bg-slate-800/80 text-slate-200';
+            const activeIndicator = isActive ? '<div class="w-1.5 h-4 rounded-full bg-indigo-500 shrink-0 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div>' : '';
+            subjectCheckboxItemsHtml += `
+                <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border ${activeBg} transition-all cursor-pointer group"
+                     onclick="window.stmSelectSubject('${s.subject.replace(/'/g, "\\'")}')">
+                    ${activeIndicator}
+                    <input type="checkbox" ${checkedAttr}
+                        class="w-3.5 h-3.5 rounded accent-indigo-500 cursor-pointer shrink-0"
+                        onclick="event.stopPropagation(); window.stmToggleSubjectCheck('${s.subject.replace(/'/g, "\\'")}')" />
+                    <span class="text-[10px] font-bold uppercase tracking-wider truncate group-hover:text-white transition-colors flex-1" title="${s.subject}">${s.subject}</span>
+                </div>`;
+        });
     }
 
     const selectedCount = window.selectedSubjectsTrend.length;
@@ -6764,7 +6824,7 @@ window.renderSubjectTrendCircle = function () {
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
-                        <div id="stm-dropdown-panel" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-[200px] overflow-y-auto custom-scrollbar p-1.5 flex flex-col gap-0.5">
+                        <div id="stm-dropdown-panel" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-[260px] overflow-y-auto custom-scrollbar p-1.5 flex flex-col gap-0.5">
                             <div class="flex items-center justify-between px-2 py-1 mb-0.5 border-b border-slate-800">
                                 <button onclick="event.stopPropagation(); window.stmSelectAll()" class="text-[8px] font-black text-indigo-400 uppercase tracking-wider hover:text-indigo-300 transition-colors">Select All</button>
                                 <button onclick="event.stopPropagation(); window.stmDeselectAll()" class="text-[8px] font-black text-slate-500 uppercase tracking-wider hover:text-slate-300 transition-colors">Deselect All</button>
@@ -12959,11 +13019,34 @@ window.openEditPaceModal = function (goalId) {
                         subs.forEach(s => {
                             const isChecked = (goal.subjects && goal.subjects.includes(s.subject)) ? 'checked' : '';
                             let displaySub = s.subject.replace(progName + ' - ', '').replace(progName + ' ', '');
-                            html += `
-                                    <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 active:scale-95 transition-all shadow-sm">
-                                        <input type="checkbox" value="${s.subject}" class="edit-pace-subject-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all" ${isChecked}>
-                                        <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title="${s.subject}">${displaySub}</span>
-                                    </label>`;
+                            const isPassed = Boolean(window.passedItems && ((window.passedItems.subjects && window.passedItems.subjects.includes(s.subject)) || (window.passedItems.programs && window.passedItems.programs.includes(progName))));
+                            const isAlreadyInGoal = Boolean(goal.subjects && goal.subjects.includes(s.subject));
+
+                            if (isPassed && !isAlreadyInGoal) {
+                                html += `
+                                        <label class="flex items-center justify-between space-x-2 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/50 bg-slate-100/60 dark:bg-slate-900/30 opacity-60 cursor-not-allowed shadow-none pace-passed-item" title="${s.subject} (Passed - cannot be added to pace)">
+                                            <div class="flex items-center space-x-2 min-w-0 flex-1">
+                                                <input type="checkbox" value="${s.subject}" disabled class="edit-pace-subject-cb form-checkbox h-4 w-4 text-slate-400 rounded border-slate-300 dark:border-slate-600 cursor-not-allowed">
+                                                <del class="text-[10px] md:text-xs font-bold text-slate-400 dark:text-slate-500 truncate line-through" title="${s.subject}">${displaySub}</del>
+                                            </div>
+                                            <span class="text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">Passed</span>
+                                        </label>`;
+                            } else if (isPassed && isAlreadyInGoal) {
+                                html += `
+                                        <label class="flex items-center justify-between space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700/60 active:scale-95 transition-all shadow-sm pace-passed-included-item" title="${s.subject} (Passed - currently included in this pace)">
+                                            <div class="flex items-center space-x-2 min-w-0 flex-1">
+                                                <input type="checkbox" value="${s.subject}" class="edit-pace-subject-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all" checked>
+                                                <del class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate line-through" title="${s.subject}">${displaySub}</del>
+                                            </div>
+                                            <span class="text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">Passed</span>
+                                        </label>`;
+                            } else {
+                                html += `
+                                        <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 active:scale-95 transition-all shadow-sm">
+                                            <input type="checkbox" value="${s.subject}" class="edit-pace-subject-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all" ${isChecked}>
+                                            <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title="${s.subject}">${displaySub}</span>
+                                        </label>`;
+                            }
                         });
                         html += `</div></div>`;
                     }
@@ -13007,11 +13090,34 @@ window.openEditPaceModal = function (goalId) {
                     window.customPrograms[track.id].forEach(p => {
                         const pName = p.name || p;
                         const isChecked = selectedProgs.some(sp => (sp.name || sp) === pName) ? 'checked' : '';
-                        html += `
-                                <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 active:scale-95 transition-all shadow-sm">
-                                    <input type="checkbox" value="${pName}" class="edit-pace-cb form-checkbox h-4 w-4 text-violet-500 rounded border-slate-300 focus:ring-violet-500 accent-violet-500 transition-all" ${isChecked}>
-                                    <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate">${pName}</span>
-                                </label>`;
+                        const isProgPassed = Boolean(window.passedItems && window.passedItems.programs && window.passedItems.programs.includes(pName));
+                        const isAlreadyInGoal = Boolean(selectedProgs.some(sp => (sp.name || sp) === pName));
+
+                        if (isProgPassed && !isAlreadyInGoal) {
+                            html += `
+                                    <label class="flex items-center justify-between space-x-2 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/50 bg-slate-100/60 dark:bg-slate-900/30 opacity-60 cursor-not-allowed shadow-none pace-passed-item" title="${pName} (Passed - cannot be added to pace)">
+                                        <div class="flex items-center space-x-2 min-w-0 flex-1">
+                                            <input type="checkbox" value="${pName}" disabled class="edit-pace-cb form-checkbox h-4 w-4 text-slate-400 rounded border-slate-300 dark:border-slate-600 cursor-not-allowed">
+                                            <del class="text-[10px] md:text-xs font-bold text-slate-400 dark:text-slate-500 truncate line-through">${pName}</del>
+                                        </div>
+                                        <span class="text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">Passed</span>
+                                    </label>`;
+                        } else if (isProgPassed && isAlreadyInGoal) {
+                            html += `
+                                    <label class="flex items-center justify-between space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700/60 active:scale-95 transition-all shadow-sm pace-passed-included-item" title="${pName} (Passed - currently included in this pace)">
+                                        <div class="flex items-center space-x-2 min-w-0 flex-1">
+                                            <input type="checkbox" value="${pName}" class="edit-pace-cb form-checkbox h-4 w-4 text-violet-500 rounded border-slate-300 focus:ring-violet-500 accent-violet-500 transition-all" checked>
+                                            <del class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate line-through">${pName}</del>
+                                        </div>
+                                        <span class="text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">Passed</span>
+                                    </label>`;
+                        } else {
+                            html += `
+                                    <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 active:scale-95 transition-all shadow-sm">
+                                        <input type="checkbox" value="${pName}" class="edit-pace-cb form-checkbox h-4 w-4 text-violet-500 rounded border-slate-300 focus:ring-violet-500 accent-violet-500 transition-all" ${isChecked}>
+                                        <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate">${pName}</span>
+                                    </label>`;
+                        }
                     });
                 }
             });
@@ -13028,11 +13134,34 @@ window.openEditPaceModal = function (goalId) {
                             subs.forEach(s => {
                                 const isChecked = selectedSubs.includes(s.subject) ? 'checked' : '';
                                 let displaySub = s.subject.replace(progName + ' - ', '').replace(progName + ' ', '');
-                                html += `
-                                        <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 active:scale-95 transition-all shadow-sm">
-                                            <input type="checkbox" value="${s.subject}" class="edit-pace-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all" ${isChecked}>
-                                            <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title="${s.subject}">${displaySub}</span>
-                                        </label>`;
+                                const isPassed = Boolean(window.passedItems && ((window.passedItems.subjects && window.passedItems.subjects.includes(s.subject)) || (window.passedItems.programs && window.passedItems.programs.includes(progName))));
+                                const isAlreadyInGoal = Boolean(selectedSubs.includes(s.subject));
+
+                                if (isPassed && !isAlreadyInGoal) {
+                                    html += `
+                                            <label class="flex items-center justify-between space-x-2 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/50 bg-slate-100/60 dark:bg-slate-900/30 opacity-60 cursor-not-allowed shadow-none pace-passed-item" title="${s.subject} (Passed - cannot be added to pace)">
+                                                <div class="flex items-center space-x-2 min-w-0 flex-1">
+                                                    <input type="checkbox" value="${s.subject}" disabled class="edit-pace-cb form-checkbox h-4 w-4 text-slate-400 rounded border-slate-300 dark:border-slate-600 cursor-not-allowed">
+                                                    <del class="text-[10px] md:text-xs font-bold text-slate-400 dark:text-slate-500 truncate line-through" title="${s.subject}">${displaySub}</del>
+                                                </div>
+                                                <span class="text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">Passed</span>
+                                            </label>`;
+                                } else if (isPassed && isAlreadyInGoal) {
+                                    html += `
+                                            <label class="flex items-center justify-between space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700/60 active:scale-95 transition-all shadow-sm pace-passed-included-item" title="${s.subject} (Passed - currently included in this pace)">
+                                                <div class="flex items-center space-x-2 min-w-0 flex-1">
+                                                    <input type="checkbox" value="${s.subject}" class="edit-pace-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all" checked>
+                                                    <del class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate line-through" title="${s.subject}">${displaySub}</del>
+                                                </div>
+                                                <span class="text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">Passed</span>
+                                            </label>`;
+                                } else {
+                                    html += `
+                                            <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 active:scale-95 transition-all shadow-sm">
+                                                <input type="checkbox" value="${s.subject}" class="edit-pace-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all" ${isChecked}>
+                                                <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title="${s.subject}">${displaySub}</span>
+                                            </label>`;
+                                }
                             });
                             html += `</div></div>`;
                         }
@@ -13062,7 +13191,14 @@ window.savePaceEdit = function () {
         const subjCheckboxes = document.querySelectorAll('.edit-pace-subject-cb:checked');
         const secCheckboxes = document.querySelectorAll('.edit-pace-sec-cb:checked');
 
-        const selectedSubjects = Array.from(subjCheckboxes).map(cb => cb.value);
+        const selectedSubjects = Array.from(subjCheckboxes).map(cb => cb.value).filter(sub => {
+            const wasAlreadyInGoal = goal.subjects && goal.subjects.includes(sub);
+            if (wasAlreadyInGoal) return true;
+            const sObj = window.getAllSubjects ? window.getAllSubjects().find(s => s.subject === sub) : null;
+            const progName = sObj ? sObj.program : '';
+            const isPassed = Boolean(window.passedItems && ((window.passedItems.subjects && window.passedItems.subjects.includes(sub)) || (window.passedItems.programs && window.passedItems.programs.includes(progName))));
+            return !isPassed;
+        });
         const selectedSec = Array.from(secCheckboxes).map(cb => cb.value);
 
         goal.subjects = selectedSubjects;
@@ -13077,6 +13213,9 @@ window.savePaceEdit = function () {
         if (selectedItems.length === 0) return showToast("Please select at least one item.", "error");
 
         goal.target = name;
+        const previousSubjects = goal.subjects || (goal.type === 'subject' ? [goal.target] : []);
+        const previousPrograms = goal.programs || (goal.type === 'program' ? [goal.target] : []);
+
         goal.type = 'bundle';
         delete goal.subjects;
         delete goal.programs;
@@ -13089,8 +13228,23 @@ window.savePaceEdit = function () {
             }
         });
 
-        if (isProg) goal.programs = selectedItems;
-        else goal.subjects = selectedItems;
+        if (isProg) {
+            goal.programs = selectedItems.filter(pName => {
+                const wasAlreadyInGoal = previousPrograms.some(sp => (sp.name || sp) === pName);
+                if (wasAlreadyInGoal) return true;
+                const isPassed = Boolean(window.passedItems && window.passedItems.programs && window.passedItems.programs.includes(pName));
+                return !isPassed;
+            });
+        } else {
+            goal.subjects = selectedItems.filter(sub => {
+                const wasAlreadyInGoal = previousSubjects.includes(sub);
+                if (wasAlreadyInGoal) return true;
+                const sObj = window.getAllSubjects ? window.getAllSubjects().find(s => s.subject === sub) : null;
+                const progName = sObj ? sObj.program : '';
+                const isPassed = Boolean(window.passedItems && ((window.passedItems.subjects && window.passedItems.subjects.includes(sub)) || (window.passedItems.programs && window.passedItems.programs.includes(progName))));
+                return !isPassed;
+            });
+        }
     }
 
     goal.startDate = startStr;
@@ -17795,11 +17949,23 @@ window.updatePaceSubjects = function () {
                                 `;
                         subs.forEach(s => {
                             let displaySub = s.subject.replace(progName + ' - ', '').replace(progName + ' ', '');
-                            html += `
+                            const isPassed = Boolean(window.passedItems && ((window.passedItems.subjects && window.passedItems.subjects.includes(s.subject)) || (window.passedItems.programs && window.passedItems.programs.includes(progName))));
+                            if (isPassed) {
+                                html += `
+                                            <label class="flex items-center justify-between space-x-2 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/50 bg-slate-100/60 dark:bg-slate-900/30 opacity-60 cursor-not-allowed shadow-none pace-passed-item" title="${s.subject} (Passed - cannot be added to new pace)">
+                                                <div class="flex items-center space-x-2 min-w-0 flex-1">
+                                                    <input type="checkbox" value="${s.subject}" disabled class="pace-subject-cb form-checkbox h-4 w-4 text-slate-400 rounded border-slate-300 dark:border-slate-600 cursor-not-allowed">
+                                                    <del class="text-[10px] md:text-xs font-bold text-slate-400 dark:text-slate-500 truncate line-through" title="${s.subject}">${displaySub}</del>
+                                                </div>
+                                                <span class="text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">Passed</span>
+                                            </label>`;
+                            } else {
+                                html += `
                                             <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-orange-400 active:scale-95 transition-all shadow-sm group/label">
                                                 <input type="checkbox" value="${s.subject}" class="pace-subject-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all">
                                                 <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate group-hover/label:text-orange-600 dark:group-hover/label:text-orange-400 transition-colors" title="${s.subject}">${displaySub}</span>
                                             </label>`;
+                            }
                         });
                         html += `
                                         </div>
@@ -17815,11 +17981,23 @@ window.updatePaceSubjects = function () {
             if (window.customPrograms[track.id] && window.customPrograms[track.id].length > 0) {
                 window.customPrograms[track.id].forEach(p => {
                     const pName = p.name || p;
-                    html += `
-                            <label class="flex items-center space-x-2 cursor-pointer bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-violet-400 active:scale-95 transition-all shadow-sm">
-                                <input type="checkbox" value="${pName}" class="pace-subject-cb form-checkbox h-4 w-4 text-violet-500 rounded border-slate-300 focus:ring-violet-500 accent-violet-500 transition-all">
-                                <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate">${pName}</span>
-                            </label>`;
+                    const isProgPassed = Boolean(window.passedItems && window.passedItems.programs && window.passedItems.programs.includes(pName));
+                    if (isProgPassed) {
+                        html += `
+                                <label class="flex items-center justify-between space-x-2 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/50 bg-slate-100/60 dark:bg-slate-900/30 opacity-60 cursor-not-allowed shadow-none pace-passed-item" title="${pName} (Passed - cannot be added to new pace)">
+                                    <div class="flex items-center space-x-2 min-w-0 flex-1">
+                                        <input type="checkbox" value="${pName}" disabled class="pace-subject-cb form-checkbox h-4 w-4 text-slate-400 rounded border-slate-300 dark:border-slate-600 cursor-not-allowed">
+                                        <del class="text-[10px] md:text-xs font-bold text-slate-400 dark:text-slate-500 truncate line-through">${pName}</del>
+                                    </div>
+                                    <span class="text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">Passed</span>
+                                </label>`;
+                    } else {
+                        html += `
+                                <label class="flex items-center space-x-2 cursor-pointer bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-violet-400 active:scale-95 transition-all shadow-sm">
+                                    <input type="checkbox" value="${pName}" class="pace-subject-cb form-checkbox h-4 w-4 text-violet-500 rounded border-slate-300 focus:ring-violet-500 accent-violet-500 transition-all">
+                                    <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate">${pName}</span>
+                                </label>`;
+                    }
                 });
             }
         });
@@ -17846,11 +18024,23 @@ window.updatePaceSubjects = function () {
                                 `;
                         subs.forEach(s => {
                             let displaySub = s.subject.replace(progName + ' - ', '').replace(progName + ' ', '');
-                            html += `
+                            const isPassed = Boolean(window.passedItems && ((window.passedItems.subjects && window.passedItems.subjects.includes(s.subject)) || (window.passedItems.programs && window.passedItems.programs.includes(progName))));
+                            if (isPassed) {
+                                html += `
+                                            <label class="flex items-center justify-between space-x-2 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/50 bg-slate-100/60 dark:bg-slate-900/30 opacity-60 cursor-not-allowed shadow-none pace-passed-item" title="${s.subject} (Passed - cannot be added to new pace)">
+                                                <div class="flex items-center space-x-2 min-w-0 flex-1">
+                                                    <input type="checkbox" value="${s.subject}" disabled class="global-subject-cb form-checkbox h-4 w-4 text-slate-400 rounded border-slate-300 dark:border-slate-600 cursor-not-allowed">
+                                                    <del class="text-[10px] md:text-xs font-bold text-slate-400 dark:text-slate-500 truncate line-through" title="${s.subject}">${displaySub}</del>
+                                                </div>
+                                                <span class="text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">Passed</span>
+                                            </label>`;
+                            } else {
+                                html += `
                                             <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-orange-400 active:scale-95 transition-all shadow-sm group/label">
                                                 <input type="checkbox" value="${s.subject}" class="global-subject-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all">
                                                 <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate group-hover/label:text-orange-600 dark:group-hover/label:text-orange-400 transition-colors" title="${s.subject}">${displaySub}</span>
                                             </label>`;
+                            }
                         });
                         html += `
                                         </div>
@@ -17903,7 +18093,12 @@ window.addPaceGoal = function () {
         const subjCheckboxes = document.querySelectorAll('.global-subject-cb:checked');
         const secCheckboxes = document.querySelectorAll('.global-pace-cb:checked');
 
-        const selectedSubjects = Array.from(subjCheckboxes).map(cb => cb.value);
+        const selectedSubjects = Array.from(subjCheckboxes).map(cb => cb.value).filter(sub => {
+            const sObj = window.getAllSubjects ? window.getAllSubjects().find(s => s.subject === sub) : null;
+            const progName = sObj ? sObj.program : '';
+            const isPassed = Boolean(window.passedItems && ((window.passedItems.subjects && window.passedItems.subjects.includes(sub)) || (window.passedItems.programs && window.passedItems.programs.includes(progName))));
+            return !isPassed;
+        });
         const selectedSec = Array.from(secCheckboxes).map(cb => cb.value);
 
         window.paceGoals.push({
@@ -17922,6 +18117,23 @@ window.addPaceGoal = function () {
         if (selectedItems.length === 0) return showToast("Please select at least one item.", "error");
         if (window.paceGoals.some(g => g.target === name)) return showToast("A custom goal with this name already exists.", "error");
 
+        let filteredItems = [];
+        if (bType === 'subjects') {
+            filteredItems = selectedItems.filter(sub => {
+                const sObj = window.getAllSubjects ? window.getAllSubjects().find(s => s.subject === sub) : null;
+                const progName = sObj ? sObj.program : '';
+                const isPassed = Boolean(window.passedItems && ((window.passedItems.subjects && window.passedItems.subjects.includes(sub)) || (window.passedItems.programs && window.passedItems.programs.includes(progName))));
+                return !isPassed;
+            });
+            if (filteredItems.length === 0) return showToast("Selected subjects are already passed and cannot be added to a new pace.", "error");
+        } else {
+            filteredItems = selectedItems.filter(pName => {
+                const isPassed = Boolean(window.passedItems && window.passedItems.programs && window.passedItems.programs.includes(pName));
+                return !isPassed;
+            });
+            if (filteredItems.length === 0) return showToast("Selected programs are already passed and cannot be added to a new pace.", "error");
+        }
+
         let newGoal = {
             id: 'pg_' + Date.now(),
             type: 'bundle',
@@ -17931,9 +18143,9 @@ window.addPaceGoal = function () {
         };
 
         if (bType === 'subjects') {
-            newGoal.subjects = selectedItems;
+            newGoal.subjects = filteredItems;
         } else {
-            newGoal.programs = selectedItems;
+            newGoal.programs = filteredItems;
         }
 
         window.paceGoals.push(newGoal);
