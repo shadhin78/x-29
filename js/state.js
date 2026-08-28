@@ -166,9 +166,6 @@ stateKeys.forEach(key => {
         get: () => window.AppState[key],
         set: (val) => {
             window.AppState[key] = val;
-            if (key === 'fiscalLedger' && typeof window.renderDashboardFiscalSummary === 'function') {
-                window.renderDashboardFiscalSummary();
-            }
         },
         configurable: true
     });
