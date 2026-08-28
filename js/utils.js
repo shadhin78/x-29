@@ -170,6 +170,16 @@ window.Utils = {
                     return new Date(yr, mon, day);
                 }
             }
+            // Parse Day Month strings like '28 Aug' or '28 Aug 2026' or '28 August 2026'
+            const dMatch = trimmed.match(/^(\d{1,2})\s+([A-Za-z]{3,})(?:[,\s]+(\d{4}))?$/);
+            if (dMatch) {
+                const day = parseInt(dMatch[1], 10);
+                const mon = monthMap[dMatch[2].toLowerCase().slice(0, 3)];
+                const yr = dMatch[3] ? parseInt(dMatch[3], 10) : new Date().getFullYear();
+                if (mon !== undefined && !isNaN(day)) {
+                    return new Date(yr, mon, day);
+                }
+            }
         }
         let parsed = new Date(dateStr);
         if (!isNaN(parsed.getTime())) return parsed;

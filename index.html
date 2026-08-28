@@ -482,6 +482,52 @@
                         </div>
                     </div>
 
+                    <!-- Monthly Targets Checklist Card -->
+                    <div id="dashboard-monthly-targets-section"
+                        class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col animate-page-enter select-none h-[225px] md:h-[250px] min-h-[225px] md:min-h-[250px]">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center space-x-2 min-w-0">
+                                <div
+                                    class="p-1.5 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded-lg shrink-0">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <div class="min-w-0 flex-grow flex items-center gap-1.5">
+                                    <div>
+                                        <h3
+                                            class="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 truncate">
+                                            Monthly Targets</h3>
+                                        <span
+                                            class="text-[7px] text-slate-400 uppercase tracking-wider block font-black truncate"
+                                            id="db-monthly-checklist-range">Present Month</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <span id="db-monthly-checklist-pct"
+                                    class="text-xs font-black text-indigo-600 dark:text-indigo-400">0%</span>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div
+                            class="w-full bg-slate-100 dark:bg-slate-700/50 h-2.5 rounded-full overflow-hidden mb-2.5 shadow-inner border border-slate-200/50 dark:border-slate-600/30 relative">
+                            <div id="db-monthly-checklist-progress"
+                                class="bg-gradient-to-r from-indigo-500 to-purple-600 h-full rounded-full transition-all duration-500 ease-out w-0 relative">
+                                <div class="absolute right-0 top-0 bottom-0 w-2 bg-white/40 rounded-full"></div>
+                            </div>
+                        </div>
+
+                        <!-- Targets List -->
+                        <div id="db-monthly-targets-checklist"
+                            class="space-y-1.5 overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 text-[10px] flex-1 mt-2">
+                            <!-- Dynamic list items -->
+                        </div>
+                    </div>
+
                     <!-- Global Overall Completion Dashboard Card -->
                     <div id="dashboard-global-completion"
                         class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col animate-page-enter select-none h-[225px] md:h-[250px] min-h-[225px] md:min-h-[250px]">

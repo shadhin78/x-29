@@ -59,14 +59,14 @@ function safeSetClass(id, className) { const el = document.getElementById(id); i
 
 function getTaskDate(task) {
     if (!task) return new Date(NaN);
-    if (typeof task.id === 'number') {
-        const baseDate = new Date(AppState.PLAN_START_DATE.getTime());
-        baseDate.setDate(baseDate.getDate() + (task.id - 1));
-        return baseDate;
-    }
     if (task.date) {
         const d = Utils.parseDateSafe(task.date);
         if (d && !isNaN(d.getTime())) return d;
+    }
+    if (typeof task.id === 'number' && AppState.PLAN_START_DATE) {
+        const baseDate = new Date(AppState.PLAN_START_DATE.getTime());
+        baseDate.setDate(baseDate.getDate() + (task.id - 1));
+        return baseDate;
     }
     return new Date(NaN);
 }
@@ -2502,37 +2502,43 @@ function rebuildTaskDates(shouldSave = true) {
     if (!AppState.tasks || AppState.tasks.length === 0) return;
     const baseDate = new Date(AppState.PLAN_START_DATE.getTime());
     AppState.tasks.forEach(t => {
-        const curDate = new Date(baseDate.getTime());
-        curDate.setDate(curDate.getDate() + (t.id - 1));
-        t.date = Utils.formatDate(curDate);
-        t.day = curDate.toLocaleDateString('en-US', { weekday: 'short' });
+        if (typeof t.id === 'number') {
+            const curDate = new Date(baseDate.getTime());
+            curDate.setDate(curDate.getDate() + (t.id - 1));
+            t.date = Utils.formatDate(curDate);
+            t.day = curDate.toLocaleDateString('en-US', { weekday: 'short' });
+        }
     });
-    const newEndDate = new Date(baseDate.getTime());
-    newEndDate.setDate(newEndDate.getDate() + (AppState.tasks[AppState.tasks.length - 1].id - 1));
-    AppState.PLAN_END_DATE = newEndDate;
-    if (shouldSave) {
-        FirebaseService.saveToCloud();
+    const lastNumTask = [...AppState.tasks].reverse().find(t => typeof t.id === 'number');
+    if (lastNumTask) {
+        const newEndDate = new Date(baseDate.getTime());
+        newEndDate.setDate(newEndDate.getDate() + (lastNumTask.id - 1));
+        AppState.PLAN_END_DATE = newEndDate;
+    }
+    if (typeof window.rebuildTaskDateMap === 'function') window.rebuildTaskDateMap();
+    if (shouldSave && window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
+        window.FirebaseService.saveToCloud();
     }
 }
 
 function updateGlobalDates() {
     const globalGoal = window.paceGoals.find(g => g.type === 'global');
-    let dateChanged = false;
 
     if (window.dashboardConfig && window.dashboardConfig.trendStartDate) {
         const trendStart = Utils.parseDateSafe(window.dashboardConfig.trendStartDate);
         if (!isNaN(trendStart.getTime())) {
             trendStart.setHours(0, 0, 0, 0);
-            const currentStart = new Date(AppState.PLAN_START_DATE.getTime());
-            currentStart.setHours(0, 0, 0, 0);
-
-            if (trendStart.getTime() !== currentStart.getTime()) {
-                AppState.PLAN_START_DATE = new Date(trendStart.getTime());
-                dateChanged = true;
+            AppState.PLAN_START_DATE = new Date(trendStart.getTime());
+        }
+    } else if (AppState.tasks && AppState.tasks.length > 0 && AppState.tasks[0].date) {
+        const firstD = Utils.parseDateSafe(AppState.tasks[0].date);
+        if (firstD && !isNaN(firstD.getTime())) {
+            firstD.setHours(0, 0, 0, 0);
+            AppState.PLAN_START_DATE = new Date(firstD.getTime());
+            if (window.dashboardConfig) {
+                window.dashboardConfig.trendStartDate = firstD.toISOString().split('T')[0];
             }
         }
-    } else if (window.dashboardConfig) {
-        window.dashboardConfig.trendStartDate = AppState.PLAN_START_DATE.toISOString().split('T')[0];
     }
 
     if (globalGoal) {
@@ -2556,10 +2562,6 @@ function updateGlobalDates() {
 
     if (AppState.globalStartDate) AppState.globalStartDate.setHours(0, 0, 0, 0);
     if (AppState.globalEndDate) AppState.globalEndDate.setHours(23, 59, 59, 999);
-
-    if (dateChanged) {
-        rebuildTaskDates(false); // Update memory but do not write back to cloud automatically on render
-    }
 }
 
 // Deprecated
@@ -3037,6 +3039,7 @@ function renderUI() {
         if (typeof renderTrendCharts === 'function') renderTrendCharts();
         if (typeof window.renderResults === 'function') window.renderResults();
         if (typeof window.renderMonthlyTargets === 'function') window.renderMonthlyTargets();
+        if (typeof window.renderDashboardMonthlyChecklist === 'function') window.renderDashboardMonthlyChecklist();
         if (typeof window.renderWeeklyTargets === 'function') window.renderWeeklyTargets();
         if (typeof window.autoSyncWeeklyToDailyTargets === 'function') window.autoSyncWeeklyToDailyTargets();
         if (typeof window.renderDashboardWeeklyChecklist === 'function') window.renderDashboardWeeklyChecklist();
@@ -18084,6 +18087,236 @@ window.toggleDashboardWeeklyTargetCompletion = function (weekKey, idx, isComplet
     showToast("Weekly checklist completion synchronized!", "success");
 };
 
+window.renderDashboardMonthlyChecklist = function () {
+    const listContainer = document.getElementById('db-monthly-targets-checklist');
+    const pctEl = document.getElementById('db-monthly-checklist-pct');
+    const rangeEl = document.getElementById('db-monthly-checklist-range');
+    const progressEl = document.getElementById('db-monthly-checklist-progress');
+    if (!listContainer) return;
+
+    const currentRange = window.getMonthlyTargetRange();
+    const currentMonthKey = window.formatMonthRangeKey(currentRange.start, currentRange.end);
+    const currentStartTime = currentRange.start.getTime();
+
+    if (!window.monthlyTargetsDatabase) window.monthlyTargetsDatabase = {};
+
+    const dashboardItems = [];
+
+    // 1. Current month targets (both completed and uncompleted)
+    const currentTargets = window.monthlyTargetsDatabase[currentMonthKey] || [];
+    currentTargets.forEach((target, idx) => {
+        const isSubjectTarget = (target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters');
+        const progress = window.getMonthlyTargetProgress(target, currentMonthKey);
+
+        let isCompleted = false;
+        if (isSubjectTarget) {
+            isCompleted = target.completed || (window.isSubjectCompleted ? window.isSubjectCompleted(target.track, target.subject) : false) || (progress.percent >= 100);
+        } else {
+            const foundTask = window.findTaskChapter(target.track, target.subject, target.chapter);
+            if (foundTask && foundTask.subTask.skipped) return;
+            isCompleted = target.completed || (foundTask ? foundTask.subTask.completed : false) || (target.totalChapterSize && progress.percent >= 100);
+        }
+
+        dashboardItems.push({
+            target,
+            monthKey: currentMonthKey,
+            idx,
+            isCompleted,
+            progress,
+            isCurrentMonth: true
+        });
+    });
+
+    // 2. Previous months targets (uncompleted only, sorted descending by start date: newest past months first, older below)
+    const pastMonthKeys = Object.keys(window.monthlyTargetsDatabase).filter(mk => {
+        if (mk === currentMonthKey) return false;
+        const st = Utils.parseStart ? Utils.parseStart(mk).getTime() : new Date(mk.split(' - ')[0]).getTime();
+        return st < currentStartTime;
+    }).sort((a, b) => {
+        const timeA = Utils.parseStart ? Utils.parseStart(a).getTime() : new Date(a.split(' - ')[0]).getTime();
+        const timeB = Utils.parseStart ? Utils.parseStart(b).getTime() : new Date(b.split(' - ')[0]).getTime();
+        return timeB - timeA;
+    });
+
+    pastMonthKeys.forEach(mkKey => {
+        const list = window.monthlyTargetsDatabase[mkKey] || [];
+        list.forEach((target, idx) => {
+            const isSubjectTarget = (target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters');
+            const progress = window.getMonthlyTargetProgress(target, mkKey);
+
+            let isCompleted = false;
+            if (isSubjectTarget) {
+                isCompleted = target.completed || (window.isSubjectCompleted ? window.isSubjectCompleted(target.track, target.subject) : false) || (progress.percent >= 100);
+            } else {
+                const foundTask = window.findTaskChapter(target.track, target.subject, target.chapter);
+                if (foundTask && foundTask.subTask.skipped) return;
+                isCompleted = target.completed || (foundTask ? foundTask.subTask.completed : false) || (target.totalChapterSize && progress.percent >= 100);
+            }
+
+            if (!isCompleted) {
+                dashboardItems.push({
+                    target,
+                    monthKey: mkKey,
+                    idx,
+                    isCompleted: false,
+                    progress,
+                    isCurrentMonth: false
+                });
+            }
+        });
+    });
+
+    const totalTargets = dashboardItems.length;
+    const completedTargets = dashboardItems.filter(item => item.isCompleted).length;
+    const pastPendingCount = dashboardItems.filter(item => !item.isCurrentMonth).length;
+
+    const currentMonthName = currentRange.start.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+    if (rangeEl) {
+        if (pastPendingCount > 0) {
+            rangeEl.textContent = `Month: ${currentMonthName} (+${pastPendingCount} Pending)`;
+        } else {
+            rangeEl.textContent = `Month: ${currentMonthName}`;
+        }
+    }
+
+    listContainer.innerHTML = '';
+
+    if (listContainer) {
+        listContainer.className = "grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2 overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 text-[10px] flex-1 min-h-0";
+        if (dashboardItems.length <= 4) {
+            const rows = Math.ceil(dashboardItems.length / 2) || 1;
+            listContainer.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+            listContainer.style.gridAutoRows = 'unset';
+            listContainer.style.height = '100%';
+        } else {
+            listContainer.style.gridTemplateRows = 'unset';
+            listContainer.style.gridAutoRows = 'minmax(38px, auto)';
+            listContainer.style.height = 'auto';
+        }
+    }
+
+    dashboardItems.forEach(item => {
+        const target = item.target;
+        const isSubjectTarget = (target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters');
+        let displaySub = target.subject.replace(target.program + ' - ', '').replace(target.program + ' ', '');
+        const subjectColor = window.getSubjectColor ? window.getSubjectColor(target.subject) : '#6366f1';
+
+        const activeStyle = `background-color: ${subjectColor}cc; border-color: ${subjectColor}; color: white; box-shadow: 0 4px 12px ${subjectColor}33;`;
+
+        let bgStyle = '';
+        if (!item.isCompleted && item.progress.percent > 0) {
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            const fillAlpha = isDarkMode ? 0.25 : 0.15;
+            const fillRgba = hexToRgba(subjectColor, fillAlpha);
+            bgStyle = `background: linear-gradient(to right, ${fillRgba} ${item.progress.percent}%, transparent ${item.progress.percent}%);`;
+        }
+
+        const buttonClass = item.isCompleted
+            ? `text-white border-transparent`
+            : 'bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-900/60';
+
+        const progressTextHtml = item.progress.label ? `<span class="text-[9px] text-indigo-500 dark:text-indigo-400 font-bold ml-1">${item.progress.label}</span>` : '';
+        const targetScope = target.scope || (isSubjectTarget ? 'Whole Subject' : 'Whole Chapter');
+
+        const monthTagHtml = !item.isCurrentMonth ? `
+            <span class="inline-block px-1 rounded-[3px] text-[6px] font-black uppercase tracking-widest bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50">
+                ${item.monthKey.split(' - ')[0]}
+            </span>
+        ` : '';
+
+        const titleText = isSubjectTarget
+            ? `📚 ${displaySub}`
+            : `${target.chapter}: ${displaySub}`;
+
+        const itemHtml = `
+                <button onclick="window.toggleDashboardMonthlyTargetCompletion('${item.monthKey}', ${item.idx}, ${!item.isCompleted})"
+                        class="flex items-center justify-between p-2 md:p-2.5 rounded-xl border font-black transition-all duration-300 active:scale-95 text-left w-full gap-1.5 h-full ${buttonClass}"
+                        style="${item.isCompleted ? activeStyle : bgStyle}">
+                    <div class="flex items-center space-x-1.5 min-w-0 flex-1">
+                        <div class="p-1 rounded-lg ${item.isCompleted ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700/60'} shrink-0">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <div class="min-w-0 leading-tight">
+                            <span class="block text-[10px] md:text-xs font-black truncate ${item.isCompleted ? 'line-through opacity-75' : ''}">${titleText} ${progressTextHtml}</span>
+                            <div class="flex items-center space-x-1.5 flex-wrap">
+                                <span class="block text-[7px] uppercase tracking-wider font-bold opacity-75 truncate">${target.program} | ${item.isCompleted ? 'YES' : 'NO'}</span>
+                                ${monthTagHtml}
+                                ${isSubjectTarget ? `
+                                    <span class="inline-block px-1 rounded-[3px] text-[6px] font-black uppercase tracking-widest ${item.isCompleted ? 'bg-white/20 text-white' : 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'}">
+                                        Subject
+                                    </span>
+                                ` : (targetScope !== 'Whole Chapter' && targetScope !== 'Whole' ? `
+                                    <span class="inline-block px-1 rounded-[3px] text-[6px] font-black uppercase tracking-widest ${item.isCompleted ? 'bg-white/20 text-white' : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'}">
+                                        ${targetScope}
+                                    </span>
+                                ` : '')}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="shrink-0">
+                        ${item.isCompleted
+                ? `<span class="flex h-4 w-4 rounded-full bg-white text-indigo-600 items-center justify-center shadow-sm text-[8px] font-black">✓</span>`
+                : `<span class="flex h-4 w-4 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 items-center justify-center text-[7px] font-black">✕</span>`
+            }
+                    </div>
+                </button>`;
+        listContainer.innerHTML += itemHtml;
+    });
+
+    if (totalTargets === 0) {
+        listContainer.innerHTML = `
+                <div class="py-8 text-center text-[9px] uppercase font-black tracking-widest text-slate-400 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 w-full col-span-2 sm:col-span-4 lg:col-span-2 h-full flex items-center justify-center">
+                    No active or overdue targets.
+                </div>`;
+        listContainer.style.gridTemplateRows = '1fr';
+        listContainer.style.height = '100%';
+    }
+
+    const pct = totalTargets === 0 ? 0 : Math.round((completedTargets / totalTargets) * 100);
+    if (pctEl) pctEl.textContent = `${completedTargets}/${totalTargets} (${pct}%)`;
+    if (progressEl) progressEl.style.width = `${pct}%`;
+};
+
+window.toggleDashboardMonthlyTargetCompletion = function (monthKey, idx, isCompleted) {
+    if (typeof isCompleted === 'undefined' && typeof monthKey === 'number') {
+        isCompleted = idx;
+        idx = monthKey;
+        const currentRange = window.getMonthlyTargetRange();
+        monthKey = window.formatMonthRangeKey(currentRange.start, currentRange.end);
+    }
+
+    if (!window.monthlyTargetsDatabase || !window.monthlyTargetsDatabase[monthKey] || !window.monthlyTargetsDatabase[monthKey][idx]) return;
+
+    const target = window.monthlyTargetsDatabase[monthKey][idx];
+    target.completed = isCompleted;
+    target.completedAt = isCompleted ? new Date().toISOString() : null;
+
+    if (target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters') {
+        const key = target.track + 'Tasks';
+        if (Array.isArray(AppState.tasks)) {
+            AppState.tasks.forEach(t => {
+                if (t.type === 'study' && Array.isArray(t[key])) {
+                    t[key].forEach(b => {
+                        if (b.subject === target.subject) {
+                            b.completed = isCompleted;
+                            b.completedAt = target.completedAt;
+                        }
+                    });
+                }
+            });
+        }
+    } else {
+        window.syncTaskChapterCompletion(target.track, target.subject, target.chapter, isCompleted, target.completedAt);
+    }
+
+    recalculateTotals();
+    renderUI();
+    showToast("Monthly checklist completion synchronized!", "success");
+    FirebaseService.saveToCloud(false);
+};
+
 // --- Weekly Targets Database Modal Controls & Logic ---
 window.openWeeklyTargetsDatabase = function () {
     const modal = document.getElementById('weekly-targets-db-modal');
@@ -21736,3 +21969,63 @@ if (typeof window.BroadcastChannel !== 'undefined') {
         console.warn("BroadcastChannel error:", e);
     }
 }
+
+// --- Automatic Midnight & New Day Rollover Monitor ---
+window._lastActiveDateStr = (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function')
+    ? Utils.formatDate(new Date())
+    : '';
+
+window.checkAndRefreshDateChange = function () {
+    if (typeof Utils === 'undefined' || typeof Utils.formatDate !== 'function') return;
+    const currentDateStr = Utils.formatDate(new Date());
+    if (!window._lastActiveDateStr) {
+        window._lastActiveDateStr = currentDateStr;
+        return;
+    }
+    if (window._lastActiveDateStr !== currentDateStr) {
+        console.log(`[X-29 Date Monitor] New day detected (${window._lastActiveDateStr} -> ${currentDateStr}). Refreshing daily actions and trackers.`);
+        window._lastActiveDateStr = currentDateStr;
+
+        if (typeof window.rebuildTaskDateMap === 'function') {
+            window.rebuildTaskDateMap();
+        }
+        if (typeof renderDailyTracker === 'function') {
+            renderDailyTracker();
+        }
+        if (typeof renderDailyLogs === 'function') {
+            renderDailyLogs();
+        }
+        if (typeof window.renderDashboardDailyChecklist === 'function') {
+            window.renderDashboardDailyChecklist();
+        }
+        if (typeof window.renderSpectraCommitmentsChart === 'function') {
+            window.renderSpectraCommitmentsChart();
+        }
+        if (typeof renderTrendCharts === 'function') {
+            renderTrendCharts();
+        }
+        if (typeof updateCountdown === 'function') {
+            updateCountdown();
+        }
+        if (typeof window.updateExamCountdown === 'function') {
+            window.updateExamCountdown();
+        }
+        const dbModal = document.getElementById('daily-actions-db-modal');
+        if (dbModal && !dbModal.classList.contains('hidden') && typeof window.openDailyActionsDBModal === 'function') {
+            window.openDailyActionsDBModal();
+        }
+    }
+};
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        window.checkAndRefreshDateChange();
+    }
+});
+window.addEventListener('focus', () => {
+    window.checkAndRefreshDateChange();
+});
+setInterval(() => {
+    window.checkAndRefreshDateChange();
+}, 5000);
+

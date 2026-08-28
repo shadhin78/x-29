@@ -217,14 +217,14 @@ window.rebuildTaskDateMap = function() {
         }
 
         let taskD = null;
-        if (typeof getTaskDate === 'function') {
+        if (t.date && typeof Utils !== 'undefined' && typeof Utils.parseDateSafe === 'function') {
+            taskD = Utils.parseDateSafe(t.date);
+        } else if (typeof getTaskDate === 'function') {
             taskD = getTaskDate(t);
         } else if (typeof t.id === 'number' && AppState.PLAN_START_DATE) {
             const baseDate = new Date(AppState.PLAN_START_DATE.getTime());
             baseDate.setDate(baseDate.getDate() + (t.id - 1));
             taskD = baseDate;
-        } else if (t.date && typeof Utils !== 'undefined' && typeof Utils.parseDateSafe === 'function') {
-            taskD = Utils.parseDateSafe(t.date);
         }
 
         if (t.date) {
