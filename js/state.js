@@ -576,6 +576,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
             });
 
             AppState.subjectFocusTargets = finalSft;
+            window.subjectFocusTargets = AppState.subjectFocusTargets;
         } else {
             rejectedAnyField = true;
         }

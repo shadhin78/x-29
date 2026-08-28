@@ -18872,6 +18872,10 @@ window.switchPage = function (pageId) {
             if (window.updateTimerAnalyticsControls) setTimeout(window.updateTimerAnalyticsControls, 50);
             if (window.renderTimerAnalyticsChart) setTimeout(window.renderTimerAnalyticsChart, 50);
             if (window.setSessionHistoryFilterUI) setTimeout(() => window.setSessionHistoryFilterUI(window.sessionHistoryFilter || 'all'), 50);
+            if (pageId === 'timer') {
+                if (window.renderTimerPage) setTimeout(window.renderTimerPage, 50);
+                if (window.updateSubjectTargetUI) setTimeout(window.updateSubjectTargetUI, 50);
+            }
             if (pageId === 'spectra-analytics') {
                 if (window.renderSpectraCircleChart) setTimeout(window.renderSpectraCircleChart, 50);
                 if (window.renderSpectraCommitmentsChart) setTimeout(window.renderSpectraCommitmentsChart, 50);
@@ -19200,7 +19204,7 @@ window.exportJSONBackup = function() {
             timerAnalyticsChartStyle: window.timerAnalyticsChartStyle || 'combo',
             spectraHeatmapRange: window.spectraHeatmapRange || 365,
             sessionHistoryFilter: window.sessionHistoryFilter || 'all',
-            subjectFocusTargets: window.subjectFocusTargets || {},
+            subjectFocusTargets: AppState.subjectFocusTargets || window.subjectFocusTargets || {},
             dashboardConfig: window.dashboardConfig,
             weeklyTargetsDatabase: window.weeklyTargetsDatabase || {},
             dailyTargetsDatabase: window.dailyTargetsDatabase || {},

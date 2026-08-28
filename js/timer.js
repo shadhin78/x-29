@@ -422,20 +422,114 @@
                 dashBtnToggle.textContent = isTimerRunning ? 'PAUSE' : 'START';
             }
         }
-        updateSubjectTargetUI();
+        updateSubjectTargetLive();
+    }
+
+    function getSubjectTargetDomId(subject) {
+        return 'stt-' + String(subject).replace(/[^a-zA-Z0-9_-]/g, '_');
+    }
+
+    let _lastLiveTargetUpdateSecond = -1;
+
+    function updateSubjectTargetLive() {
+        const listContainer = document.getElementById('subject-targets-list');
+        if (!listContainer) return;
+
+        const activeState = AppState.activeTimerState;
+        if (!activeState || !activeState.isRunning) return;
+
+        const currentSubject = activeState.selectedSubject || 'General Study';
+        const targets = AppState.subjectFocusTargets || window.subjectFocusTargets || {};
+        const target = targets[currentSubject];
+        if (!target) return;
+
+        let activeElapsedMs = activeState.elapsedBeforeStart || 0;
+        if (activeState.startTime) {
+            activeElapsedMs += (window.getServerTime() - parseStartTime(activeState.startTime));
+        }
+        const currentSecond = Math.floor(activeElapsedMs / 1000);
+        if (currentSecond === _lastLiveTargetUpdateSecond) return;
+        _lastLiveTargetUpdateSecond = currentSecond;
+
+        const domId = getSubjectTargetDomId(currentSubject);
+        const doneElem = document.getElementById(`${domId}-done`);
+        const remainElem = document.getElementById(`${domId}-remain`);
+        const badgeElem = document.getElementById(`${domId}-badge`);
+        const barElem = document.getElementById(`${domId}-bar`);
+
+        if (!doneElem || !remainElem || !badgeElem || !barElem) return;
+
+        const targetHours = parseInt(target.hours, 10) || 0;
+        const targetMinutes = parseInt(target.minutes, 10) || 0;
+
+        let doneSeconds = 0;
+        const targetCreatedAt = target.createdAt ? new Date(target.createdAt) : null;
+        if (targetCreatedAt) {
+            targetCreatedAt.setHours(0, 0, 0, 0);
+        }
+        if (AppState.timerLogs) {
+            AppState.timerLogs.forEach(log => {
+                if ((log.subject || 'General Study') === currentSubject) {
+                    const logDate = new Date(log.date);
+                    if (!targetCreatedAt || logDate >= targetCreatedAt) {
+                        doneSeconds += parseInt(log.duration || 0, 10);
+                    }
+                }
+            });
+        }
+        doneSeconds += currentSecond;
+
+        const doneHrs = Math.floor(doneSeconds / 3600);
+        const doneMins = Math.floor((doneSeconds % 3600) / 60);
+        const doneText = `${String(doneHrs).padStart(2, '0')}h ${String(doneMins).padStart(2, '0')}m`;
+
+        const targetSeconds = (targetHours * 3600) + (targetMinutes * 60);
+        const remainSeconds = Math.max(0, targetSeconds - doneSeconds);
+        const remainHrs = Math.floor(remainSeconds / 3600);
+        const remainMins = Math.floor((remainSeconds % 3600) / 60);
+        const remainText = `${String(remainHrs).padStart(2, '0')}h ${String(remainMins).padStart(2, '0')}m`;
+
+        const progressPercent = targetSeconds > 0 ? Math.min(100, Math.round((doneSeconds / targetSeconds) * 100)) : 0;
+        const subjColor = (typeof window.getSubjectColor === 'function') ? window.getSubjectColor(currentSubject) : '#6366f1';
+
+        doneElem.textContent = doneText;
+        remainElem.textContent = remainText;
+        if (targetSeconds > 0 && remainSeconds === 0) {
+            remainElem.className = 'text-[9.5px] font-black text-emerald-500 font-mono whitespace-nowrap';
+        } else {
+            remainElem.className = 'text-[9.5px] font-black text-indigo-500 dark:text-indigo-400 font-mono whitespace-nowrap';
+        }
+
+        badgeElem.textContent = `${progressPercent}%`;
+        badgeElem.className = `text-[9px] font-black font-mono px-1.5 py-0.5 rounded-full transition-colors duration-300 ${progressPercent >= 100 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`;
+
+        barElem.style.width = `${progressPercent}%`;
+        barElem.style.backgroundColor = progressPercent >= 100 ? '#10b981' : subjColor;
     }
 
     function updateSubjectTargetUI() {
         const listContainer = document.getElementById('subject-targets-list');
+        if (!listContainer) return;
 
-        if (!window.subjectFocusTargets || Object.keys(window.subjectFocusTargets).length === 0) {
+        const targets = AppState.subjectFocusTargets || window.subjectFocusTargets || {};
+        const entries = Object.entries(targets);
+
+        if (entries.length === 0) {
             listContainer.innerHTML = `<p class="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider py-4 text-center">No subject targets set. Click + to add one.</p>`;
             return;
         }
 
+        // Stable deterministic sort by creation date ascending, fallback to alphabetical subject name
+        const sortedEntries = entries.sort((a, b) => {
+            const timeA = a[1].createdAt ? new Date(a[1].createdAt).getTime() : (a[1].updatedAt || 0);
+            const timeB = b[1].createdAt ? new Date(b[1].createdAt).getTime() : (b[1].updatedAt || 0);
+            if (timeA !== timeB) return timeA - timeB;
+            return a[0].localeCompare(b[0]);
+        });
+
         let html = '';
 
-        Object.entries(window.subjectFocusTargets).forEach(([subject, target]) => {
+        sortedEntries.forEach(([subject, target]) => {
             const targetHours = parseInt(target.hours, 10) || 0;
             const targetMinutes = parseInt(target.minutes, 10) || 0;
 
@@ -494,8 +588,10 @@
                 startDateText = 'All-time';
             }
 
+            const domId = getSubjectTargetDomId(subject);
+
             html += `
-                <div class="p-3.5 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl flex flex-col gap-2.5 shadow-sm relative overflow-hidden transition-all duration-300 hover:shadow-md" style="border-left: 4px solid ${subjColor};">
+                <div id="${domId}-card" class="p-3.5 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl flex flex-col gap-2.5 shadow-sm relative overflow-hidden transition-all duration-300 hover:shadow-md" style="border-left: 4px solid ${subjColor};">
                     <div class="flex justify-between items-center gap-2">
                         <div class="flex flex-col min-w-0">
                             <span class="font-black text-xs text-slate-800 dark:text-white truncate" title="${subject}">${subject}</span>
@@ -503,7 +599,7 @@
                         </div>
                         <div class="flex items-center gap-1.5 shrink-0">
                             <!-- Progress Badge -->
-                            <span class="text-[9px] font-black font-mono px-1.5 py-0.5 rounded-full transition-colors duration-300 ${progressPercent >= 100 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}">${progressPercent}%</span>
+                            <span id="${domId}-badge" class="text-[9px] font-black font-mono px-1.5 py-0.5 rounded-full transition-colors duration-300 ${progressPercent >= 100 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}">${progressPercent}%</span>
                             
                             <!-- Edit Button -->
                             <button onclick="window.openSubjectTargetModal('${subject.replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all" title="Edit Target">
@@ -516,22 +612,22 @@
                     
                     <!-- Premium Progress Bar -->
                     <div class="w-full bg-slate-200/50 dark:bg-slate-800/50 rounded-full h-1.5 overflow-hidden">
-                        <div class="h-full rounded-full transition-all duration-500 ease-out" style="width: ${progressPercent}%; background-color: ${progressPercent >= 100 ? '#10b981' : subjColor};"></div>
+                        <div id="${domId}-bar" class="h-full rounded-full transition-all duration-500 ease-out" style="width: ${progressPercent}%; background-color: ${progressPercent >= 100 ? '#10b981' : subjColor};"></div>
                     </div>
 
                     <!-- Details Grid -->
                     <div class="grid grid-cols-3 gap-1.5 text-center mt-0.5">
                         <div class="flex flex-col bg-white dark:bg-slate-950/40 border border-slate-200/40 dark:border-slate-800/80 rounded-xl py-1 px-0.5">
                             <span class="text-[7.5px] font-bold uppercase tracking-wider text-slate-400">Done</span>
-                            <span class="text-[9.5px] font-black text-emerald-500 font-mono whitespace-nowrap">${doneText}</span>
+                            <span id="${domId}-done" class="text-[9.5px] font-black text-emerald-500 font-mono whitespace-nowrap">${doneText}</span>
                         </div>
                         <div class="flex flex-col bg-white dark:bg-slate-950/40 border border-slate-200/40 dark:border-slate-800/80 rounded-xl py-1 px-0.5">
                             <span class="text-[7.5px] font-bold uppercase tracking-wider text-slate-400">Remain</span>
-                            <span class="text-[9.5px] font-black ${remainColorClass} font-mono whitespace-nowrap">${remainText}</span>
+                            <span id="${domId}-remain" class="text-[9.5px] font-black ${remainColorClass} font-mono whitespace-nowrap">${remainText}</span>
                         </div>
                         <div class="flex flex-col bg-white dark:bg-slate-950/40 border border-slate-200/40 dark:border-slate-800/80 rounded-xl py-1 px-0.5">
                             <span class="text-[7.5px] font-bold uppercase tracking-wider text-slate-400">Target</span>
-                            <span class="text-[9.5px] font-black text-slate-600 dark:text-slate-300 font-mono whitespace-nowrap">${targetText}</span>
+                            <span id="${domId}-target" class="text-[9.5px] font-black text-slate-600 dark:text-slate-300 font-mono whitespace-nowrap">${targetText}</span>
                         </div>
                     </div>
                 </div>
@@ -671,8 +767,8 @@
         if (isNaN(minutes) || minutes < 0) minutes = 0;
         if (minutes > 59) minutes = 59;
 
-        if (!window.subjectFocusTargets) {
-            window.subjectFocusTargets = {};
+        if (!AppState.subjectFocusTargets) {
+            AppState.subjectFocusTargets = {};
         }
 
         if (AppState._tombstones) {
@@ -687,15 +783,13 @@
             const selectedDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 0, 0, 0, 0);
             createdAt = selectedDate.toISOString();
         } else {
-            const existingTarget = window.subjectFocusTargets[subject];
+            const existingTarget = (AppState.subjectFocusTargets && AppState.subjectFocusTargets[subject]) || (window.subjectFocusTargets && window.subjectFocusTargets[subject]);
             createdAt = (existingTarget && existingTarget.createdAt) ? existingTarget.createdAt : new Date().toISOString();
         }
 
         const nowMs = Date.now() + (window.serverTimeOffset || 0);
-        window.subjectFocusTargets[subject] = { hours, minutes, createdAt, updatedAt: nowMs };
-        if (AppState.subjectFocusTargets) {
-            AppState.subjectFocusTargets[subject] = window.subjectFocusTargets[subject];
-        }
+        AppState.subjectFocusTargets[subject] = { hours, minutes, createdAt, updatedAt: nowMs };
+        window.subjectFocusTargets = AppState.subjectFocusTargets;
 
         window.closeSubjectTargetModal();
         updateSubjectTargetUI();
@@ -708,7 +802,8 @@
     window.deleteSubjectTarget = function (subject) {
         if (!subject) return;
         const executeDelete = () => {
-            if (window.subjectFocusTargets && window.subjectFocusTargets[subject]) {
+            const currentTargets = AppState.subjectFocusTargets || window.subjectFocusTargets;
+            if (currentTargets && currentTargets[subject]) {
                 if (typeof window.recordItemDeletion === 'function') {
                     window.recordItemDeletion(`subjectFocusTargets_${subject}`);
                 }
@@ -718,6 +813,7 @@
                 if (window.subjectFocusTargets) {
                     delete window.subjectFocusTargets[subject];
                 }
+                window.subjectFocusTargets = AppState.subjectFocusTargets || {};
                 updateSubjectTargetUI();
                 if (typeof showToast === 'function') {
                     showToast(`Target for ${subject} deleted.`, "success");
@@ -3658,6 +3754,9 @@
             tickTimer();
             if (typeof window.renderTimerPage === 'function') {
                 window.renderTimerPage();
+            }
+            if (typeof window.updateSubjectTargetUI === 'function') {
+                window.updateSubjectTargetUI();
             }
             // Real-time synchronization for Focus Analytics (both Modal & Analytics page)
             if (typeof window.updateTimerAnalyticsControls === 'function') {
