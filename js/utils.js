@@ -295,6 +295,26 @@ window.Utils = {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+    },
+
+    /**
+     * Flexibly matches two chapter identifiers (e.g., "Ch. 1", "1", "Chapter 1").
+     */
+    isChapterMatch: function(ch1, ch2) {
+        if (ch1 === ch2) return true;
+        if (!ch1 || !ch2) return false;
+        const s1 = String(ch1).trim();
+        const s2 = String(ch2).trim();
+        if (s1.toLowerCase() === s2.toLowerCase()) return true;
+        const clean1 = s1.replace(/^(ch\.|chapter)\s*/i, '').trim();
+        const clean2 = s2.replace(/^(ch\.|chapter)\s*/i, '').trim();
+        if (clean1.toLowerCase() === clean2.toLowerCase()) return true;
+        if (typeof window.Utils.extractNum === 'function') {
+            const n1 = window.Utils.extractNum(s1);
+            const n2 = window.Utils.extractNum(s2);
+            if (n1 !== null && n2 !== null && n1 !== 999 && n2 !== 999 && n1 === n2) return true;
+        }
+        return false;
     }
 };
 
@@ -303,6 +323,7 @@ window.toMinutes = window.Utils.toMinutes;
 window.timeToMinutes = window.Utils.timeToMinutes;
 window.formatTime12h = window.Utils.formatTime12h;
 window.extractNum = window.Utils.extractNum;
+window.isChapterMatch = window.Utils.isChapterMatch;
 window.parseStart = window.Utils.parseStart;
 window.formatDaysPassed = window.Utils.formatDaysPassed;
 window.formatDate = window.Utils.formatDate;

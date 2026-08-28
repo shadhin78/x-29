@@ -3362,8 +3362,20 @@ function renderTaskList() {
         const today = new Date(); today.setHours(0, 0, 0, 0);
         const msPerDay = 1000 * 60 * 60 * 24;
 
-        const completedCount = group.tasks.filter(x => x.taskObj.completed).length;
-        const progressPct = group.totalChapters > 0 ? Math.round((completedCount / group.totalChapters) * 100) : 100;
+        let completedCount = 0;
+        group.tasks.forEach(x => {
+            if (x.taskObj.skipped) return;
+            if (x.taskObj.completed) {
+                completedCount += 1;
+            } else {
+                const prog = window.getChapterWeeklyTargetProgress ? window.getChapterWeeklyTargetProgress(x.type, x.taskObj.subject, x.taskObj.chapter) : null;
+                if (prog && prog.isSizeBased && prog.total > 0 && prog.completed > 0) {
+                    completedCount += Math.min(1, prog.completed / prog.total);
+                }
+            }
+        });
+        const progressPct = group.totalChapters > 0 ? Math.min(100, Math.round((completedCount / group.totalChapters) * 100)) : 100;
+        const displayCompleted = (completedCount % 1 === 0) ? completedCount : (Math.round(completedCount * 10) / 10);
 
         let remainingCh = Math.max(0, group.totalChapters - completedCount);
         let actPaceRaw = 0;
@@ -3494,7 +3506,7 @@ function renderTaskList() {
                                 <!-- Middle: Progress Bar & Status -->
                                 <div class="flex flex-col gap-2 w-full lg:w-[35%] lg:px-4">
                                     <div class="flex justify-between items-end text-[10px] font-black uppercase tracking-widest">
-                                        <span id="group-text-${safeSubId}" class="text-slate-500 dark:text-slate-400">${completedCount} <span class="opacity-60 text-[9px] mx-0.5">/</span> ${group.totalChapters} <span class="opacity-60">CH</span></span>
+                                        <span id="group-text-${safeSubId}" class="text-slate-500 dark:text-slate-400">${displayCompleted} <span class="opacity-60 text-[9px] mx-0.5">/</span> ${group.totalChapters} <span class="opacity-60">CH</span></span>
                                         <span id="group-pct-${safeSubId}" class="text-${colorClass}-600 dark:text-${colorClass}-400 bg-${colorClass}-50 dark:bg-${colorClass}-900/30 px-1.5 py-0.5 rounded border border-${colorClass}-100 dark:border-${colorClass}-800/50 shadow-sm">${progressPct}%</span>
                                     </div>
                                     <div class="w-full bg-slate-100 dark:bg-slate-700/50 h-2.5 rounded-full overflow-hidden shadow-inner border border-slate-200/50 dark:border-slate-600/30 relative">
@@ -3660,18 +3672,16 @@ function generateSingleTaskHtml(dayObj, taskObj, type) {
     const isSkipped = !!taskObj.skipped;
 
     // Look up matching weekly target to get size-based progress
-    const currentRange = window.getWeeklyTargetRange(window.currentDailyTargetsDate || new Date());
-    const currentWeekKey = window.formatDateRangeKey(currentRange.start, currentRange.end);
-    const wtList = (window.weeklyTargetsDatabase && window.weeklyTargetsDatabase[currentWeekKey]) || [];
-    const matchingWt = wtList.find(t => t.track === type && t.subject === taskObj.subject && t.chapter === taskObj.chapter);
-
     let progressPercent = 0;
     let progressTextHtml = '';
     let isSizeBased = false;
 
-    if (matchingWt && matchingWt.totalChapterSize) {
+    const progress = window.getChapterWeeklyTargetProgress
+        ? window.getChapterWeeklyTargetProgress(type, taskObj.subject, taskObj.chapter)
+        : null;
+
+    if (progress && progress.isSizeBased && progress.total > 0) {
         isSizeBased = true;
-        const progress = window.getWeeklyTargetProgress(matchingWt, currentWeekKey);
         progressPercent = progress.percent;
         progressTextHtml = `<span class="text-[9px] text-blue-500 font-bold ml-1.5">(${progress.completed}/${progress.total} p)</span>`;
     }
@@ -3811,13 +3821,11 @@ function handleTaskToggle(e) {
             // Check if size-based progress should fill
             let progressPercent = 0;
             let isSizeBased = false;
-            const currentRange = window.getWeeklyTargetRange(window.currentDailyTargetsDate || new Date());
-            const currentWeekKey = window.formatDateRangeKey(currentRange.start, currentRange.end);
-            const wtList = (window.weeklyTargetsDatabase && window.weeklyTargetsDatabase[currentWeekKey]) || [];
-            const matchingWt = wtList.find(t => t.track === type && t.subject === taskObj.subject && t.chapter === taskObj.chapter);
-            if (matchingWt && matchingWt.totalChapterSize) {
+            const progress = window.getChapterWeeklyTargetProgress
+                ? window.getChapterWeeklyTargetProgress(type, taskObj.subject, taskObj.chapter)
+                : null;
+            if (progress && progress.isSizeBased && progress.total > 0) {
                 isSizeBased = true;
-                const progress = window.getWeeklyTargetProgress(matchingWt, currentWeekKey);
                 progressPercent = progress.percent;
             }
 
@@ -3841,15 +3849,26 @@ function handleTaskToggle(e) {
     const safeSubId = taskObj.subject.replace(/[^a-zA-Z0-9]/g, '-');
     const subName = taskObj.subject;
     const groupTasks = AppState.tasks.flatMap(t => t.type === 'study' ? (t[key] || []) : []).filter(x => x.subject === subName);
-    const completedCount = groupTasks.filter(x => x.completed).length;
+    let completedCount = 0;
+    groupTasks.forEach(x => {
+        if (x.completed) {
+            completedCount += 1;
+        } else {
+            const prog = window.getChapterWeeklyTargetProgress ? window.getChapterWeeklyTargetProgress(type, subName, x.chapter) : null;
+            if (prog && prog.isSizeBased && prog.total > 0 && prog.completed > 0) {
+                completedCount += Math.min(1, prog.completed / prog.total);
+            }
+        }
+    });
 
     const sObj = syllabusStructure[type] ? syllabusStructure[type].find(s => s.subject === subName) : null;
     const skippedCount = window.getSubjectSkippedCount(subName, type);
     const totalChapters = sObj ? Math.max(0, sObj.chapters - skippedCount) : 1;
     const progressPct = totalChapters > 0 ? Math.round((completedCount / totalChapters) * 100) : 100;
+    const displayCompleted = (completedCount % 1 === 0) ? completedCount : (Math.round(completedCount * 10) / 10);
 
     const textEl = document.getElementById(`group-text-${safeSubId}`);
-    if (textEl) textEl.innerHTML = `${completedCount} <span class="opacity-60 text-[9px] mx-0.5">/</span> ${totalChapters} <span class="opacity-60">CH</span>`;
+    if (textEl) textEl.innerHTML = `${displayCompleted} <span class="opacity-60 text-[9px] mx-0.5">/</span> ${totalChapters} <span class="opacity-60">CH</span>`;
 
     const pctEl = document.getElementById(`group-pct-${safeSubId}`);
     if (pctEl) pctEl.textContent = `${progressPct}%`;
@@ -4032,6 +4051,11 @@ function updateMetrics() {
                             if (isNaN(d.getTime())) d = getTaskDate(task);
                             if (!subjectStats[subTask.subject].earliestCompletedDate || d < subjectStats[subTask.subject].earliestCompletedDate) {
                                 subjectStats[subTask.subject].earliestCompletedDate = d;
+                            }
+                        } else {
+                            const prog = window.getChapterWeeklyTargetProgress ? window.getChapterWeeklyTargetProgress(track.id, subTask.subject, subTask.chapter) : null;
+                            if (prog && prog.isSizeBased && prog.total > 0 && prog.completed > 0) {
+                                subjectStats[subTask.subject].tasksCompleted += Math.min(1, prog.completed / prog.total);
                             }
                         }
                     }
@@ -5135,16 +5159,10 @@ window.getChapterStatus = function (subName, chNum, trackId = null) {
         // Check size-based weekly targets
         let isSizeBased = false;
         let progressPercent = 0;
-        if (window.weeklyTargetsDatabase) {
-            const currentRange = window.getWeeklyTargetRange(window.currentDailyTargetsDate || new Date());
-            const currentWeekKey = window.formatDateRangeKey(currentRange.start, currentRange.end);
-            const wtList = window.weeklyTargetsDatabase[currentWeekKey] || [];
-            const matchingWt = wtList.find(t => t.track === taskType && t.subject === subName && (t.chapter === `Ch. ${chNum}` || t.chapter === String(chNum)));
-            if (matchingWt && matchingWt.totalChapterSize) {
-                isSizeBased = true;
-                const progress = window.getWeeklyTargetProgress ? window.getWeeklyTargetProgress(matchingWt, currentWeekKey) : { percent: 0 };
-                progressPercent = progress.percent;
-            }
+        const prog = window.getChapterWeeklyTargetProgress ? window.getChapterWeeklyTargetProgress(taskType, subName, `Ch. ${chNum}`) : null;
+        if (prog && prog.isSizeBased && prog.total > 0) {
+            isSizeBased = true;
+            progressPercent = prog.percent;
         }
 
         if (foundTaskObj.completed || (isSizeBased && progressPercent >= 100)) {
@@ -14467,6 +14485,8 @@ window.getCompletedSizeForWeeklyTarget = function (target, weekKey) {
         weekKey = window.formatDateRangeKey(currentRange.start, currentRange.end);
     }
 
+    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
+
     Object.keys(window.dailyTargetsDatabase).forEach(dateKey => {
         const d = window.parseDailyTargetDateKey(dateKey);
         const range = window.getWeeklyTargetRange(d);
@@ -14475,8 +14495,9 @@ window.getCompletedSizeForWeeklyTarget = function (target, weekKey) {
 
         const dailyTargets = window.dailyTargetsDatabase[dateKey] || [];
         dailyTargets.forEach(dt => {
-            if (dt.completed && dt.track === target.track && dt.subject === target.subject && dt.chapter === target.chapter) {
-                if (dt.totalChapterSize) {
+            if (!dt.isDeleted && dt.completed && dt.track === target.track && dt.subject === target.subject) {
+                const isMatching = matchFn ? matchFn(dt.chapter, target.chapter) : (dt.chapter === target.chapter);
+                if (isMatching && dt.totalChapterSize) {
                     completedSize += parseFloat(dt.totalChapterSize);
                 }
             }
@@ -14494,6 +14515,8 @@ window.getAllocatedSizeForWeeklyTarget = function (target, weekKey) {
         weekKey = window.formatDateRangeKey(currentRange.start, currentRange.end);
     }
 
+    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
+
     Object.keys(window.dailyTargetsDatabase).forEach(dateKey => {
         const d = window.parseDailyTargetDateKey(dateKey);
         const range = window.getWeeklyTargetRange(d);
@@ -14502,8 +14525,9 @@ window.getAllocatedSizeForWeeklyTarget = function (target, weekKey) {
 
         const dailyTargets = window.dailyTargetsDatabase[dateKey] || [];
         dailyTargets.forEach(dt => {
-            if (dt.track === target.track && dt.subject === target.subject && dt.chapter === target.chapter) {
-                if (dt.totalChapterSize) {
+            if (!dt.isDeleted && dt.track === target.track && dt.subject === target.subject) {
+                const isMatching = matchFn ? matchFn(dt.chapter, target.chapter) : (dt.chapter === target.chapter);
+                if (isMatching && dt.totalChapterSize) {
                     allocatedSize += parseFloat(dt.totalChapterSize);
                 }
             }
@@ -14522,6 +14546,60 @@ window.getWeeklyTargetProgress = function (target, weekKey) {
     return { completed: completed, total: total, percent: percent };
 };
 
+/**
+ * Retrieves the size-based progress for any chapter of a subject across weekly targets.
+ * Enables the subject page and analytics to show fraction-wise completion.
+ */
+window.getChapterWeeklyTargetProgress = function (track, subject, chapter, weekKey = null) {
+    if (!window.weeklyTargetsDatabase) return { completed: 0, total: 0, percent: 0, isSizeBased: false, target: null, weekKey: null };
+
+    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
+    const isMatch = (t) => {
+        if (!t) return false;
+        if (track && t.track && t.track !== track) return false;
+        if (t.subject !== subject) return false;
+        return matchFn ? matchFn(t.chapter, chapter) : (t.chapter === chapter);
+    };
+
+    // 1. If explicit weekKey provided, check that week first
+    if (weekKey && window.weeklyTargetsDatabase[weekKey]) {
+        const target = window.weeklyTargetsDatabase[weekKey].find(t => isMatch(t) && t.totalChapterSize);
+        if (target) {
+            const progress = window.getWeeklyTargetProgress(target, weekKey);
+            return { completed: progress.completed, total: progress.total, percent: progress.percent, isSizeBased: true, target: target, weekKey: weekKey };
+        }
+    }
+
+    // 2. Check current week
+    const currentRange = window.getWeeklyTargetRange(window.currentDailyTargetsDate || new Date());
+    const currentWeekKey = window.formatDateRangeKey(currentRange.start, currentRange.end);
+    if (window.weeklyTargetsDatabase[currentWeekKey]) {
+        const target = window.weeklyTargetsDatabase[currentWeekKey].find(t => isMatch(t) && t.totalChapterSize);
+        if (target) {
+            const progress = window.getWeeklyTargetProgress(target, currentWeekKey);
+            return { completed: progress.completed, total: progress.total, percent: progress.percent, isSizeBased: true, target: target, weekKey: currentWeekKey };
+        }
+    }
+
+    // 3. Search across all weeks in weeklyTargetsDatabase (sorted by latest week start)
+    const allWeekKeys = Object.keys(window.weeklyTargetsDatabase).sort((a, b) => {
+        const d1 = (window.Utils && window.Utils.parseStart) ? window.Utils.parseStart(a) : new Date(0);
+        const d2 = (window.Utils && window.Utils.parseStart) ? window.Utils.parseStart(b) : new Date(0);
+        return d2 - d1;
+    });
+
+    for (const wk of allWeekKeys) {
+        const list = window.weeklyTargetsDatabase[wk] || [];
+        const target = list.find(t => isMatch(t) && t.totalChapterSize);
+        if (target) {
+            const progress = window.getWeeklyTargetProgress(target, wk);
+            return { completed: progress.completed, total: progress.total, percent: progress.percent, isSizeBased: true, target: target, weekKey: wk };
+        }
+    }
+
+    return { completed: 0, total: 0, percent: 0, isSizeBased: false, target: null, weekKey: null };
+};
+
 window.formatDateRangeKey = function (start, end) {
     const opt = { day: '2-digit', month: 'short', year: 'numeric' };
     const startStr = start.toLocaleDateString('en-GB', opt);
@@ -14532,9 +14610,10 @@ window.formatDateRangeKey = function (start, end) {
 window.getWeeklyTargetOccurrenceCount = function (track, subject, chapter) {
     let count = 0;
     if (!window.weeklyTargetsDatabase) return 0;
+    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
     Object.keys(window.weeklyTargetsDatabase).forEach(weekKey => {
         const list = window.weeklyTargetsDatabase[weekKey] || [];
-        const match = list.some(t => t.track === track && t.subject === subject && t.chapter === chapter);
+        const match = list.some(t => t.track === track && t.subject === subject && (matchFn ? matchFn(t.chapter, chapter) : t.chapter === chapter));
         if (match) count++;
     });
     return count;
