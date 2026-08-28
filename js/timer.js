@@ -38,10 +38,11 @@
         if (!AppState.activeTimerState) return false;
         if (AppState.activeTimerState.isRunning) return true;
         if (AppState.activeTimerState.timerStates) {
-            return Object.values(AppState.activeTimerState.timerStates).some(store => store.isRunning);
+            return Object.values(AppState.activeTimerState.timerStates).some(store => store && store.isRunning);
         }
         return false;
     }
+    window.isAnyTimerRunning = isAnyTimerRunning;
 
     function playCompletionChime() {
         try {
@@ -289,16 +290,8 @@
         const secs = totalSecs % 60;
         const hundredths = Math.floor((renderMs % 1000) / 10);
 
-        let hhmmText = '';
-        let ssmsText = '';
-
-        if (hrs > 0) {
-            hhmmText = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:`;
-            ssmsText = `${String(secs).padStart(2, '0')}`;
-        } else {
-            hhmmText = `${String(mins).padStart(2, '0')}:`;
-            ssmsText = `${String(secs).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
-        }
+        const hhmmText = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:`;
+        const ssmsText = `${String(secs).padStart(2, '0')}`;
 
         safeSetText('timer-clock-hhmm', hhmmText);
         safeSetText('timer-clock-ssms', ssmsText);
@@ -430,6 +423,62 @@
     }
 
     let _lastLiveTargetUpdateSecond = -1;
+    let currentSubjectTargetFilter = 'uncompleted';
+
+    window.setSubjectTargetFilter = function (filter) {
+        currentSubjectTargetFilter = (filter === 'done') ? 'done' : 'uncompleted';
+        updateSubjectTargetFilterButtons();
+        updateSubjectTargetUI();
+    };
+
+    function updateSubjectTargetFilterButtons() {
+        const btnUncompleted = document.getElementById('st-filter-uncompleted');
+        const btnDone = document.getElementById('st-filter-done');
+        const dotUncompleted = document.getElementById('st-dot-uncompleted');
+        const dotDone = document.getElementById('st-dot-done');
+        const badgeUncompleted = document.getElementById('st-count-uncompleted');
+        const badgeDone = document.getElementById('st-count-done');
+
+        if (currentSubjectTargetFilter === 'uncompleted') {
+            if (btnUncompleted) {
+                btnUncompleted.className = 'flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all bg-rose-600 text-white shadow shadow-rose-500/20 active:scale-95';
+            }
+            if (dotUncompleted) {
+                dotUncompleted.className = 'w-2 h-2 rounded-full bg-rose-200 animate-pulse';
+            }
+            if (badgeUncompleted) {
+                badgeUncompleted.className = 'px-1.5 py-0.5 rounded-full bg-white/20 text-white text-[9px] font-mono leading-none';
+            }
+            if (btnDone) {
+                btnDone.className = 'flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all text-slate-500 dark:text-slate-400 hover:bg-slate-200/80 dark:hover:bg-slate-800 active:scale-95';
+            }
+            if (dotDone) {
+                dotDone.className = 'w-2 h-2 rounded-full bg-emerald-500';
+            }
+            if (badgeDone) {
+                badgeDone.className = 'px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[9px] font-mono leading-none';
+            }
+        } else {
+            if (btnDone) {
+                btnDone.className = 'flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all bg-emerald-600 text-white shadow shadow-emerald-500/20 active:scale-95';
+            }
+            if (dotDone) {
+                dotDone.className = 'w-2 h-2 rounded-full bg-emerald-200 animate-pulse';
+            }
+            if (badgeDone) {
+                badgeDone.className = 'px-1.5 py-0.5 rounded-full bg-white/20 text-white text-[9px] font-mono leading-none';
+            }
+            if (btnUncompleted) {
+                btnUncompleted.className = 'flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all text-slate-500 dark:text-slate-400 hover:bg-slate-200/80 dark:hover:bg-slate-800 active:scale-95';
+            }
+            if (dotUncompleted) {
+                dotUncompleted.className = 'w-2 h-2 rounded-full bg-rose-500';
+            }
+            if (badgeUncompleted) {
+                badgeUncompleted.className = 'px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[9px] font-mono leading-none';
+            }
+        }
+    }
 
     function updateSubjectTargetLive() {
         const listContainer = document.getElementById('subject-targets-list');
@@ -451,16 +500,9 @@
         if (currentSecond === _lastLiveTargetUpdateSecond) return;
         _lastLiveTargetUpdateSecond = currentSecond;
 
-        const domId = getSubjectTargetDomId(currentSubject);
-        const doneElem = document.getElementById(`${domId}-done`);
-        const remainElem = document.getElementById(`${domId}-remain`);
-        const badgeElem = document.getElementById(`${domId}-badge`);
-        const barElem = document.getElementById(`${domId}-bar`);
-
-        if (!doneElem || !remainElem || !badgeElem || !barElem) return;
-
         const targetHours = parseInt(target.hours, 10) || 0;
         const targetMinutes = parseInt(target.minutes, 10) || 0;
+        const targetSeconds = (targetHours * 3600) + (targetMinutes * 60);
 
         let doneSeconds = 0;
         const targetCreatedAt = target.createdAt ? new Date(target.createdAt) : null;
@@ -479,11 +521,29 @@
         }
         doneSeconds += currentSecond;
 
+        const isCompleted = targetSeconds > 0 && doneSeconds >= targetSeconds;
+        const domId = getSubjectTargetDomId(currentSubject);
+        const cardElem = document.getElementById(`${domId}-card`);
+
+        // If target just completed while in 'uncompleted' view, re-render so it automatically moves to Done section!
+        if (isCompleted && currentSubjectTargetFilter === 'uncompleted' && cardElem) {
+            updateSubjectTargetUI();
+            return;
+        }
+
+        const doneElem = document.getElementById(`${domId}-done`);
+        const remainElem = document.getElementById(`${domId}-remain`);
+        const badgeElem = document.getElementById(`${domId}-badge`);
+        const barElem = document.getElementById(`${domId}-bar`);
+
+        if (!doneElem || !remainElem || !badgeElem || !barElem) {
+            return;
+        }
+
         const doneHrs = Math.floor(doneSeconds / 3600);
         const doneMins = Math.floor((doneSeconds % 3600) / 60);
         const doneText = `${String(doneHrs).padStart(2, '0')}h ${String(doneMins).padStart(2, '0')}m`;
 
-        const targetSeconds = (targetHours * 3600) + (targetMinutes * 60);
         const remainSeconds = Math.max(0, targetSeconds - doneSeconds);
         const remainHrs = Math.floor(remainSeconds / 3600);
         const remainMins = Math.floor((remainSeconds % 3600) / 60);
@@ -501,7 +561,7 @@
         }
 
         badgeElem.textContent = `${progressPercent}%`;
-        badgeElem.className = `text-[9px] font-black font-mono px-1.5 py-0.5 rounded-full transition-colors duration-300 ${progressPercent >= 100 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`;
+        badgeElem.className = `text-[9px] font-black font-mono px-1.5 py-0.5 rounded-full transition-colors duration-300 ${progressPercent >= 100 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`;
 
         barElem.style.width = `${progressPercent}%`;
         barElem.style.backgroundColor = progressPercent >= 100 ? '#10b981' : subjColor;
@@ -514,8 +574,15 @@
         const targets = AppState.subjectFocusTargets || window.subjectFocusTargets || {};
         const entries = Object.entries(targets);
 
+        const badgeUncompleted = document.getElementById('st-count-uncompleted');
+        const badgeDone = document.getElementById('st-count-done');
+
+        updateSubjectTargetFilterButtons();
+
         if (entries.length === 0) {
-            listContainer.innerHTML = `<p class="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider py-4 text-center">No subject targets set. Click + to add one.</p>`;
+            if (badgeUncompleted) badgeUncompleted.textContent = '0';
+            if (badgeDone) badgeDone.textContent = '0';
+            listContainer.innerHTML = `<p class="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider py-8 text-center col-span-full">No subject targets set. Click Add Target to create one.</p>`;
             return;
         }
 
@@ -527,13 +594,11 @@
             return a[0].localeCompare(b[0]);
         });
 
-        let html = '';
-
-        sortedEntries.forEach(([subject, target]) => {
+        // Compute progress and completion status for all targets
+        const processedTargets = sortedEntries.map(([subject, target]) => {
             const targetHours = parseInt(target.hours, 10) || 0;
             const targetMinutes = parseInt(target.minutes, 10) || 0;
 
-            // Calculate Done time for subject (in seconds) - only logs completed on or after target creation date
             let doneSeconds = 0;
             const targetCreatedAt = target.createdAt ? new Date(target.createdAt) : null;
             if (targetCreatedAt) {
@@ -559,25 +624,20 @@
                 doneSeconds += Math.floor(activeElapsedMs / 1000);
             }
 
-            // Format Done using compact 00h 00m form to prevent mobile squishing
+            const targetSeconds = (targetHours * 3600) + (targetMinutes * 60);
+            const remainSeconds = Math.max(0, targetSeconds - doneSeconds);
+            const isCompleted = targetSeconds > 0 ? (doneSeconds >= targetSeconds) : false;
+            const progressPercent = targetSeconds > 0 ? Math.min(100, Math.round((doneSeconds / targetSeconds) * 100)) : 0;
+
             const doneHrs = Math.floor(doneSeconds / 3600);
             const doneMins = Math.floor((doneSeconds % 3600) / 60);
             const doneText = `${String(doneHrs).padStart(2, '0')}h ${String(doneMins).padStart(2, '0')}m`;
 
-            // Calculate Remain
-            const targetSeconds = (targetHours * 3600) + (targetMinutes * 60);
-            const remainSeconds = Math.max(0, targetSeconds - doneSeconds);
             const remainHrs = Math.floor(remainSeconds / 3600);
             const remainMins = Math.floor((remainSeconds % 3600) / 60);
             const remainText = `${String(remainHrs).padStart(2, '0')}h ${String(remainMins).padStart(2, '0')}m`;
 
-            const remainColorClass = (targetSeconds > 0 && remainSeconds === 0) ? 'text-emerald-500' : 'text-indigo-500 dark:text-indigo-400';
             const targetText = `${String(targetHours).padStart(2, '0')}h ${String(targetMinutes).padStart(2, '0')}m`;
-
-            // Calculate target completion percentage
-            const progressPercent = targetSeconds > 0 ? Math.min(100, Math.round((doneSeconds / targetSeconds) * 100)) : 0;
-
-            // Resolve subject theme color for left border and progress indicators
             const subjColor = (typeof window.getSubjectColor === 'function') ? window.getSubjectColor(subject) : '#6366f1';
 
             let startDateText = '';
@@ -588,21 +648,93 @@
                 startDateText = 'All-time';
             }
 
-            const domId = getSubjectTargetDomId(subject);
+            return {
+                subject,
+                target,
+                targetHours,
+                targetMinutes,
+                targetSeconds,
+                doneSeconds,
+                remainSeconds,
+                isCompleted,
+                progressPercent,
+                doneText,
+                remainText,
+                targetText,
+                subjColor,
+                startDateText,
+                domId: getSubjectTargetDomId(subject)
+            };
+        });
+
+        const uncompletedTargets = processedTargets.filter(t => !t.isCompleted);
+        const completedTargets = processedTargets.filter(t => t.isCompleted);
+
+        if (badgeUncompleted) badgeUncompleted.textContent = String(uncompletedTargets.length);
+        if (badgeDone) badgeDone.textContent = String(completedTargets.length);
+
+        const currentFilter = currentSubjectTargetFilter || 'uncompleted';
+        const displayList = (currentFilter === 'done') ? completedTargets : uncompletedTargets;
+
+        if (displayList.length === 0) {
+            if (currentFilter === 'uncompleted') {
+                listContainer.innerHTML = `
+                    <div class="col-span-full py-8 text-center flex flex-col items-center justify-center gap-2">
+                        <div class="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 flex items-center justify-center border border-emerald-200 dark:border-emerald-800/40">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                        <p class="text-xs text-slate-700 dark:text-slate-200 font-black uppercase tracking-wider">All subject targets completed!</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                            View finished targets in the <button onclick="window.setSubjectTargetFilter('done')" class="text-emerald-500 underline font-black hover:text-emerald-400">Done (${completedTargets.length})</button> section.
+                        </p>
+                    </div>
+                `;
+            } else {
+                listContainer.innerHTML = `
+                    <div class="col-span-full py-8 text-center flex flex-col items-center justify-center gap-2">
+                        <div class="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center border border-slate-200/60 dark:border-slate-700">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <p class="text-xs text-slate-700 dark:text-slate-200 font-black uppercase tracking-wider">No completed targets yet</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                            Keep focusing! Completed subject targets will appear here automatically.
+                        </p>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+        let html = '';
+        displayList.forEach(item => {
+            const remainColorClass = item.isCompleted ? 'text-emerald-500' : 'text-indigo-500 dark:text-indigo-400';
+            const badgeClass = item.isCompleted 
+                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400';
+            const statusTag = item.isCompleted
+                ? `<span class="text-[8px] font-black uppercase tracking-wider text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-md flex items-center gap-1 border border-emerald-500/20"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>Done</span>`
+                : '';
 
             html += `
-                <div id="${domId}-card" class="p-3.5 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl flex flex-col gap-2.5 shadow-sm relative overflow-hidden transition-all duration-300 hover:shadow-md" style="border-left: 4px solid ${subjColor};">
+                <div id="${item.domId}-card" class="p-3.5 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl flex flex-col gap-2.5 shadow-sm relative overflow-hidden transition-all duration-300 hover:shadow-md ${item.isCompleted ? 'ring-1 ring-emerald-500/30' : ''}" style="border-left: 4px solid ${item.subjColor};">
                     <div class="flex justify-between items-center gap-2">
                         <div class="flex flex-col min-w-0">
-                            <span class="font-black text-xs text-slate-800 dark:text-white truncate" title="${subject}">${subject}</span>
-                            <span class="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide mt-0.5">Start: ${startDateText}</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-black text-xs text-slate-800 dark:text-white truncate" title="${item.subject}">${item.subject}</span>
+                                ${statusTag}
+                            </div>
+                            <span class="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide mt-0.5">Start: ${item.startDateText}</span>
                         </div>
                         <div class="flex items-center gap-1.5 shrink-0">
                             <!-- Progress Badge -->
-                            <span id="${domId}-badge" class="text-[9px] font-black font-mono px-1.5 py-0.5 rounded-full transition-colors duration-300 ${progressPercent >= 100 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}">${progressPercent}%</span>
+                            <span id="${item.domId}-badge" class="text-[9px] font-black font-mono px-1.5 py-0.5 rounded-full transition-colors duration-300 ${badgeClass}">${item.progressPercent}%</span>
                             
                             <!-- Edit Button -->
-                            <button onclick="window.openSubjectTargetModal('${subject.replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all" title="Edit Target">
+                            <button onclick="window.openSubjectTargetModal('${item.subject.replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all" title="Edit Target">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                 </svg>
@@ -612,22 +744,22 @@
                     
                     <!-- Premium Progress Bar -->
                     <div class="w-full bg-slate-200/50 dark:bg-slate-800/50 rounded-full h-1.5 overflow-hidden">
-                        <div id="${domId}-bar" class="h-full rounded-full transition-all duration-500 ease-out" style="width: ${progressPercent}%; background-color: ${progressPercent >= 100 ? '#10b981' : subjColor};"></div>
+                        <div id="${item.domId}-bar" class="h-full rounded-full transition-all duration-500 ease-out" style="width: ${item.progressPercent}%; background-color: ${item.isCompleted ? '#10b981' : item.subjColor};"></div>
                     </div>
 
                     <!-- Details Grid -->
                     <div class="grid grid-cols-3 gap-1.5 text-center mt-0.5">
                         <div class="flex flex-col bg-white dark:bg-slate-950/40 border border-slate-200/40 dark:border-slate-800/80 rounded-xl py-1 px-0.5">
                             <span class="text-[7.5px] font-bold uppercase tracking-wider text-slate-400">Done</span>
-                            <span id="${domId}-done" class="text-[9.5px] font-black text-emerald-500 font-mono whitespace-nowrap">${doneText}</span>
+                            <span id="${item.domId}-done" class="text-[9.5px] font-black text-emerald-500 font-mono whitespace-nowrap">${item.doneText}</span>
                         </div>
                         <div class="flex flex-col bg-white dark:bg-slate-950/40 border border-slate-200/40 dark:border-slate-800/80 rounded-xl py-1 px-0.5">
                             <span class="text-[7.5px] font-bold uppercase tracking-wider text-slate-400">Remain</span>
-                            <span id="${domId}-remain" class="text-[9.5px] font-black ${remainColorClass} font-mono whitespace-nowrap">${remainText}</span>
+                            <span id="${item.domId}-remain" class="text-[9.5px] font-black ${remainColorClass} font-mono whitespace-nowrap">${item.remainText}</span>
                         </div>
                         <div class="flex flex-col bg-white dark:bg-slate-950/40 border border-slate-200/40 dark:border-slate-800/80 rounded-xl py-1 px-0.5">
                             <span class="text-[7.5px] font-bold uppercase tracking-wider text-slate-400">Target</span>
-                            <span id="${domId}-target" class="text-[9.5px] font-black text-slate-600 dark:text-slate-300 font-mono whitespace-nowrap">${targetText}</span>
+                            <span id="${item.domId}-target" class="text-[9.5px] font-black text-slate-600 dark:text-slate-300 font-mono whitespace-nowrap">${item.targetText}</span>
                         </div>
                     </div>
                 </div>
@@ -941,24 +1073,28 @@
 
     function saveActiveStateToStore() {
         if (!AppState.activeTimerState) return;
+        const nowMs = (typeof window.getServerTime === 'function') ? window.getServerTime() : Date.now();
+        AppState.activeTimerState.updatedAt = nowMs;
+
         if (!AppState.activeTimerState.timerStates) {
             AppState.activeTimerState.timerStates = {
-                stopwatch: { isRunning: false, startTime: null, elapsedBeforeStart: 0, targetDuration: 0, selectedSubject: 'General Study' },
-                timer: { isRunning: false, startTime: null, elapsedBeforeStart: 0, targetDuration: 25 * 60, selectedSubject: 'General Study' },
-                alarm: { isRunning: false, startTime: null, elapsedBeforeStart: 0, targetDuration: 0, selectedSubject: 'General Study', alarmStart: '', alarmEnd: '', alarmUseCurrent: true }
+                stopwatch: { isRunning: false, startTime: null, elapsedBeforeStart: 0, targetDuration: 0, selectedSubject: 'General Study', updatedAt: nowMs },
+                timer: { isRunning: false, startTime: null, elapsedBeforeStart: 0, targetDuration: 25 * 60, selectedSubject: 'General Study', updatedAt: nowMs },
+                alarm: { isRunning: false, startTime: null, elapsedBeforeStart: 0, targetDuration: 0, selectedSubject: 'General Study', alarmStart: '', alarmEnd: '', alarmUseCurrent: true, updatedAt: nowMs }
             };
         }
-        const currentMode = AppState.activeTimerState.mode;
+        const currentMode = AppState.activeTimerState.mode || 'stopwatch';
         if (!AppState.activeTimerState.timerStates[currentMode]) {
             AppState.activeTimerState.timerStates[currentMode] = {};
         }
         const store = AppState.activeTimerState.timerStates[currentMode];
 
-        store.isRunning = AppState.activeTimerState.isRunning;
-        store.startTime = AppState.activeTimerState.startTime;
-        store.elapsedBeforeStart = AppState.activeTimerState.elapsedBeforeStart;
-        store.targetDuration = AppState.activeTimerState.targetDuration;
+        store.isRunning = AppState.activeTimerState.isRunning || false;
+        store.startTime = AppState.activeTimerState.startTime || null;
+        store.elapsedBeforeStart = AppState.activeTimerState.elapsedBeforeStart || 0;
+        store.targetDuration = AppState.activeTimerState.targetDuration || 0;
         store.selectedSubject = AppState.activeTimerState.selectedSubject || 'General Study';
+        store.updatedAt = nowMs;
 
         if (currentMode === 'alarm') {
             const startEl = document.getElementById('timer-alarm-start');
@@ -969,15 +1105,20 @@
             store.alarmEnd = endEl ? endEl.value : '';
             store.alarmUseCurrent = useCurrentCb ? useCurrentCb.checked : true;
         }
+
+        window.activeTimerState = AppState.activeTimerState;
     }
 
     function loadActiveStateFromStore(mode) {
         if (!AppState.activeTimerState) return;
+        const nowMs = (typeof window.getServerTime === 'function') ? window.getServerTime() : Date.now();
+        AppState.activeTimerState.updatedAt = nowMs;
+
         if (!AppState.activeTimerState.timerStates) {
             AppState.activeTimerState.timerStates = {
-                stopwatch: { isRunning: false, startTime: null, elapsedBeforeStart: 0, targetDuration: 0, selectedSubject: 'General Study' },
-                timer: { isRunning: false, startTime: null, elapsedBeforeStart: 0, targetDuration: 25 * 60, selectedSubject: 'General Study' },
-                alarm: { isRunning: false, startTime: null, elapsedBeforeStart: 0, targetDuration: 0, selectedSubject: 'General Study', alarmStart: '', alarmEnd: '', alarmUseCurrent: true }
+                stopwatch: { isRunning: false, startTime: null, elapsedBeforeStart: 0, targetDuration: 0, selectedSubject: 'General Study', updatedAt: nowMs },
+                timer: { isRunning: false, startTime: null, elapsedBeforeStart: 0, targetDuration: 25 * 60, selectedSubject: 'General Study', updatedAt: nowMs },
+                alarm: { isRunning: false, startTime: null, elapsedBeforeStart: 0, targetDuration: 0, selectedSubject: 'General Study', alarmStart: '', alarmEnd: '', alarmUseCurrent: true, updatedAt: nowMs }
             };
         }
         if (!AppState.activeTimerState.timerStates[mode]) {
@@ -986,17 +1127,20 @@
                 startTime: null,
                 elapsedBeforeStart: 0,
                 targetDuration: mode === 'timer' ? 25 * 60 : 0,
-                selectedSubject: 'General Study'
+                selectedSubject: 'General Study',
+                updatedAt: nowMs
             };
         }
         const store = AppState.activeTimerState.timerStates[mode];
 
         AppState.activeTimerState.mode = mode;
-        AppState.activeTimerState.isRunning = store.isRunning;
-        AppState.activeTimerState.startTime = store.startTime;
-        AppState.activeTimerState.elapsedBeforeStart = store.elapsedBeforeStart;
-        AppState.activeTimerState.targetDuration = store.targetDuration;
+        AppState.activeTimerState.isRunning = store.isRunning || false;
+        AppState.activeTimerState.startTime = store.startTime || null;
+        AppState.activeTimerState.elapsedBeforeStart = store.elapsedBeforeStart || 0;
+        AppState.activeTimerState.targetDuration = store.targetDuration !== undefined ? store.targetDuration : (mode === 'timer' ? 25 * 60 : 0);
         AppState.activeTimerState.selectedSubject = store.selectedSubject || 'General Study';
+        AppState.activeTimerState.updatedAt = nowMs;
+        store.updatedAt = nowMs;
 
         // Restore DOM inputs for alarm mode
         if (mode === 'alarm') {
@@ -1018,6 +1162,8 @@
         if (subjectSelect) {
             subjectSelect.value = AppState.activeTimerState.selectedSubject;
         }
+
+        window.activeTimerState = AppState.activeTimerState;
     }
 
     function checkBackgroundTimers() {
@@ -1054,10 +1200,9 @@
         }
     }
 
-    // --- GLOBAL BUTTON & ACTION HANDLERS ---
-
     window.syncTimerStateFromCloud = function () {
         if (!AppState.activeTimerState) return;
+        window.activeTimerState = AppState.activeTimerState;
 
         // Initialize state store if missing
         if (!AppState.activeTimerState.timerStates) {
@@ -1351,14 +1496,16 @@
         }
 
         const subject = AppState.activeTimerState.selectedSubject || 'General Study';
-        const mode = AppState.activeTimerState.mode;
-
+        const currentMode = AppState.activeTimerState.mode || 'stopwatch';
+        const nowMs = (typeof window.getServerTime === 'function') ? window.getServerTime() : Date.now();
         const newLog = {
             id: 'timer-log-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
             subject: subject,
             duration: elapsedSeconds,
-            date: new Date(window.getServerTime()).toISOString(),
-            mode: mode
+            date: new Date(nowMs).toISOString(),
+            mode: currentMode,
+            createdAt: new Date(nowMs).toISOString(),
+            updatedAt: nowMs
         };
 
         if (!AppState.timerLogs) AppState.timerLogs = [];
@@ -1367,22 +1514,24 @@
         AppState.activeTimerState.isRunning = false;
         AppState.activeTimerState.startTime = null;
         AppState.activeTimerState.elapsedBeforeStart = 0;
+        AppState.activeTimerState.updatedAt = nowMs;
 
         // Also reset stored state for active mode since we just saved it!
-        const currentMode = AppState.activeTimerState.mode;
         if (AppState.activeTimerState.timerStates && AppState.activeTimerState.timerStates[currentMode]) {
             const store = AppState.activeTimerState.timerStates[currentMode];
             store.isRunning = false;
             store.startTime = null;
             store.elapsedBeforeStart = 0;
+            store.updatedAt = nowMs;
         }
 
+        window.activeTimerState = AppState.activeTimerState;
         saveActiveStateToStore();
         window.TimerService.restore();
         window.TimerService.updateDisplay();
         showToast(`Saved session: ${Math.floor(elapsedSeconds / 60)}m ${elapsedSeconds % 60}s for ${subject}.`, "success");
         if (window.FirebaseService) {
-            window.FirebaseService.saveToCloud(false);
+            window.FirebaseService.saveToCloud(true);
         }
     };
 
@@ -3634,7 +3783,7 @@
                 // Check if any other mode is running
                 if (AppState.activeTimerState.timerStates) {
                     const runningMode = Object.keys(AppState.activeTimerState.timerStates).find(mode => {
-                        return mode !== AppState.activeTimerState.mode && AppState.activeTimerState.timerStates[mode].isRunning;
+                        return mode !== AppState.activeTimerState.mode && AppState.activeTimerState.timerStates[mode] && AppState.activeTimerState.timerStates[mode].isRunning;
                     });
                     if (runningMode) {
                         const friendlyName = runningMode === 'stopwatch' ? 'Stopwatch' : (runningMode === 'alarm' ? 'Alarm Range' : 'Timer');
@@ -3643,20 +3792,28 @@
                     }
                 }
 
+                const nowMs = (typeof window.getServerTime === 'function') ? window.getServerTime() : Date.now();
                 AppState.activeTimerState.isRunning = true;
-                AppState.activeTimerState.startTime = window.getServerTime();
+                AppState.activeTimerState.startTime = nowMs;
+                AppState.activeTimerState.updatedAt = nowMs;
+                window.activeTimerState = AppState.activeTimerState;
                 saveActiveStateToStore();
-                FirebaseService.saveTimerToCloud();
+                if (window.FirebaseService) {
+                    window.FirebaseService.saveTimerToCloud();
+                }
                 window.TimerService.restore();
             }
         },
 
         pause: function () {
             if (AppState.activeTimerState) {
+                const nowMs = (typeof window.getServerTime === 'function') ? window.getServerTime() : Date.now();
+                AppState.activeTimerState.updatedAt = nowMs;
+
                 if (AppState.activeTimerState.isRunning) {
                     AppState.activeTimerState.isRunning = false;
                     if (AppState.activeTimerState.startTime) {
-                        AppState.activeTimerState.elapsedBeforeStart += (window.getServerTime() - parseStartTime(AppState.activeTimerState.startTime));
+                        AppState.activeTimerState.elapsedBeforeStart += (nowMs - parseStartTime(AppState.activeTimerState.startTime));
                     }
                     AppState.activeTimerState.startTime = null;
                 }
@@ -3664,18 +3821,22 @@
                 if (AppState.activeTimerState.timerStates) {
                     Object.keys(AppState.activeTimerState.timerStates).forEach(mode => {
                         const store = AppState.activeTimerState.timerStates[mode];
-                        if (store.isRunning) {
+                        if (store && store.isRunning) {
                             store.isRunning = false;
                             if (store.startTime) {
-                                store.elapsedBeforeStart += (window.getServerTime() - parseStartTime(store.startTime));
+                                store.elapsedBeforeStart += (nowMs - parseStartTime(store.startTime));
                             }
                             store.startTime = null;
+                            store.updatedAt = nowMs;
                         }
                     });
                 }
 
+                window.activeTimerState = AppState.activeTimerState;
                 saveActiveStateToStore();
-                FirebaseService.saveTimerToCloud();
+                if (window.FirebaseService) {
+                    window.FirebaseService.saveTimerToCloud();
+                }
                 window.TimerService.restore();
             }
         },
@@ -3690,10 +3851,13 @@
 
         reset: function () {
             if (AppState.activeTimerState) {
-                let targetMode = AppState.activeTimerState.mode;
+                const nowMs = (typeof window.getServerTime === 'function') ? window.getServerTime() : Date.now();
+                AppState.activeTimerState.updatedAt = nowMs;
+
+                let targetMode = AppState.activeTimerState.mode || 'stopwatch';
                 if (AppState.activeTimerState.timerStates) {
                     const runningMode = Object.keys(AppState.activeTimerState.timerStates).find(
-                        m => AppState.activeTimerState.timerStates[m].isRunning
+                        m => AppState.activeTimerState.timerStates[m] && AppState.activeTimerState.timerStates[m].isRunning
                     );
                     if (runningMode) {
                         targetMode = runningMode;
@@ -3711,6 +3875,7 @@
                     store.isRunning = false;
                     store.startTime = null;
                     store.elapsedBeforeStart = 0;
+                    store.updatedAt = nowMs;
                     if (targetMode === 'timer') {
                         store.targetDuration = 25 * 60;
                         if (targetMode === AppState.activeTimerState.mode) {
@@ -3732,8 +3897,11 @@
                     }
                 }
 
+                window.activeTimerState = AppState.activeTimerState;
                 saveActiveStateToStore();
-                FirebaseService.saveTimerToCloud();
+                if (window.FirebaseService) {
+                    window.FirebaseService.saveTimerToCloud();
+                }
                 window.TimerService.restore();
             }
         },

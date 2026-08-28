@@ -124,27 +124,27 @@ window.FirebaseService = {
     _fastPersistLocalStorage: function() {
         try {
             const currentCache = {
-                tasks: AppState.tasks || [],
-                tracks: window.tracks || [],
-                customActions: window.customActions || [],
-                paceGoals: window.paceGoals || [],
-                passedItems: window.passedItems || { programs: [], subjects: [] },
-                revisionData: window.revisionData || { active: [], progress: {} },
-                timerLogs: window.timerLogs || [],
+                tasks: AppState.tasks || window.tasks || [],
+                tracks: AppState.tracks || window.tracks || [],
+                customActions: AppState.customActions || window.customActions || [],
+                paceGoals: AppState.paceGoals || window.paceGoals || [],
+                passedItems: AppState.passedItems || window.passedItems || { programs: [], subjects: [] },
+                revisionData: AppState.revisionData || window.revisionData || { active: [], progress: {} },
+                timerLogs: AppState.timerLogs || window.timerLogs || [],
                 fiscalLedger: AppState.fiscalLedger || { transactions: [], budgets: [], vaults: [] },
-                dashboardConfig: window.dashboardConfig || {},
-                weeklyTargetsDatabase: window.weeklyTargetsDatabase || {},
-                dailyTargetsDatabase: window.dailyTargetsDatabase || {},
+                dashboardConfig: AppState.dashboardConfig || window.dashboardConfig || {},
+                weeklyTargetsDatabase: AppState.weeklyTargetsDatabase || window.weeklyTargetsDatabase || {},
+                dailyTargetsDatabase: AppState.dailyTargetsDatabase || window.dailyTargetsDatabase || {},
                 subjectFocusTargets: AppState.subjectFocusTargets || window.subjectFocusTargets || {},
-                scheduleBlocks: window.scheduleBlocks || [],
-                scheduleBlocks2: window.scheduleBlocks2 || [],
-                scheduleGroups: window.scheduleGroups || [],
-                examSessions: window.examSessions || [],
-                examRoutine: window.examRoutine || [],
-                selectedCountdownExamId: window.selectedCountdownExamId || 'auto',
-                activeTimerState: window.activeTimerState || {},
-                activeRoutineSet: window.activeRoutineSet || 1,
-                subjectColors: window.subjectColors || {},
+                scheduleBlocks: AppState.scheduleBlocks || window.scheduleBlocks || [],
+                scheduleBlocks2: AppState.scheduleBlocks2 || window.scheduleBlocks2 || [],
+                scheduleGroups: AppState.scheduleGroups || window.scheduleGroups || [],
+                examSessions: AppState.examSessions || window.examSessions || [],
+                examRoutine: AppState.examRoutine || window.examRoutine || [],
+                selectedCountdownExamId: AppState.selectedCountdownExamId || window.selectedCountdownExamId || 'auto',
+                activeTimerState: AppState.activeTimerState || window.activeTimerState || {},
+                activeRoutineSet: AppState.activeRoutineSet || window.activeRoutineSet || 1,
+                subjectColors: AppState.subjectColors || window.subjectColors || {},
                 _tombstones: AppState._tombstones || {}
             };
             const jsonStr = JSON.stringify(currentCache);
@@ -573,6 +573,21 @@ window.FirebaseService = {
                             cloudData.subjectFocusTargets = mergedSft;
                         }
 
+                        if (cloudData.activeTimerState || AppState.activeTimerState) {
+                            const localTimer = AppState.activeTimerState;
+                            const cloudTimer = cloudData.activeTimerState;
+                            const localTime = (localTimer && (localTimer.updatedAt || localTimer._localTimestamp)) || 0;
+                            const cloudTime = (cloudTimer && (cloudTimer.updatedAt || cloudTimer._localTimestamp)) || 0;
+                            const isRunning = (typeof window.isAnyTimerRunning === 'function') ? window.isAnyTimerRunning() : (localTimer && localTimer.isRunning);
+
+                            if (localTimer && localTime > cloudTime && (AppState.isLocalDirty || isRunning)) {
+                                cloudData.activeTimerState = localTimer;
+                                console.log(`SYNC_DEBUG RECONCILE_RESULT (activeTimerState): Preserving newer local timer state (${localTime} > ${cloudTime})`);
+                            } else if (cloudTimer) {
+                                cloudData.activeTimerState = cloudTimer;
+                            }
+                        }
+
                         if ((AppState.localRevision || 0) <= (AppState.lastCommittedRevision || 0)) {
                             if (this._saveDebounceTimer) {
                                 clearTimeout(this._saveDebounceTimer);
@@ -765,12 +780,12 @@ window.FirebaseService = {
                 scheduleBlocks2: window.scheduleBlocks2 || [],
                 scheduleGroups: window.scheduleGroups || [],
                 fiscalLedger: AppState.fiscalLedger || { transactions: [], budgets: [], vaults: [] },
-                examSessions: AppState.examSessions || [],
-                examRoutine: AppState.examRoutine || [],
-                selectedCountdownExamId: AppState.selectedCountdownExamId || 'auto',
-                activeTimerState: AppState.activeTimerState || {},
-                activeRoutineSet: AppState.activeRoutineSet || 1,
-                subjectColors: AppState.subjectColors || {},
+                examSessions: AppState.examSessions || window.examSessions || [],
+                examRoutine: AppState.examRoutine || window.examRoutine || [],
+                selectedCountdownExamId: AppState.selectedCountdownExamId || window.selectedCountdownExamId || 'auto',
+                activeTimerState: AppState.activeTimerState || window.activeTimerState || {},
+                activeRoutineSet: AppState.activeRoutineSet || window.activeRoutineSet || 1,
+                subjectColors: AppState.subjectColors || window.subjectColors || {},
                 _tombstones: tombstones
             };
 
@@ -1161,4 +1176,18 @@ window.saveTimerToCloud = window.FirebaseService.saveTimerToCloud.bind(window.Fi
 window.initializeCloudWorkspace = window.FirebaseService.initializeCloudWorkspace.bind(window.FirebaseService);
 window.resetLocalWorkspace = window.FirebaseService.resetLocalWorkspace.bind(window.FirebaseService);
 window.showSync = showSync;
+
+// Cross-tab real-time state synchronization listener
+window.addEventListener('storage', (e) => {
+    if ((e.key === 'local_app_state' || e.key === 'appState') && e.newValue) {
+        try {
+            const data = JSON.parse(e.newValue);
+            if (data && typeof data === 'object' && typeof window.applyFullAppState === 'function') {
+                window.applyFullAppState(data, false, false, true);
+            }
+        } catch (err) {
+            console.warn("Cross-tab storage synchronization notice:", err);
+        }
+    }
+});
 

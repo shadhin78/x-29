@@ -1636,12 +1636,14 @@
                                     <div class="flex flex-col gap-1.5">
                                         <label for="timer-alarm-start" class="text-[9px] font-black uppercase tracking-wider text-slate-400">Start Time</label>
                                         <input type="time" id="timer-alarm-start"
+                                            onchange="if(window.TimerService) window.TimerService.saveActiveStateToStore(); if(window.FirebaseService) window.FirebaseService.saveTimerToCloud();"
                                             class="bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white font-bold outline-none w-full shadow-sm touch-action-manipulation"
                                             disabled />
                                     </div>
                                     <div class="flex flex-col gap-1.5">
                                         <label for="timer-alarm-end" class="text-[9px] font-black uppercase tracking-wider text-slate-400">End Time</label>
                                         <input type="time" id="timer-alarm-end"
+                                            onchange="if(window.TimerService) window.TimerService.saveActiveStateToStore(); if(window.FirebaseService) window.FirebaseService.saveTimerToCloud();"
                                             class="bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white font-bold outline-none w-full shadow-sm touch-action-manipulation" />
                                     </div>
                                 </div>
@@ -1679,7 +1681,7 @@
                             <!-- Digital Time & Status Display (Outside Below Clock) -->
                             <div id="timer-digital-display-container" class="flex flex-col items-center justify-center select-none">
                                 <div id="timer-clock-text-split" class="font-mono text-4xl sm:text-5xl md:text-6xl font-black tracking-tight drop-shadow-md leading-none flex items-baseline">
-                                    <span id="timer-clock-hhmm" class="text-slate-900 dark:text-white transition-colors duration-300">00:</span><span id="timer-clock-ssms" class="text-blue-600 dark:text-blue-500 transition-colors duration-300">00.00</span>
+                                    <span id="timer-clock-hhmm" class="text-slate-900 dark:text-white transition-colors duration-300">00:00:</span><span id="timer-clock-ssms" class="text-blue-600 dark:text-blue-500 transition-colors duration-300">00</span>
                                 </div>
                                 <!-- Hidden fallback element for existing text selectors -->
                                 <span id="timer-clock-text" class="hidden">00:00:00</span>
@@ -1780,35 +1782,6 @@
                             </div>
                         </div>
 
-                        <!-- Subject Focus Target Section -->
-                        <div
-                            class="bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 p-5 rounded-3xl shadow-sm space-y-4">
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <h4
-                                        class="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-white">
-                                        Subject Target Tracker</h4>
-                                    <p class="text-[8px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
-                                        Set study target and track progress
-                                    </p>
-                                </div>
-                                <button onclick="window.openSubjectTargetModal('')" id="timer-btn-add-subject-target"
-                                    class="p-2 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-sm border border-blue-100 dark:border-blue-900/30 font-black text-xs"
-                                    title="Add Subject Target">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                            d="M12 4v16m8-8H4"></path>
-                                    </svg>
-                                </button>
-                            </div>
-
-                            <!-- List of active subject targets -->
-                            <div class="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-1"
-                                id="subject-targets-list">
-                                <!-- Dynamic subject targets list populated here -->
-                            </div>
-                        </div>
-
                         <!-- Time Allocation per Subject -->
                         <div
                             class="bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 p-5 rounded-3xl shadow-sm space-y-4">
@@ -1822,6 +1795,55 @@
                                 <!-- Dynamic breakdown progress bars -->
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Subject Focus Target Section -->
+                <div
+                    class="bg-white dark:bg-slate-800 rounded-3xl p-5 md:p-8 border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col space-y-4">
+                    <div
+                        class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-700 pb-4">
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="text-base md:text-lg font-black dark:text-white leading-tight">Subject Target Tracker</h3>
+                            </div>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+                                Set study target and track progress
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <!-- Section Filter Tabs: Uncompleted (Red) & Done (Green) -->
+                            <div id="subject-target-filter-bar" class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900/80 p-1 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+                                <button onclick="window.setSubjectTargetFilter('uncompleted')" id="st-filter-uncompleted"
+                                    class="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all bg-rose-600 text-white shadow shadow-rose-500/20 active:scale-95">
+                                    <span id="st-dot-uncompleted" class="w-2 h-2 rounded-full bg-rose-200 animate-pulse"></span>
+                                    <span>Uncompleted</span>
+                                    <span id="st-count-uncompleted" class="px-1.5 py-0.5 rounded-full bg-white/20 text-white text-[9px] font-mono leading-none">0</span>
+                                </button>
+                                <button onclick="window.setSubjectTargetFilter('done')" id="st-filter-done"
+                                    class="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all text-slate-500 dark:text-slate-400 hover:bg-slate-200/80 dark:hover:bg-slate-800 active:scale-95">
+                                    <span id="st-dot-done" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    <span>Done</span>
+                                    <span id="st-count-done" class="px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[9px] font-mono leading-none">0</span>
+                                </button>
+                            </div>
+
+                            <button onclick="window.openSubjectTargetModal('')" id="timer-btn-add-subject-target"
+                                class="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-md active:scale-95 transition-all"
+                                title="Add Subject Target">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M12 4v16m8-8H4"></path>
+                                </svg>
+                                <span class="hidden sm:inline">Add Target</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- List of active subject targets -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 max-h-[360px] overflow-y-auto custom-scrollbar pr-1"
+                        id="subject-targets-list">
+                        <!-- Dynamic subject targets list populated here -->
                     </div>
                 </div>
 

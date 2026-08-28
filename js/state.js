@@ -634,7 +634,29 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.selectedCountdownExamId !== undefined) AppState.selectedCountdownExamId = data.selectedCountdownExamId;
-    if (data.activeTimerState !== undefined) AppState.activeTimerState = data.activeTimerState;
+    if (data.activeTimerState !== undefined) {
+        const localTimer = AppState.activeTimerState;
+        const incomingTimer = data.activeTimerState;
+        const localTime = (localTimer && (localTimer.updatedAt || localTimer._localTimestamp)) || 0;
+        const incomingTime = (incomingTimer && (incomingTimer.updatedAt || incomingTimer._localTimestamp)) || 0;
+        const isRunning = (typeof window.isAnyTimerRunning === 'function') ? window.isAnyTimerRunning() : (localTimer && localTimer.isRunning);
+
+        if (isExplicitWipe) {
+            AppState.activeTimerState = incomingTimer;
+            window.activeTimerState = AppState.activeTimerState;
+            if (window.TimerService && typeof window.TimerService.restore === 'function') {
+                window.TimerService.restore();
+            }
+        } else if (localTimer && localTime > incomingTime && (AppState.isLocalDirty || isRunning)) {
+            console.log(`HYDRATION_GUARD: Preserving newer local activeTimerState (localTime: ${localTime} > incomingTime: ${incomingTime})`);
+        } else if (incomingTimer) {
+            AppState.activeTimerState = incomingTimer;
+            window.activeTimerState = AppState.activeTimerState;
+            if (window.TimerService && typeof window.TimerService.restore === 'function') {
+                window.TimerService.restore();
+            }
+        }
+    }
     if (data.activeRoutineSet !== undefined) AppState.activeRoutineSet = data.activeRoutineSet;
     if (data.subjectColors !== undefined) AppState.subjectColors = data.subjectColors;
 
