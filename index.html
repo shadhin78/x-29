@@ -1960,6 +1960,122 @@
                         <!-- Dynamically populated via JS -->
                     </div>
 
+                    <!-- Monthly Targets Section -->
+                    <div id="monthly-targets-section"
+                        class="mt-8 md:mt-10 bg-white dark:bg-slate-800 p-5 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl md:rounded-[2.5rem] border border-slate-200/50 dark:border-slate-700/50 shadow-sm space-y-6">
+                        <!-- Header and Metrics -->
+                        <div
+                            class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-5 border-b border-slate-100 dark:border-slate-700/60 pb-5">
+                            <div class="flex flex-col md:flex-row md:items-center gap-4 w-full">
+                                <div class="flex items-center space-x-3">
+                                    <div
+                                        class="p-2.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-base md:text-lg font-black dark:text-white leading-tight">Monthly
+                                            Targets Setup</h3>
+                                        <div class="flex flex-wrap items-center gap-2 mt-1">
+                                            <span id="mt-selected-month-range"
+                                                class="text-[10px] text-indigo-600 dark:text-indigo-400 font-black tracking-wider uppercase bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800">[
+                                                Loading Month... ]</span>
+                                            <span id="mt-today-display"
+                                                class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Today:
+                                                Thursday, 11 Jun 2026</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Month Navigation and Buttons -->
+                                <div
+                                    class="flex items-center space-x-2 md:ml-auto w-full md:w-auto mt-2 md:mt-0 flex-wrap gap-2 justify-end">
+                                    <!-- Arrow navigation buttons -->
+                                    <div
+                                        class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shrink-0">
+                                        <button id="mt-btn-past" onclick="window.navigateMonth('past')"
+                                            class="px-2.5 py-1.5 text-[9px] font-black rounded-lg transition-all text-slate-650 dark:text-slate-355 hover:bg-slate-200 dark:hover:bg-slate-600/50 flex items-center space-x-1">
+                                            <span>&lt;- Past Month</span>
+                                        </button>
+                                        <button id="mt-btn-present" onclick="window.navigateMonth('present')"
+                                            class="px-2.5 py-1.5 text-[9px] font-black rounded-lg transition-all bg-indigo-600 text-white shadow">
+                                            <span>Present Month</span>
+                                        </button>
+                                        <button id="mt-btn-future" onclick="window.navigateMonth('future')"
+                                            class="px-2.5 py-1.5 text-[9px] font-black rounded-lg transition-all text-slate-650 dark:text-slate-355 hover:bg-slate-200 dark:hover:bg-slate-600/50 flex items-center space-x-1">
+                                            <span>Future Month -&gt;</span>
+                                        </button>
+                                    </div>
+                                    <button onclick="window.openMonthlyTargetsDatabase()"
+                                        class="flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2.5 rounded-lg transition-colors shadow-md shadow-indigo-500/10 active:scale-95 shrink-0">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
+                                            </path>
+                                        </svg>
+                                        <span>Targets Database</span>
+                                    </button>
+                                    <button onclick="window.openAddMonthlyTargetModal()"
+                                        class="flex items-center justify-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest px-3 py-2.5 rounded-lg transition-colors shadow-md shadow-emerald-500/10 active:scale-95 shrink-0"
+                                        title="Add Monthly Target">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                                d="M12 4v16m8-8H4"></path>
+                                        </svg>
+                                        <span>Add</span>
+                                    </button>
+                                    <select id="mt-select-month" class="hidden"></select>
+                                </div>
+                            </div>
+
+                            <!-- Metrics panel -->
+                            <div class="grid grid-cols-3 gap-2 sm:gap-4 w-full xl:w-auto shrink-0">
+                                <div
+                                    class="bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800/80 text-center min-w-[80px] sm:min-w-[100px]">
+                                    <span
+                                        class="block text-[8px] font-black uppercase tracking-wider text-slate-400">Req.
+                                        Pace</span>
+                                    <span id="mt-req-pace"
+                                        class="text-xs font-black text-indigo-600 dark:text-indigo-400">0.00
+                                        Ch/D</span>
+                                </div>
+                                <div
+                                    class="bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800/80 text-center min-w-[80px] sm:min-w-[100px]">
+                                    <span
+                                        class="block text-[8px] font-black uppercase tracking-wider text-slate-400">Actual
+                                        Pace</span>
+                                    <span id="mt-act-pace"
+                                        class="text-xs font-black text-emerald-600 dark:text-emerald-400">0.00
+                                        Ch/D</span>
+                                </div>
+                                <div
+                                    class="bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800/80 text-center min-w-[80px] sm:min-w-[100px]">
+                                    <span
+                                        class="block text-[8px] font-black uppercase tracking-wider text-slate-400">Est.
+                                        Finish</span>
+                                    <span id="mt-est-finish"
+                                        class="text-xs font-black text-purple-600 dark:text-purple-400">N/A</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Targets List -->
+                        <div class="space-y-3">
+                            <div
+                                class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-1.5">
+                                <h4 class="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                    Monthly Target Checklist
+                                </h4>
+                            </div>
+                            <div id="monthly-targets-list" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <!-- Populated via JS -->
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Weekly Targets Section -->
                     <div id="weekly-targets-section"
                         class="mt-8 md:mt-10 bg-white dark:bg-slate-800 p-5 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl md:rounded-[2.5rem] border border-slate-200/50 dark:border-slate-700/50 shadow-sm space-y-6">
@@ -5037,6 +5153,148 @@
             </div>
         </div>
 
+        <!-- Monthly Targets Database Modal -->
+        <div id="monthly-targets-db-modal"
+            class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 sm:p-6 transition-all duration-300">
+            <div id="mtdb-backdrop"
+                class="fixed inset-0 bg-slate-900/80 backdrop-blur-xl opacity-0 transition-opacity duration-300"
+                onclick="closeModal('monthly-targets-db-modal')"></div>
+            <div id="mtdb-content"
+                class="relative bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-4xl border border-slate-200/50 dark:border-slate-700/50 transform scale-95 opacity-0 translate-y-4 transition-all duration-300 mx-4 z-10 flex flex-col max-h-[85vh]">
+                <div
+                    class="flex justify-between items-center mb-6 border-b border-slate-100 dark:border-slate-700 pb-4 shrink-0">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                </path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black text-slate-800 dark:text-slate-100">Monthly Targets Database
+                            </h2>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Historical
+                                records and analysis of monthly targets</p>
+                        </div>
+                    </div>
+                    <button onclick="closeModal('monthly-targets-db-modal')"
+                        class="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl hover:rotate-90 transition-transform active:scale-95"><svg
+                            class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                d="M6 18L18 6M6 6l12 12">
+                            </path>
+                        </svg></button>
+                </div>
+
+                <!-- Tab Buttons -->
+                <div
+                    class="sticky top-0 z-10 bg-white dark:bg-slate-800 flex space-x-2 md:space-x-4 mb-4 border-b border-slate-200 dark:border-slate-700 pb-3 pt-1 shrink-0 overflow-x-auto scrollbar-hide">
+                    <button id="mtdb-tab-btn-list" onclick="window.switchMtdbTab('list')"
+                        class="px-4 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-xl transition-all bg-indigo-600 text-white shadow-md whitespace-nowrap">Monthly
+                        List</button>
+                    <button id="mtdb-tab-btn-month" onclick="window.switchMtdbTab('month')"
+                        class="px-4 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-xl transition-all bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 whitespace-nowrap">Month-wise
+                        sorting & bar trend</button>
+                </div>
+
+                <!-- TAB CONTENT: Monthly list with filters -->
+                <div id="mtdb-tab-content-list" class="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
+                    <!-- Filters Grid -->
+                    <div
+                        class="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-200/50 dark:border-slate-700/50">
+                        <div class="flex flex-col gap-1 w-full">
+                            <label class="text-[9px] font-black uppercase tracking-wider text-slate-400">Month
+                                Filter</label>
+                            <select id="mtdb-filter-month" onchange="window.renderMtdbList()"
+                                class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none"></select>
+                        </div>
+                        <div class="flex flex-col gap-1 w-full">
+                            <label class="text-[9px] font-black uppercase tracking-wider text-slate-400">Program
+                                Filter</label>
+                            <select id="mtdb-filter-prog" onchange="window.renderMtdbList()"
+                                class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none"></select>
+                        </div>
+                        <div class="flex flex-col gap-1 w-full">
+                            <label class="text-[9px] font-black uppercase tracking-wider text-slate-400">Subject
+                                Filter</label>
+                            <select id="mtdb-filter-sub" onchange="window.renderMtdbList()"
+                                class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none"></select>
+                        </div>
+                        <div class="flex flex-col gap-1 w-full">
+                            <label class="text-[9px] font-black uppercase tracking-wider text-slate-400">Status
+                                Filter</label>
+                            <select id="mtdb-filter-status" onchange="window.renderMtdbList()"
+                                class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none">
+                                <option value="all">All</option>
+                                <option value="completed">Completed</option>
+                                <option value="non-completed">Non-Completed</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Database List Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr
+                                    class="border-b border-slate-100 dark:border-slate-700 text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                    <th class="py-3 px-4 w-12 text-center">Status</th>
+                                    <th class="py-3 px-4">Month Range</th>
+                                    <th class="py-3 px-4">Program</th>
+                                    <th class="py-3 px-4">Subject</th>
+                                    <th class="py-3 px-4">Chapter</th>
+                                    <th class="py-3 px-4 w-12 text-center">Delete</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mtdb-targets-tbody"
+                                class="divide-y divide-slate-100 dark:divide-slate-800 text-xs font-bold">
+                                <!-- Populated dynamically via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB CONTENT: Month-wise and Bar Trend -->
+                <div id="mtdb-tab-content-month" class="hidden flex-1 min-h-0 overflow-y-auto space-y-6 pr-1">
+                    <!-- Mixed trend chart -->
+                    <div
+                        class="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-3xl border border-slate-200/50 dark:border-slate-700/50">
+                        <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-3 text-center">
+                            Monthly Targets vs Accomplishment (Bar Trend)</h3>
+                        <div class="h-64 w-full relative">
+                            <canvas id="monthlyMonthMixedChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Month-wise Sorted Target Summary -->
+                    <div class="space-y-3">
+                        <h3
+                            class="text-xs font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-slate-700 pb-2">
+                            Month-Wise Targets Summary
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr
+                                        class="border-b border-slate-100 dark:border-slate-700 text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                        <th class="py-3 px-4">Month</th>
+                                        <th class="py-3 px-4 text-center">Targets Set</th>
+                                        <th class="py-3 px-4 text-center">Targets Completed</th>
+                                        <th class="py-3 px-4 text-center">Completion Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mtdb-months-tbody"
+                                    class="divide-y divide-slate-100 dark:divide-slate-800 text-xs font-bold">
+                                    <!-- Populated dynamically via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Daily Targets Database Modal -->
         <div id="daily-targets-db-modal"
             class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 sm:p-6 transition-all duration-300">
@@ -6309,6 +6567,102 @@
                             class="px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-650 rounded-xl text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 active:scale-95 transition-all">Cancel</button>
                         <button onclick="window.addWeeklyTarget()"
                             class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider active:scale-95 transition-all shadow-md">Add
+                            Target</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Monthly Target Modal -->
+        <div id="add-monthly-target-modal"
+            class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 sm:p-6 transition-all duration-300">
+            <div id="mtm-backdrop"
+                class="fixed inset-0 bg-slate-900/80 backdrop-blur-xl opacity-0 transition-opacity duration-300"
+                onclick="closeModal('add-monthly-target-modal')"></div>
+            <div id="mtm-content"
+                class="relative bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-lg border border-slate-200/50 dark:border-slate-700/50 transform scale-95 opacity-0 translate-y-4 transition-all duration-300 mx-4 z-10 flex flex-col">
+                <div
+                    class="flex justify-between items-center mb-6 border-b border-slate-100 dark:border-slate-700/60 pb-4 shrink-0">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black text-slate-800 dark:text-slate-100">Add Monthly Target</h2>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Select a
+                                chapter and specify target scope</p>
+                        </div>
+                    </div>
+                    <button onclick="closeModal('add-monthly-target-modal')"
+                        class="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl hover:rotate-90 transition-transform active:scale-95">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="space-y-4 my-2 overflow-y-auto max-h-[60vh] pr-1">
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Program</label>
+                        <select id="mt-select-prog" onchange="window.updateMonthlyTargetSubjectDropdown()"
+                            class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none w-full shadow-inner">
+                        </select>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label
+                            class="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                            Subject
+                            <span id="mt-sub-color-dot" class="inline-block w-2 h-2 rounded-full hidden"></span>
+                        </label>
+                        <select id="mt-select-sub" onchange="window.updateMonthlyTargetChapterDropdown()"
+                            class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none w-full shadow-inner">
+                        </select>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Chapter / Target Level</label>
+                        <select id="mt-select-ch"
+                            class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none w-full shadow-inner">
+                        </select>
+                    </div>
+
+                    <!-- Auto-connect to Weekly and Daily Targets -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/60">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-[9.5px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                                <span>📅 Weekly Range</span>
+                                <span class="text-[7.5px] text-slate-400 font-bold">(Auto-connect)</span>
+                            </label>
+                            <select id="mt-select-week-range" onchange="window.handleMonthlyTargetWeekChange()"
+                                class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none w-full shadow-sm">
+                            </select>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-[9.5px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                <span>📆 Day / Date</span>
+                                <span class="text-[7.5px] text-slate-400 font-bold">(Auto-connect)</span>
+                            </label>
+                            <select id="mt-select-day" onchange="window.handleMonthlyTargetDayChange()"
+                                class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-emerald-500 outline-none w-full shadow-sm">
+                            </select>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="mt-target-scope" value="Whole Chapter" />
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Size (Optional)</label>
+                        <input type="number" id="mt-input-size" placeholder="e.g. 10 (for pages, questions, etc.)"
+                            min="1"
+                            class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none w-full shadow-inner" />
+                    </div>
+                    <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700/60 mt-4">
+                        <button onclick="closeModal('add-monthly-target-modal')"
+                            class="px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-650 rounded-xl text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 active:scale-95 transition-all">Cancel</button>
+                        <button onclick="window.addMonthlyTarget()"
+                            class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wider active:scale-95 transition-all shadow-md">Add
                             Target</button>
                     </div>
                 </div>

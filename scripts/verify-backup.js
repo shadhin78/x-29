@@ -932,6 +932,7 @@ function extractX29Metrics(collectionsTree) {
         scheduleGroupsCount: 0,
         dailyTargetsCount: 0,
         weeklyTargetsCount: 0,
+        monthlyTargetsCount: 0,
         fiscalLedgerCount: 0,
         updatedAt: null
     };
@@ -1006,6 +1007,9 @@ function extractX29Metrics(collectionsTree) {
         }
         if (data.weeklyTargetsDatabase && typeof data.weeklyTargetsDatabase === 'object') {
             metrics.weeklyTargetsCount += Object.keys(data.weeklyTargetsDatabase).length;
+        }
+        if (data.monthlyTargetsDatabase && typeof data.monthlyTargetsDatabase === 'object') {
+            metrics.monthlyTargetsCount += Object.keys(data.monthlyTargetsDatabase).length;
         }
 
         if (data.fiscalLedger && typeof data.fiscalLedger === 'object') {

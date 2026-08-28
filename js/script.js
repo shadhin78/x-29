@@ -3036,6 +3036,7 @@ function renderUI() {
         if (typeof window.renderSpectraCommitmentsChart === 'function') window.renderSpectraCommitmentsChart();
         if (typeof renderTrendCharts === 'function') renderTrendCharts();
         if (typeof window.renderResults === 'function') window.renderResults();
+        if (typeof window.renderMonthlyTargets === 'function') window.renderMonthlyTargets();
         if (typeof window.renderWeeklyTargets === 'function') window.renderWeeklyTargets();
         if (typeof window.autoSyncWeeklyToDailyTargets === 'function') window.autoSyncWeeklyToDailyTargets();
         if (typeof window.renderDashboardWeeklyChecklist === 'function') window.renderDashboardWeeklyChecklist();
@@ -3765,6 +3766,25 @@ function handleTaskToggle(e) {
             });
         }
     });
+
+    // Synchronize to monthlyTargetsDatabase if this subtask is a monthly target!
+    if (window.monthlyTargetsDatabase) {
+        Object.keys(window.monthlyTargetsDatabase).forEach(monthKey => {
+            const targets = window.monthlyTargetsDatabase[monthKey] || [];
+            targets.forEach(t => {
+                if (t.track === type && t.subject === taskObj.subject) {
+                    if (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters') {
+                        const isAllDone = window.isSubjectCompleted ? window.isSubjectCompleted(type, t.subject) : isCompleted;
+                        t.completed = isAllDone;
+                        t.completedAt = isAllDone ? nowIso : null;
+                    } else if (t.chapter === taskObj.chapter) {
+                        t.completed = isCompleted;
+                        t.completedAt = isCompleted ? nowIso : null;
+                    }
+                }
+            });
+        });
+    }
 
     // Synchronize to weeklyTargetsDatabase if this subtask is a weekly target!
     if (window.weeklyTargetsDatabase) {
@@ -11384,8 +11404,8 @@ window.switchDadbTab = function (tab) {
 
 window.openModal = function (modalId, typeKey = null) {
     if (modalId === 'analytics-modal' && typeKey) populateAnalyticsModal(typeKey);
-    const backdrops = { 'edit-timeline-entry-modal': 'etem-backdrop', 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-backdrop', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'edit-daily-action-modal': 'edam-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop' };
-    const contents = { 'edit-timeline-entry-modal': 'etem-content', 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'edit-daily-action-modal': 'edam-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content' };
+    const backdrops = { 'edit-timeline-entry-modal': 'etem-backdrop', 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'monthly-targets-db-modal': 'mtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'edit-daily-action-modal': 'edam-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop', 'add-monthly-target-modal': 'mtm-backdrop' };
+    const contents = { 'edit-timeline-entry-modal': 'etem-content', 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'monthly-targets-db-modal': 'mtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'edit-daily-action-modal': 'edam-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content', 'add-monthly-target-modal': 'mtm-content' };
     const modal = document.getElementById(modalId);
     const backdrop = (backdrops[modalId] && document.getElementById(backdrops[modalId])) || (modal ? modal.children[0] : null);
     const content = (contents[modalId] && document.getElementById(contents[modalId])) || (modal ? modal.children[1] : null);
@@ -11423,6 +11443,7 @@ window.openModal = function (modalId, typeKey = null) {
         if (modalId === 'global-history-modal') resizeAndUpdate(window.globalHistoryChartInstance);
         if (modalId === 'daily-actions-db-modal') resizeAndUpdate(window.dadbTrendChartInstance);
         if (modalId === 'weekly-targets-db-modal') resizeAndUpdate(window.wtdbMixedChartInstance);
+        if (modalId === 'monthly-targets-db-modal') resizeAndUpdate(window.mtdbMixedChartInstance);
         if (modalId === 'program-trend-modal') {
             resizeAndUpdate(window.programTrendChartInstance);
             resizeAndUpdate(window.subjectWiseChartInstance);
@@ -11433,8 +11454,8 @@ window.openModal = function (modalId, typeKey = null) {
 };
 
 window.closeModal = function (modalId) {
-    const backdrops = { 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-backdrop', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'edit-daily-action-modal': 'edam-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop' };
-    const contents = { 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'edit-daily-action-modal': 'edam-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content' };
+    const backdrops = { 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-backdrop', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'monthly-targets-db-modal': 'mtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'edit-daily-action-modal': 'edam-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop', 'add-monthly-target-modal': 'mtm-backdrop' };
+    const contents = { 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'monthly-targets-db-modal': 'mtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'edit-daily-action-modal': 'edam-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content', 'add-monthly-target-modal': 'mtm-content' };
     const modal = document.getElementById(modalId);
     const backdrop = (backdrops[modalId] && document.getElementById(backdrops[modalId])) || (modal ? modal.children[0] : null);
     const content = (contents[modalId] && document.getElementById(contents[modalId])) || (modal ? modal.children[1] : null);
@@ -13940,6 +13961,7 @@ window.resetToCleanSlate = function (confirmFirst = true) {
         AppState.scheduleBlocks2 = [];
         AppState.scheduleGroups = [];
         AppState.weeklyTargetsDatabase = {};
+        AppState.monthlyTargetsDatabase = {};
         AppState.dailyTargetsDatabase = {};
         AppState.passedItems = { programs: [], subjects: [] };
         AppState.revisionData = { active: [], progress: {} };
@@ -14467,6 +14489,1429 @@ window.renderPassConfig = function () {
     html += '</div></div></div>';
 
     container.innerHTML = html;
+};
+
+// --- Monthly Targets System Logic ---
+window.monthlyTargetsDatabase = window.monthlyTargetsDatabase || {};
+window.currentMonthlyTargetsDate = new Date();
+
+window.isSubjectCompleted = function (track, subject) {
+    if (!AppState.tasks || !Array.isArray(AppState.tasks)) return false;
+    const passedItems = window.passedItems || (AppState && AppState.passedItems) || { programs: [], subjects: [] };
+    if (Array.isArray(passedItems.subjects) && passedItems.subjects.includes(subject)) return true;
+
+    const key = track + 'Tasks';
+    let totalChapters = 0;
+    let completedChapters = 0;
+
+    AppState.tasks.forEach(t => {
+        if (t.type === 'study' && Array.isArray(t[key])) {
+            t[key].forEach(b => {
+                if (b.subject === subject && !b.skipped) {
+                    totalChapters++;
+                    if (b.completed) completedChapters++;
+                }
+            });
+        }
+    });
+
+    return totalChapters > 0 && completedChapters === totalChapters;
+};
+
+window.getMonthlyTargetRange = function (date = new Date()) {
+    const d = new Date(date);
+    const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
+    const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+    const daysInMonth = endOfMonth.getDate();
+    return { start: startOfMonth, end: endOfMonth, daysInMonth: daysInMonth, currentDay: d.getDate() };
+};
+
+window.formatMonthRangeKey = function (start, end) {
+    const opt = { day: '2-digit', month: 'short', year: 'numeric' };
+    const startStr = start.toLocaleDateString('en-GB', opt);
+    const endStr = end.toLocaleDateString('en-GB', opt);
+    return `${startStr} - ${endStr}`;
+};
+
+window.getCompletedSizeForMonthlyTarget = function (target, monthKey) {
+    let completedSize = 0;
+    if (!window.dailyTargetsDatabase) return 0;
+
+    if (!monthKey) {
+        const currentRange = window.getMonthlyTargetRange();
+        monthKey = window.formatMonthRangeKey(currentRange.start, currentRange.end);
+    }
+
+    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
+    const isSubjectTarget = (target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters');
+
+    Object.keys(window.dailyTargetsDatabase).forEach(dateKey => {
+        const d = window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(dateKey) : Utils.parseDateSafe(dateKey);
+        if (!d || isNaN(d.getTime())) return;
+        const range = window.getMonthlyTargetRange(d);
+        const dateMonthKey = window.formatMonthRangeKey(range.start, range.end);
+        if (dateMonthKey !== monthKey) return;
+
+        const dailyTargets = window.dailyTargetsDatabase[dateKey] || [];
+        dailyTargets.forEach(dt => {
+            if (!dt.isDeleted && dt.completed && dt.track === target.track && dt.subject === target.subject) {
+                if (isSubjectTarget) {
+                    if (dt.totalChapterSize) {
+                        completedSize += parseFloat(dt.totalChapterSize);
+                    }
+                } else {
+                    const isMatching = matchFn ? matchFn(dt.chapter, target.chapter) : (dt.chapter === target.chapter);
+                    if (isMatching && dt.totalChapterSize) {
+                        completedSize += parseFloat(dt.totalChapterSize);
+                    }
+                }
+            }
+        });
+    });
+    return completedSize;
+};
+
+window.getMonthlyTargetProgress = function (target, monthKey) {
+    const isSubjectTarget = (target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters');
+    const total = target.totalChapterSize ? parseFloat(target.totalChapterSize) : 0;
+
+    if (total > 0) {
+        const completed = window.getCompletedSizeForMonthlyTarget(target, monthKey);
+        const percent = Math.min(100, Math.max(0, Math.round((completed / total) * 100)));
+        return { completed: completed, total: total, percent: percent, type: 'size', label: `(${completed}/${total} p)` };
+    }
+
+    if (isSubjectTarget) {
+        const allChs = window.getChaptersForSubject ? window.getChaptersForSubject(target.track, target.subject) : [];
+        let doneCount = 0;
+        allChs.forEach(ch => {
+            const found = window.findTaskChapter(target.track, target.subject, ch);
+            if (found && found.subTask && found.subTask.completed) doneCount++;
+        });
+        const totalChs = allChs.length;
+        const isDone = target.completed || (window.isSubjectCompleted ? window.isSubjectCompleted(target.track, target.subject) : false);
+        const percent = totalChs > 0 ? Math.min(100, Math.round((doneCount / totalChs) * 100)) : (isDone ? 100 : 0);
+        return { completed: doneCount, total: totalChs, percent: percent, type: 'chapters', label: totalChs > 0 ? `(${doneCount}/${totalChs} Ch)` : '' };
+    }
+
+    return { completed: target.completed ? 1 : 0, total: 1, percent: target.completed ? 100 : 0, type: 'single', label: '' };
+};
+
+window.getMonthlyTargetOccurrenceCount = function (track, subject, chapter, targetType = null) {
+    let count = 0;
+    if (!window.monthlyTargetsDatabase) return 0;
+    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
+    const isSubjectTarget = targetType === 'subject' || chapter === 'Whole Subject' || chapter === 'All Chapters';
+
+    Object.keys(window.monthlyTargetsDatabase).forEach(monthKey => {
+        const list = window.monthlyTargetsDatabase[monthKey] || [];
+        const match = list.some(t => {
+            if (t.track !== track || t.subject !== subject) return false;
+            const tIsSubject = t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters';
+            if (isSubjectTarget) return tIsSubject;
+            return !tIsSubject && (matchFn ? matchFn(t.chapter, chapter) : t.chapter === chapter);
+        });
+        if (match) count++;
+    });
+    return count;
+};
+
+window.updateMonthlyTargetColorSync = function () {
+    const subSelect = document.getElementById('mt-select-sub');
+    const chSelect = document.getElementById('mt-select-ch');
+    const dot = document.getElementById('mt-sub-color-dot');
+    if (!subSelect) return;
+    const subject = subSelect.value;
+    if (subject && subject !== "No Subjects") {
+        const color = window.getSubjectColor ? window.getSubjectColor(subject) : '#6366f1';
+        if (dot) {
+            dot.style.backgroundColor = color;
+            dot.classList.remove('hidden');
+        }
+        subSelect.style.borderColor = color;
+        if (chSelect) chSelect.style.borderColor = color;
+    } else {
+        if (dot) dot.classList.add('hidden');
+        subSelect.style.borderColor = '';
+        if (chSelect) chSelect.style.borderColor = '';
+    }
+};
+
+window.updateMonthlyTargetSubjectDropdown = function () {
+    const progSelectEl = document.getElementById('mt-select-prog');
+    const progName = progSelectEl ? progSelectEl.value : '';
+    const subSelect = document.getElementById('mt-select-sub');
+    if (!subSelect) return;
+    subSelect.innerHTML = '';
+
+    const trackId = window.tracks.find(t => window.customPrograms[t.id] && window.customPrograms[t.id].some(p => (p.name || p) === progName))?.id;
+    if (!trackId) {
+        subSelect.innerHTML = '<option value="">No Subjects</option>';
+        window.updateMonthlyTargetChapterDropdown();
+        return;
+    }
+
+    const subs = (syllabusStructure[trackId] || []).filter(s => s.program === progName);
+    if (subs.length === 0) {
+        subSelect.innerHTML = '<option value="">No Subjects</option>';
+    } else {
+        const passedItems = window.passedItems || (window.AppState && window.AppState.passedItems) || { programs: [], subjects: [] };
+        subs.forEach(s => {
+            const isPassed = Boolean(
+                (Array.isArray(passedItems.subjects) && passedItems.subjects.includes(s.subject)) ||
+                (Array.isArray(passedItems.programs) && passedItems.programs.includes(s.program || progName))
+            );
+            const label = isPassed ? `🏆 ${s.subject} (Passed)` : s.subject;
+            subSelect.innerHTML += `<option value="${s.subject}">${label}</option>`;
+        });
+    }
+    window.updateMonthlyTargetChapterDropdown();
+    window.updateMonthlyTargetColorSync();
+};
+
+window.updateMonthlyTargetChapterDropdown = function () {
+    const progSelectEl = document.getElementById('mt-select-prog');
+    const progName = progSelectEl ? progSelectEl.value : '';
+    const subSelectEl = document.getElementById('mt-select-sub');
+    const subject = subSelectEl ? subSelectEl.value : '';
+    const chSelect = document.getElementById('mt-select-ch');
+    if (!chSelect) return;
+    chSelect.innerHTML = '';
+
+    const trackId = window.tracks.find(t => window.customPrograms[t.id] && window.customPrograms[t.id].some(p => (p.name || p) === progName))?.id;
+    if (!trackId || !subject) {
+        chSelect.innerHTML = '<option value="Whole Subject">-- 📚 Whole Subject (All Chapters) --</option>';
+        window.updateMonthlyTargetColorSync();
+        return;
+    }
+
+    const chapters = window.getChaptersForSubject(trackId, subject);
+    chSelect.innerHTML += '<option value="Whole Subject">-- 📚 Whole Subject (All Chapters) --</option>';
+    if (chapters && chapters.length > 0) {
+        chapters.forEach(ch => {
+            const count = window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(trackId, subject, ch, 'chapter') : 0;
+            const stars = count > 0 ? ' ' + '★'.repeat(count) : '';
+            chSelect.innerHTML += `<option value="${ch}">${ch}${stars}</option>`;
+        });
+    }
+    window.updateMonthlyTargetColorSync();
+};
+
+window.getWeeksForMonth = function (date = new Date()) {
+    const d = new Date(date);
+    const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
+    const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const weeks = [];
+    const seen = new Set();
+
+    let cur = new Date(startOfMonth);
+    while (cur <= endOfMonth) {
+        const range = window.getWeeklyTargetRange(cur);
+        const weekKey = window.formatDateRangeKey(range.start, range.end);
+        if (!seen.has(weekKey)) {
+            seen.add(weekKey);
+            const opt = { day: '2-digit', month: 'short' };
+            const label = `Week ${weeks.length + 1}: ${range.start.toLocaleDateString('en-GB', opt)} - ${range.end.toLocaleDateString('en-GB', opt)}`;
+            weeks.push({
+                key: weekKey,
+                start: range.start,
+                end: range.end,
+                label: label
+            });
+        }
+        cur.setDate(cur.getDate() + 1);
+    }
+    return weeks;
+};
+
+window.getDaysForMonthOrWeek = function (monthDate = new Date(), weekKey = null) {
+    const days = [];
+    if (weekKey && weekKey !== 'none' && weekKey !== '') {
+        const dates = weekKey.split(' - ');
+        if (dates.length === 2) {
+            const start = Utils.parseDateSafe(dates[0]);
+            if (!isNaN(start.getTime())) {
+                for (let i = 0; i < 7; i++) {
+                    const dayDate = new Date(start);
+                    dayDate.setDate(dayDate.getDate() + i);
+                    const dateKey = Utils.formatDate(dayDate);
+                    const opt = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
+                    const label = dayDate.toLocaleDateString('en-GB', opt);
+                    days.push({ key: dateKey, rawDate: dayDate, label: label });
+                }
+                return days;
+            }
+        }
+    }
+
+    const d = new Date(monthDate);
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+
+    for (let day = 1; day <= totalDays; day++) {
+        const dayDate = new Date(year, month, day);
+        const dateKey = Utils.formatDate(dayDate);
+        const opt = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
+        const label = dayDate.toLocaleDateString('en-GB', opt);
+        days.push({ key: dateKey, rawDate: dayDate, label: label });
+    }
+    return days;
+};
+
+window.populateMonthlyTargetWeeksAndDays = function (monthDate = new Date(), selectedWeekKey = null, selectedDayKey = null) {
+    const weekSelect = document.getElementById('mt-select-week-range');
+    const daySelect = document.getElementById('mt-select-day');
+    if (!weekSelect || !daySelect) return;
+
+    const weeks = window.getWeeksForMonth(monthDate);
+    weekSelect.innerHTML = '<option value="">-- None (Only Monthly Target) --</option>';
+    weeks.forEach(w => {
+        weekSelect.innerHTML += `<option value="${w.key}">${w.label}</option>`;
+    });
+    if (selectedWeekKey && weeks.some(w => w.key === selectedWeekKey)) {
+        weekSelect.value = selectedWeekKey;
+    } else {
+        weekSelect.value = '';
+    }
+
+    window.updateMonthlyTargetDaysDropdown(monthDate, weekSelect.value, selectedDayKey);
+};
+
+window.updateMonthlyTargetDaysDropdown = function (monthDate = new Date(), weekKey = null, selectedDayKey = null) {
+    const daySelect = document.getElementById('mt-select-day');
+    if (!daySelect) return;
+
+    const days = window.getDaysForMonthOrWeek(monthDate, weekKey);
+    daySelect.innerHTML = '<option value="">-- None (Not Assigned to Day) --</option>';
+    days.forEach(d => {
+        daySelect.innerHTML += `<option value="${d.key}">${d.label}</option>`;
+    });
+
+    if (selectedDayKey && days.some(d => d.key === selectedDayKey)) {
+        daySelect.value = selectedDayKey;
+    } else {
+        daySelect.value = '';
+    }
+};
+
+window.handleMonthlyTargetWeekChange = function () {
+    const weekSelect = document.getElementById('mt-select-week-range');
+    const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
+    const weekKey = weekSelect ? weekSelect.value : null;
+    window.updateMonthlyTargetDaysDropdown(targetMonthDate, weekKey, null);
+};
+
+window.handleMonthlyTargetDayChange = function () {
+    const daySelect = document.getElementById('mt-select-day');
+    const weekSelect = document.getElementById('mt-select-week-range');
+    if (!daySelect || !weekSelect) return;
+
+    const dayKey = daySelect.value;
+    if (dayKey && (!weekSelect.value || weekSelect.value === '')) {
+        const d = window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(dayKey) : Utils.parseDateSafe(dayKey);
+        if (d && !isNaN(d.getTime())) {
+            const range = window.getWeeklyTargetRange(d);
+            const weekKey = window.formatDateRangeKey(range.start, range.end);
+            if (Array.from(weekSelect.options).some(o => o.value === weekKey)) {
+                weekSelect.value = weekKey;
+            }
+        }
+    }
+};
+
+window.addMonthlyTarget = function () {
+    const range = window.getMonthlyTargetRange(window.currentMonthlyTargetsDate || new Date());
+    const currentMonthKey = window.formatMonthRangeKey(range.start, range.end);
+
+    const monthSelectEl = document.getElementById('mt-select-month');
+    const targetMonthKey = monthSelectEl ? monthSelectEl.value : currentMonthKey;
+
+    const progSelectEl = document.getElementById('mt-select-prog');
+    const subSelectEl = document.getElementById('mt-select-sub');
+    const chSelectEl = document.getElementById('mt-select-ch');
+    const scopeEl = document.getElementById('mt-target-scope');
+    const sizeEl = document.getElementById('mt-input-size');
+
+    const progName = progSelectEl ? progSelectEl.value : '';
+    const subject = subSelectEl ? subSelectEl.value : '';
+    let chapter = chSelectEl ? chSelectEl.value : '';
+    const scopeVal = scopeEl ? (scopeEl.value.trim() || 'Whole Chapter') : 'Whole Chapter';
+    const totalSize = sizeEl && sizeEl.value ? parseInt(sizeEl.value, 10) : null;
+
+    if (!progName) {
+        return showToast("Please select a Program (minimum 1 target is required).", "error");
+    }
+    if (!subject || subject === 'No Subjects') {
+        return showToast("Please select a Subject (minimum 1 target is required).", "error");
+    }
+    if (!chapter || chapter === 'No Chapters') {
+        return showToast("Please select a Chapter or Whole Subject (minimum 1 target is required).", "error");
+    }
+
+    const isSubjectTarget = (chapter === 'Whole Subject' || chapter === '-- 📚 Whole Subject (All Chapters) --');
+    const targetType = isSubjectTarget ? 'subject' : 'chapter';
+    const finalChapter = isSubjectTarget ? 'Whole Subject' : chapter;
+
+    const trackId = window.tracks.find(t => window.customPrograms[t.id] && window.customPrograms[t.id].some(p => (p.name || p) === progName))?.id;
+    if (!trackId) {
+        return showToast("Program track could not be identified.", "error");
+    }
+
+    if (!window.monthlyTargetsDatabase) window.monthlyTargetsDatabase = {};
+    if (!window.monthlyTargetsDatabase[targetMonthKey]) window.monthlyTargetsDatabase[targetMonthKey] = [];
+
+    if (isSubjectTarget) {
+        const exists = window.monthlyTargetsDatabase[targetMonthKey].some(t =>
+            t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters')
+        );
+        if (exists) {
+            return showToast("This subject target is already in your monthly targets list.", "error");
+        }
+    } else {
+        const exists = window.monthlyTargetsDatabase[targetMonthKey].some(t =>
+            t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject'
+        );
+        if (exists) {
+            return showToast("This chapter target is already in your monthly targets list.", "error");
+        }
+    }
+
+    let isCompletedBefore = false;
+    let completedAtBefore = null;
+
+    if (isSubjectTarget) {
+        isCompletedBefore = window.isSubjectCompleted ? window.isSubjectCompleted(trackId, subject) : false;
+        completedAtBefore = isCompletedBefore ? new Date().toISOString() : null;
+    } else {
+        const foundTask = window.findTaskChapter(trackId, subject, finalChapter);
+        isCompletedBefore = foundTask ? (foundTask.subTask.completed || false) : false;
+        completedAtBefore = foundTask ? (foundTask.subTask.completedAt || null) : null;
+    }
+
+    window.monthlyTargetsDatabase[targetMonthKey].push({
+        track: trackId,
+        program: progName,
+        subject: subject,
+        chapter: finalChapter,
+        targetType: targetType,
+        completed: isCompletedBefore,
+        completedAt: completedAtBefore,
+        scope: isSubjectTarget ? 'Whole Subject' : scopeVal,
+        totalChapterSize: totalSize
+    });
+
+    const weekSelectEl = document.getElementById('mt-select-week-range');
+    const selectedWeekKey = weekSelectEl ? weekSelectEl.value : '';
+    let connectedToWeek = false;
+
+    if (selectedWeekKey) {
+        if (!window.weeklyTargetsDatabase) window.weeklyTargetsDatabase = {};
+        if (!window.weeklyTargetsDatabase[selectedWeekKey]) window.weeklyTargetsDatabase[selectedWeekKey] = [];
+
+        const wtList = window.weeklyTargetsDatabase[selectedWeekKey];
+        const wtExists = isSubjectTarget
+            ? wtList.some(t => t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
+            : wtList.some(t => t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject');
+
+        if (!wtExists) {
+            wtList.push({
+                track: trackId,
+                program: progName,
+                subject: subject,
+                chapter: finalChapter,
+                targetType: targetType,
+                completed: isCompletedBefore,
+                completedAt: completedAtBefore,
+                scope: isSubjectTarget ? 'Whole Subject' : scopeVal,
+                totalChapterSize: totalSize
+            });
+            connectedToWeek = true;
+            if (typeof window.renderWeeklyTargets === 'function') window.renderWeeklyTargets();
+            if (typeof window.autoSyncWeeklyToDailyTargets === 'function') window.autoSyncWeeklyToDailyTargets();
+        }
+    }
+
+    const daySelectEl = document.getElementById('mt-select-day');
+    const selectedDayKey = daySelectEl ? daySelectEl.value : '';
+    let connectedToDay = false;
+
+    if (selectedDayKey) {
+        if (!window.dailyTargetsDatabase) window.dailyTargetsDatabase = {};
+        if (!window.dailyTargetsDatabase[selectedDayKey]) window.dailyTargetsDatabase[selectedDayKey] = [];
+
+        const dtList = window.dailyTargetsDatabase[selectedDayKey];
+        const dtExists = isSubjectTarget
+            ? dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
+            : dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject');
+
+        if (!dtExists) {
+            dtList.push({
+                track: trackId,
+                program: progName,
+                subject: subject,
+                chapter: finalChapter,
+                targetType: targetType,
+                completed: isCompletedBefore,
+                completedAt: completedAtBefore,
+                scope: isSubjectTarget ? 'Whole Subject' : scopeVal,
+                totalChapterSize: totalSize
+            });
+            connectedToDay = true;
+            if (typeof window.renderDailyTargets === 'function') window.renderDailyTargets();
+        }
+    }
+
+    if (scopeEl) scopeEl.value = 'Whole Chapter';
+    if (sizeEl) sizeEl.value = '';
+
+    FirebaseService.saveToCloud();
+    renderUI();
+    closeModal('add-monthly-target-modal');
+
+    let toastMsg = isSubjectTarget ? "Monthly subject target added!" : "Monthly chapter target added!";
+    if (connectedToWeek && connectedToDay) {
+        toastMsg += " (Connected to Weekly & Daily targets)";
+    } else if (connectedToWeek) {
+        toastMsg += " (Connected to Weekly target)";
+    } else if (connectedToDay) {
+        toastMsg += " (Connected to Daily target)";
+    }
+    showToast(toastMsg, "success");
+};
+
+window.deleteMonthlyTarget = function (idx) {
+    const monthSelectEl = document.getElementById('mt-select-month');
+    if (!monthSelectEl) return;
+    const selectedMonthKey = monthSelectEl.value;
+
+    if (window.monthlyTargetsDatabase && window.monthlyTargetsDatabase[selectedMonthKey] && window.monthlyTargetsDatabase[selectedMonthKey][idx]) {
+        window.monthlyTargetsDatabase[selectedMonthKey].splice(idx, 1);
+        renderUI();
+        showToast("Monthly target removed.", "success");
+        FirebaseService.saveToCloud(true);
+    }
+};
+
+window.toggleMonthlyTargetCompletion = function (idx, isCompleted) {
+    const monthSelectEl = document.getElementById('mt-select-month');
+    if (!monthSelectEl) return;
+    const selectedMonthKey = monthSelectEl.value;
+
+    if (!window.monthlyTargetsDatabase || !window.monthlyTargetsDatabase[selectedMonthKey] || !window.monthlyTargetsDatabase[selectedMonthKey][idx]) return;
+
+    const target = window.monthlyTargetsDatabase[selectedMonthKey][idx];
+    target.completed = isCompleted;
+    target.completedAt = isCompleted ? new Date().toISOString() : null;
+
+    if (target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters') {
+        const key = target.track + 'Tasks';
+        if (Array.isArray(AppState.tasks)) {
+            AppState.tasks.forEach(t => {
+                if (t.type === 'study' && Array.isArray(t[key])) {
+                    t[key].forEach(b => {
+                        if (b.subject === target.subject) {
+                            b.completed = isCompleted;
+                            b.completedAt = target.completedAt;
+                        }
+                    });
+                }
+            });
+        }
+    } else {
+        window.syncTaskChapterCompletion(target.track, target.subject, target.chapter, isCompleted, target.completedAt);
+    }
+
+    recalculateTotals();
+    renderUI();
+    showToast("Completion state synchronized!", "success");
+    FirebaseService.saveToCloud(false);
+};
+
+window.navigateMonth = function (mode) {
+    const monthSelectEl = document.getElementById('mt-select-month');
+    if (!window.currentMonthlyTargetsDate) {
+        const selectedMonthKey = monthSelectEl ? monthSelectEl.value : null;
+        window.currentMonthlyTargetsDate = (selectedMonthKey && Utils.parseStart && !isNaN(Utils.parseStart(selectedMonthKey).getTime()))
+            ? Utils.parseStart(selectedMonthKey)
+            : new Date();
+    }
+
+    if (mode === 'past') {
+        window.currentMonthlyTargetsDate = new Date(window.currentMonthlyTargetsDate.getFullYear(), window.currentMonthlyTargetsDate.getMonth() - 1, 1);
+    } else if (mode === 'future') {
+        window.currentMonthlyTargetsDate = new Date(window.currentMonthlyTargetsDate.getFullYear(), window.currentMonthlyTargetsDate.getMonth() + 1, 1);
+    } else {
+        window.currentMonthlyTargetsDate = new Date();
+    }
+
+    window.renderMonthlyTargets();
+};
+
+window.renderMonthlyTargets = function () {
+    const listContainer = document.getElementById('monthly-targets-list');
+    const progDropdown = document.getElementById('mt-select-prog');
+    const monthSelectEl = document.getElementById('mt-select-month');
+    if (!listContainer || !monthSelectEl) return;
+
+    if (!window.currentMonthlyTargetsDate) {
+        const currentSelectedMonth = monthSelectEl.value;
+        window.currentMonthlyTargetsDate = (currentSelectedMonth && Utils.parseStart && !isNaN(Utils.parseStart(currentSelectedMonth).getTime()))
+            ? Utils.parseStart(currentSelectedMonth)
+            : new Date();
+    }
+
+    const activeRange = window.getMonthlyTargetRange(window.currentMonthlyTargetsDate);
+    const activeMonthKey = window.formatMonthRangeKey(activeRange.start, activeRange.end);
+
+    const currentRange = window.getMonthlyTargetRange(new Date());
+    const currentMonthKey = window.formatMonthRangeKey(currentRange.start, currentRange.end);
+
+    if (!window.monthlyTargetsDatabase) window.monthlyTargetsDatabase = {};
+
+    const allMonthsSet = new Set(Object.keys(window.monthlyTargetsDatabase));
+    allMonthsSet.add(currentMonthKey);
+    allMonthsSet.add(activeMonthKey);
+
+    const allMonths = Array.from(allMonthsSet).sort((a, b) => {
+        return Utils.parseStart(b) - Utils.parseStart(a);
+    });
+
+    monthSelectEl.innerHTML = '';
+    allMonths.forEach(mk => {
+        monthSelectEl.innerHTML += `<option value="${mk}">${mk}</option>`;
+    });
+    monthSelectEl.value = activeMonthKey;
+
+    const monthName = activeRange.start.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    const selectedBadge = document.getElementById('mt-selected-month-range');
+    if (selectedBadge) {
+        selectedBadge.textContent = `[ ${monthName} : ${activeMonthKey} ]`;
+    }
+
+    const todayDate = new Date();
+    const weekday = todayDate.toLocaleDateString('en-GB', { weekday: 'long' });
+    const formattedToday = todayDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const todayDisplay = document.getElementById('mt-today-display');
+    if (todayDisplay) {
+        todayDisplay.textContent = `Today: ${weekday}, ${formattedToday}`;
+    }
+
+    const btnPast = document.getElementById('mt-btn-past');
+    const btnPresent = document.getElementById('mt-btn-present');
+    const btnFuture = document.getElementById('mt-btn-future');
+
+    const activeClass = "bg-indigo-600 text-white shadow";
+    const inactiveClass = "text-slate-650 dark:text-slate-355 hover:bg-slate-200 dark:hover:bg-slate-600/50";
+
+    if (btnPast && btnPresent && btnFuture) {
+        const startDiff = activeRange.start.getTime() - currentRange.start.getTime();
+        btnPresent.className = `px-2.5 py-1.5 text-[9px] font-black rounded-lg transition-all ${activeMonthKey === currentMonthKey ? activeClass : inactiveClass}`;
+        btnPast.className = `px-2.5 py-1.5 text-[9px] font-black rounded-lg transition-all ${startDiff < 0 ? activeClass : inactiveClass} flex items-center space-x-1`;
+        btnFuture.className = `px-2.5 py-1.5 text-[9px] font-black rounded-lg transition-all ${startDiff > 0 ? activeClass : inactiveClass} flex items-center space-x-1`;
+    }
+
+    if (progDropdown) {
+        const activeProgs = [];
+        window.tracks.forEach(track => {
+            if (window.customPrograms[track.id]) {
+                window.customPrograms[track.id].forEach(p => {
+                    activeProgs.push(p.name || p);
+                });
+            }
+        });
+
+        const currentSelectedProg = progDropdown.value;
+        if (progDropdown.options.length !== activeProgs.length) {
+            progDropdown.innerHTML = '';
+            activeProgs.forEach(p => {
+                progDropdown.innerHTML += `<option value="${p}">${p}</option>`;
+            });
+            if (activeProgs.length > 0) {
+                if (activeProgs.includes(currentSelectedProg)) {
+                    progDropdown.value = currentSelectedProg;
+                }
+                window.updateMonthlyTargetSubjectDropdown();
+            }
+        }
+    }
+
+    listContainer.innerHTML = '';
+    const targetsList = window.monthlyTargetsDatabase[activeMonthKey] || [];
+
+    let totalTargets = targetsList.length;
+    let completedTargets = 0;
+
+    targetsList.forEach((target, idx) => {
+        const isSubjectTarget = (target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters');
+        const progress = window.getMonthlyTargetProgress(target, activeMonthKey);
+
+        let isCompleted = false;
+        if (isSubjectTarget) {
+            isCompleted = target.completed || (window.isSubjectCompleted ? window.isSubjectCompleted(target.track, target.subject) : false) || (progress.percent >= 100);
+        } else {
+            const foundTask = window.findTaskChapter(target.track, target.subject, target.chapter);
+            isCompleted = target.completed || (foundTask ? foundTask.subTask.completed : false) || (target.totalChapterSize && progress.percent >= 100);
+        }
+
+        if (isCompleted) completedTargets++;
+
+        const subjectColor = window.getSubjectColor ? window.getSubjectColor(target.subject) : '#6366f1';
+        const isDarkMode = document.documentElement.classList.contains('dark');
+
+        const statusColor = isCompleted
+            ? 'bg-emerald-50/20 dark:bg-emerald-950/20'
+            : 'bg-slate-50/50 dark:bg-slate-900/30';
+
+        const cardBorderColorClass = isCompleted ? '' : 'border-slate-200 dark:border-slate-700';
+
+        let bgStyle = `border-color: ${isCompleted ? subjectColor : (isDarkMode ? '#334155' : '#e2e8f0')};`;
+        if (!isCompleted && progress.percent > 0) {
+            const fillRgba = hexToRgba(subjectColor, isDarkMode ? 0.25 : 0.15);
+            bgStyle += `background: linear-gradient(to right, ${fillRgba} ${progress.percent}%, transparent ${progress.percent}%);`;
+        }
+
+        let displaySub = target.subject.replace(target.program + ' - ', '').replace(target.program + ' ', '');
+
+        const occurrenceCount = window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(target.track, target.subject, target.chapter, target.targetType) : 0;
+        let starsHtml = '';
+        if (occurrenceCount > 1) {
+            starsHtml = `<span class="inline-flex text-amber-500 text-[10px] ml-1.5" title="Added as target ${occurrenceCount} times">${'★'.repeat(occurrenceCount)}</span>`;
+        }
+
+        const progressTextHtml = progress.label ? `<span class="text-[9px] text-indigo-500 font-bold ml-1.5">${progress.label}</span>` : '';
+        const targetScope = target.scope || (isSubjectTarget ? 'Whole Subject' : 'Whole Chapter');
+
+        const titleText = isSubjectTarget
+            ? `📚 ${displaySub} (Whole Subject)`
+            : `${target.chapter}: ${displaySub}`;
+
+        const itemHtml = `
+                <div class="flex items-center justify-between p-3 rounded-2xl border ${statusColor} ${cardBorderColorClass} transition-all duration-300" style="${bgStyle}">
+                    <div class="flex items-center space-x-3 min-w-0">
+                        <input type="checkbox" 
+                            onchange="window.toggleMonthlyTargetCompletion(${idx}, this.checked)" 
+                            class="form-checkbox h-4.5 w-4.5 text-emerald-500 dark:text-emerald-500 rounded border-slate-350 focus:ring-emerald-500 transition-all cursor-pointer" 
+                            ${isCompleted ? 'checked' : ''}>
+                        <div class="min-w-0">
+                            <span class="block text-xs font-black text-slate-800 dark:text-slate-100 truncate">${titleText}${starsHtml}${progressTextHtml}</span>
+                            <div class="flex items-center space-x-1.5 flex-wrap">
+                                <span class="block text-[8px] font-black uppercase text-slate-400 tracking-wider">${target.program}</span>
+                                ${isSubjectTarget ? `
+                                    <span class="inline-block px-1.5 py-0.5 rounded-[4px] text-[7.5px] font-black uppercase tracking-wider bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
+                                        📚 Subject Target
+                                    </span>
+                                ` : (targetScope !== 'Whole Chapter' && targetScope !== 'Whole' ? `
+                                    <span class="inline-block px-1 py-0.5 rounded-[3px] text-[7px] font-black uppercase tracking-widest bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50">
+                                        ${targetScope}
+                                    </span>
+                                ` : '')}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-1 shrink-0">
+                        <button onclick="window.openEditMonthlyTargetModal(${idx}, '${activeMonthKey}')" class="p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 text-slate-300 hover:text-indigo-550 dark:hover:text-indigo-400 rounded-lg transition-all active:scale-90 shadow-sm" title="Edit Monthly Target">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                            </svg>
+                        </button>
+                        <button onclick="window.deleteMonthlyTarget(${idx})" class="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-300 hover:text-red-500 rounded-lg transition-all active:scale-90 shadow-sm" title="Delete Monthly Target">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>`;
+        listContainer.innerHTML += itemHtml;
+    });
+
+    if (totalTargets === 0) {
+        listContainer.innerHTML = `
+                <div class="col-span-full py-8 text-center text-[10px] uppercase font-black tracking-widest text-slate-400 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                    No monthly targets set for this month.
+                </div>`;
+    }
+
+    const remainingTargets = totalTargets - completedTargets;
+    const estFinishEl = document.getElementById('mt-est-finish');
+    const reqPaceEl = document.getElementById('mt-req-pace');
+    const actPaceEl = document.getElementById('mt-act-pace');
+
+    if (activeMonthKey === currentMonthKey) {
+        const daysInMonth = currentRange.daysInMonth;
+        const currentDay = todayDate.getDate();
+        const daysLeft = daysInMonth - currentDay + 1;
+
+        const reqPace = daysLeft > 0 ? (remainingTargets / daysLeft) : 0;
+        const actPace = completedTargets / currentDay;
+
+        if (reqPaceEl) reqPaceEl.textContent = `${reqPace.toFixed(2)} /Day`;
+        if (actPaceEl) actPaceEl.textContent = `${actPace.toFixed(2)} /Day`;
+
+        if (estFinishEl) {
+            if (remainingTargets === 0) {
+                estFinishEl.textContent = 'Goal Met';
+                estFinishEl.className = 'text-xs font-black text-emerald-600 dark:text-emerald-400';
+            } else if (actPace === 0) {
+                estFinishEl.textContent = 'Infinite';
+                estFinishEl.className = 'text-xs font-black text-red-600 dark:text-red-400';
+            } else {
+                const daysNeeded = remainingTargets / actPace;
+                const estDate = new Date();
+                estDate.setDate(estDate.getDate() + Math.ceil(daysNeeded));
+
+                const opt = { day: 'numeric', month: 'short', year: 'numeric' };
+                estFinishEl.textContent = estDate.toLocaleDateString('en-GB', opt);
+                estFinishEl.className = 'text-xs font-black text-purple-600 dark:text-purple-400';
+            }
+        }
+    } else {
+        const daysInMonth = activeRange.daysInMonth;
+        const startDiff = activeRange.start.getTime() - currentRange.start.getTime();
+
+        if (startDiff < 0) {
+            if (reqPaceEl) reqPaceEl.textContent = `0.00 /Day`;
+            const actPace = completedTargets / daysInMonth;
+            if (actPaceEl) actPaceEl.textContent = `${actPace.toFixed(2)} /Day`;
+
+            if (estFinishEl) {
+                if (remainingTargets === 0) {
+                    estFinishEl.textContent = 'Goal Met';
+                    estFinishEl.className = 'text-xs font-black text-emerald-600 dark:text-emerald-400';
+                } else {
+                    estFinishEl.textContent = 'Not Met';
+                    estFinishEl.className = 'text-xs font-black text-rose-600 dark:text-rose-400';
+                }
+            }
+        } else {
+            const reqPace = remainingTargets / daysInMonth;
+            if (reqPaceEl) reqPaceEl.textContent = `${reqPace.toFixed(2)} /Day`;
+            if (actPaceEl) actPaceEl.textContent = `0.00 /Day`;
+
+            if (estFinishEl) {
+                estFinishEl.textContent = 'Upcoming';
+                estFinishEl.className = 'text-xs font-black text-indigo-600 dark:text-indigo-400';
+            }
+        }
+    }
+};
+
+window.openAddMonthlyTargetModal = function () {
+    window.editingMonthlyTargetIndex = null;
+    const modalTitle = document.querySelector('#add-monthly-target-modal h2');
+    if (modalTitle) modalTitle.textContent = "Add Monthly Target";
+    const modalBtn = document.querySelector('#add-monthly-target-modal button[onclick*="addMonthlyTarget"], #add-monthly-target-modal button[onclick*="saveMonthlyTarget"]');
+    if (modalBtn) {
+        modalBtn.textContent = "Add Target";
+        modalBtn.setAttribute('onclick', 'window.addMonthlyTarget()');
+    }
+
+    const sizeInput = document.getElementById('mt-input-size');
+    if (sizeInput) sizeInput.value = '';
+
+    const progDropdown = document.getElementById('mt-select-prog');
+    if (progDropdown) {
+        const activeProgs = [];
+        window.tracks.forEach(track => {
+            if (window.customPrograms[track.id]) {
+                window.customPrograms[track.id].forEach(p => {
+                    activeProgs.push(p.name || p);
+                });
+            }
+        });
+        progDropdown.innerHTML = '';
+        activeProgs.forEach(p => {
+            progDropdown.innerHTML += `<option value="${p}">${p}</option>`;
+        });
+        if (activeProgs.length > 0) {
+            window.updateMonthlyTargetSubjectDropdown();
+        }
+    }
+
+    const activeMonthDate = window.currentMonthlyTargetsDate || new Date();
+    window.populateMonthlyTargetWeeksAndDays(activeMonthDate);
+
+    window.openModal('add-monthly-target-modal');
+};
+
+window.openEditMonthlyTargetModal = function (idx, monthKey = null) {
+    if (!monthKey) {
+        const range = window.getMonthlyTargetRange();
+        monthKey = window.formatMonthRangeKey(range.start, range.end);
+    }
+    if (!window.monthlyTargetsDatabase || !window.monthlyTargetsDatabase[monthKey] || !window.monthlyTargetsDatabase[monthKey][idx]) return;
+
+    const target = window.monthlyTargetsDatabase[monthKey][idx];
+    window.editingMonthlyTargetIndex = idx;
+
+    window.openModal('add-monthly-target-modal');
+
+    const modalTitle = document.querySelector('#add-monthly-target-modal h2');
+    if (modalTitle) modalTitle.textContent = "Edit Monthly Target";
+    const modalBtn = document.querySelector('#add-monthly-target-modal button[onclick*="addMonthlyTarget"], #add-monthly-target-modal button[onclick*="saveMonthlyTarget"]');
+    if (modalBtn) {
+        modalBtn.textContent = "Save Target";
+        modalBtn.setAttribute('onclick', `window.saveMonthlyTarget(${idx}, '${monthKey}')`);
+    }
+
+    const progDropdown = document.getElementById('mt-select-prog');
+    if (progDropdown) {
+        const activeProgs = [];
+        window.tracks.forEach(track => {
+            if (window.customPrograms[track.id]) {
+                window.customPrograms[track.id].forEach(p => {
+                    activeProgs.push(p.name || p);
+                });
+            }
+        });
+        progDropdown.innerHTML = '';
+        activeProgs.forEach(p => {
+            progDropdown.innerHTML += `<option value="${p}">${p}</option>`;
+        });
+    }
+
+    const progSelect = document.getElementById('mt-select-prog');
+    if (progSelect) {
+        progSelect.value = target.program;
+        window.updateMonthlyTargetSubjectDropdown();
+    }
+
+    const subSelect = document.getElementById('mt-select-sub');
+    if (subSelect) {
+        subSelect.value = target.subject;
+        window.updateMonthlyTargetChapterDropdown();
+    }
+
+    const chSelect = document.getElementById('mt-select-ch');
+    if (chSelect) {
+        chSelect.value = (target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters') ? 'Whole Subject' : target.chapter;
+    }
+
+    const sizeInput = document.getElementById('mt-input-size');
+    if (sizeInput) {
+        sizeInput.value = target.totalChapterSize || '';
+    }
+
+    const targetMonthDate = (monthKey && Utils.parseStart && !isNaN(Utils.parseStart(monthKey).getTime()))
+        ? Utils.parseStart(monthKey)
+        : (window.currentMonthlyTargetsDate || new Date());
+    window.populateMonthlyTargetWeeksAndDays(targetMonthDate);
+};
+
+window.saveMonthlyTarget = function (idx, monthKey = null) {
+    if (!monthKey) {
+        const range = window.getMonthlyTargetRange();
+        monthKey = window.formatMonthRangeKey(range.start, range.end);
+    }
+    if (!window.monthlyTargetsDatabase || !window.monthlyTargetsDatabase[monthKey] || !window.monthlyTargetsDatabase[monthKey][idx]) return;
+
+    const target = window.monthlyTargetsDatabase[monthKey][idx];
+
+    const progSelectEl = document.getElementById('mt-select-prog');
+    const subSelectEl = document.getElementById('mt-select-sub');
+    const chSelectEl = document.getElementById('mt-select-ch');
+    const sizeEl = document.getElementById('mt-input-size');
+
+    const progName = progSelectEl ? progSelectEl.value : '';
+    const subject = subSelectEl ? subSelectEl.value : '';
+    let chapter = chSelectEl ? chSelectEl.value : '';
+    const totalSize = sizeEl && sizeEl.value ? parseInt(sizeEl.value, 10) : null;
+
+    if (!progName) {
+        return showToast("Please select a Program (minimum 1 target is required).", "error");
+    }
+    if (!subject || subject === 'No Subjects') {
+        return showToast("Please select a Subject (minimum 1 target is required).", "error");
+    }
+    if (!chapter || chapter === 'No Chapters') {
+        return showToast("Please select a Chapter or Whole Subject (minimum 1 target is required).", "error");
+    }
+
+    const isSubjectTarget = (chapter === 'Whole Subject' || chapter === '-- 📚 Whole Subject (All Chapters) --');
+    const targetType = isSubjectTarget ? 'subject' : 'chapter';
+    const finalChapter = isSubjectTarget ? 'Whole Subject' : chapter;
+
+    const trackId = window.tracks.find(t => window.customPrograms[t.id] && window.customPrograms[t.id].some(p => (p.name || p) === progName))?.id;
+    if (!trackId) return;
+
+    if (isSubjectTarget) {
+        const exists = window.monthlyTargetsDatabase[monthKey].some((t, i) =>
+            i !== idx && t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters')
+        );
+        if (exists) {
+            return showToast("This subject target already exists in your monthly targets list.", "error");
+        }
+    } else {
+        const exists = window.monthlyTargetsDatabase[monthKey].some((t, i) =>
+            i !== idx && t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject'
+        );
+        if (exists) {
+            return showToast("This chapter target already exists in your monthly targets list.", "error");
+        }
+    }
+
+    target.track = trackId;
+    target.program = progName;
+    target.subject = subject;
+    target.chapter = finalChapter;
+    target.targetType = targetType;
+    target.scope = isSubjectTarget ? 'Whole Subject' : (target.scope || 'Whole Chapter');
+    target.totalChapterSize = totalSize;
+
+    const weekSelectEl = document.getElementById('mt-select-week-range');
+    const selectedWeekKey = weekSelectEl ? weekSelectEl.value : '';
+    let connectedToWeek = false;
+
+    if (selectedWeekKey) {
+        if (!window.weeklyTargetsDatabase) window.weeklyTargetsDatabase = {};
+        if (!window.weeklyTargetsDatabase[selectedWeekKey]) window.weeklyTargetsDatabase[selectedWeekKey] = [];
+
+        const wtList = window.weeklyTargetsDatabase[selectedWeekKey];
+        const wtExists = isSubjectTarget
+            ? wtList.some(t => t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
+            : wtList.some(t => t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject');
+
+        if (!wtExists) {
+            wtList.push({
+                track: trackId,
+                program: progName,
+                subject: subject,
+                chapter: finalChapter,
+                targetType: targetType,
+                completed: target.completed,
+                completedAt: target.completedAt,
+                scope: target.scope,
+                totalChapterSize: totalSize
+            });
+            connectedToWeek = true;
+            if (typeof window.renderWeeklyTargets === 'function') window.renderWeeklyTargets();
+            if (typeof window.autoSyncWeeklyToDailyTargets === 'function') window.autoSyncWeeklyToDailyTargets();
+        }
+    }
+
+    const daySelectEl = document.getElementById('mt-select-day');
+    const selectedDayKey = daySelectEl ? daySelectEl.value : '';
+    let connectedToDay = false;
+
+    if (selectedDayKey) {
+        if (!window.dailyTargetsDatabase) window.dailyTargetsDatabase = {};
+        if (!window.dailyTargetsDatabase[selectedDayKey]) window.dailyTargetsDatabase[selectedDayKey] = [];
+
+        const dtList = window.dailyTargetsDatabase[selectedDayKey];
+        const dtExists = isSubjectTarget
+            ? dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
+            : dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject');
+
+        if (!dtExists) {
+            dtList.push({
+                track: trackId,
+                program: progName,
+                subject: subject,
+                chapter: finalChapter,
+                targetType: targetType,
+                completed: target.completed,
+                completedAt: target.completedAt,
+                scope: target.scope,
+                totalChapterSize: totalSize
+            });
+            connectedToDay = true;
+            if (typeof window.renderDailyTargets === 'function') window.renderDailyTargets();
+        }
+    }
+
+    FirebaseService.saveToCloud();
+    renderUI();
+    closeModal('add-monthly-target-modal');
+
+    let toastMsg = isSubjectTarget ? "Monthly subject target updated!" : "Monthly chapter target updated!";
+    if (connectedToWeek && connectedToDay) {
+        toastMsg += " (Connected to Weekly & Daily targets)";
+    } else if (connectedToWeek) {
+        toastMsg += " (Connected to Weekly target)";
+    } else if (connectedToDay) {
+        toastMsg += " (Connected to Daily target)";
+    }
+    showToast(toastMsg, "success");
+};
+
+// --- Monthly Targets Database Modal Controls & Logic ---
+window.openMonthlyTargetsDatabase = function () {
+    const modal = document.getElementById('monthly-targets-db-modal');
+    if (!modal) return;
+
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        const backdrop = document.getElementById('mtdb-backdrop');
+        const content = document.getElementById('mtdb-content');
+        if (backdrop) backdrop.classList.replace('opacity-0', 'opacity-100');
+        if (content) {
+            content.classList.replace('scale-95', 'scale-100');
+            content.classList.replace('opacity-0', 'opacity-100');
+            content.classList.replace('translate-y-4', 'translate-y-0');
+        }
+    }, 10);
+
+    window.switchMtdbTab('list');
+    window.populateMtdbFilters();
+    window.renderMtdbList();
+};
+
+window.switchMtdbTab = function (tab) {
+    const listBtn = document.getElementById('mtdb-tab-btn-list');
+    const monthBtn = document.getElementById('mtdb-tab-btn-month');
+    const listContent = document.getElementById('mtdb-tab-content-list');
+    const monthContent = document.getElementById('mtdb-tab-content-month');
+
+    if (!listBtn || !monthBtn || !listContent || !monthContent) return;
+
+    if (tab === 'list') {
+        listBtn.className = "px-4 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-xl transition-all bg-indigo-600 text-white shadow-md whitespace-nowrap";
+        monthBtn.className = "px-4 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-xl transition-all bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 whitespace-nowrap";
+        listContent.classList.remove('hidden');
+        monthContent.classList.add('hidden');
+        window.renderMtdbList();
+    } else {
+        monthBtn.className = "px-4 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-xl transition-all bg-indigo-600 text-white shadow-md whitespace-nowrap";
+        listBtn.className = "px-4 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-xl transition-all bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 whitespace-nowrap";
+        listContent.classList.add('hidden');
+        monthContent.classList.remove('hidden');
+        window.renderMtdbMonthView();
+    }
+};
+
+window.populateMtdbFilters = function () {
+    const monthFilter = document.getElementById('mtdb-filter-month');
+    const progFilter = document.getElementById('mtdb-filter-prog');
+    const subFilter = document.getElementById('mtdb-filter-sub');
+
+    if (!monthFilter || !progFilter || !subFilter) return;
+
+    const currentRange = window.getMonthlyTargetRange();
+    const currentMonthKey = window.formatMonthRangeKey(currentRange.start, currentRange.end);
+
+    if (!window.monthlyTargetsDatabase) window.monthlyTargetsDatabase = {};
+    const allMonthsSet = new Set(Object.keys(window.monthlyTargetsDatabase));
+    allMonthsSet.add(currentMonthKey);
+    const allMonths = Array.from(allMonthsSet).sort((a, b) => {
+        return Utils.parseStart(b) - Utils.parseStart(a);
+    });
+
+    const prevMonthVal = monthFilter.value;
+    monthFilter.innerHTML = '<option value="all">All Months</option>';
+    allMonths.forEach(mk => {
+        monthFilter.innerHTML += `<option value="${mk}">${mk}</option>`;
+    });
+    if (prevMonthVal) monthFilter.value = prevMonthVal;
+    else monthFilter.value = currentMonthKey;
+
+    const activeProgs = [];
+    window.tracks.forEach(track => {
+        if (window.customPrograms[track.id]) {
+            window.customPrograms[track.id].forEach(p => {
+                activeProgs.push(p.name || p);
+            });
+        }
+    });
+
+    const prevProgVal = progFilter.value;
+    progFilter.innerHTML = '<option value="all">All Programs</option>';
+    activeProgs.forEach(p => {
+        progFilter.innerHTML += `<option value="${p}">${p}</option>`;
+    });
+    if (prevProgVal) progFilter.value = prevProgVal;
+
+    const prevSubVal = subFilter.value;
+    subFilter.innerHTML = '<option value="all">All Subjects</option>';
+    window.getAllSubjects().forEach(s => {
+        subFilter.innerHTML += `<option value="${s.subject}">${s.subject}</option>`;
+    });
+    if (prevSubVal) subFilter.value = prevSubVal;
+};
+
+window.renderMtdbList = function () {
+    const tbody = document.getElementById('mtdb-targets-tbody');
+    if (!tbody) return;
+
+    const mFilter = document.getElementById('mtdb-filter-month') ? document.getElementById('mtdb-filter-month').value : 'all';
+    const pFilter = document.getElementById('mtdb-filter-prog') ? document.getElementById('mtdb-filter-prog').value : 'all';
+    const sFilter = document.getElementById('mtdb-filter-sub') ? document.getElementById('mtdb-filter-sub').value : 'all';
+    const statFilter = document.getElementById('mtdb-filter-status') ? document.getElementById('mtdb-filter-status').value : 'all';
+
+    tbody.innerHTML = '';
+    let matchedCount = 0;
+
+    if (!window.monthlyTargetsDatabase) window.monthlyTargetsDatabase = {};
+
+    Object.keys(window.monthlyTargetsDatabase).forEach(monthKey => {
+        if (mFilter !== 'all' && monthKey !== mFilter) return;
+
+        const list = window.monthlyTargetsDatabase[monthKey] || [];
+        list.forEach((target, idx) => {
+            if (pFilter !== 'all' && target.program !== pFilter) return;
+            if (sFilter !== 'all' && target.subject !== sFilter) return;
+
+            const isSubjectTarget = (target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters');
+            let isCompleted = false;
+
+            if (isSubjectTarget) {
+                isCompleted = target.completed || (window.isSubjectCompleted ? window.isSubjectCompleted(target.track, target.subject) : false);
+            } else {
+                const foundTask = window.findTaskChapter(target.track, target.subject, target.chapter);
+                isCompleted = target.completed || (foundTask ? foundTask.subTask.completed : false);
+            }
+
+            if (statFilter === 'completed' && !isCompleted) return;
+            if (statFilter === 'non-completed' && isCompleted) return;
+
+            matchedCount++;
+
+            let displaySub = target.subject.replace(target.program + ' - ', '').replace(target.program + ' ', '');
+
+            const occurrenceCount = window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(target.track, target.subject, target.chapter, target.targetType) : 0;
+            let starsHtml = '';
+            if (occurrenceCount > 1) {
+                starsHtml = `<span class="inline-flex text-amber-500 text-[9px] ml-1.5" title="Added as target ${occurrenceCount} times">${'★'.repeat(occurrenceCount)}</span>`;
+            }
+
+            const chapterCell = isSubjectTarget
+                ? `<span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">📚 Whole Subject</span>`
+                : `<span class="text-indigo-600 dark:text-indigo-400 font-bold">${target.chapter}${starsHtml}</span>`;
+
+            const row = `
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                        <td class="py-3 px-4 text-center">
+                            <input type="checkbox" onchange="window.toggleMtdbTargetCompletion('${monthKey}', ${idx}, this.checked)" class="form-checkbox h-4 w-4 text-emerald-500 rounded cursor-pointer" ${isCompleted ? 'checked' : ''}>
+                        </td>
+                        <td class="py-3 px-4 font-bold text-slate-500 dark:text-slate-400 text-[10px]">${monthKey}</td>
+                        <td class="py-3 px-4 uppercase text-[10px] text-slate-400">${target.program}</td>
+                        <td class="py-3 px-4 truncate max-w-[120px]" title="${target.subject}">${displaySub}</td>
+                        <td class="py-3 px-4">${chapterCell}</td>
+                        <td class="py-3 px-4 text-center">
+                            <button onclick="window.deleteMtdbTarget('${monthKey}', ${idx})" class="p-1 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 rounded transition-all active:scale-90 shadow-sm">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>`;
+            tbody.innerHTML += row;
+        });
+    });
+
+    if (matchedCount === 0) {
+        tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="py-8 text-center text-[10px] uppercase font-black tracking-widest text-slate-400">
+                        No matching targets found in database.
+                    </td>
+                </tr>`;
+    }
+};
+
+window.deleteMtdbTarget = function (monthKey, idx) {
+    if (window.monthlyTargetsDatabase && window.monthlyTargetsDatabase[monthKey] && window.monthlyTargetsDatabase[monthKey][idx]) {
+        window.monthlyTargetsDatabase[monthKey].splice(idx, 1);
+        FirebaseService.saveToCloud();
+        renderUI();
+        window.renderMtdbList();
+        showToast("Monthly target removed.", "success");
+    }
+};
+
+window.toggleMtdbTargetCompletion = function (monthKey, idx, isCompleted) {
+    if (!window.monthlyTargetsDatabase || !window.monthlyTargetsDatabase[monthKey] || !window.monthlyTargetsDatabase[monthKey][idx]) return;
+
+    const target = window.monthlyTargetsDatabase[monthKey][idx];
+    target.completed = isCompleted;
+    target.completedAt = isCompleted ? new Date().toISOString() : null;
+
+    if (target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters') {
+        const key = target.track + 'Tasks';
+        if (Array.isArray(AppState.tasks)) {
+            AppState.tasks.forEach(t => {
+                if (t.type === 'study' && Array.isArray(t[key])) {
+                    t[key].forEach(b => {
+                        if (b.subject === target.subject) {
+                            b.completed = isCompleted;
+                            b.completedAt = target.completedAt;
+                        }
+                    });
+                }
+            });
+        }
+        recalculateTotals();
+    } else {
+        const found = window.findTaskChapter(target.track, target.subject, target.chapter);
+        if (found) {
+            found.subTask.completed = isCompleted;
+            found.subTask.completedAt = target.completedAt;
+            recalculateTotals();
+        }
+    }
+
+    FirebaseService.saveToCloud();
+    renderUI();
+    window.renderMtdbList();
+    showToast("Target completion state updated!", "success");
+};
+
+window.calculateMonthWiseMonthlyTargets = function () {
+    const monthsData = {};
+
+    const getMonthKey = (date) => {
+        return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    };
+
+    if (!window.monthlyTargetsDatabase) window.monthlyTargetsDatabase = {};
+
+    Object.keys(window.monthlyTargetsDatabase).forEach(monthKey => {
+        const targets = window.monthlyTargetsDatabase[monthKey] || [];
+        if (targets.length === 0) return;
+
+        const dates = monthKey.split(' - ');
+        if (dates.length !== 2) return;
+
+        const start = Utils.parseDateSafe(dates[0]);
+        if (isNaN(start.getTime())) return;
+
+        const mKey = getMonthKey(start);
+        if (!monthsData[mKey]) {
+            monthsData[mKey] = { set: 0, completed: 0, rawMonth: start };
+        }
+
+        targets.forEach(t => {
+            monthsData[mKey].set += 1;
+            const isSubjectTarget = (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters');
+            const isCompleted = isSubjectTarget
+                ? (t.completed || (window.isSubjectCompleted ? window.isSubjectCompleted(t.track, t.subject) : false))
+                : t.completed;
+            if (isCompleted) {
+                monthsData[mKey].completed += 1;
+            }
+        });
+    });
+
+    return Object.keys(monthsData).map(k => {
+        return {
+            month: k,
+            set: Math.round(monthsData[k].set * 100) / 100,
+            completed: Math.round(monthsData[k].completed * 100) / 100,
+            rawMonth: monthsData[k].rawMonth
+        };
+    }).sort((a, b) => a.rawMonth - b.rawMonth);
+};
+
+window.renderMtdbMonthChart = function (monthsList) {
+    const ctx = document.getElementById('monthlyMonthMixedChart');
+    if (!ctx) return;
+
+    const labels = monthsList.map(m => m.month);
+    const setDataset = {
+        type: 'bar',
+        label: 'Targets Set',
+        data: monthsList.map(m => m.set),
+        backgroundColor: 'rgba(99, 102, 241, 0.65)',
+        borderColor: '#6366f1',
+        borderWidth: 2,
+        borderRadius: 6,
+        order: 2
+    };
+    const completedDataset = {
+        type: 'bar',
+        label: 'Targets Completed',
+        data: monthsList.map(m => m.completed),
+        backgroundColor: 'rgba(16, 185, 129, 0.65)',
+        borderColor: '#10b981',
+        borderWidth: 2,
+        borderRadius: 6,
+        order: 1
+    };
+
+    if (window.mtdbMixedChartInstance) {
+        window.mtdbMixedChartInstance.data.labels = labels;
+        window.mtdbMixedChartInstance.data.datasets = [completedDataset, setDataset];
+        window.mtdbMixedChartInstance.update();
+    } else {
+        window.mtdbMixedChartInstance = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [completedDataset, setDataset]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: { size: 10, weight: 'bold' },
+                            color: '#94a3b8'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#cbd5e1',
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderWidth: 1,
+                        padding: 12,
+                        cornerRadius: 8
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { font: { size: 9, weight: 'bold' }, color: '#94a3b8' },
+                        grid: { color: 'rgba(148, 163, 184, 0.1)', drawBorder: false }
+                    },
+                    x: {
+                        ticks: { font: { size: 9, weight: 'bold' }, color: '#94a3b8' },
+                        grid: { display: false, drawBorder: false }
+                    }
+                }
+            }
+        });
+    }
+};
+
+window.renderMtdbMonthView = function () {
+    const tbody = document.getElementById('mtdb-months-tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    const monthsList = window.calculateMonthWiseMonthlyTargets();
+
+    const tableList = [...monthsList].reverse();
+
+    tableList.forEach(m => {
+        const rate = m.set > 0 ? Math.round((m.completed / m.set) * 100) : 0;
+        let rateColor = 'text-rose-600 dark:text-rose-400';
+        if (rate >= 50) rateColor = 'text-orange-500';
+        if (rate >= 80) rateColor = 'text-emerald-600 dark:text-emerald-400';
+
+        const row = `
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                    <td class="py-3 px-4 font-black text-slate-800 dark:text-slate-100">${m.month}</td>
+                    <td class="py-3 px-4 text-center text-indigo-600 dark:text-indigo-400 font-black">${m.set}</td>
+                    <td class="py-3 px-4 text-center text-emerald-600 dark:text-emerald-400 font-black">${m.completed}</td>
+                    <td class="py-3 px-4 text-center font-black ${rateColor}">${rate}%</td>
+                </tr>`;
+        tbody.innerHTML += row;
+    });
+
+    if (monthsList.length === 0) {
+        tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="py-8 text-center text-[10px] uppercase font-black tracking-widest text-slate-400">
+                        No monthly target data available. Set and complete targets in months to build trends.
+                    </td>
+                </tr>`;
+    }
+
+    window.renderMtdbMonthChart(monthsList);
 };
 
 // --- Weekly Targets System Logic ---

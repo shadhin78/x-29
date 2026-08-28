@@ -119,6 +119,7 @@ window.AppState = {
     customPrograms: {},
     programVisibility: {},
     weeklyTargetsDatabase: {},
+    monthlyTargetsDatabase: {},
     dailyTargetsDatabase: {},
     scheduleGroups: [],
     hasLoadedFromCloud: false,
@@ -154,7 +155,7 @@ const stateKeys = [
     'currentFilter', 'PLAN_START_DATE', 'PLAN_END_DATE', 'showSync', 'serverTimeOffset',
     'fiscalLedger', 'examSessions', 'examRoutine', 'selectedCountdownExamId',
     'syllabusStructure', 'customSyllabus', 'customPrograms', 'programVisibility', 'weeklyTargetsDatabase',
-    'dailyTargetsDatabase', 'scheduleBlocks', 'scheduleBlocks2', 'scheduleGroups',
+    'monthlyTargetsDatabase', 'dailyTargetsDatabase', 'scheduleBlocks', 'scheduleBlocks2', 'scheduleGroups',
     'hasLoadedFromCloud', 'cloudDocumentExists',
     'syncGeneration', 'lastAppliedCloudTimestamp', 'isLocalDirty',
     'localRevision', 'lastCommittedRevision', 'lastLocalEditTime', 'saveStatus',
@@ -583,6 +584,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
     if (data.dashboardConfig !== undefined) AppState.dashboardConfig = data.dashboardConfig;
     if (data.weeklyTargetsDatabase !== undefined) AppState.weeklyTargetsDatabase = data.weeklyTargetsDatabase;
+    if (data.monthlyTargetsDatabase !== undefined) AppState.monthlyTargetsDatabase = data.monthlyTargetsDatabase;
     if (data.dailyTargetsDatabase !== undefined) AppState.dailyTargetsDatabase = data.dailyTargetsDatabase;
 
     if (data.scheduleBlocks !== undefined) {
@@ -716,6 +718,7 @@ window.getDefaultAppState = function() {
             independentPaces: { tracks: {}, programs: {}, subjects: {} }
         },
         weeklyTargetsDatabase: {},
+        monthlyTargetsDatabase: {},
         dailyTargetsDatabase: {},
         scheduleBlocks: [],
         scheduleBlocks2: [],
