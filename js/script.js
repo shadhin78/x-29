@@ -14768,6 +14768,8 @@ window.addWeeklyTarget = function () {
     if (scopeEl) scopeEl.value = '';
     if (sizeEl) sizeEl.value = '';
 
+    if (window.autoSyncWeeklyToDailyTargets) window.autoSyncWeeklyToDailyTargets();
+
     FirebaseService.saveToCloud();
     renderUI();
     closeModal('add-weekly-target-modal');
@@ -14820,7 +14822,23 @@ window.toggleWeeklyTargetCompletion = function (idx, isCompleted) {
     target.completed = isCompleted;
     target.completedAt = isCompleted ? new Date().toISOString() : null; // Sync date
 
-    // Sync with Daily Target (if exists for today)
+    // Sync with Daily Targets across the selected week
+    const startDate = Utils.parseStart ? Utils.parseStart(selectedWeekKey) : (window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(selectedWeekKey.split(' - ')[0]) : new Date());
+    if (startDate && !isNaN(startDate.getTime()) && window.dailyTargetsDatabase) {
+        const range = window.getWeeklyTargetRange(startDate);
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(range.start.getTime() + i * 24 * 60 * 60 * 1000);
+            const dateKey = Utils.formatDate(d);
+            const list = window.dailyTargetsDatabase[dateKey] || [];
+            list.forEach(matchingDt => {
+                if (matchingDt.track === target.track && matchingDt.subject === target.subject && matchingDt.chapter === target.chapter) {
+                    matchingDt.completed = isCompleted;
+                    matchingDt.completedAt = target.completedAt;
+                }
+            });
+        }
+    }
+
     const todayKey = Utils.formatDate(new Date());
     if (window.dailyTargetsDatabase && window.dailyTargetsDatabase[todayKey]) {
         const matchingDt = window.dailyTargetsDatabase[todayKey].find(t => t.track === target.track && t.subject === target.subject && t.chapter === target.chapter);
@@ -15733,29 +15751,24 @@ window.autoSyncWeeklyToDailyTargets = function () {
 
     let updated = false;
 
-    const datesToSync = [new Date()];
-    if (window.currentDailyTargetsDate) {
-        datesToSync.push(new Date(window.currentDailyTargetsDate));
-    }
+    // Scan all weeks in weeklyTargetsDatabase (past, present, and future weeks)
+    const weekKeys = Object.keys(window.weeklyTargetsDatabase);
 
-    const processedWeeks = new Set();
-
-    datesToSync.forEach(dateObj => {
-        const range = window.getWeeklyTargetRange(dateObj);
-        const weekKey = window.formatDateRangeKey(range.start, range.end);
-
-        if (processedWeeks.has(weekKey)) return;
-        processedWeeks.add(weekKey);
-
+    weekKeys.forEach(weekKey => {
         const weeklyTargets = window.weeklyTargetsDatabase[weekKey] || [];
         if (weeklyTargets.length === 0) return;
+
+        const startDate = Utils.parseStart ? Utils.parseStart(weekKey) : (window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(weekKey.split(' - ')[0]) : new Date());
+        if (!startDate || isNaN(startDate.getTime())) return;
+
+        const range = window.getWeeklyTargetRange(startDate);
 
         for (let i = 0; i < 7; i++) {
             const d = new Date(range.start.getTime() + i * 24 * 60 * 60 * 1000);
             const dayOfWeekName = d.toLocaleDateString('en-US', { weekday: 'long' });
             const dateKey = Utils.formatDate(d);
 
-            const dayTargets = weeklyTargets.filter(t => t.dayName === dayOfWeekName);
+            const dayTargets = weeklyTargets.filter(t => t.dayName && t.dayName.toLowerCase() === dayOfWeekName.toLowerCase());
 
             if (dayTargets.length > 0) {
                 if (!window.dailyTargetsDatabase[dateKey]) {
@@ -15763,13 +15776,13 @@ window.autoSyncWeeklyToDailyTargets = function () {
                 }
 
                 dayTargets.forEach(wt => {
-                    const exists = window.dailyTargetsDatabase[dateKey].some(dt =>
+                    const existingTarget = window.dailyTargetsDatabase[dateKey].find(dt =>
                         dt.track === wt.track &&
                         dt.subject === wt.subject &&
                         dt.chapter === wt.chapter
                     );
 
-                    if (!exists) {
+                    if (!existingTarget) {
                         const foundTask = window.findTaskChapter(wt.track, wt.subject, wt.chapter);
                         const isCompleted = wt.completed || (foundTask ? foundTask.subTask.completed : false);
                         const completedAt = wt.completedAt || (foundTask ? foundTask.subTask.completedAt : null);
@@ -15785,6 +15798,15 @@ window.autoSyncWeeklyToDailyTargets = function () {
                             scope: wt.scope || 'Whole Chapter',
                             isAutoSynced: true
                         });
+                        updated = true;
+                    } else if (existingTarget.isDeleted) {
+                        delete existingTarget.isDeleted;
+                        const foundTask = window.findTaskChapter(wt.track, wt.subject, wt.chapter);
+                        existingTarget.completed = wt.completed || (foundTask ? foundTask.subTask.completed : false);
+                        existingTarget.completedAt = wt.completedAt || (foundTask ? foundTask.subTask.completedAt : null);
+                        existingTarget.totalChapterSize = wt.totalChapterSize;
+                        existingTarget.scope = wt.scope || 'Whole Chapter';
+                        existingTarget.isAutoSynced = true;
                         updated = true;
                     }
                 });
@@ -16091,20 +16113,82 @@ window.renderDashboardDailyChecklist = function () {
 
     const todayStr = Utils.formatDate(new Date());
 
-    if (rangeEl) rangeEl.textContent = `Today: ${todayStr}`;
-
     if (!window.dailyTargetsDatabase) window.dailyTargetsDatabase = {};
-    const targetsList = window.dailyTargetsDatabase[todayStr] || [];
 
-    let totalTargets = targetsList.length;
-    let completedTargets = 0;
+    const dashboardItems = [];
+
+    // 1. Current day targets (both completed and uncompleted)
+    const currentTargets = window.dailyTargetsDatabase[todayStr] || [];
+    currentTargets.forEach((target, idx) => {
+        if (target.isDeleted) return;
+        const isTodo = target.isTodo === true;
+        if (!isTodo) {
+            const foundTask = window.findTaskChapter(target.track, target.subject, target.chapter);
+            if (foundTask && foundTask.subTask.skipped) return;
+        }
+        const isCompleted = isTodo ? (target.completed || false) : (target.completed || (window.findTaskChapter(target.track, target.subject, target.chapter)?.subTask.completed ?? false));
+        dashboardItems.push({
+            target,
+            dateKey: todayStr,
+            idx,
+            isCompleted,
+            isToday: true
+        });
+    });
+
+    // 2. Previous days targets (uncompleted only, sorted descending by date: newest past days first, older below)
+    const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
+    const pastDateKeys = Object.keys(window.dailyTargetsDatabase).filter(dk => {
+        if (dk === todayStr) return false;
+        const d = window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(dk) : new Date(dk);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() < todayStart.getTime();
+    }).sort((a, b) => {
+        const timeA = (window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(a) : new Date(a)).getTime();
+        const timeB = (window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(b) : new Date(b)).getTime();
+        return timeB - timeA;
+    });
+
+    pastDateKeys.forEach(pastDk => {
+        const list = window.dailyTargetsDatabase[pastDk] || [];
+        list.forEach((target, idx) => {
+            if (target.isDeleted) return;
+            const isTodo = target.isTodo === true;
+            if (!isTodo) {
+                const foundTask = window.findTaskChapter(target.track, target.subject, target.chapter);
+                if (foundTask && foundTask.subTask.skipped) return;
+            }
+            const isCompleted = isTodo ? (target.completed || false) : (target.completed || (window.findTaskChapter(target.track, target.subject, target.chapter)?.subTask.completed ?? false));
+            if (!isCompleted) {
+                dashboardItems.push({
+                    target,
+                    dateKey: pastDk,
+                    idx,
+                    isCompleted: false,
+                    isToday: false
+                });
+            }
+        });
+    });
+
+    const totalTargets = dashboardItems.length;
+    const completedTargets = dashboardItems.filter(item => item.isCompleted).length;
+    const pastPendingCount = dashboardItems.filter(item => !item.isToday).length;
+
+    if (rangeEl) {
+        if (pastPendingCount > 0) {
+            rangeEl.textContent = `Today: ${todayStr} (+${pastPendingCount} Pending)`;
+        } else {
+            rangeEl.textContent = `Today: ${todayStr}`;
+        }
+    }
 
     listContainer.innerHTML = '';
 
     if (listContainer) {
         listContainer.className = "grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2 overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 text-[10px] flex-1 min-h-0";
-        if (targetsList.length <= 4) {
-            const rows = Math.ceil(targetsList.length / 2) || 1;
+        if (dashboardItems.length <= 4) {
+            const rows = Math.ceil(dashboardItems.length / 2) || 1;
             listContainer.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
             listContainer.style.gridAutoRows = 'unset';
             listContainer.style.height = '100%';
@@ -16115,21 +16199,10 @@ window.renderDashboardDailyChecklist = function () {
         }
     }
 
-    targetsList.forEach((target, idx) => {
-        if (target.isDeleted) {
-            totalTargets--;
-            return;
-        }
+    dashboardItems.forEach(item => {
+        const target = item.target;
+        const isCompleted = item.isCompleted;
         const isTodo = target.isTodo === true;
-        if (!isTodo) {
-            const foundTask = window.findTaskChapter(target.track, target.subject, target.chapter);
-            if (foundTask && foundTask.subTask.skipped) {
-                totalTargets--;
-                return;
-            }
-        }
-        const isCompleted = isTodo ? (target.completed || false) : (target.completed || (window.findTaskChapter(target.track, target.subject, target.chapter)?.subTask.completed ?? false));
-        if (isCompleted) completedTargets++;
 
         let displayTitle = '';
         let displaySubtitle = '';
@@ -16152,8 +16225,14 @@ window.renderDashboardDailyChecklist = function () {
             ? `text-white border-transparent`
             : 'bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 border-slate-200/50 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-900/60';
 
+        const dateTagHtml = !item.isToday ? `
+            <span class="inline-block px-1 rounded-[3px] text-[6px] font-black uppercase tracking-widest bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50">
+                ${item.dateKey}
+            </span>
+        ` : '';
+
         const itemHtml = `
-                <button onclick="window.toggleDashboardDailyTargetCompletion(${idx}, ${!isCompleted})"
+                <button onclick="window.toggleDashboardDailyTargetCompletion('${item.dateKey}', ${item.idx}, ${!isCompleted})"
                         class="flex items-center justify-between p-2 md:p-2.5 rounded-xl border font-black transition-all duration-300 active:scale-95 text-left w-full gap-1.5 h-full ${buttonClass}"
                         style="${isCompleted ? activeStyle : ''}">
                     <div class="flex items-center space-x-1.5 min-w-0 flex-1">
@@ -16168,7 +16247,10 @@ window.renderDashboardDailyChecklist = function () {
                                 ${target.totalChapterSize ? `<span class="text-[9px] text-blue-500 font-bold ml-1">(${target.totalChapterSize} p)</span>` : ''}
                                 ${target.scope && target.scope !== 'Whole Chapter' && target.scope !== 'Whole' ? `<span class="inline-block px-1 rounded-[3px] text-[6px] font-black uppercase tracking-widest ${isCompleted ? 'bg-white/20 text-white' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'} ml-1">${target.scope}</span>` : ''}
                             </span>
-                            <span class="block text-[7px] uppercase tracking-wider font-bold opacity-75 truncate">${displaySubtitle} | ${isCompleted ? 'YES' : 'NO'}</span>
+                            <div class="flex items-center space-x-1.5 flex-wrap">
+                                <span class="block text-[7px] uppercase tracking-wider font-bold opacity-75 truncate">${displaySubtitle} | ${isCompleted ? 'YES' : 'NO'}</span>
+                                ${dateTagHtml}
+                            </div>
                         </div>
                     </div>
                     <div class="shrink-0">
@@ -16184,7 +16266,7 @@ window.renderDashboardDailyChecklist = function () {
     if (totalTargets === 0) {
         listContainer.innerHTML = `
                 <div class="py-8 text-center text-[9px] uppercase font-black tracking-widest text-slate-400 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 w-full col-span-2 sm:col-span-4 lg:col-span-2 h-full flex items-center justify-center">
-                    No daily targets set for today.
+                    No active or overdue daily targets.
                 </div>`;
         listContainer.style.gridTemplateRows = '1fr';
         listContainer.style.height = '100%';
@@ -16195,12 +16277,16 @@ window.renderDashboardDailyChecklist = function () {
     if (progressEl) progressEl.style.width = `${pct}%`;
 };
 
-window.toggleDashboardDailyTargetCompletion = function (idx, isCompleted) {
-    const todayStr = Utils.formatDate(new Date());
+window.toggleDashboardDailyTargetCompletion = function (dateKey, idx, isCompleted) {
+    if (typeof isCompleted === 'undefined' && typeof dateKey === 'number') {
+        isCompleted = idx;
+        idx = dateKey;
+        dateKey = Utils.formatDate(new Date());
+    }
 
-    if (!window.dailyTargetsDatabase || !window.dailyTargetsDatabase[todayStr] || !window.dailyTargetsDatabase[todayStr][idx]) return;
+    if (!window.dailyTargetsDatabase || !window.dailyTargetsDatabase[dateKey] || !window.dailyTargetsDatabase[dateKey][idx]) return;
 
-    const target = window.dailyTargetsDatabase[todayStr][idx];
+    const target = window.dailyTargetsDatabase[dateKey][idx];
     target.completed = isCompleted;
     target.completedAt = isCompleted ? new Date().toISOString() : null;
 
@@ -16211,23 +16297,49 @@ window.toggleDashboardDailyTargetCompletion = function (idx, isCompleted) {
         return;
     }
 
-    // Sync with Weekly Target (if exists)
-    const currentRange = window.getWeeklyTargetRange();
-    const currentWeekKey = window.formatDateRangeKey(currentRange.start, currentRange.end);
-    if (window.weeklyTargetsDatabase && window.weeklyTargetsDatabase[currentWeekKey]) {
-        const matchingWt = window.weeklyTargetsDatabase[currentWeekKey].find(t => t.track === target.track && t.subject === target.subject && t.chapter === target.chapter);
+    // Sync with Weekly Target (if exists in that date's week)
+    const targetDate = window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(dateKey) : new Date();
+    const targetRange = window.getWeeklyTargetRange(targetDate);
+    const targetWeekKey = window.formatDateRangeKey(targetRange.start, targetRange.end);
+    let wtCompleted = isCompleted;
+    let wtCompletedAt = target.completedAt;
+    let hasWtSize = false;
+
+    if (window.weeklyTargetsDatabase && window.weeklyTargetsDatabase[targetWeekKey]) {
+        const matchingWt = window.weeklyTargetsDatabase[targetWeekKey].find(t => t.track === target.track && t.subject === target.subject && t.chapter === target.chapter);
         if (matchingWt) {
-            matchingWt.completed = isCompleted;
-            matchingWt.completedAt = target.completedAt;
+            if (matchingWt.totalChapterSize) {
+                hasWtSize = true;
+                const progress = window.getWeeklyTargetProgress(matchingWt, targetWeekKey);
+                matchingWt.completed = (progress.percent >= 100);
+                matchingWt.completedAt = matchingWt.completed ? new Date().toISOString() : null;
+                wtCompleted = matchingWt.completed;
+                wtCompletedAt = matchingWt.completedAt;
+            } else {
+                matchingWt.completed = isCompleted;
+                matchingWt.completedAt = target.completedAt;
+            }
         }
     }
 
-    const found = window.findTaskChapter(target.track, target.subject, target.chapter);
-    if (found) {
-        found.subTask.completed = isCompleted;
-        found.subTask.completedAt = target.completedAt;
-        recalculateTotals();
+    // Also sync with current week if different
+    const currentRange = window.getWeeklyTargetRange();
+    const currentWeekKey = window.formatDateRangeKey(currentRange.start, currentRange.end);
+    if (currentWeekKey !== targetWeekKey && window.weeklyTargetsDatabase && window.weeklyTargetsDatabase[currentWeekKey]) {
+        const matchingCurrentWt = window.weeklyTargetsDatabase[currentWeekKey].find(t => t.track === target.track && t.subject === target.subject && t.chapter === target.chapter);
+        if (matchingCurrentWt && !matchingCurrentWt.totalChapterSize) {
+            matchingCurrentWt.completed = isCompleted;
+            matchingCurrentWt.completedAt = target.completedAt;
+        }
     }
+
+    // Sync with daily study task (subtask in tasks)
+    if (hasWtSize) {
+        window.syncTaskChapterCompletion(target.track, target.subject, target.chapter, wtCompleted, wtCompletedAt);
+    } else {
+        window.syncTaskChapterCompletion(target.track, target.subject, target.chapter, isCompleted, target.completedAt);
+    }
+    recalculateTotals();
 
     FirebaseService.saveToCloud();
     renderUI();
@@ -16243,21 +16355,76 @@ window.renderDashboardWeeklyChecklist = function () {
 
     const currentRange = window.getWeeklyTargetRange();
     const currentWeekKey = window.formatDateRangeKey(currentRange.start, currentRange.end);
-
-    if (rangeEl) rangeEl.textContent = `Week: ${currentWeekKey}`;
+    const currentStartTime = currentRange.start.getTime();
 
     if (!window.weeklyTargetsDatabase) window.weeklyTargetsDatabase = {};
-    const targetsList = window.weeklyTargetsDatabase[currentWeekKey] || [];
 
-    let totalTargets = targetsList.length;
-    let completedTargets = 0;
+    const dashboardItems = [];
+
+    // 1. Current week targets (both completed and uncompleted)
+    const currentTargets = window.weeklyTargetsDatabase[currentWeekKey] || [];
+    currentTargets.forEach((target, idx) => {
+        const foundTask = window.findTaskChapter(target.track, target.subject, target.chapter);
+        if (foundTask && foundTask.subTask.skipped) return;
+        const progress = window.getWeeklyTargetProgress(target, currentWeekKey);
+        const isCompleted = target.completed || (foundTask ? foundTask.subTask.completed : false) || (target.totalChapterSize && progress.percent >= 100);
+        dashboardItems.push({
+            target,
+            weekKey: currentWeekKey,
+            idx,
+            isCompleted,
+            progress,
+            isCurrentWeek: true
+        });
+    });
+
+    // 2. Previous weeks targets (uncompleted only, sorted descending by start date: newest past weeks first, older below)
+    const pastWeekKeys = Object.keys(window.weeklyTargetsDatabase).filter(wk => {
+        if (wk === currentWeekKey) return false;
+        const st = Utils.parseStart(wk).getTime();
+        return st < currentStartTime;
+    }).sort((a, b) => {
+        return Utils.parseStart(b) - Utils.parseStart(a);
+    });
+
+    pastWeekKeys.forEach(wkKey => {
+        const list = window.weeklyTargetsDatabase[wkKey] || [];
+        list.forEach((target, idx) => {
+            const foundTask = window.findTaskChapter(target.track, target.subject, target.chapter);
+            if (foundTask && foundTask.subTask.skipped) return;
+            const progress = window.getWeeklyTargetProgress(target, wkKey);
+            const isCompleted = target.completed || (foundTask ? foundTask.subTask.completed : false) || (target.totalChapterSize && progress.percent >= 100);
+            if (!isCompleted) {
+                dashboardItems.push({
+                    target,
+                    weekKey: wkKey,
+                    idx,
+                    isCompleted: false,
+                    progress,
+                    isCurrentWeek: false
+                });
+            }
+        });
+    });
+
+    const totalTargets = dashboardItems.length;
+    const completedTargets = dashboardItems.filter(item => item.isCompleted).length;
+    const pastPendingCount = dashboardItems.filter(item => !item.isCurrentWeek).length;
+
+    if (rangeEl) {
+        if (pastPendingCount > 0) {
+            rangeEl.textContent = `Week: ${currentWeekKey} (+${pastPendingCount} Pending)`;
+        } else {
+            rangeEl.textContent = `Week: ${currentWeekKey}`;
+        }
+    }
 
     listContainer.innerHTML = '';
 
     if (listContainer) {
         listContainer.className = "grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2 overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 text-[10px] flex-1 min-h-0";
-        if (targetsList.length <= 4) {
-            const rows = Math.ceil(targetsList.length / 2) || 1;
+        if (dashboardItems.length <= 4) {
+            const rows = Math.ceil(dashboardItems.length / 2) || 1;
             listContainer.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
             listContainer.style.gridAutoRows = 'unset';
             listContainer.style.height = '100%';
@@ -16268,51 +16435,51 @@ window.renderDashboardWeeklyChecklist = function () {
         }
     }
 
-    targetsList.forEach((target, idx) => {
-        const foundTask = window.findTaskChapter(target.track, target.subject, target.chapter);
-        if (foundTask && foundTask.subTask.skipped) {
-            totalTargets--;
-            return;
-        }
-        const progress = window.getWeeklyTargetProgress(target, currentWeekKey);
-        const isCompleted = target.completed || (foundTask ? foundTask.subTask.completed : false) || (target.totalChapterSize && progress.percent >= 100);
-        if (isCompleted) completedTargets++;
-
+    dashboardItems.forEach(item => {
+        const target = item.target;
         let displaySub = target.subject.replace(target.program + ' - ', '').replace(target.program + ' ', '');
         const subjectColor = window.getSubjectColor ? window.getSubjectColor(target.subject) : '#10b981';
 
         const activeStyle = `background-color: ${subjectColor}cc; border-color: ${subjectColor}; color: white; box-shadow: 0 4px 12px ${subjectColor}33;`;
 
         let bgStyle = '';
-        if (!isCompleted && target.totalChapterSize && progress.percent > 0) {
+        if (!item.isCompleted && target.totalChapterSize && item.progress.percent > 0) {
             const isDarkMode = document.documentElement.classList.contains('dark');
             const fillAlpha = isDarkMode ? 0.25 : 0.15;
             const fillRgba = hexToRgba(subjectColor, fillAlpha);
-            bgStyle = `background: linear-gradient(to right, ${fillRgba} ${progress.percent}%, transparent ${progress.percent}%);`;
+            bgStyle = `background: linear-gradient(to right, ${fillRgba} ${item.progress.percent}%, transparent ${item.progress.percent}%);`;
         }
 
-        const buttonClass = isCompleted
+        const buttonClass = item.isCompleted
             ? `text-white border-transparent`
             : 'bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-900/60';
 
-        const progressTextHtml = target.totalChapterSize ? `<span class="text-[9px] text-blue-500 font-bold ml-1">(${progress.completed}/${progress.total} p)</span>` : '';
+        const progressTextHtml = target.totalChapterSize ? `<span class="text-[9px] text-blue-500 font-bold ml-1">(${item.progress.completed}/${item.progress.total} p)</span>` : '';
         const targetScope = target.scope || 'Whole Chapter';
+
+        const weekTagHtml = !item.isCurrentWeek ? `
+            <span class="inline-block px-1 rounded-[3px] text-[6px] font-black uppercase tracking-widest bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50">
+                ${item.weekKey.split(' - ')[0]}
+            </span>
+        ` : '';
+
         const itemHtml = `
-                <button onclick="window.toggleDashboardWeeklyTargetCompletion(${idx}, ${!isCompleted})"
+                <button onclick="window.toggleDashboardWeeklyTargetCompletion('${item.weekKey}', ${item.idx}, ${!item.isCompleted})"
                         class="flex items-center justify-between p-2 md:p-2.5 rounded-xl border font-black transition-all duration-300 active:scale-95 text-left w-full gap-1.5 h-full ${buttonClass}"
-                        style="${isCompleted ? activeStyle : bgStyle}">
+                        style="${item.isCompleted ? activeStyle : bgStyle}">
                     <div class="flex items-center space-x-1.5 min-w-0 flex-1">
-                        <div class="p-1 rounded-lg ${isCompleted ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700/60'} shrink-0">
+                        <div class="p-1 rounded-lg ${item.isCompleted ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700/60'} shrink-0">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                             </svg>
                         </div>
                         <div class="min-w-0 leading-tight">
-                            <span class="block text-[10px] md:text-xs font-black truncate ${isCompleted ? 'line-through opacity-75' : ''}">${target.chapter}: ${displaySub} ${progressTextHtml}</span>
+                            <span class="block text-[10px] md:text-xs font-black truncate ${item.isCompleted ? 'line-through opacity-75' : ''}">${target.chapter}: ${displaySub} ${progressTextHtml}</span>
                             <div class="flex items-center space-x-1.5 flex-wrap">
-                                <span class="block text-[7px] uppercase tracking-wider font-bold opacity-75 truncate">${target.program}${target.dayName ? ' | ' + target.dayName.toUpperCase() : ''} | ${isCompleted ? 'YES' : 'NO'}</span>
+                                <span class="block text-[7px] uppercase tracking-wider font-bold opacity-75 truncate">${target.program}${target.dayName ? ' | ' + target.dayName.toUpperCase() : ''} | ${item.isCompleted ? 'YES' : 'NO'}</span>
+                                ${weekTagHtml}
                                 ${targetScope !== 'Whole Chapter' && targetScope !== 'Whole' ? `
-                                    <span class="inline-block px-1 rounded-[3px] text-[6px] font-black uppercase tracking-widest ${isCompleted ? 'bg-white/20 text-white' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'}">
+                                    <span class="inline-block px-1 rounded-[3px] text-[6px] font-black uppercase tracking-widest ${item.isCompleted ? 'bg-white/20 text-white' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'}">
                                         ${targetScope}
                                     </span>
                                 ` : ''}
@@ -16320,7 +16487,7 @@ window.renderDashboardWeeklyChecklist = function () {
                         </div>
                     </div>
                     <div class="shrink-0">
-                        ${isCompleted
+                        ${item.isCompleted
                 ? `<span class="flex h-4 w-4 rounded-full bg-white text-emerald-500 items-center justify-center shadow-sm text-[8px] font-black">✓</span>`
                 : `<span class="flex h-4 w-4 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 items-center justify-center text-[7px] font-black">✕</span>`
             }
@@ -16332,7 +16499,7 @@ window.renderDashboardWeeklyChecklist = function () {
     if (totalTargets === 0) {
         listContainer.innerHTML = `
                 <div class="py-8 text-center text-[9px] uppercase font-black tracking-widest text-slate-400 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 w-full col-span-2 sm:col-span-4 lg:col-span-2 h-full flex items-center justify-center">
-                    No targets set for this week.
+                    No active or overdue targets.
                 </div>`;
         listContainer.style.gridTemplateRows = '1fr';
         listContainer.style.height = '100%';
@@ -16343,17 +16510,37 @@ window.renderDashboardWeeklyChecklist = function () {
     if (progressEl) progressEl.style.width = `${pct}%`;
 };
 
-window.toggleDashboardWeeklyTargetCompletion = function (idx, isCompleted) {
-    const currentRange = window.getWeeklyTargetRange();
-    const currentWeekKey = window.formatDateRangeKey(currentRange.start, currentRange.end);
+window.toggleDashboardWeeklyTargetCompletion = function (weekKey, idx, isCompleted) {
+    if (typeof isCompleted === 'undefined' && typeof weekKey === 'number') {
+        isCompleted = idx;
+        idx = weekKey;
+        const currentRange = window.getWeeklyTargetRange();
+        weekKey = window.formatDateRangeKey(currentRange.start, currentRange.end);
+    }
 
-    if (!window.weeklyTargetsDatabase || !window.weeklyTargetsDatabase[currentWeekKey] || !window.weeklyTargetsDatabase[currentWeekKey][idx]) return;
+    if (!window.weeklyTargetsDatabase || !window.weeklyTargetsDatabase[weekKey] || !window.weeklyTargetsDatabase[weekKey][idx]) return;
 
-    const target = window.weeklyTargetsDatabase[currentWeekKey][idx];
+    const target = window.weeklyTargetsDatabase[weekKey][idx];
     target.completed = isCompleted;
     target.completedAt = isCompleted ? new Date().toISOString() : null;
 
-    // Sync with Daily Target (if exists for today)
+    // Sync with Daily Targets across this week
+    const startDate = Utils.parseStart ? Utils.parseStart(weekKey) : (window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(weekKey.split(' - ')[0]) : new Date());
+    if (startDate && !isNaN(startDate.getTime()) && window.dailyTargetsDatabase) {
+        const range = window.getWeeklyTargetRange(startDate);
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(range.start.getTime() + i * 24 * 60 * 60 * 1000);
+            const dateKey = Utils.formatDate(d);
+            const list = window.dailyTargetsDatabase[dateKey] || [];
+            list.forEach(matchingDt => {
+                if (matchingDt.track === target.track && matchingDt.subject === target.subject && matchingDt.chapter === target.chapter) {
+                    matchingDt.completed = isCompleted;
+                    matchingDt.completedAt = target.completedAt;
+                }
+            });
+        }
+    }
+
     const todayKey = Utils.formatDate(new Date());
     if (window.dailyTargetsDatabase && window.dailyTargetsDatabase[todayKey]) {
         const matchingDt = window.dailyTargetsDatabase[todayKey].find(t => t.track === target.track && t.subject === target.subject && t.chapter === target.chapter);
