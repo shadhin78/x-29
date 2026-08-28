@@ -14672,32 +14672,136 @@ window.updateMonthlyTargetSubjectDropdown = function () {
     window.updateMonthlyTargetColorSync();
 };
 
-window.updateMonthlyTargetChapterDropdown = function () {
+window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, preselectSize = null) {
     const progSelectEl = document.getElementById('mt-select-prog');
     const progName = progSelectEl ? progSelectEl.value : '';
     const subSelectEl = document.getElementById('mt-select-sub');
     const subject = subSelectEl ? subSelectEl.value : '';
-    const chSelect = document.getElementById('mt-select-ch');
-    if (!chSelect) return;
-    chSelect.innerHTML = '';
+    const container = document.getElementById('mt-chapters-container');
+    if (!container) return;
+    container.innerHTML = '';
 
     const trackId = window.tracks.find(t => window.customPrograms[t.id] && window.customPrograms[t.id].some(p => (p.name || p) === progName))?.id;
     if (!trackId || !subject) {
-        chSelect.innerHTML = '<option value="Whole Subject">-- 📚 Whole Subject (All Chapters) --</option>';
+        container.innerHTML = `
+            <div class="py-4 text-center text-[10px] uppercase font-black tracking-widest text-slate-400">
+                No Chapters Available
+            </div>`;
         window.updateMonthlyTargetColorSync();
         return;
     }
 
+    const isWholeSubPreselected = preselectChapter === 'Whole Subject' || preselectChapter === '-- 📚 Whole Subject (All Chapters) --';
+
+    // 1. Whole Subject Checkbox Row
+    let wholeSubHtml = `
+        <div class="flex items-center justify-between p-2.5 rounded-xl border border-purple-200/70 dark:border-purple-800/50 bg-purple-50/50 dark:bg-purple-950/20 transition-all hover:bg-purple-50 dark:hover:bg-purple-950/30">
+            <label class="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
+                <input type="checkbox" id="mt-ch-whole-subject" onchange="window.handleMonthlyWholeSubjectToggle(this.checked)"
+                    class="form-checkbox h-4 w-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
+                    ${isWholeSubPreselected ? 'checked' : ''}>
+                <div class="min-w-0">
+                    <span class="text-xs font-black text-purple-900 dark:text-purple-200 truncate block">📚 Whole Subject (All Chapters)</span>
+                    <span class="text-[7.5px] text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider block">Subject-level Target</span>
+                </div>
+            </label>
+            <div class="shrink-0 ml-2">
+                <input type="number" id="mt-size-whole-subject" placeholder="Size (opt)" min="1"
+                    value="${isWholeSubPreselected && preselectSize ? preselectSize : ''}"
+                    class="w-20 sm:w-24 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/60 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-white font-bold outline-none shadow-sm focus:ring-1 focus:ring-purple-500">
+            </div>
+        </div>
+    `;
+    container.innerHTML = wholeSubHtml;
+
+    // 2. Individual Chapters
     const chapters = window.getChaptersForSubject(trackId, subject);
-    chSelect.innerHTML += '<option value="Whole Subject">-- 📚 Whole Subject (All Chapters) --</option>';
     if (chapters && chapters.length > 0) {
         chapters.forEach(ch => {
             const count = window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(trackId, subject, ch, 'chapter') : 0;
             const stars = count > 0 ? ' ' + '★'.repeat(count) : '';
-            chSelect.innerHTML += `<option value="${ch}">${ch}${stars}</option>`;
+            const isChPreselected = preselectChapter === ch;
+
+            const chHtml = `
+                <div class="flex items-center justify-between p-2 rounded-xl border border-slate-200/70 dark:border-slate-700/60 bg-white dark:bg-slate-800 transition-all hover:border-indigo-400/50 dark:hover:border-indigo-500/50">
+                    <label class="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
+                        <input type="checkbox" data-chapter="${ch}" class="mt-chapter-checkbox form-checkbox h-4 w-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                            onchange="window.handleMonthlyChapterCheckChange(this)"
+                            ${isChPreselected ? 'checked' : ''}>
+                        <div class="min-w-0">
+                            <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate block">${ch}${stars}</span>
+                        </div>
+                    </label>
+                    <div class="shrink-0 ml-2">
+                        <input type="number" data-chapter="${ch}" class="mt-chapter-size-input w-20 sm:w-24 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-white font-bold outline-none shadow-sm focus:ring-1 focus:ring-indigo-500"
+                            placeholder="Size (opt)" min="1"
+                            value="${isChPreselected && preselectSize ? preselectSize : ''}">
+                    </div>
+                </div>
+            `;
+            container.innerHTML += chHtml;
         });
     }
+
     window.updateMonthlyTargetColorSync();
+};
+
+window.toggleAllMonthlyChapters = function (select) {
+    const wholeSub = document.getElementById('mt-ch-whole-subject');
+    if (wholeSub) wholeSub.checked = false;
+
+    const checkboxes = document.querySelectorAll('.mt-chapter-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = select;
+    });
+};
+
+window.handleMonthlyWholeSubjectToggle = function (isChecked) {
+    if (isChecked) {
+        const checkboxes = document.querySelectorAll('.mt-chapter-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = false;
+        });
+    }
+};
+
+window.handleMonthlyChapterCheckChange = function (checkboxEl) {
+    if (checkboxEl && checkboxEl.checked) {
+        const wholeSub = document.getElementById('mt-ch-whole-subject');
+        if (wholeSub) wholeSub.checked = false;
+    }
+};
+
+window.applyBulkSizeToMonthlyChapters = function () {
+    const bulkInput = document.getElementById('mt-bulk-size-input');
+    const bulkVal = bulkInput && bulkInput.value ? bulkInput.value : '';
+    if (!bulkVal) {
+        return showToast("Please enter a bulk size number first.", "error");
+    }
+
+    let appliedCount = 0;
+    const wholeSub = document.getElementById('mt-ch-whole-subject');
+    const wholeSubSize = document.getElementById('mt-size-whole-subject');
+    if (wholeSub && wholeSub.checked && wholeSubSize) {
+        wholeSubSize.value = bulkVal;
+        appliedCount++;
+    }
+
+    const checkboxes = document.querySelectorAll('.mt-chapter-checkbox:checked');
+    checkboxes.forEach(cb => {
+        const ch = cb.getAttribute('data-chapter');
+        const sizeInput = document.querySelector(`.mt-chapter-size-input[data-chapter="${CSS.escape(ch)}"]`);
+        if (sizeInput) {
+            sizeInput.value = bulkVal;
+            appliedCount++;
+        }
+    });
+
+    if (appliedCount === 0) {
+        showToast("No chapters or whole subject currently selected. Check the chapters you want to apply size to.", "error");
+    } else {
+        showToast(`Bulk size (${bulkVal}) applied to ${appliedCount} selected target(s)!`, "success");
+    }
 };
 
 window.getWeeksForMonth = function (date = new Date()) {
@@ -14833,15 +14937,9 @@ window.addMonthlyTarget = function () {
 
     const progSelectEl = document.getElementById('mt-select-prog');
     const subSelectEl = document.getElementById('mt-select-sub');
-    const chSelectEl = document.getElementById('mt-select-ch');
-    const scopeEl = document.getElementById('mt-target-scope');
-    const sizeEl = document.getElementById('mt-input-size');
 
     const progName = progSelectEl ? progSelectEl.value : '';
     const subject = subSelectEl ? subSelectEl.value : '';
-    let chapter = chSelectEl ? chSelectEl.value : '';
-    const scopeVal = scopeEl ? (scopeEl.value.trim() || 'Whole Chapter') : 'Whole Chapter';
-    const totalSize = sizeEl && sizeEl.value ? parseInt(sizeEl.value, 10) : null;
 
     if (!progName) {
         return showToast("Please select a Program (minimum 1 target is required).", "error");
@@ -14849,13 +14947,6 @@ window.addMonthlyTarget = function () {
     if (!subject || subject === 'No Subjects') {
         return showToast("Please select a Subject (minimum 1 target is required).", "error");
     }
-    if (!chapter || chapter === 'No Chapters') {
-        return showToast("Please select a Chapter or Whole Subject (minimum 1 target is required).", "error");
-    }
-
-    const isSubjectTarget = (chapter === 'Whole Subject' || chapter === '-- 📚 Whole Subject (All Chapters) --');
-    const targetType = isSubjectTarget ? 'subject' : 'chapter';
-    const finalChapter = isSubjectTarget ? 'Whole Subject' : chapter;
 
     const trackId = window.tracks.find(t => window.customPrograms[t.id] && window.customPrograms[t.id].some(p => (p.name || p) === progName))?.id;
     if (!trackId) {
@@ -14865,115 +14956,172 @@ window.addMonthlyTarget = function () {
     if (!window.monthlyTargetsDatabase) window.monthlyTargetsDatabase = {};
     if (!window.monthlyTargetsDatabase[targetMonthKey]) window.monthlyTargetsDatabase[targetMonthKey] = [];
 
-    if (isSubjectTarget) {
-        const exists = window.monthlyTargetsDatabase[targetMonthKey].some(t =>
-            t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters')
-        );
-        if (exists) {
-            return showToast("This subject target is already in your monthly targets list.", "error");
-        }
-    } else {
-        const exists = window.monthlyTargetsDatabase[targetMonthKey].some(t =>
-            t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject'
-        );
-        if (exists) {
-            return showToast("This chapter target is already in your monthly targets list.", "error");
-        }
-    }
-
-    let isCompletedBefore = false;
-    let completedAtBefore = null;
-
-    if (isSubjectTarget) {
-        isCompletedBefore = window.isSubjectCompleted ? window.isSubjectCompleted(trackId, subject) : false;
-        completedAtBefore = isCompletedBefore ? new Date().toISOString() : null;
-    } else {
-        const foundTask = window.findTaskChapter(trackId, subject, finalChapter);
-        isCompletedBefore = foundTask ? (foundTask.subTask.completed || false) : false;
-        completedAtBefore = foundTask ? (foundTask.subTask.completedAt || null) : null;
-    }
-
-    window.monthlyTargetsDatabase[targetMonthKey].push({
-        track: trackId,
-        program: progName,
-        subject: subject,
-        chapter: finalChapter,
-        targetType: targetType,
-        completed: isCompletedBefore,
-        completedAt: completedAtBefore,
-        scope: isSubjectTarget ? 'Whole Subject' : scopeVal,
-        totalChapterSize: totalSize
-    });
-
     const weekSelectEl = document.getElementById('mt-select-week-range');
     const selectedWeekKey = weekSelectEl ? weekSelectEl.value : '';
-    let connectedToWeek = false;
-
-    if (selectedWeekKey) {
-        if (!window.weeklyTargetsDatabase) window.weeklyTargetsDatabase = {};
-        if (!window.weeklyTargetsDatabase[selectedWeekKey]) window.weeklyTargetsDatabase[selectedWeekKey] = [];
-
-        const wtList = window.weeklyTargetsDatabase[selectedWeekKey];
-        const wtExists = isSubjectTarget
-            ? wtList.some(t => t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
-            : wtList.some(t => t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject');
-
-        if (!wtExists) {
-            wtList.push({
-                track: trackId,
-                program: progName,
-                subject: subject,
-                chapter: finalChapter,
-                targetType: targetType,
-                completed: isCompletedBefore,
-                completedAt: completedAtBefore,
-                scope: isSubjectTarget ? 'Whole Subject' : scopeVal,
-                totalChapterSize: totalSize
-            });
-            connectedToWeek = true;
-            if (typeof window.renderWeeklyTargets === 'function') window.renderWeeklyTargets();
-            if (typeof window.autoSyncWeeklyToDailyTargets === 'function') window.autoSyncWeeklyToDailyTargets();
-        }
-    }
-
     const daySelectEl = document.getElementById('mt-select-day');
     const selectedDayKey = daySelectEl ? daySelectEl.value : '';
-    let connectedToDay = false;
 
-    if (selectedDayKey) {
-        if (!window.dailyTargetsDatabase) window.dailyTargetsDatabase = {};
-        if (!window.dailyTargetsDatabase[selectedDayKey]) window.dailyTargetsDatabase[selectedDayKey] = [];
+    // Collect targets to add
+    const targetsToAdd = [];
 
-        const dtList = window.dailyTargetsDatabase[selectedDayKey];
-        const dtExists = isSubjectTarget
-            ? dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
-            : dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject');
-
-        if (!dtExists) {
-            dtList.push({
-                track: trackId,
-                program: progName,
-                subject: subject,
-                chapter: finalChapter,
-                targetType: targetType,
-                completed: isCompletedBefore,
-                completedAt: completedAtBefore,
-                scope: isSubjectTarget ? 'Whole Subject' : scopeVal,
-                totalChapterSize: totalSize
-            });
-            connectedToDay = true;
-            if (typeof window.renderDailyTargets === 'function') window.renderDailyTargets();
-        }
+    // 1. Whole Subject
+    const wholeSubCheckbox = document.getElementById('mt-ch-whole-subject');
+    const wholeSubSizeEl = document.getElementById('mt-size-whole-subject');
+    if (wholeSubCheckbox && wholeSubCheckbox.checked) {
+        const totalSize = wholeSubSizeEl && wholeSubSizeEl.value ? parseInt(wholeSubSizeEl.value, 10) : null;
+        targetsToAdd.push({
+            chapter: 'Whole Subject',
+            targetType: 'subject',
+            scope: 'Whole Subject',
+            totalChapterSize: totalSize
+        });
     }
 
-    if (scopeEl) scopeEl.value = 'Whole Chapter';
-    if (sizeEl) sizeEl.value = '';
+    // 2. Individual Chapters
+    const checkedBoxes = document.querySelectorAll('.mt-chapter-checkbox:checked');
+    checkedBoxes.forEach(cb => {
+        const ch = cb.getAttribute('data-chapter');
+        const sizeInput = document.querySelector(`.mt-chapter-size-input[data-chapter="${CSS.escape(ch)}"]`);
+        const totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+        targetsToAdd.push({
+            chapter: ch,
+            targetType: 'chapter',
+            scope: 'Whole Chapter',
+            totalChapterSize: totalSize
+        });
+    });
+
+    if (targetsToAdd.length === 0) {
+        return showToast("Please select at least one chapter or the whole subject (minimum 1 is required).", "error");
+    }
+
+    let addedCount = 0;
+    let skippedDuplicateCount = 0;
+    let connectedToWeek = false;
+    let connectedToDay = false;
+
+    targetsToAdd.forEach(item => {
+        const isSubjectTarget = item.targetType === 'subject';
+        const finalChapter = item.chapter;
+
+        // Duplicate check
+        if (isSubjectTarget) {
+            const exists = window.monthlyTargetsDatabase[targetMonthKey].some(t =>
+                t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters')
+            );
+            if (exists) {
+                skippedDuplicateCount++;
+                return;
+            }
+        } else {
+            const exists = window.monthlyTargetsDatabase[targetMonthKey].some(t =>
+                t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject'
+            );
+            if (exists) {
+                skippedDuplicateCount++;
+                return;
+            }
+        }
+
+        // Baseline completion status
+        let isCompletedBefore = false;
+        let completedAtBefore = null;
+
+        if (isSubjectTarget) {
+            isCompletedBefore = window.isSubjectCompleted ? window.isSubjectCompleted(trackId, subject) : false;
+            completedAtBefore = isCompletedBefore ? new Date().toISOString() : null;
+        } else {
+            const foundTask = window.findTaskChapter(trackId, subject, finalChapter);
+            isCompletedBefore = foundTask ? (foundTask.subTask.completed || false) : false;
+            completedAtBefore = foundTask ? (foundTask.subTask.completedAt || null) : null;
+        }
+
+        window.monthlyTargetsDatabase[targetMonthKey].push({
+            track: trackId,
+            program: progName,
+            subject: subject,
+            chapter: finalChapter,
+            targetType: item.targetType,
+            completed: isCompletedBefore,
+            completedAt: completedAtBefore,
+            scope: item.scope,
+            totalChapterSize: item.totalChapterSize
+        });
+        addedCount++;
+
+        // Auto-connect to Weekly Target if selected
+        if (selectedWeekKey) {
+            if (!window.weeklyTargetsDatabase) window.weeklyTargetsDatabase = {};
+            if (!window.weeklyTargetsDatabase[selectedWeekKey]) window.weeklyTargetsDatabase[selectedWeekKey] = [];
+
+            const wtList = window.weeklyTargetsDatabase[selectedWeekKey];
+            const wtExists = isSubjectTarget
+                ? wtList.some(t => t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
+                : wtList.some(t => t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject');
+
+            if (!wtExists) {
+                wtList.push({
+                    track: trackId,
+                    program: progName,
+                    subject: subject,
+                    chapter: finalChapter,
+                    targetType: item.targetType,
+                    completed: isCompletedBefore,
+                    completedAt: completedAtBefore,
+                    scope: item.scope,
+                    totalChapterSize: item.totalChapterSize
+                });
+                connectedToWeek = true;
+            }
+        }
+
+        // Auto-connect to Daily Target if selected
+        if (selectedDayKey) {
+            if (!window.dailyTargetsDatabase) window.dailyTargetsDatabase = {};
+            if (!window.dailyTargetsDatabase[selectedDayKey]) window.dailyTargetsDatabase[selectedDayKey] = [];
+
+            const dtList = window.dailyTargetsDatabase[selectedDayKey];
+            const dtExists = isSubjectTarget
+                ? dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
+                : dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject');
+
+            if (!dtExists) {
+                dtList.push({
+                    track: trackId,
+                    program: progName,
+                    subject: subject,
+                    chapter: finalChapter,
+                    targetType: item.targetType,
+                    completed: isCompletedBefore,
+                    completedAt: completedAtBefore,
+                    scope: item.scope,
+                    totalChapterSize: item.totalChapterSize
+                });
+                connectedToDay = true;
+            }
+        }
+    });
+
+    if (addedCount === 0) {
+        if (skippedDuplicateCount > 0) {
+            return showToast("Selected target(s) are already in your monthly targets list.", "error");
+        }
+        return showToast("No targets added.", "error");
+    }
+
+    if (connectedToWeek) {
+        if (typeof window.renderWeeklyTargets === 'function') window.renderWeeklyTargets();
+        if (typeof window.autoSyncWeeklyToDailyTargets === 'function') window.autoSyncWeeklyToDailyTargets();
+    }
+    if (connectedToDay) {
+        if (typeof window.renderDailyTargets === 'function') window.renderDailyTargets();
+    }
 
     FirebaseService.saveToCloud();
     renderUI();
     closeModal('add-monthly-target-modal');
 
-    let toastMsg = isSubjectTarget ? "Monthly subject target added!" : "Monthly chapter target added!";
+    let toastMsg = addedCount === 1 ? "1 Monthly target added!" : `${addedCount} Monthly targets added!`;
     if (connectedToWeek && connectedToDay) {
         toastMsg += " (Connected to Weekly & Daily targets)";
     } else if (connectedToWeek) {
@@ -15383,17 +15531,7 @@ window.openEditMonthlyTargetModal = function (idx, monthKey = null) {
     const subSelect = document.getElementById('mt-select-sub');
     if (subSelect) {
         subSelect.value = target.subject;
-        window.updateMonthlyTargetChapterDropdown();
-    }
-
-    const chSelect = document.getElementById('mt-select-ch');
-    if (chSelect) {
-        chSelect.value = (target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters') ? 'Whole Subject' : target.chapter;
-    }
-
-    const sizeInput = document.getElementById('mt-input-size');
-    if (sizeInput) {
-        sizeInput.value = target.totalChapterSize || '';
+        window.updateMonthlyTargetChapterDropdown(target.chapter, target.totalChapterSize);
     }
 
     const targetMonthDate = (monthKey && Utils.parseStart && !isNaN(Utils.parseStart(monthKey).getTime()))
@@ -15413,30 +15551,46 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
 
     const progSelectEl = document.getElementById('mt-select-prog');
     const subSelectEl = document.getElementById('mt-select-sub');
-    const chSelectEl = document.getElementById('mt-select-ch');
-    const sizeEl = document.getElementById('mt-input-size');
 
     const progName = progSelectEl ? progSelectEl.value : '';
     const subject = subSelectEl ? subSelectEl.value : '';
-    let chapter = chSelectEl ? chSelectEl.value : '';
-    const totalSize = sizeEl && sizeEl.value ? parseInt(sizeEl.value, 10) : null;
 
     if (!progName) {
-        return showToast("Please select a Program (minimum 1 target is required).", "error");
+        return showToast("Please select a Program.", "error");
     }
     if (!subject || subject === 'No Subjects') {
-        return showToast("Please select a Subject (minimum 1 target is required).", "error");
+        return showToast("Please select a Subject.", "error");
     }
-    if (!chapter || chapter === 'No Chapters') {
-        return showToast("Please select a Chapter or Whole Subject (minimum 1 target is required).", "error");
-    }
-
-    const isSubjectTarget = (chapter === 'Whole Subject' || chapter === '-- 📚 Whole Subject (All Chapters) --');
-    const targetType = isSubjectTarget ? 'subject' : 'chapter';
-    const finalChapter = isSubjectTarget ? 'Whole Subject' : chapter;
 
     const trackId = window.tracks.find(t => window.customPrograms[t.id] && window.customPrograms[t.id].some(p => (p.name || p) === progName))?.id;
     if (!trackId) return;
+
+    let selectedChapter = '';
+    let selectedType = 'chapter';
+    let selectedSize = null;
+
+    const wholeSub = document.getElementById('mt-ch-whole-subject');
+    const wholeSubSize = document.getElementById('mt-size-whole-subject');
+    if (wholeSub && wholeSub.checked) {
+        selectedChapter = 'Whole Subject';
+        selectedType = 'subject';
+        selectedSize = wholeSubSize && wholeSubSize.value ? parseInt(wholeSubSize.value, 10) : null;
+    } else {
+        const firstChecked = document.querySelector('.mt-chapter-checkbox:checked');
+        if (firstChecked) {
+            selectedChapter = firstChecked.getAttribute('data-chapter');
+            selectedType = 'chapter';
+            const sizeInput = document.querySelector(`.mt-chapter-size-input[data-chapter="${CSS.escape(selectedChapter)}"]`);
+            selectedSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+        }
+    }
+
+    if (!selectedChapter) {
+        return showToast("Please select a chapter or whole subject.", "error");
+    }
+
+    const isSubjectTarget = selectedType === 'subject';
+    const finalChapter = selectedChapter;
 
     if (isSubjectTarget) {
         const exists = window.monthlyTargetsDatabase[monthKey].some((t, i) =>
@@ -15458,9 +15612,9 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
     target.program = progName;
     target.subject = subject;
     target.chapter = finalChapter;
-    target.targetType = targetType;
+    target.targetType = selectedType;
     target.scope = isSubjectTarget ? 'Whole Subject' : (target.scope || 'Whole Chapter');
-    target.totalChapterSize = totalSize;
+    target.totalChapterSize = selectedSize;
 
     const weekSelectEl = document.getElementById('mt-select-week-range');
     const selectedWeekKey = weekSelectEl ? weekSelectEl.value : '';
@@ -15481,11 +15635,11 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
                 program: progName,
                 subject: subject,
                 chapter: finalChapter,
-                targetType: targetType,
+                targetType: selectedType,
                 completed: target.completed,
                 completedAt: target.completedAt,
                 scope: target.scope,
-                totalChapterSize: totalSize
+                totalChapterSize: selectedSize
             });
             connectedToWeek = true;
             if (typeof window.renderWeeklyTargets === 'function') window.renderWeeklyTargets();
@@ -15512,11 +15666,11 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
                 program: progName,
                 subject: subject,
                 chapter: finalChapter,
-                targetType: targetType,
+                targetType: selectedType,
                 completed: target.completed,
                 completedAt: target.completedAt,
                 scope: target.scope,
-                totalChapterSize: totalSize
+                totalChapterSize: selectedSize
             });
             connectedToDay = true;
             if (typeof window.renderDailyTargets === 'function') window.renderDailyTargets();
