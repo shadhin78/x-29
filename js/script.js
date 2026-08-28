@@ -14936,38 +14936,21 @@ window.toggleWeeklyTargetCompletion = function (idx, isCompleted) {
 
 window.navigateWeek = function (mode) {
     const weekSelectEl = document.getElementById('wt-select-week');
-    if (!weekSelectEl) return;
-
-    const presentRange = window.getWeeklyTargetRange();
-    const presentWeekKey = window.formatDateRangeKey(presentRange.start, presentRange.end);
-
-    const pastRange = window.getWeeklyTargetRange(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
-    const pastWeekKey = window.formatDateRangeKey(pastRange.start, pastRange.end);
-
-    const futureRange = window.getWeeklyTargetRange(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
-    const futureWeekKey = window.formatDateRangeKey(futureRange.start, futureRange.end);
-
-    let targetKey = presentWeekKey;
-    if (mode === 'past') targetKey = pastWeekKey;
-    else if (mode === 'future') targetKey = futureWeekKey;
-
-    // Make sure the option exists in the selector
-    let optionExists = false;
-    for (let i = 0; i < weekSelectEl.options.length; i++) {
-        if (weekSelectEl.options[i].value === targetKey) {
-            optionExists = true;
-            break;
-        }
+    if (!window.currentWeeklyTargetsDate) {
+        const selectedWeekKey = weekSelectEl ? weekSelectEl.value : null;
+        window.currentWeeklyTargetsDate = (selectedWeekKey && Utils.parseStart && !isNaN(Utils.parseStart(selectedWeekKey).getTime()))
+            ? Utils.parseStart(selectedWeekKey)
+            : new Date();
     }
 
-    if (!optionExists) {
-        const opt = document.createElement('option');
-        opt.value = targetKey;
-        opt.textContent = targetKey;
-        weekSelectEl.appendChild(opt);
+    if (mode === 'past') {
+        window.currentWeeklyTargetsDate.setDate(window.currentWeeklyTargetsDate.getDate() - 7);
+    } else if (mode === 'future') {
+        window.currentWeeklyTargetsDate.setDate(window.currentWeeklyTargetsDate.getDate() + 7);
+    } else {
+        window.currentWeeklyTargetsDate = new Date();
     }
 
-    weekSelectEl.value = targetKey;
     window.renderWeeklyTargets();
 };
 
@@ -14984,43 +14967,37 @@ window.renderWeeklyTargets = function () {
     const weekSelectEl = document.getElementById('wt-select-week');
     if (!listContainer || !progDropdown || !weekSelectEl) return;
 
-    // 1. Calculate current week range
-    const currentRange = window.getWeeklyTargetRange();
+    if (!window.currentWeeklyTargetsDate) {
+        const currentSelectedWeek = weekSelectEl.value;
+        window.currentWeeklyTargetsDate = (currentSelectedWeek && Utils.parseStart && !isNaN(Utils.parseStart(currentSelectedWeek).getTime()))
+            ? Utils.parseStart(currentSelectedWeek)
+            : new Date();
+    }
+
+    // 1. Calculate active week range & current present week range
+    const activeRange = window.getWeeklyTargetRange(window.currentWeeklyTargetsDate);
+    const activeWeekKey = window.formatDateRangeKey(activeRange.start, activeRange.end);
+
+    const currentRange = window.getWeeklyTargetRange(new Date());
     const currentWeekKey = window.formatDateRangeKey(currentRange.start, currentRange.end);
 
-    // 2. Collect all weeks in database + current week + past/future navigation weeks
+    // 2. Collect all weeks in database + current week + active week
     if (!window.weeklyTargetsDatabase) window.weeklyTargetsDatabase = {};
 
-    const pastRange = window.getWeeklyTargetRange(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
-    const pastWeekKey = window.formatDateRangeKey(pastRange.start, pastRange.end);
-
-    const futureRange = window.getWeeklyTargetRange(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
-    const futureWeekKey = window.formatDateRangeKey(futureRange.start, futureRange.end);
-
     const allWeeksSet = new Set(Object.keys(window.weeklyTargetsDatabase));
-    allWeeksSet.add(pastWeekKey);
     allWeeksSet.add(currentWeekKey);
-    allWeeksSet.add(futureWeekKey);
+    allWeeksSet.add(activeWeekKey);
 
     const allWeeks = Array.from(allWeeksSet).sort((a, b) => {
-        // local helper consolidated
-        // local helper consolidated
-        // local helper consolidated
-        // local helper consolidated
         return Utils.parseStart(b) - Utils.parseStart(a);
     });
 
-    // 3. Update week selector options if count/keys mismatch
-    const currentSelectedWeek = weekSelectEl.value || currentWeekKey;
-    if (weekSelectEl.options.length !== allWeeks.length) {
-        weekSelectEl.innerHTML = '';
-        allWeeks.forEach(wk => {
-            weekSelectEl.innerHTML += `<option value="${wk}">${wk}</option>`;
-        });
-        weekSelectEl.value = allWeeks.includes(currentSelectedWeek) ? currentSelectedWeek : currentWeekKey;
-    }
-
-    const activeWeekKey = weekSelectEl.value;
+    // 3. Update week selector options
+    weekSelectEl.innerHTML = '';
+    allWeeks.forEach(wk => {
+        weekSelectEl.innerHTML += `<option value="${wk}">${wk}</option>`;
+    });
+    weekSelectEl.value = activeWeekKey;
 
     // 4. Update Header displays
     document.getElementById('wt-selected-week-range').textContent = `[ ${activeWeekKey} ]`;
@@ -15035,12 +15012,13 @@ window.renderWeeklyTargets = function () {
     const btnFuture = document.getElementById('wt-btn-future');
 
     const activeClass = "bg-blue-600 text-white shadow";
-    const inactiveClass = "text-slate-650 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600/50";
+    const inactiveClass = "text-slate-650 dark:text-slate-355 hover:bg-slate-200 dark:hover:bg-slate-600/50";
 
     if (btnPast && btnPresent && btnFuture) {
-        btnPast.className = `px-2.5 py-1.5 text-[9px] font-black rounded-lg transition-all ${activeWeekKey === pastWeekKey ? activeClass : inactiveClass}`;
+        const startDiff = activeRange.start.getTime() - currentRange.start.getTime();
         btnPresent.className = `px-2.5 py-1.5 text-[9px] font-black rounded-lg transition-all ${activeWeekKey === currentWeekKey ? activeClass : inactiveClass}`;
-        btnFuture.className = `px-2.5 py-1.5 text-[9px] font-black rounded-lg transition-all ${activeWeekKey === futureWeekKey ? activeClass : inactiveClass}`;
+        btnPast.className = `px-2.5 py-1.5 text-[9px] font-black rounded-lg transition-all ${startDiff < 0 ? activeClass : inactiveClass} flex items-center space-x-1`;
+        btnFuture.className = `px-2.5 py-1.5 text-[9px] font-black rounded-lg transition-all ${startDiff > 0 ? activeClass : inactiveClass} flex items-center space-x-1`;
     }
 
     // 5. Keep add form container visible for all weeks
@@ -16064,6 +16042,28 @@ window.renderDailyTargets = function () {
     if (dateDisplay) {
         const weekday = window.currentDailyTargetsDate.toLocaleDateString('en-GB', { weekday: 'long' });
         dateDisplay.textContent = `[ ${weekday}, ${targetDateKey} ]`;
+    }
+
+    // Update Day Navigation Buttons active states
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+
+    const selectedTargetDate = new Date(window.currentDailyTargetsDate);
+    selectedTargetDate.setHours(0, 0, 0, 0);
+
+    const diffTime = selectedTargetDate.getTime() - todayDate.getTime();
+
+    const dtBtnPast = document.getElementById('dt-btn-past');
+    const dtBtnPresent = document.getElementById('dt-btn-present');
+    const dtBtnFuture = document.getElementById('dt-btn-future');
+
+    const dtActiveClass = "bg-blue-600 text-white shadow";
+    const dtInactiveClass = "text-slate-650 dark:text-slate-355 hover:bg-slate-200 dark:hover:bg-slate-600/50";
+
+    if (dtBtnPast && dtBtnPresent && dtBtnFuture) {
+        dtBtnPast.className = `px-2.5 py-1.5 text-[9px] font-black rounded-lg transition-all ${diffTime < 0 ? dtActiveClass : dtInactiveClass}`;
+        dtBtnPresent.className = `px-2.5 py-1.5 text-[9px] font-black rounded-lg transition-all ${diffTime === 0 ? dtActiveClass : dtInactiveClass}`;
+        dtBtnFuture.className = `px-2.5 py-1.5 text-[9px] font-black rounded-lg transition-all ${diffTime > 0 ? dtActiveClass : dtInactiveClass}`;
     }
 
     // Populate Weekly Targets dropdown for this date's week
