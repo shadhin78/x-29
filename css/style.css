@@ -1149,6 +1149,16 @@ div[id^="dt-log-"] .overflow-y-auto::-webkit-scrollbar-thumb {
     .mt-daily-size-input {
         font-size: 13px; /* Prevents auto-zoom on iOS Safari */
     }
+    .mt-chapter-row {
+        overflow: hidden !important;
+    }
+    .mt-chapter-week-select,
+    .mt-size-whole-subject-week {
+        min-width: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
     #mt-progs-container,
     #mt-subjects-container,
     #mt-chapters-container,

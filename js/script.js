@@ -14951,7 +14951,7 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                 });
 
                 chaptersHtml += `
-                    <div class="mt-chapter-row flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 bg-white dark:bg-slate-800/90 transition-all hover:border-indigo-400/60 dark:hover:border-indigo-500/60 hover:shadow-xs gap-2"
+                    <div class="mt-chapter-row flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 bg-white dark:bg-slate-800/90 transition-all hover:border-indigo-400/60 dark:hover:border-indigo-500/60 hover:shadow-xs gap-2 overflow-hidden"
                          data-track="${trackId}" data-program="${progName}" data-chapter-name="${subject} ${ch}" data-subject="${subject}">
                         <label class="flex items-center gap-2.5 sm:gap-3 cursor-pointer flex-1 min-w-0">
                             <input type="checkbox" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" data-chapter="${ch}" class="mt-chapter-checkbox form-checkbox h-5 w-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer transition-all shrink-0"
@@ -14961,16 +14961,16 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                                 <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate block">${ch}${stars}</span>
                             </div>
                         </label>
-                        <div class="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start shrink-0 pt-0.5 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-700/40">
+                        <div class="flex items-center gap-2 w-full sm:w-auto min-w-0 shrink-0 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-700/40">
                             <!-- Week Picker per chapter -->
                             <select data-track="${trackId}" data-program="${progName}" data-subject="${subject}" data-chapter="${ch}"
-                                class="mt-chapter-week-select bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-[11px] text-indigo-700 dark:text-indigo-300 font-bold outline-none focus:ring-2 focus:ring-indigo-500 flex-1 sm:flex-none sm:w-[135px] truncate shadow-xs h-9"
+                                class="mt-chapter-week-select bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-[11px] text-indigo-700 dark:text-indigo-300 font-bold outline-none focus:ring-2 focus:ring-indigo-500 flex-1 min-w-0 sm:flex-none sm:w-[135px] truncate shadow-xs h-9"
                                 onchange="window.handleMonthlyChapterWeekSelectChange('${CSS.escape(subject)}', '${CSS.escape(ch)}', this.value, '${CSS.escape(trackId)}', '${CSS.escape(progName)}');">
                                 <option value="">-- No Week --</option>
                                 ${chWeeksOptionsHtml}
                             </select>
                             <!-- Size Input per chapter -->
-                            <input type="number" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" data-chapter="${ch}" class="mt-chapter-size-input w-20 sm:w-22 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-bold outline-none shadow-inner focus:ring-2 focus:ring-indigo-500 transition-all text-center h-9 shrink-0"
+                            <input type="number" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" data-chapter="${ch}" class="mt-chapter-size-input w-16 sm:w-20 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-bold outline-none shadow-inner focus:ring-2 focus:ring-indigo-500 transition-all text-center h-9 shrink-0"
                                 placeholder="Size" min="1"
                                 oninput="window.updateMonthlyTargetPageSummary();"
                                 value="${isChPreselected && preselectSize ? preselectSize : ''}">
@@ -15009,7 +15009,7 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                 </div>
 
                 <!-- Whole Subject Checkbox Row -->
-                <div class="mt-chapter-row flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-xl border border-purple-200/80 dark:border-purple-800/60 bg-purple-50/60 dark:bg-purple-950/30 transition-all hover:bg-purple-50 dark:hover:bg-purple-950/50 shadow-xs gap-2"
+                <div class="mt-chapter-row flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-xl border border-purple-200/80 dark:border-purple-800/60 bg-purple-50/60 dark:bg-purple-950/30 transition-all hover:bg-purple-50 dark:hover:bg-purple-950/50 shadow-xs gap-2 overflow-hidden"
                      data-track="${trackId}" data-program="${progName}" data-chapter-name="${subject} Whole Subject All Chapters" data-subject="${subject}">
                     <label class="flex items-center gap-2.5 sm:gap-3 cursor-pointer flex-1 min-w-0">
                         <input type="checkbox" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" class="mt-ch-whole-subject form-checkbox h-5 w-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer transition-all shrink-0"
@@ -15020,10 +15020,10 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                             <span class="text-[8.5px] text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider block">Target entirety of ${subject} (${progName})</span>
                         </div>
                     </label>
-                    <div class="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-purple-200/40 dark:border-purple-800/40">
+                    <div class="flex items-center gap-2 w-full sm:w-auto min-w-0 shrink-0 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-purple-200/40 dark:border-purple-800/40">
                         <!-- Week Picker for Whole Subject -->
                         <select data-track="${trackId}" data-program="${progName}" data-subject="${subject}"
-                            class="mt-size-whole-subject-week bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/60 rounded-xl px-2 py-1.5 text-[11px] text-purple-700 dark:text-purple-300 font-bold outline-none focus:ring-2 focus:ring-purple-500 flex-1 sm:flex-none sm:w-[135px] truncate shadow-xs h-9"
+                            class="mt-size-whole-subject-week bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/60 rounded-xl px-2 py-1.5 text-[11px] text-purple-700 dark:text-purple-300 font-bold outline-none focus:ring-2 focus:ring-purple-500 flex-1 min-w-0 sm:flex-none sm:w-[135px] truncate shadow-xs h-9"
                             onchange="window.handleMonthlyChapterWeekSelectChange('${CSS.escape(subject)}', 'Whole Subject', this.value, '${CSS.escape(trackId)}', '${CSS.escape(progName)}');">
                             <option value="">-- No Week --</option>
                             ${wholeSubWeeksOptionsHtml}
@@ -15032,7 +15032,7 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                         <input type="number" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" placeholder="Size" min="1"
                             oninput="window.updateMonthlyTargetPageSummary();"
                             value="${isWholeSubPreselected && preselectSize ? preselectSize : ''}"
-                            class="mt-size-whole-subject w-20 sm:w-22 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/60 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none shadow-sm focus:ring-2 focus:ring-purple-500 transition-all text-center h-9 shrink-0">
+                            class="mt-size-whole-subject w-16 sm:w-20 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/60 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none shadow-sm focus:ring-2 focus:ring-purple-500 transition-all text-center h-9 shrink-0">
                     </div>
                 </div>
 
