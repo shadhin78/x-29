@@ -22544,9 +22544,9 @@ window.setExamFilter = function(filter) {
         const btn = document.getElementById(`btn-exam-filter-${f}`);
         if (btn) {
             if (f === filter) {
-                btn.className = "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm transition-all";
+                btn.className = "justify-center py-2 px-2.5 sm:px-3 sm:py-1.5 rounded-lg text-[10px] sm:text-[11px] font-black uppercase tracking-wider bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm transition-all min-h-[34px] flex items-center";
             } else {
-                btn.className = "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-all";
+                btn.className = "justify-center py-2 px-2.5 sm:px-3 sm:py-1.5 rounded-lg text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-all min-h-[34px] flex items-center";
             }
         }
     });
@@ -23146,7 +23146,7 @@ window.renderExamRoutine = function() {
 
     if (sessions.length === 0) {
         container.innerHTML = `
-            <div class="py-12 text-center bg-slate-50 dark:bg-slate-800/40 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700 w-full col-span-full">
+            <div class="py-10 sm:py-12 px-4 text-center bg-slate-50 dark:bg-slate-800/40 rounded-2xl sm:rounded-3xl border border-dashed border-slate-200 dark:border-slate-700 w-full col-span-full">
                 <div class="w-12 h-12 mx-auto mb-3 text-slate-400 flex items-center justify-center bg-white dark:bg-slate-800 rounded-2xl shadow-sm">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01m-.01 4h.01"></path></svg>
                 </div>
@@ -23184,11 +23184,11 @@ window.renderExamRoutine = function() {
 
         let dateRangeBadge = '';
         if (session.startDate && session.endDate) {
-            dateRangeBadge = `<span class="text-xs font-mono text-slate-400 font-bold">(${formatSessionDate(session.startDate)} - ${formatSessionDate(session.endDate)})</span>`;
+            dateRangeBadge = `<span class="text-[11px] sm:text-xs font-mono text-slate-400 font-bold break-all">(${formatSessionDate(session.startDate)} - ${formatSessionDate(session.endDate)})</span>`;
         } else if (session.startDate) {
-            dateRangeBadge = `<span class="text-xs font-mono text-slate-400 font-bold">(${formatSessionDate(session.startDate)})</span>`;
+            dateRangeBadge = `<span class="text-[11px] sm:text-xs font-mono text-slate-400 font-bold break-all">(${formatSessionDate(session.startDate)})</span>`;
         } else if (session.endDate) {
-            dateRangeBadge = `<span class="text-xs font-mono text-slate-400 font-bold">(Until ${formatSessionDate(session.endDate)})</span>`;
+            dateRangeBadge = `<span class="text-[11px] sm:text-xs font-mono text-slate-400 font-bold break-all">(Until ${formatSessionDate(session.endDate)})</span>`;
         }
 
         let examsGridHtml = '';
@@ -23217,16 +23217,16 @@ window.renderExamRoutine = function() {
 
                 let countdownBadge = '';
                 if (isCompleted) {
-                    countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">✓ Completed</span>`;
+                    countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shrink-0">✓ Completed</span>`;
                 } else if (!rem || isNaN(exTimeMs)) {
-                    countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-700/60 text-slate-500">No Date</span>`;
+                    countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-700/60 text-slate-500 shrink-0">No Date</span>`;
                 } else if (rem.isPast && rem.diffMs > -7200000) {
-                    countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500 text-white animate-pulse">● Live Exam Today</span>`;
+                    countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500 text-white animate-pulse shrink-0">● Live Exam Today</span>`;
                 } else if (!rem.isPast) {
                     const countdownStr = window.formatExamCountdownString(rem);
-                    countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1.5"><svg class="w-3 h-3 text-rose-500 animate-spin" style="animation-duration: 4s;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span id="exam-card-cd-${ex.id}" data-exam-target-time="${exTimeMs}">${countdownStr}</span></span>`;
+                    countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 inline-flex items-center gap-1.5 min-w-0 max-w-[85%] truncate"><svg class="w-3 h-3 text-rose-500 animate-spin shrink-0" style="animation-duration: 4s;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span id="exam-card-cd-${ex.id}" data-exam-target-time="${exTimeMs}" class="truncate">${countdownStr}</span></span>`;
                 } else {
-                    countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-700/60 text-slate-500">Ended</span>`;
+                    countdownBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-700/60 text-slate-500 shrink-0">Ended</span>`;
                 }
 
                 const subjColor = typeof getSubjectColor === 'function' ? getSubjectColor(ex.subject || 'General') : '#ef4444';
@@ -23236,16 +23236,16 @@ window.renderExamRoutine = function() {
                 examsGridHtml += `
                     <div class="bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-4 sm:p-5 hover:shadow-lg transition-all duration-300 flex flex-col justify-between group ${isCompleted ? 'opacity-70' : ''}">
                         <div>
-                            <div class="flex items-center justify-between gap-2 mb-3">
+                            <div class="flex items-center justify-between gap-2 mb-2.5 sm:mb-3">
                                 ${countdownBadge}
                                 <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" style="background-color: ${subjColor}" title="Subject Accent"></span>
                             </div>
 
-                            <h4 class="text-base sm:text-lg font-black text-slate-800 dark:text-white leading-snug group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                            <h4 class="text-base sm:text-lg font-black text-slate-800 dark:text-white leading-snug group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors break-words">
                                 ${ex.subject || 'General Subject'}
                             </h4>
 
-                            <div class="mt-3 space-y-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                            <div class="mt-2.5 sm:mt-3 space-y-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
                                 <div class="flex items-center gap-2">
                                     <svg class="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                     <span>${dtFormatted} at ${ex.time || '00:00'}</span>
@@ -23253,15 +23253,15 @@ window.renderExamRoutine = function() {
                             </div>
                         </div>
 
-                        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2">
-                            <button onclick="window.toggleExamStatus('${ex.id}')" class="text-xs font-bold px-3 py-1.5 rounded-xl transition-all ${isCompleted ? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300' : 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100'}">
+                        <div class="mt-3.5 sm:mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2">
+                            <button onclick="window.toggleExamStatus('${ex.id}')" class="flex-1 sm:flex-initial text-xs font-bold px-3 py-2 sm:py-1.5 rounded-xl transition-all min-h-[36px] flex items-center justify-center ${isCompleted ? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300' : 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100'}">
                                 ${isCompleted ? 'Mark Pending' : '✓ Mark Complete'}
                             </button>
-                            <div class="flex items-center gap-1">
-                                <button onclick="window.openExamModal('${ex.id}', '${session.id}')" class="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all" title="Edit Subject">
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button onclick="window.openExamModal('${ex.id}', '${session.id}')" class="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all" title="Edit Subject">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                 </button>
-                                <button onclick="window.deleteExam('${ex.id}')" class="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-all" title="Delete Subject">
+                                <button onclick="window.deleteExam('${ex.id}')" class="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-all" title="Delete Subject">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                 </button>
                             </div>
@@ -23272,46 +23272,46 @@ window.renderExamRoutine = function() {
         }
 
         blocksHtml += `
-            <div class="bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-700/70 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 w-full">
+            <div class="bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-700/70 rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-6 shadow-sm space-y-3.5 sm:space-y-4 w-full">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-slate-200/60 dark:border-slate-700/60">
-                    <div class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-3 min-w-0">
                         <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center font-black text-lg border border-rose-500/20 shadow-sm shrink-0">
                             ${sessionIcon}
                         </div>
-                        <div>
-                            <h4 class="text-base sm:text-lg font-black text-slate-800 dark:text-white leading-tight flex flex-wrap items-center gap-2">
+                        <div class="min-w-0">
+                            <h4 class="text-base sm:text-lg font-black text-slate-800 dark:text-white leading-tight flex flex-wrap items-center gap-1.5 sm:gap-2 break-words">
                                 <span>${sessionDisplayName}</span>
                                 ${dateRangeBadge}
                             </h4>
-                            <div class="flex items-center gap-2 mt-1">
-                                <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60">
+                            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1">
+                                <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60 shrink-0">
                                     ${upcomingCount} Upcoming
                                 </span>
-                                <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
+                                <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60 shrink-0">
                                     ${completedCount} Completed
                                 </span>
-                                <span class="text-[10px] font-bold text-slate-400">
+                                <span class="text-[10px] font-bold text-slate-400 shrink-0">
                                     (${totalCount} Total Exam${totalCount === 1 ? '' : 's'})
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2 self-start sm:self-auto">
-                        <button onclick="window.openSessionModal('${session.id}')" class="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all" title="Edit Session">
+                    <div class="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-end sm:justify-start pt-2 sm:pt-0 border-t border-slate-200/40 dark:border-slate-700/40 sm:border-t-0">
+                        <button onclick="window.openSessionModal('${session.id}')" class="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl bg-white/60 dark:bg-slate-800/60 sm:bg-transparent border border-slate-200/40 dark:border-slate-700/40 sm:border-0 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all" title="Edit Session">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                         </button>
-                        <button onclick="window.deleteSession('${session.id}')" class="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-all" title="Delete Session">
+                        <button onclick="window.deleteSession('${session.id}')" class="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-xl bg-white/60 dark:bg-slate-800/60 sm:bg-transparent border border-slate-200/40 dark:border-slate-700/40 sm:border-0 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-all" title="Delete Session">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         </button>
-                        <button onclick="window.openExamModal(null, '${session.id}')" class="bg-rose-600 hover:bg-rose-700 text-white font-black text-[11px] uppercase tracking-wider px-3.5 py-2 rounded-xl transition-all shadow-sm active:scale-95 flex items-center gap-1.5">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
-                            Add Subject
+                        <button onclick="window.openExamModal(null, '${session.id}')" class="flex-1 sm:flex-initial bg-rose-600 hover:bg-rose-700 text-white font-black text-[11px] uppercase tracking-wider px-3.5 py-2 rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5 min-h-[36px]">
+                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                            <span>Add Subject</span>
                         </button>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 w-full">
                     ${examsGridHtml}
                 </div>
             </div>
