@@ -650,11 +650,6 @@ select optgroup {
     border-radius: 4px;
 }
 
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
 
 /* ===== Chronograph Clock Flat "Painted On Wall" Theme Styling ===== */
 :root {
