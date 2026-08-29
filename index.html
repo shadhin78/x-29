@@ -2064,7 +2064,7 @@
                                         </svg>
                                         <span>Targets Database</span>
                                     </button>
-                                    <button onclick="window.openAddMonthlyTargetModal()"
+                                    <button onclick="window.openAddMonthlyTargetPage()"
                                         class="flex items-center justify-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest px-3 py-2.5 rounded-lg transition-colors shadow-md shadow-emerald-500/10 active:scale-95 shrink-0"
                                         title="Add Monthly Target">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3448,6 +3448,345 @@
                             <button type="submit" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-md transition-all active:scale-95">Save Exam Routine</button>
                         </div>
                     </form>
+                </div>
+            </div>
+
+            <!-- Page: Monthly Target Setup Studio -->
+            <div id="page-monthly-target-setup" class="hidden space-y-6 md:space-y-8 animate-page-enter">
+                <!-- Page Navigation & Action Header -->
+                <div class="bg-white dark:bg-slate-800 p-5 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl md:rounded-[2.5rem] border border-slate-200/50 dark:border-slate-700/50 shadow-sm space-y-5">
+                    <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-slate-100 dark:border-slate-700/60 pb-5">
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-4 w-full xl:w-auto">
+                            <!-- Back Button -->
+                            <button type="button" onclick="window.closeMonthlyTargetPage()"
+                                class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-700/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-650 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 font-black text-xs transition-all active:scale-95 border border-slate-200/70 dark:border-slate-600/50 shadow-sm shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                                </svg>
+                                <span>Back to Daily Actions</span>
+                            </button>
+
+                            <div class="flex items-center space-x-3.5">
+                                <div class="p-3 bg-gradient-to-br from-indigo-50 to-indigo-100/70 dark:from-indigo-950/60 dark:to-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl border border-indigo-200/60 dark:border-indigo-800/50 shadow-sm">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h2 id="mt-page-title" class="text-lg sm:text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-tight">Add Monthly Target</h2>
+                                        <span id="mt-page-mode-badge" class="hidden sm:inline-block text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">Target Setup</span>
+                                    </div>
+                                    <p id="mt-page-subtitle" class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
+                                        Configure program, subject, chapter breakdown, sizes, and weekly/daily target synchronization
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Top Action Controls -->
+                        <div class="flex items-center gap-2.5 w-full xl:w-auto justify-end flex-wrap">
+                            <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 text-xs font-black tracking-wider uppercase shadow-inner shrink-0">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <span id="mt-page-month-badge">[ Target Month ]</span>
+                            </div>
+
+                            <button type="button" onclick="window.closeMonthlyTargetPage()"
+                                class="px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-650 rounded-xl text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 active:scale-95 transition-all shadow-sm">
+                                Cancel
+                            </button>
+
+                            <button type="button" id="mt-btn-save-top" onclick="window.addMonthlyTarget()"
+                                class="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all shadow-md shadow-indigo-500/20 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span>Add Target</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Live Summary Metrics Row -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                        <div class="bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800/80">
+                            <span class="block text-[8.5px] font-black uppercase tracking-wider text-slate-400">Target Month Range</span>
+                            <span id="mt-summary-month-display" class="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200 truncate block mt-0.5">--</span>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800/80">
+                            <span class="block text-[8.5px] font-black uppercase tracking-wider text-slate-400">Selected Subjects</span>
+                            <div class="flex items-center gap-1.5 mt-0.5 min-w-0">
+                                <span id="mt-summary-subject-display" class="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200 truncate">0 Selected</span>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800/80">
+                            <span class="block text-[8.5px] font-black uppercase tracking-wider text-slate-400">Selected Targets</span>
+                            <span id="mt-summary-target-count" class="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 block mt-0.5">0 Targets Selected</span>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800/80">
+                            <span class="block text-[8.5px] font-black uppercase tracking-wider text-slate-400">Total Page Allocation</span>
+                            <span id="mt-summary-total-size" class="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 block mt-0.5">0 Pages / Units</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Configuration Workspace Studio (Two-Column Layout) -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    <!-- Left Column: Target Hierarchy & Cascade Options (5 Cols) -->
+                    <div class="lg:col-span-5 space-y-6">
+                        <!-- Card 1: Hierarchy (Program & Multi-Subject Selection) -->
+                        <div class="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm space-y-5">
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider">Target Hierarchy</h3>
+                                        <p class="text-[10px] text-slate-400 font-bold">Select program track & syllabus subjects</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                                        <span>Program Track</span>
+                                        <span class="text-rose-500 font-black">*</span>
+                                    </label>
+                                    <select id="mt-select-prog" onchange="window.updateMonthlyTargetSubjectDropdown()"
+                                        class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none w-full shadow-inner transition-all">
+                                    </select>
+                                </div>
+
+                                <div class="flex flex-col gap-1.5 relative">
+                                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                                        <span>Syllabus Subjects</span>
+                                        <span class="text-rose-500 font-black">*</span>
+                                    </label>
+
+                                    <!-- Dropdown Trigger Button -->
+                                    <button type="button" id="mt-subjects-dropdown-btn" onclick="window.toggleMonthlySubjectsDropdown()"
+                                        class="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all text-left shadow-xs focus:ring-2 focus:ring-indigo-500 outline-none group cursor-pointer">
+                                        <div class="flex items-center gap-2.5 min-w-0">
+                                            <div class="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 shrink-0">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                                </svg>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <span id="mt-subjects-dropdown-label" class="text-xs sm:text-sm font-bold text-slate-400 dark:text-slate-500 truncate block">Select Subjects...</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2 shrink-0">
+                                            <span id="mt-subjects-count-badge" class="text-[9px] font-black text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/50 dark:border-indigo-800/50">0 Selected</span>
+                                            <svg id="mt-subjects-dropdown-chevron" class="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </div>
+                                    </button>
+
+                                    <!-- Collapsible Subjects Dropdown Menu -->
+                                    <div id="mt-subjects-dropdown-menu" class="hidden p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-md space-y-2.5 transition-all">
+                                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">Choose Subjects</span>
+                                            <div class="flex items-center gap-1">
+                                                <button type="button" onclick="window.toggleAllMonthlySubjects(true)"
+                                                    class="text-[9px] font-black text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 px-2 py-0.5 rounded border border-indigo-200/50 dark:border-indigo-800/50 transition-all active:scale-95">Select All</button>
+                                                <button type="button" onclick="window.toggleAllMonthlySubjects(false)"
+                                                    class="text-[9px] font-black text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 transition-all active:scale-95">Clear</button>
+                                            </div>
+                                        </div>
+                                        <div id="mt-subjects-container" class="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                                            <!-- Dynamic Subject Cards loaded via JS -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: Daily Target Schedule & Multi-Day Fraction Studio -->
+                        <div id="mt-daily-allocation-card" class="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm space-y-4">
+                            <!-- Card Header -->
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="p-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider">Daily Target Allocator</h3>
+                                        <p class="text-[10px] text-slate-400 font-bold">Fraction & multi-day scheduling from total chapter size</p>
+                                    </div>
+                                </div>
+                                <span id="mt-daily-allocation-count-badge" class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">0 Scheduled</span>
+                            </div>
+
+                            <!-- Bulk Daily Scheduling Toolbar -->
+                            <div class="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-2.5">
+                                <div class="flex items-center justify-between gap-1 flex-wrap">
+                                    <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                                        ⚡ Quick Daily Actions:
+                                    </span>
+                                    <div class="flex items-center gap-1.5">
+                                        <button type="button" onclick="window.autoSpreadAllChaptersAcrossDays('month')"
+                                            class="px-2 py-1 bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg text-[9px] font-bold border border-emerald-200/60 dark:border-emerald-800/60 transition-all active:scale-95 shadow-xs"
+                                            title="Auto-spread all selected chapters sequentially across active month days">
+                                            ⚡ Spread Across Month
+                                        </button>
+                                        <button type="button" onclick="window.clearAllDailyAllocations()"
+                                            class="px-2 py-1 bg-white dark:bg-slate-800 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg text-[9px] font-bold border border-slate-200 dark:border-slate-700 transition-all active:scale-95 shadow-xs">
+                                            Clear All
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Set All to 1 Day helper -->
+                                <div class="flex items-center gap-1.5">
+                                    <select id="mt-bulk-assign-day-select"
+                                        class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-[11px] text-slate-900 dark:text-white font-bold outline-none shadow-sm focus:ring-2 focus:ring-emerald-500 flex-1 min-w-0 truncate">
+                                        <option value="">-- Choose Date for All Chapters --</option>
+                                    </select>
+                                    <button type="button" onclick="window.applyBulkDayToAllChapters()"
+                                        class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm shrink-0">
+                                        Set Date
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Chapters Daily Allocations Dynamic Container -->
+                            <div id="mt-daily-allocations-container" class="space-y-3 max-h-[380px] overflow-y-auto custom-scrollbar pr-1">
+                                <!-- Rendered dynamically by window.renderMonthlyTargetDailyAllocations() -->
+                            </div>
+
+                            <!-- Backward Compatibility hidden inputs if any -->
+                            <div class="hidden">
+                                <select id="mt-select-week-range"></select>
+                                <select id="mt-select-day"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Target Scope, Chapter Selection & Sizing Studio (7 Cols) -->
+                    <div class="lg:col-span-7 space-y-6">
+                        <div class="bg-white dark:bg-slate-800 p-5 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm space-y-5">
+                            <!-- Card Header -->
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-700/60 pb-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="p-2 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider">Chapters & Scope Studio</h3>
+                                        <p class="text-[10px] text-slate-400 font-bold">Select individual chapters or target whole subject with custom page sizes</p>
+                                    </div>
+                                </div>
+
+                                <!-- Selection Action Pills -->
+                                <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                    <button type="button" onclick="window.toggleAllMonthlyChapters(true)"
+                                        class="text-[9.5px] font-black text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-950/60 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-800/60 transition-all active:scale-95">Select All</button>
+                                    <button type="button" onclick="window.toggleAllMonthlyChapters(false)"
+                                        class="text-[9.5px] font-black text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-750 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-750 border border-slate-200/60 dark:border-slate-700 transition-all active:scale-95">Clear</button>
+                                </div>
+                            </div>
+
+                            <!-- Search & Filter Bar + Bulk Tools (Size & Weekly Assignment) -->
+                            <div class="space-y-3">
+                                <!-- Chapter Search Filter -->
+                                <div class="relative">
+                                    <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                    <input type="text" id="mt-chapter-search-input" oninput="window.filterMonthlyTargetChapters(this.value)"
+                                        placeholder="Search chapters by keyword..."
+                                        class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-slate-900 dark:text-white font-bold outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner transition-all" />
+                                </div>
+
+                                <!-- Bulk Tools Grid (Size & Week Range Assignment) -->
+                                <div class="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+                                    <!-- 1. Bulk Size Helper Bar -->
+                                    <div class="flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 shrink-0">Bulk Size:</span>
+                                            <input type="number" id="mt-bulk-size-input" placeholder="e.g. 15" min="1"
+                                                class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-900 dark:text-white font-bold outline-none w-16 shadow-sm focus:ring-2 focus:ring-indigo-500" />
+                                            <!-- Presets -->
+                                            <div class="flex items-center gap-1">
+                                                <button type="button" onclick="window.setBulkSizePreset(10)" class="px-1.5 py-1 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 rounded text-[9px] font-bold border border-slate-200 dark:border-slate-700">+10</button>
+                                                <button type="button" onclick="window.setBulkSizePreset(20)" class="px-1.5 py-1 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 rounded text-[9px] font-bold border border-slate-200 dark:border-slate-700">+20</button>
+                                                <button type="button" onclick="window.setBulkSizePreset(30)" class="px-1.5 py-1 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 rounded text-[9px] font-bold border border-slate-200 dark:border-slate-700">+30</button>
+                                                <button type="button" onclick="window.setBulkSizePreset(50)" class="px-1.5 py-1 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 rounded text-[9px] font-bold border border-slate-200 dark:border-slate-700">+50</button>
+                                            </div>
+                                        </div>
+                                        <button type="button" onclick="window.applyBulkSizeToMonthlyChapters()"
+                                            class="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 border border-indigo-200/50 dark:border-indigo-700/50 shadow-sm">
+                                            Apply Size
+                                        </button>
+                                    </div>
+
+                                    <!-- 2. Bulk Weekly Assignment Tool -->
+                                    <div class="flex flex-wrap items-center justify-between gap-2 p-3 bg-indigo-50/50 dark:bg-indigo-950/25 rounded-2xl border border-indigo-200/60 dark:border-indigo-800/50">
+                                        <div class="flex items-center gap-2 flex-1 min-w-0">
+                                            <span class="text-[9px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 shrink-0">📅 Bulk Week:</span>
+                                            <select id="mt-bulk-week-select"
+                                                class="bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800/60 rounded-lg px-2 py-1 text-[11px] text-slate-900 dark:text-white font-bold outline-none shadow-sm focus:ring-2 focus:ring-indigo-500 flex-1 min-w-0 truncate">
+                                                <option value="">-- No Week --</option>
+                                            </select>
+                                        </div>
+                                        <div class="flex items-center gap-1 shrink-0">
+                                            <button type="button" onclick="window.applyBulkWeekToMonthlyChapters()"
+                                                class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm">
+                                                Apply Week
+                                            </button>
+                                            <button type="button" onclick="window.distributeChaptersAcrossWeeks()"
+                                                class="px-2 py-1 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 rounded-lg text-[9px] font-bold border border-indigo-200 dark:border-indigo-700 transition-all active:scale-95 shadow-xs"
+                                                title="Evenly cycle selected chapters across available weeks of the month">
+                                                ⚡ Distribute W1-W4
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Chapters Checkbox and Size List Container -->
+                            <div id="mt-chapters-container"
+                                class="max-h-[500px] overflow-y-auto space-y-2 p-3 rounded-2xl bg-slate-50/80 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-700/60 custom-scrollbar">
+                                <!-- Populated dynamically via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Scope Metadata (Hidden input) -->
+                        <input type="hidden" id="mt-target-scope" value="Whole Chapter" />
+
+                        <!-- Bottom Sticky Action Footer -->
+                        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl sm:rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div class="text-xs font-bold text-slate-500 dark:text-slate-400" id="mt-bottom-summary-text">
+                                Ready to configure monthly target.
+                            </div>
+                            <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                                <button type="button" onclick="window.closeMonthlyTargetPage()"
+                                    class="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-650 rounded-xl text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 active:scale-95 transition-all shadow-sm">
+                                    Cancel
+                                </button>
+                                <button type="button" id="mt-btn-save-bottom" onclick="window.addMonthlyTarget()"
+                                    class="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all shadow-md shadow-indigo-500/20 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span>Add Target</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -6619,118 +6958,7 @@
             </div>
         </div>
 
-        <!-- Add Monthly Target Modal -->
-        <div id="add-monthly-target-modal"
-            class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 sm:p-6 transition-all duration-300">
-            <div id="mtm-backdrop"
-                class="fixed inset-0 bg-slate-900/80 backdrop-blur-xl opacity-0 transition-opacity duration-300"
-                onclick="closeModal('add-monthly-target-modal')"></div>
-            <div id="mtm-content"
-                class="relative bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-lg border border-slate-200/50 dark:border-slate-700/50 transform scale-95 opacity-0 translate-y-4 transition-all duration-300 mx-4 z-10 flex flex-col">
-                <div
-                    class="flex justify-between items-center mb-6 border-b border-slate-100 dark:border-slate-700/60 pb-4 shrink-0">
-                    <div class="flex items-center space-x-3">
-                        <div class="p-2.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <h2 class="text-xl font-black text-slate-800 dark:text-slate-100">Add Monthly Target</h2>
-                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Select a
-                                chapter and specify target scope</p>
-                        </div>
-                    </div>
-                    <button onclick="closeModal('add-monthly-target-modal')"
-                        class="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl hover:rotate-90 transition-transform active:scale-95">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
 
-                <div class="space-y-4 my-2 overflow-y-auto max-h-[60vh] pr-1">
-                    <div class="flex flex-col gap-2">
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Program</label>
-                        <select id="mt-select-prog" onchange="window.updateMonthlyTargetSubjectDropdown()"
-                            class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none w-full shadow-inner">
-                        </select>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label
-                            class="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
-                            Subject
-                            <span id="mt-sub-color-dot" class="inline-block w-2 h-2 rounded-full hidden"></span>
-                        </label>
-                        <select id="mt-select-sub" onchange="window.updateMonthlyTargetChapterDropdown()"
-                            class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none w-full shadow-inner">
-                        </select>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <div class="flex items-center justify-between">
-                            <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Chapters & Sizes</label>
-                            <div class="flex items-center gap-1.5">
-                                <button type="button" onclick="window.toggleAllMonthlyChapters(true)"
-                                    class="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40">Select All</button>
-                                <span class="text-slate-300 dark:text-slate-600 text-[9px]">•</span>
-                                <button type="button" onclick="window.toggleAllMonthlyChapters(false)"
-                                    class="text-[9px] font-bold text-slate-500 dark:text-slate-400 hover:underline px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">Clear</button>
-                            </div>
-                        </div>
-
-                        <!-- Bulk Size Helper Bar -->
-                        <div class="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
-                            <span class="text-[8.5px] font-black uppercase tracking-wider text-slate-400 shrink-0">Bulk Size:</span>
-                            <input type="number" id="mt-bulk-size-input" placeholder="e.g. 10" min="1"
-                                class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-white font-bold outline-none w-20 shadow-sm focus:ring-1 focus:ring-indigo-500" />
-                            <button type="button" onclick="window.applyBulkSizeToMonthlyChapters()"
-                                class="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 border border-indigo-200/50 dark:border-indigo-700/50">
-                                Apply to Selected
-                            </button>
-                        </div>
-
-                        <!-- Chapters Checkbox and Size List Container -->
-                        <div id="mt-chapters-container"
-                            class="max-h-52 overflow-y-auto space-y-1.5 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/60 custom-scrollbar">
-                            <!-- Populated dynamically via JS -->
-                        </div>
-                    </div>
-
-                    <!-- Auto-connect to Weekly and Daily Targets -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/60">
-                        <div class="flex flex-col gap-1.5">
-                            <label class="text-[9.5px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
-                                <span>📅 Weekly Range</span>
-                                <span class="text-[7.5px] text-slate-400 font-bold">(Auto-connect)</span>
-                            </label>
-                            <select id="mt-select-week-range" onchange="window.handleMonthlyTargetWeekChange()"
-                                class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none w-full shadow-sm">
-                            </select>
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                            <label class="text-[9.5px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                <span>📆 Day / Date</span>
-                                <span class="text-[7.5px] text-slate-400 font-bold">(Auto-connect)</span>
-                            </label>
-                            <select id="mt-select-day" onchange="window.handleMonthlyTargetDayChange()"
-                                class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-emerald-500 outline-none w-full shadow-sm">
-                            </select>
-                        </div>
-                    </div>
-
-                    <input type="hidden" id="mt-target-scope" value="Whole Chapter" />
-                    <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700/60 mt-4">
-                        <button onclick="closeModal('add-monthly-target-modal')"
-                            class="px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-650 rounded-xl text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 active:scale-95 transition-all">Cancel</button>
-                        <button onclick="window.addMonthlyTarget()"
-                            class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wider active:scale-95 transition-all shadow-md">Add
-                            Target</button>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Final Project Completion / Congrats Modal -->
         <div id="congrats-modal"

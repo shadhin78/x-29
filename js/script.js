@@ -11407,8 +11407,8 @@ window.switchDadbTab = function (tab) {
 
 window.openModal = function (modalId, typeKey = null) {
     if (modalId === 'analytics-modal' && typeKey) populateAnalyticsModal(typeKey);
-    const backdrops = { 'edit-timeline-entry-modal': 'etem-backdrop', 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'monthly-targets-db-modal': 'mtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'edit-daily-action-modal': 'edam-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop', 'add-monthly-target-modal': 'mtm-backdrop' };
-    const contents = { 'edit-timeline-entry-modal': 'etem-content', 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'monthly-targets-db-modal': 'mtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'edit-daily-action-modal': 'edam-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content', 'add-monthly-target-modal': 'mtm-content' };
+    const backdrops = { 'edit-timeline-entry-modal': 'etem-backdrop', 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'monthly-targets-db-modal': 'mtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'edit-daily-action-modal': 'edam-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop' };
+    const contents = { 'edit-timeline-entry-modal': 'etem-content', 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'monthly-targets-db-modal': 'mtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'edit-daily-action-modal': 'edam-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content' };
     const modal = document.getElementById(modalId);
     const backdrop = (backdrops[modalId] && document.getElementById(backdrops[modalId])) || (modal ? modal.children[0] : null);
     const content = (contents[modalId] && document.getElementById(contents[modalId])) || (modal ? modal.children[1] : null);
@@ -11457,8 +11457,8 @@ window.openModal = function (modalId, typeKey = null) {
 };
 
 window.closeModal = function (modalId) {
-    const backdrops = { 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-backdrop', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'monthly-targets-db-modal': 'mtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'edit-daily-action-modal': 'edam-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop', 'add-monthly-target-modal': 'mtm-backdrop' };
-    const contents = { 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'monthly-targets-db-modal': 'mtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'edit-daily-action-modal': 'edam-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content', 'add-monthly-target-modal': 'mtm-content' };
+    const backdrops = { 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-backdrop', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'monthly-targets-db-modal': 'mtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'edit-daily-action-modal': 'edam-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop' };
+    const contents = { 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'monthly-targets-db-modal': 'mtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'edit-daily-action-modal': 'edam-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content' };
     const modal = document.getElementById(modalId);
     const backdrop = (backdrops[modalId] && document.getElementById(backdrops[modalId])) || (modal ? modal.children[0] : null);
     const content = (contents[modalId] && document.getElementById(contents[modalId])) || (modal ? modal.children[1] : null);
@@ -14640,135 +14640,1010 @@ window.updateMonthlyTargetColorSync = function () {
     }
 };
 
-window.updateMonthlyTargetSubjectDropdown = function () {
+window.updateMonthlyTargetSubjectDropdown = function (preselectSubject = null, preselectChapter = null, preselectSize = null, preselectWeek = null) {
     const progSelectEl = document.getElementById('mt-select-prog');
     const progName = progSelectEl ? progSelectEl.value : '';
-    const subSelect = document.getElementById('mt-select-sub');
-    if (!subSelect) return;
-    subSelect.innerHTML = '';
+    const container = document.getElementById('mt-subjects-container');
+    if (!container) return;
+    container.innerHTML = '';
 
     const trackId = window.tracks.find(t => window.customPrograms[t.id] && window.customPrograms[t.id].some(p => (p.name || p) === progName))?.id;
     if (!trackId) {
-        subSelect.innerHTML = '<option value="">No Subjects</option>';
+        container.innerHTML = `
+            <div class="py-6 text-center text-[10px] uppercase font-black tracking-widest text-slate-400">
+                No Program Track Selected
+            </div>`;
         window.updateMonthlyTargetChapterDropdown();
+        window.updateMonthlyTargetPageSummary();
         return;
     }
 
     const subs = (syllabusStructure[trackId] || []).filter(s => s.program === progName);
     if (subs.length === 0) {
-        subSelect.innerHTML = '<option value="">No Subjects</option>';
+        container.innerHTML = `
+            <div class="py-6 text-center text-[10px] uppercase font-black tracking-widest text-slate-400">
+                No Subjects Available for this Program
+            </div>`;
     } else {
         const passedItems = window.passedItems || (window.AppState && window.AppState.passedItems) || { programs: [], subjects: [] };
-        subs.forEach(s => {
+        subs.forEach((s) => {
             const isPassed = Boolean(
                 (Array.isArray(passedItems.subjects) && passedItems.subjects.includes(s.subject)) ||
                 (Array.isArray(passedItems.programs) && passedItems.programs.includes(s.program || progName))
             );
             const label = isPassed ? `🏆 ${s.subject} (Passed)` : s.subject;
-            subSelect.innerHTML += `<option value="${s.subject}">${label}</option>`;
+            const color = window.getSubjectColor ? window.getSubjectColor(s.subject) : '#6366f1';
+            const chs = window.getChaptersForSubject(trackId, s.subject) || [];
+            
+            let isSelected = false;
+            if (preselectSubject) {
+                isSelected = s.subject === preselectSubject;
+            }
+
+            const cardHtml = `
+                <div class="mt-subject-card flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-white dark:bg-slate-800 transition-all hover:border-indigo-400/80 dark:hover:border-indigo-500/80 cursor-pointer shadow-xs hover:shadow-sm"
+                    data-subject="${s.subject}"
+                    onclick="window.toggleMonthlySubjectCard('${CSS.escape(s.subject)}', event)">
+                    <label class="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0 pointer-events-none">
+                        <input type="checkbox" data-subject="${s.subject}" class="mt-subject-checkbox form-checkbox h-4 w-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer pointer-events-auto"
+                            onchange="window.handleMonthlySubjectToggle(); event.stopPropagation();"
+                            ${isSelected ? 'checked' : ''}>
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style="background-color: ${color}"></span>
+                            <span class="text-xs font-black text-slate-800 dark:text-slate-100 truncate">${label}</span>
+                        </div>
+                    </label>
+                    <span class="text-[9px] font-black px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/70 text-slate-500 dark:text-slate-300 shrink-0 ml-2">
+                        ${chs.length} Ch
+                    </span>
+                </div>
+            `;
+            container.innerHTML += cardHtml;
         });
     }
-    window.updateMonthlyTargetChapterDropdown();
-    window.updateMonthlyTargetColorSync();
+
+    window.updateMonthlyTargetChapterDropdown(preselectChapter, preselectSize, preselectSubject, preselectWeek);
+    window.updateMonthlyTargetPageSummary();
 };
 
-window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, preselectSize = null) {
+window.toggleMonthlySubjectsDropdown = function (forceState = null) {
+    const menu = document.getElementById('mt-subjects-dropdown-menu');
+    const chevron = document.getElementById('mt-subjects-dropdown-chevron');
+    if (!menu) return;
+
+    const shouldOpen = forceState !== null ? forceState : menu.classList.contains('hidden');
+    if (shouldOpen) {
+        menu.classList.remove('hidden');
+        if (chevron) chevron.classList.add('rotate-180');
+    } else {
+        menu.classList.add('hidden');
+        if (chevron) chevron.classList.remove('rotate-180');
+    }
+};
+
+window.toggleMonthlySubjectCard = function (subjectName, event) {
+    if (event && event.target && (event.target.tagName === 'INPUT' || event.target.closest('input'))) {
+        return;
+    }
+    const cb = document.querySelector(`.mt-subject-checkbox[data-subject="${CSS.escape(subjectName)}"]`);
+    if (cb) {
+        cb.checked = !cb.checked;
+        window.handleMonthlySubjectToggle();
+    }
+};
+
+window.toggleAllMonthlySubjects = function (select) {
+    const checkboxes = document.querySelectorAll('.mt-subject-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = select;
+    });
+    window.handleMonthlySubjectToggle();
+};
+
+window.handleMonthlySubjectToggle = function () {
+    window.updateMonthlyTargetChapterDropdown();
+    window.updateMonthlyTargetPageSummary();
+};
+
+window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, preselectSize = null, targetSubject = null, preselectWeek = null) {
     const progSelectEl = document.getElementById('mt-select-prog');
     const progName = progSelectEl ? progSelectEl.value : '';
-    const subSelectEl = document.getElementById('mt-select-sub');
-    const subject = subSelectEl ? subSelectEl.value : '';
     const container = document.getElementById('mt-chapters-container');
     if (!container) return;
     container.innerHTML = '';
 
     const trackId = window.tracks.find(t => window.customPrograms[t.id] && window.customPrograms[t.id].some(p => (p.name || p) === progName))?.id;
-    if (!trackId || !subject) {
+    if (!trackId) {
         container.innerHTML = `
-            <div class="py-4 text-center text-[10px] uppercase font-black tracking-widest text-slate-400">
-                No Chapters Available
+            <div class="py-12 text-center text-xs font-bold text-slate-400">
+                No program selected.
             </div>`;
-        window.updateMonthlyTargetColorSync();
+        window.updateMonthlyTargetPageSummary();
         return;
     }
 
-    const isWholeSubPreselected = preselectChapter === 'Whole Subject' || preselectChapter === '-- 📚 Whole Subject (All Chapters) --';
-
-    // 1. Whole Subject Checkbox Row
-    let wholeSubHtml = `
-        <div class="flex items-center justify-between p-2.5 rounded-xl border border-purple-200/70 dark:border-purple-800/50 bg-purple-50/50 dark:bg-purple-950/20 transition-all hover:bg-purple-50 dark:hover:bg-purple-950/30">
-            <label class="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
-                <input type="checkbox" id="mt-ch-whole-subject" onchange="window.handleMonthlyWholeSubjectToggle(this.checked)"
-                    class="form-checkbox h-4 w-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
-                    ${isWholeSubPreselected ? 'checked' : ''}>
-                <div class="min-w-0">
-                    <span class="text-xs font-black text-purple-900 dark:text-purple-200 truncate block">📚 Whole Subject (All Chapters)</span>
-                    <span class="text-[7.5px] text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider block">Subject-level Target</span>
-                </div>
-            </label>
-            <div class="shrink-0 ml-2">
-                <input type="number" id="mt-size-whole-subject" placeholder="Size (opt)" min="1"
-                    value="${isWholeSubPreselected && preselectSize ? preselectSize : ''}"
-                    class="w-20 sm:w-24 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/60 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-white font-bold outline-none shadow-sm focus:ring-1 focus:ring-purple-500">
-            </div>
-        </div>
-    `;
-    container.innerHTML = wholeSubHtml;
-
-    // 2. Individual Chapters
-    const chapters = window.getChaptersForSubject(trackId, subject);
-    if (chapters && chapters.length > 0) {
-        chapters.forEach(ch => {
-            const count = window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(trackId, subject, ch, 'chapter') : 0;
-            const stars = count > 0 ? ' ' + '★'.repeat(count) : '';
-            const isChPreselected = preselectChapter === ch;
-
-            const chHtml = `
-                <div class="flex items-center justify-between p-2 rounded-xl border border-slate-200/70 dark:border-slate-700/60 bg-white dark:bg-slate-800 transition-all hover:border-indigo-400/50 dark:hover:border-indigo-500/50">
-                    <label class="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
-                        <input type="checkbox" data-chapter="${ch}" class="mt-chapter-checkbox form-checkbox h-4 w-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
-                            onchange="window.handleMonthlyChapterCheckChange(this)"
-                            ${isChPreselected ? 'checked' : ''}>
-                        <div class="min-w-0">
-                            <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate block">${ch}${stars}</span>
-                        </div>
-                    </label>
-                    <div class="shrink-0 ml-2">
-                        <input type="number" data-chapter="${ch}" class="mt-chapter-size-input w-20 sm:w-24 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-white font-bold outline-none shadow-sm focus:ring-1 focus:ring-indigo-500"
-                            placeholder="Size (opt)" min="1"
-                            value="${isChPreselected && preselectSize ? preselectSize : ''}">
-                    </div>
-                </div>
-            `;
-            container.innerHTML += chHtml;
-        });
+    const checkedSubjects = Array.from(document.querySelectorAll('.mt-subject-checkbox:checked')).map(cb => cb.getAttribute('data-subject'));
+    if (checkedSubjects.length === 0) {
+        container.innerHTML = `
+            <div class="py-12 text-center text-xs font-bold text-slate-400 flex flex-col items-center justify-center gap-2">
+                <svg class="w-8 h-8 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                </svg>
+                <span>No subjects selected. Check one or more subjects on the left to configure chapters.</span>
+            </div>`;
+        window.updateMonthlyTargetPageSummary();
+        return;
     }
 
-    window.updateMonthlyTargetColorSync();
+    const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
+    const weeks = window.getWeeksForMonth ? window.getWeeksForMonth(targetMonthDate) : [];
+
+    let baseWeeksOptions = '';
+    weeks.forEach((w, wIdx) => {
+        const opt = { day: '2-digit', month: 'short' };
+        const shortLabel = `Week ${wIdx + 1} (${w.start.toLocaleDateString('en-GB', opt)} - ${w.end.toLocaleDateString('en-GB', opt)})`;
+        baseWeeksOptions += `<option value="${w.key}">${shortLabel}</option>`;
+    });
+
+    const bulkWeekSelect = document.getElementById('mt-bulk-week-select');
+    if (bulkWeekSelect) {
+        const prevVal = bulkWeekSelect.value;
+        bulkWeekSelect.innerHTML = '<option value="">-- No Week --</option>' + baseWeeksOptions;
+        if (prevVal && weeks.some(w => w.key === prevVal)) {
+            bulkWeekSelect.value = prevVal;
+        }
+    }
+
+    checkedSubjects.forEach(subject => {
+        const color = window.getSubjectColor ? window.getSubjectColor(subject) : '#6366f1';
+        const chapters = window.getChaptersForSubject(trackId, subject) || [];
+        const isTargetSub = !targetSubject || targetSubject === subject;
+        const isWholeSubPreselected = isTargetSub && (preselectChapter === 'Whole Subject' || preselectChapter === '-- 📚 Whole Subject (All Chapters) --');
+
+        let wholeSubWeeksOptionsHtml = '';
+        weeks.forEach((w, wIdx) => {
+            const opt = { day: '2-digit', month: 'short' };
+            const shortLabel = `Week ${wIdx + 1} (${w.start.toLocaleDateString('en-GB', opt)} - ${w.end.toLocaleDateString('en-GB', opt)})`;
+            const isWeekSelected = Boolean(isWholeSubPreselected && preselectWeek === w.key);
+            wholeSubWeeksOptionsHtml += `<option value="${w.key}" ${isWeekSelected ? 'selected' : ''}>${shortLabel}</option>`;
+        });
+
+        let chaptersHtml = '';
+        if (chapters.length > 0) {
+            chapters.forEach(ch => {
+                const count = window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(trackId, subject, ch, 'chapter') : 0;
+                const stars = count > 0 ? ' ' + '★'.repeat(count) : '';
+                const isChPreselected = isTargetSub && preselectChapter === ch;
+
+                let chWeeksOptionsHtml = '';
+                weeks.forEach((w, wIdx) => {
+                    const opt = { day: '2-digit', month: 'short' };
+                    const shortLabel = `Week ${wIdx + 1} (${w.start.toLocaleDateString('en-GB', opt)} - ${w.end.toLocaleDateString('en-GB', opt)})`;
+                    const isWeekSelected = Boolean(isChPreselected && preselectWeek === w.key);
+                    chWeeksOptionsHtml += `<option value="${w.key}" ${isWeekSelected ? 'selected' : ''}>${shortLabel}</option>`;
+                });
+
+                chaptersHtml += `
+                    <div class="mt-chapter-row flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-700/60 bg-white dark:bg-slate-800/90 transition-all hover:border-indigo-400/60 dark:hover:border-indigo-500/60 hover:shadow-xs gap-2"
+                         data-chapter-name="${subject} ${ch}" data-subject="${subject}">
+                        <label class="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
+                            <input type="checkbox" data-subject="${subject}" data-chapter="${ch}" class="mt-chapter-checkbox form-checkbox h-4.5 w-4.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer transition-all"
+                                onchange="window.handleMonthlyChapterCheckChange(this, '${CSS.escape(subject)}');"
+                                ${isChPreselected ? 'checked' : ''}>
+                            <div class="min-w-0">
+                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate block">${ch}${stars}</span>
+                            </div>
+                        </label>
+                        <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                            <!-- Week Picker per chapter -->
+                            <select data-subject="${subject}" data-chapter="${ch}"
+                                class="mt-chapter-week-select bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-[10px] text-indigo-700 dark:text-indigo-300 font-bold outline-none focus:ring-2 focus:ring-indigo-500 max-w-[130px] truncate shadow-xs"
+                                onchange="window.updateMonthlyTargetPageSummary();">
+                                <option value="">-- No Week --</option>
+                                ${chWeeksOptionsHtml}
+                            </select>
+                            <!-- Size Input per chapter -->
+                            <input type="number" data-subject="${subject}" data-chapter="${ch}" class="mt-chapter-size-input w-16 sm:w-20 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-bold outline-none shadow-inner focus:ring-2 focus:ring-indigo-500 transition-all text-center"
+                                placeholder="Size" min="1"
+                                oninput="window.updateMonthlyTargetPageSummary();"
+                                value="${isChPreselected && preselectSize ? preselectSize : ''}">
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            chaptersHtml = `
+                <div class="py-4 text-center text-[10px] uppercase font-black tracking-widest text-slate-400">
+                    No individual chapters listed for ${subject}.
+                </div>
+            `;
+        }
+
+        const groupHtml = `
+            <div class="mt-subject-chapter-group rounded-2xl border border-slate-200/90 dark:border-slate-700/80 bg-white dark:bg-slate-800/95 p-4 shadow-sm space-y-3" data-subject="${subject}">
+                <!-- Subject Header -->
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-slate-700/60">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-3 h-3 rounded-full shrink-0 shadow-xs" style="background-color: ${color}"></span>
+                        <h4 class="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 truncate">${subject}</h4>
+                        <span class="text-[9px] font-black px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700/70 text-slate-500 dark:text-slate-300">
+                            ${chapters.length} Chapters
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button type="button" onclick="window.toggleAllMonthlyChaptersForSubject('${CSS.escape(subject)}', true)"
+                            class="text-[9px] font-black text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 px-2 py-0.5 rounded border border-indigo-200/50 dark:border-indigo-800/50 transition-all active:scale-95">Select All</button>
+                        <button type="button" onclick="window.toggleAllMonthlyChaptersForSubject('${CSS.escape(subject)}', false)"
+                            class="text-[9px] font-black text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 transition-all active:scale-95">Clear</button>
+                    </div>
+                </div>
+
+                <!-- Whole Subject Checkbox Row -->
+                <div class="mt-chapter-row flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border border-purple-200/80 dark:border-purple-800/60 bg-purple-50/60 dark:bg-purple-950/30 transition-all hover:bg-purple-50 dark:hover:bg-purple-950/50 shadow-xs gap-2"
+                     data-chapter-name="${subject} Whole Subject All Chapters" data-subject="${subject}">
+                    <label class="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
+                        <input type="checkbox" data-subject="${subject}" class="mt-ch-whole-subject form-checkbox h-4.5 w-4.5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer transition-all"
+                            onchange="window.handleMonthlyWholeSubjectToggle('${CSS.escape(subject)}', this.checked)"
+                            ${isWholeSubPreselected ? 'checked' : ''}>
+                        <div class="min-w-0">
+                            <span class="text-xs font-black text-purple-900 dark:text-purple-200 truncate block">📚 Whole Subject (All Chapters)</span>
+                            <span class="text-[8px] text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider block">Target entirety of ${subject}</span>
+                        </div>
+                    </label>
+                    <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                        <!-- Week Picker for Whole Subject -->
+                        <select data-subject="${subject}"
+                            class="mt-size-whole-subject-week bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/60 rounded-xl px-2 py-1.5 text-[10px] text-purple-700 dark:text-purple-300 font-bold outline-none focus:ring-2 focus:ring-purple-500 max-w-[130px] truncate shadow-xs"
+                            onchange="window.updateMonthlyTargetPageSummary();">
+                            <option value="">-- No Week --</option>
+                            ${wholeSubWeeksOptionsHtml}
+                        </select>
+                        <!-- Size Input for Whole Subject -->
+                        <input type="number" data-subject="${subject}" placeholder="Size" min="1"
+                            oninput="window.updateMonthlyTargetPageSummary();"
+                            value="${isWholeSubPreselected && preselectSize ? preselectSize : ''}"
+                            class="mt-size-whole-subject w-16 sm:w-20 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/60 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-bold outline-none shadow-sm focus:ring-2 focus:ring-purple-500 transition-all text-center">
+                    </div>
+                </div>
+
+                <!-- Individual Chapters List -->
+                <div class="space-y-1.5">
+                    ${chaptersHtml}
+                </div>
+            </div>
+        `;
+        container.innerHTML += groupHtml;
+    });
+
+    const searchInput = document.getElementById('mt-chapter-search-input');
+    if (searchInput && searchInput.value) {
+        window.filterMonthlyTargetChapters(searchInput.value);
+    }
+
+    window.updateMonthlyTargetPageSummary();
+};
+
+window.toggleAllMonthlyChaptersForSubject = function (subjectName, select) {
+    const wholeSub = document.querySelector(`.mt-ch-whole-subject[data-subject="${CSS.escape(subjectName)}"]`);
+    if (wholeSub && select) wholeSub.checked = false;
+
+    const checkboxes = document.querySelectorAll(`.mt-chapter-checkbox[data-subject="${CSS.escape(subjectName)}"]`);
+    checkboxes.forEach(cb => {
+        const parentRow = cb.closest('.mt-chapter-row');
+        if (!parentRow || !parentRow.classList.contains('hidden')) {
+            cb.checked = select;
+        }
+    });
+    window.renderMonthlyTargetDailyAllocations();
+    window.updateMonthlyTargetPageSummary();
 };
 
 window.toggleAllMonthlyChapters = function (select) {
-    const wholeSub = document.getElementById('mt-ch-whole-subject');
-    if (wholeSub) wholeSub.checked = false;
+    const wholeSubs = document.querySelectorAll('.mt-ch-whole-subject');
+    if (select) {
+        wholeSubs.forEach(ws => ws.checked = false);
+    }
 
     const checkboxes = document.querySelectorAll('.mt-chapter-checkbox');
     checkboxes.forEach(cb => {
-        cb.checked = select;
+        const parentRow = cb.closest('.mt-chapter-row');
+        if (!parentRow || !parentRow.classList.contains('hidden')) {
+            cb.checked = select;
+        }
     });
+    window.renderMonthlyTargetDailyAllocations();
+    window.updateMonthlyTargetPageSummary();
 };
 
-window.handleMonthlyWholeSubjectToggle = function (isChecked) {
+window.handleMonthlyWholeSubjectToggle = function (subjectName, isChecked) {
     if (isChecked) {
-        const checkboxes = document.querySelectorAll('.mt-chapter-checkbox');
+        const checkboxes = document.querySelectorAll(`.mt-chapter-checkbox[data-subject="${CSS.escape(subjectName)}"]`);
         checkboxes.forEach(cb => {
             cb.checked = false;
         });
     }
+    window.renderMonthlyTargetDailyAllocations();
+    window.updateMonthlyTargetPageSummary();
 };
 
-window.handleMonthlyChapterCheckChange = function (checkboxEl) {
+window.handleMonthlyChapterCheckChange = function (checkboxEl, subjectName) {
     if (checkboxEl && checkboxEl.checked) {
-        const wholeSub = document.getElementById('mt-ch-whole-subject');
+        const wholeSub = document.querySelector(`.mt-ch-whole-subject[data-subject="${CSS.escape(subjectName)}"]`);
         if (wholeSub) wholeSub.checked = false;
+    }
+    window.renderMonthlyTargetDailyAllocations();
+    window.updateMonthlyTargetPageSummary();
+};
+
+window.filterMonthlyTargetChapters = function (query) {
+    const q = (query || '').toLowerCase().trim();
+    const groups = document.querySelectorAll('.mt-subject-chapter-group');
+    groups.forEach(group => {
+        const subjectName = (group.getAttribute('data-subject') || '').toLowerCase();
+        const rows = group.querySelectorAll('.mt-chapter-row');
+        let visibleRowCount = 0;
+        rows.forEach(row => {
+            const name = (row.getAttribute('data-chapter-name') || '').toLowerCase();
+            if (!q || name.includes(q) || subjectName.includes(q)) {
+                row.classList.remove('hidden');
+                visibleRowCount++;
+            } else {
+                row.classList.add('hidden');
+            }
+        });
+        if (!q || visibleRowCount > 0 || subjectName.includes(q)) {
+            group.classList.remove('hidden');
+        } else {
+            group.classList.add('hidden');
+        }
+    });
+};
+
+window.setBulkSizePreset = function (val) {
+    const bulkInput = document.getElementById('mt-bulk-size-input');
+    if (bulkInput) {
+        bulkInput.value = val;
+        window.applyBulkSizeToMonthlyChapters();
+    }
+};
+
+window.applyBulkWeekToMonthlyChapters = function () {
+    const bulkWeekSelect = document.getElementById('mt-bulk-week-select');
+    const selectedWeek = bulkWeekSelect ? bulkWeekSelect.value : '';
+
+    let appliedCount = 0;
+    const wholeSubs = document.querySelectorAll('.mt-ch-whole-subject:checked');
+    wholeSubs.forEach(ws => {
+        const sub = ws.getAttribute('data-subject');
+        const weekSelect = document.querySelector(`.mt-size-whole-subject-week[data-subject="${CSS.escape(sub)}"]`);
+        if (weekSelect) {
+            weekSelect.value = selectedWeek;
+            appliedCount++;
+        }
+    });
+
+    const checkboxes = document.querySelectorAll('.mt-chapter-checkbox:checked');
+    checkboxes.forEach(cb => {
+        const sub = cb.getAttribute('data-subject');
+        const ch = cb.getAttribute('data-chapter');
+        const weekSelect = document.querySelector(`.mt-chapter-week-select[data-subject="${CSS.escape(sub)}"][data-chapter="${CSS.escape(ch)}"]`);
+        if (weekSelect) {
+            weekSelect.value = selectedWeek;
+            appliedCount++;
+        }
+    });
+
+    window.updateMonthlyTargetPageSummary();
+
+    if (appliedCount === 0) {
+        showToast("No chapters or whole subjects currently selected. Check the targets you want to assign week to.", "error");
+    } else {
+        const weekLabel = selectedWeek ? "assigned" : "cleared";
+        showToast(`Weekly target ${weekLabel} for ${appliedCount} selected target(s)!`, "success");
+    }
+};
+
+window.distributeChaptersAcrossWeeks = function () {
+    const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
+    const weeks = window.getWeeksForMonth ? window.getWeeksForMonth(targetMonthDate) : [];
+    if (!weeks || weeks.length === 0) {
+        return showToast("No weeks available for the active month.", "error");
+    }
+
+    const selectedTargets = [];
+    const wholeSubs = document.querySelectorAll('.mt-ch-whole-subject:checked');
+    wholeSubs.forEach(ws => {
+        const sub = ws.getAttribute('data-subject');
+        const weekSelect = document.querySelector(`.mt-size-whole-subject-week[data-subject="${CSS.escape(sub)}"]`);
+        if (weekSelect) selectedTargets.push(weekSelect);
+    });
+
+    const checkboxes = document.querySelectorAll('.mt-chapter-checkbox:checked');
+    checkboxes.forEach(cb => {
+        const sub = cb.getAttribute('data-subject');
+        const ch = cb.getAttribute('data-chapter');
+        const weekSelect = document.querySelector(`.mt-chapter-week-select[data-subject="${CSS.escape(sub)}"][data-chapter="${CSS.escape(ch)}"]`);
+        if (weekSelect) selectedTargets.push(weekSelect);
+    });
+
+    if (selectedTargets.length === 0) {
+        return showToast("Please check at least one chapter or whole subject to distribute across weeks.", "error");
+    }
+
+    selectedTargets.forEach((weekSelect, idx) => {
+        const assignedWeek = weeks[idx % weeks.length];
+        weekSelect.value = assignedWeek.key;
+    });
+
+    window.updateMonthlyTargetPageSummary();
+    showToast(`⚡ ${selectedTargets.length} target(s) distributed across ${weeks.length} weeks!`, "success");
+};
+
+/* --- Daily Target Allocator & Multi-Day Fraction Management --- */
+window.monthlyTargetDailyAllocations = window.monthlyTargetDailyAllocations || {};
+
+window.renderMonthlyTargetDailyAllocations = function () {
+    const container = document.getElementById('mt-daily-allocations-container');
+    const countBadge = document.getElementById('mt-daily-allocation-count-badge');
+    if (!container) return;
+
+    const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
+    const days = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate) : [];
+
+    const checkedTargets = [];
+    const wholeSubs = document.querySelectorAll('.mt-ch-whole-subject:checked');
+    wholeSubs.forEach(ws => {
+        const sub = ws.getAttribute('data-subject');
+        const sizeInput = document.querySelector(`.mt-size-whole-subject[data-subject="${CSS.escape(sub)}"]`);
+        const totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+        checkedTargets.push({
+            subject: sub,
+            chapter: 'Whole Subject',
+            displayTitle: `📚 ${sub} (Whole Subject)`,
+            isSubjectTarget: true,
+            totalSize: totalSize
+        });
+    });
+
+    const checkboxes = document.querySelectorAll('.mt-chapter-checkbox:checked');
+    checkboxes.forEach(cb => {
+        const sub = cb.getAttribute('data-subject');
+        const ch = cb.getAttribute('data-chapter');
+        const sizeInput = document.querySelector(`.mt-chapter-size-input[data-subject="${CSS.escape(sub)}"][data-chapter="${CSS.escape(ch)}"]`);
+        const totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+        checkedTargets.push({
+            subject: sub,
+            chapter: ch,
+            displayTitle: `${ch}: ${sub}`,
+            isSubjectTarget: false,
+            totalSize: totalSize
+        });
+    });
+
+    if (checkedTargets.length === 0) {
+        container.innerHTML = `
+            <div class="py-8 px-4 text-center text-slate-400 flex flex-col items-center justify-center gap-2 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                <div class="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl text-slate-400 dark:text-slate-500 shadow-inner">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <span class="text-xs font-black text-slate-600 dark:text-slate-300">No Chapters Selected</span>
+                <span class="text-[10px] text-slate-400 max-w-[220px]">Check chapters or whole subjects on the right to configure daily target dates and fractional allocations.</span>
+            </div>
+        `;
+        if (countBadge) countBadge.textContent = "0 Scheduled";
+        return;
+    }
+
+    let totalAllocationsCount = 0;
+    const scheduledDaysSet = new Set();
+    let html = '';
+
+    checkedTargets.forEach((target) => {
+        const key = target.subject + '|||' + target.chapter;
+        const color = window.getSubjectColor ? window.getSubjectColor(target.subject) : '#6366f1';
+        const allocations = window.monthlyTargetDailyAllocations[key] || [];
+
+        let sumAllocated = 0;
+        allocations.forEach(a => {
+            if (a.portionSize) sumAllocated += parseInt(a.portionSize, 10) || 0;
+            if (a.dayKey) scheduledDaysSet.add(a.dayKey);
+            totalAllocationsCount++;
+        });
+
+        // Allocation status badge
+        let allocationBadgeHtml = '';
+        if (target.totalSize) {
+            if (allocations.length === 0) {
+                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300">Size: ${target.totalSize}</span>`;
+            } else if (sumAllocated === target.totalSize) {
+                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">✓ ${sumAllocated}/${target.totalSize} (100%)</span>`;
+            } else if (sumAllocated < target.totalSize) {
+                const left = target.totalSize - sumAllocated;
+                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">⏳ ${sumAllocated}/${target.totalSize} (${left} left)</span>`;
+            } else {
+                const over = sumAllocated - target.totalSize;
+                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 flex items-center gap-0.5" title="100% completed + Extra/Repeat target">⭐ ${sumAllocated}/${target.totalSize} (+${over} Extra)</span>`;
+            }
+        } else {
+            allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">${allocations.length} Day(s)</span>`;
+        }
+
+        // Generate rows HTML
+        let rowsHtml = '';
+        if (allocations.length === 0) {
+            rowsHtml = `
+                <div class="py-2.5 text-center text-[10px] text-slate-400 italic bg-slate-50/70 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                    No days assigned yet. Click "⚡ Split" or "+ Add Day" below.
+                </div>
+            `;
+        } else {
+            let runningSum = 0;
+            allocations.forEach((alloc, rowIdx) => {
+                const prevSum = runningSum;
+                const portionVal = parseInt(alloc.portionSize, 10) || 0;
+                runningSum += portionVal;
+
+                // Star condition: chapter has totalSize and previous allocations already reached/exceeded 100%
+                const isStar = Boolean(target.totalSize && target.totalSize > 0 && prevSum >= target.totalSize);
+
+                let dayOptions = '<option value="">-- Day --</option>';
+                days.forEach(d => {
+                    const isSel = alloc.dayKey === d.key;
+                    dayOptions += `<option value="${d.key}" ${isSel ? 'selected' : ''}>${d.label}</option>`;
+                });
+
+                const rowBgClass = isStar
+                    ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300/80 dark:border-amber-600/60 shadow-xs'
+                    : 'bg-slate-50 dark:bg-slate-900/70 border-slate-200/80 dark:border-slate-700/60 shadow-xs';
+
+                const dayBadge = isStar
+                    ? `<span class="text-[10px] font-black text-amber-500 flex items-center shrink-0" title="Extra/Repeat Target (Already done 100%)">⭐D${rowIdx + 1}</span>`
+                    : `<span class="text-[10px] font-black text-slate-400 w-5 text-center shrink-0">D${rowIdx + 1}</span>`;
+
+                rowsHtml += `
+                    <div class="flex items-center gap-2 p-2 sm:p-2.5 rounded-2xl ${rowBgClass} border transition-all w-full">
+                        ${dayBadge}
+                        <!-- Compact Day Select Dropdown -->
+                        <select onchange="window.updateDailyAllocationDay('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, this.value)"
+                            class="w-[108px] sm:w-[122px] shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-[11px] sm:text-xs text-slate-800 dark:text-slate-100 font-bold outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs truncate cursor-pointer"
+                            title="Select Target Day">
+                            ${dayOptions}
+                        </select>
+                        <!-- Clearly Visible Portion/Page Size Input -->
+                        <div class="relative w-16 sm:w-20 shrink-0">
+                            <input type="number" min="1" placeholder="Size" value="${alloc.portionSize || ''}"
+                                oninput="window.updateDailyAllocationSize('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, this.value)"
+                                class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs sm:text-sm text-slate-900 dark:text-white font-black outline-none text-center shadow-xs focus:ring-2 focus:ring-emerald-500"
+                                title="Daily Target Pages/Units" />
+                        </div>
+                        <!-- Full-Width Fraction shortcuts: 1/2, 1/3, 1/4, 1/5, 1/10, All -->
+                        <div class="flex items-center gap-1 flex-1 min-w-0">
+                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.5, '1/2')"
+                                class="flex-1 py-1.5 px-0.5 text-[9.5px] sm:text-[10.5px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 hover:border-emerald-300 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-95 text-center shadow-xs transition-all" title="Allocate 1/2 of chapter size">1/2</button>
+                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.33333, '1/3')"
+                                class="flex-1 py-1.5 px-0.5 text-[9.5px] sm:text-[10.5px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 hover:border-emerald-300 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-95 text-center shadow-xs transition-all" title="Allocate 1/3 of chapter size">1/3</button>
+                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.25, '1/4')"
+                                class="flex-1 py-1.5 px-0.5 text-[9.5px] sm:text-[10.5px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 hover:border-emerald-300 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-95 text-center shadow-xs transition-all" title="Allocate 1/4 of chapter size">1/4</button>
+                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.2, '1/5')"
+                                class="flex-1 py-1.5 px-0.5 text-[9.5px] sm:text-[10.5px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 hover:border-emerald-300 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-95 text-center shadow-xs transition-all" title="Allocate 1/5 of chapter size">1/5</button>
+                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.1, '1/10')"
+                                class="flex-1 py-1.5 px-0.5 text-[9.5px] sm:text-[10.5px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 hover:border-emerald-300 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-95 text-center shadow-xs transition-all" title="Allocate 1/10 of chapter size">1/10</button>
+                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 1.0, 'All')"
+                                class="flex-1 py-1.5 px-0.5 text-[9.5px] sm:text-[10.5px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 hover:border-emerald-300 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-95 text-center shadow-xs transition-all" title="Allocate full chapter size">All</button>
+                        </div>
+                        <!-- Remove button -->
+                        <button type="button" onclick="window.removeDailyAllocationRow('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx})"
+                            class="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-all active:scale-90 shrink-0" title="Remove day allocation">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        html += `
+            <div class="p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700/70 bg-white dark:bg-slate-800 shadow-xs space-y-2.5 transition-all">
+                <!-- Header -->
+                <div class="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-2">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style="background-color: ${color}"></span>
+                        <h5 class="text-xs font-black text-slate-800 dark:text-slate-100 truncate">${target.displayTitle}</h5>
+                    </div>
+                    <div class="shrink-0">
+                        ${allocationBadgeHtml}
+                    </div>
+                </div>
+
+                <!-- Action Bar & Split buttons -->
+                <div class="flex items-center justify-between gap-1 flex-wrap">
+                    <div class="flex items-center gap-1 flex-wrap">
+                        <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 2)"
+                            class="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[8.5px] font-black transition-all active:scale-95">
+                            ⚡ 2 Days
+                        </button>
+                        <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 3)"
+                            class="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[8.5px] font-black transition-all active:scale-95">
+                            ⚡ 3 Days
+                        </button>
+                        <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 4)"
+                            class="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[8.5px] font-black transition-all active:scale-95">
+                            ⚡ 4 Days
+                        </button>
+                        <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 5)"
+                            class="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[8.5px] font-black transition-all active:scale-95">
+                            ⚡ 5 Days
+                        </button>
+                    </div>
+                    <button type="button" onclick="window.addDailyAllocationRow('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}')"
+                        class="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200/60 dark:border-indigo-800/50 text-[8.5px] font-black transition-all active:scale-95 flex items-center gap-0.5">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                        <span>Add Day</span>
+                    </button>
+                </div>
+
+                <!-- Daily Allocation Rows -->
+                <div class="space-y-1.5">
+                    ${rowsHtml}
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+
+    if (countBadge) {
+        const dayCount = scheduledDaysSet.size;
+        countBadge.textContent = totalAllocationsCount > 0
+            ? `${totalAllocationsCount} Targets (${dayCount} Days)`
+            : "0 Scheduled";
+    }
+};
+
+window.addDailyAllocationRow = function (subject, chapter, defaultDay = '', defaultSize = null) {
+    const key = subject + '|||' + chapter;
+    if (!window.monthlyTargetDailyAllocations) window.monthlyTargetDailyAllocations = {};
+    if (!window.monthlyTargetDailyAllocations[key]) window.monthlyTargetDailyAllocations[key] = [];
+
+    const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
+    const days = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate) : [];
+
+    let dayKeyToUse = defaultDay;
+    if (!dayKeyToUse && days.length > 0) {
+        const usedDays = new Set(window.monthlyTargetDailyAllocations[key].map(a => a.dayKey));
+        const firstUnused = days.find(d => !usedDays.has(d.key));
+        dayKeyToUse = firstUnused ? firstUnused.key : days[0].key;
+    }
+
+    let sizeToUse = defaultSize;
+    if (sizeToUse === null) {
+        let totalSize = null;
+        if (chapter === 'Whole Subject') {
+            const wholeSubSizeEl = document.querySelector(`.mt-size-whole-subject[data-subject="${CSS.escape(subject)}"]`);
+            totalSize = wholeSubSizeEl && wholeSubSizeEl.value ? parseInt(wholeSubSizeEl.value, 10) : null;
+        } else {
+            const sizeInput = document.querySelector(`.mt-chapter-size-input[data-subject="${CSS.escape(subject)}"][data-chapter="${CSS.escape(chapter)}"]`);
+            totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+        }
+        if (totalSize) {
+            const allocatedSum = window.monthlyTargetDailyAllocations[key].reduce((sum, a) => sum + (parseInt(a.portionSize, 10) || 0), 0);
+            sizeToUse = Math.max(0, totalSize - allocatedSum) || totalSize;
+        }
+    }
+
+    window.monthlyTargetDailyAllocations[key].push({
+        dayKey: dayKeyToUse,
+        portionSize: sizeToUse,
+        fraction: '',
+        portionLabel: ''
+    });
+
+    window.renderMonthlyTargetDailyAllocations();
+    window.updateMonthlyTargetPageSummary();
+};
+
+window.removeDailyAllocationRow = function (subject, chapter, rowIdx) {
+    const key = subject + '|||' + chapter;
+    if (window.monthlyTargetDailyAllocations && window.monthlyTargetDailyAllocations[key]) {
+        window.monthlyTargetDailyAllocations[key].splice(rowIdx, 1);
+        window.renderMonthlyTargetDailyAllocations();
+        window.updateMonthlyTargetPageSummary();
+    }
+};
+
+window.splitChapterAcrossDays = function (subject, chapter, numDays) {
+    const key = subject + '|||' + chapter;
+    if (!window.monthlyTargetDailyAllocations) window.monthlyTargetDailyAllocations = {};
+
+    let totalSize = null;
+    if (chapter === 'Whole Subject') {
+        const wholeSubSizeEl = document.querySelector(`.mt-size-whole-subject[data-subject="${CSS.escape(subject)}"]`);
+        totalSize = wholeSubSizeEl && wholeSubSizeEl.value ? parseInt(wholeSubSizeEl.value, 10) : null;
+    } else {
+        const sizeInput = document.querySelector(`.mt-chapter-size-input[data-subject="${CSS.escape(subject)}"][data-chapter="${CSS.escape(chapter)}"]`);
+        totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+    }
+
+    const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
+    const days = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate) : [];
+    if (days.length === 0) return;
+
+    const todayStr = Utils.formatDate(new Date());
+    let startIdx = days.findIndex(d => d.key === todayStr);
+    if (startIdx === -1 || startIdx + numDays > days.length) startIdx = 0;
+
+    const basePortion = totalSize ? Math.floor(totalSize / numDays) : null;
+    const remainder = totalSize ? (totalSize % numDays) : 0;
+
+    const newAllocations = [];
+    for (let i = 0; i < numDays; i++) {
+        const dayObj = days[(startIdx + i) % days.length];
+        const daySize = basePortion !== null ? (basePortion + (i === 0 ? remainder : 0)) : null;
+        newAllocations.push({
+            dayKey: dayObj ? dayObj.key : '',
+            portionSize: daySize,
+            fraction: `1/${numDays}`,
+            portionLabel: `Part ${i + 1}/${numDays}`
+        });
+    }
+
+    window.monthlyTargetDailyAllocations[key] = newAllocations;
+    window.renderMonthlyTargetDailyAllocations();
+    window.updateMonthlyTargetPageSummary();
+    showToast(`⚡ Split across ${numDays} days successfully!`, "success");
+};
+
+window.updateDailyAllocationDay = function (subject, chapter, rowIdx, dayKey) {
+    const key = subject + '|||' + chapter;
+    if (window.monthlyTargetDailyAllocations && window.monthlyTargetDailyAllocations[key] && window.monthlyTargetDailyAllocations[key][rowIdx]) {
+        window.monthlyTargetDailyAllocations[key][rowIdx].dayKey = dayKey;
+        window.renderMonthlyTargetDailyAllocations();
+        window.updateMonthlyTargetPageSummary();
+    }
+};
+
+window.updateDailyAllocationSize = function (subject, chapter, rowIdx, sizeVal) {
+    const key = subject + '|||' + chapter;
+    if (window.monthlyTargetDailyAllocations && window.monthlyTargetDailyAllocations[key] && window.monthlyTargetDailyAllocations[key][rowIdx]) {
+        window.monthlyTargetDailyAllocations[key][rowIdx].portionSize = sizeVal ? parseInt(sizeVal, 10) : null;
+        window.renderMonthlyTargetDailyAllocations();
+        window.updateMonthlyTargetPageSummary();
+    }
+};
+
+window.applyFractionToDailyAllocation = function (subject, chapter, rowIdx, fractionVal, fractionLabel) {
+    const key = subject + '|||' + chapter;
+    if (window.monthlyTargetDailyAllocations && window.monthlyTargetDailyAllocations[key] && window.monthlyTargetDailyAllocations[key][rowIdx]) {
+        let totalSize = null;
+        if (chapter === 'Whole Subject') {
+            const wholeSubSizeEl = document.querySelector(`.mt-size-whole-subject[data-subject="${CSS.escape(subject)}"]`);
+            totalSize = wholeSubSizeEl && wholeSubSizeEl.value ? parseInt(wholeSubSizeEl.value, 10) : null;
+        } else {
+            const sizeInput = document.querySelector(`.mt-chapter-size-input[data-subject="${CSS.escape(subject)}"][data-chapter="${CSS.escape(chapter)}"]`);
+            totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+        }
+
+        const calculatedSize = totalSize ? Math.round(totalSize * fractionVal) : null;
+        window.monthlyTargetDailyAllocations[key][rowIdx].portionSize = calculatedSize;
+        window.monthlyTargetDailyAllocations[key][rowIdx].fraction = fractionLabel;
+        window.monthlyTargetDailyAllocations[key][rowIdx].portionLabel = `Fraction ${fractionLabel}`;
+        window.renderMonthlyTargetDailyAllocations();
+        window.updateMonthlyTargetPageSummary();
+    }
+};
+
+window.autoSpreadAllChaptersAcrossDays = function (mode = 'month') {
+    const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
+    const days = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate) : [];
+    if (days.length === 0) return showToast("No days available in the active month.", "error");
+
+    const checkedTargets = [];
+    const wholeSubs = document.querySelectorAll('.mt-ch-whole-subject:checked');
+    wholeSubs.forEach(ws => {
+        const sub = ws.getAttribute('data-subject');
+        const sizeInput = document.querySelector(`.mt-size-whole-subject[data-subject="${CSS.escape(sub)}"]`);
+        const totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+        checkedTargets.push({ subject: sub, chapter: 'Whole Subject', totalSize: totalSize });
+    });
+
+    const checkboxes = document.querySelectorAll('.mt-chapter-checkbox:checked');
+    checkboxes.forEach(cb => {
+        const sub = cb.getAttribute('data-subject');
+        const ch = cb.getAttribute('data-chapter');
+        const sizeInput = document.querySelector(`.mt-chapter-size-input[data-subject="${CSS.escape(sub)}"][data-chapter="${CSS.escape(ch)}"]`);
+        const totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+        checkedTargets.push({ subject: sub, chapter: ch, totalSize: totalSize });
+    });
+
+    if (checkedTargets.length === 0) {
+        return showToast("Please check at least one chapter or whole subject first.", "error");
+    }
+
+    if (!window.monthlyTargetDailyAllocations) window.monthlyTargetDailyAllocations = {};
+
+    checkedTargets.forEach((target, idx) => {
+        const key = target.subject + '|||' + target.chapter;
+        const assignedDay = days[idx % days.length];
+        window.monthlyTargetDailyAllocations[key] = [{
+            dayKey: assignedDay ? assignedDay.key : '',
+            portionSize: target.totalSize,
+            fraction: 'All',
+            portionLabel: 'Full Chapter'
+        }];
+    });
+
+    window.renderMonthlyTargetDailyAllocations();
+    window.updateMonthlyTargetPageSummary();
+    showToast(`⚡ Auto-spread ${checkedTargets.length} target(s) across month days!`, "success");
+};
+
+window.applyBulkDayToAllChapters = function () {
+    const bulkSelect = document.getElementById('mt-bulk-assign-day-select');
+    const selectedDay = bulkSelect ? bulkSelect.value : '';
+    if (!selectedDay) {
+        return showToast("Please select a date from the dropdown first.", "error");
+    }
+
+    const checkedTargets = [];
+    const wholeSubs = document.querySelectorAll('.mt-ch-whole-subject:checked');
+    wholeSubs.forEach(ws => {
+        const sub = ws.getAttribute('data-subject');
+        const sizeInput = document.querySelector(`.mt-size-whole-subject[data-subject="${CSS.escape(sub)}"]`);
+        const totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+        checkedTargets.push({ subject: sub, chapter: 'Whole Subject', totalSize: totalSize });
+    });
+
+    const checkboxes = document.querySelectorAll('.mt-chapter-checkbox:checked');
+    checkboxes.forEach(cb => {
+        const sub = cb.getAttribute('data-subject');
+        const ch = cb.getAttribute('data-chapter');
+        const sizeInput = document.querySelector(`.mt-chapter-size-input[data-subject="${CSS.escape(sub)}"][data-chapter="${CSS.escape(ch)}"]`);
+        const totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+        checkedTargets.push({ subject: sub, chapter: ch, totalSize: totalSize });
+    });
+
+    if (checkedTargets.length === 0) {
+        return showToast("Please check at least one chapter or whole subject first.", "error");
+    }
+
+    if (!window.monthlyTargetDailyAllocations) window.monthlyTargetDailyAllocations = {};
+
+    checkedTargets.forEach(target => {
+        const key = target.subject + '|||' + target.chapter;
+        window.monthlyTargetDailyAllocations[key] = [{
+            dayKey: selectedDay,
+            portionSize: target.totalSize,
+            fraction: 'All',
+            portionLabel: 'Full Chapter'
+        }];
+    });
+
+    window.renderMonthlyTargetDailyAllocations();
+    window.updateMonthlyTargetPageSummary();
+    showToast(`📅 All ${checkedTargets.length} selected target(s) assigned to ${selectedDay}!`, "success");
+};
+
+window.clearAllDailyAllocations = function () {
+    window.monthlyTargetDailyAllocations = {};
+    window.renderMonthlyTargetDailyAllocations();
+    window.updateMonthlyTargetPageSummary();
+    showToast("All daily target allocations cleared.", "success");
+};
+
+window.updateMonthlyTargetPageSummary = function () {
+    const checkedSubjects = Array.from(document.querySelectorAll('.mt-subject-checkbox:checked')).map(cb => cb.getAttribute('data-subject'));
+    const badgeCount = document.getElementById('mt-subjects-count-badge');
+    if (badgeCount) {
+        badgeCount.textContent = `${checkedSubjects.length} Selected`;
+    }
+
+    const dropdownLabel = document.getElementById('mt-subjects-dropdown-label');
+    if (dropdownLabel) {
+        if (checkedSubjects.length === 0) {
+            dropdownLabel.textContent = 'Select Subjects...';
+            dropdownLabel.className = 'text-xs sm:text-sm font-bold text-slate-400 dark:text-slate-500 truncate block';
+        } else if (checkedSubjects.length === 1) {
+            dropdownLabel.textContent = `${checkedSubjects[0]}`;
+            dropdownLabel.className = 'text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate block';
+        } else {
+            dropdownLabel.textContent = `${checkedSubjects.length} Selected: ${checkedSubjects.join(', ')}`;
+            dropdownLabel.className = 'text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate block';
+        }
+    }
+
+    const summarySubject = document.getElementById('mt-summary-subject-display');
+    const summaryTargetCount = document.getElementById('mt-summary-target-count');
+    const summaryTotalSize = document.getElementById('mt-summary-total-size');
+    const bottomSummary = document.getElementById('mt-bottom-summary-text');
+
+    if (summarySubject) {
+        if (checkedSubjects.length === 0) {
+            summarySubject.textContent = 'None Selected';
+        } else if (checkedSubjects.length === 1) {
+            summarySubject.textContent = `${checkedSubjects[0]}`;
+        } else {
+            summarySubject.textContent = `${checkedSubjects.length} Subjects (${checkedSubjects.join(', ')})`;
+        }
+    }
+
+    let checkedCount = 0;
+    let totalSizeSum = 0;
+    const weekCountMap = {};
+
+    const wholeSubs = document.querySelectorAll('.mt-ch-whole-subject:checked');
+    wholeSubs.forEach(ws => {
+        checkedCount++;
+        const sub = ws.getAttribute('data-subject');
+        const sizeInput = document.querySelector(`.mt-size-whole-subject[data-subject="${CSS.escape(sub)}"]`);
+        const weekSelect = document.querySelector(`.mt-size-whole-subject-week[data-subject="${CSS.escape(sub)}"]`);
+        if (sizeInput && sizeInput.value) {
+            totalSizeSum += parseInt(sizeInput.value, 10) || 0;
+        }
+        if (weekSelect && weekSelect.value) {
+            weekCountMap[weekSelect.value] = (weekCountMap[weekSelect.value] || 0) + 1;
+        }
+    });
+
+    const checkboxes = document.querySelectorAll('.mt-chapter-checkbox:checked');
+    checkboxes.forEach(cb => {
+        checkedCount++;
+        const sub = cb.getAttribute('data-subject');
+        const ch = cb.getAttribute('data-chapter');
+        const sizeInput = document.querySelector(`.mt-chapter-size-input[data-subject="${CSS.escape(sub)}"][data-chapter="${CSS.escape(ch)}"]`);
+        const weekSelect = document.querySelector(`.mt-chapter-week-select[data-subject="${CSS.escape(sub)}"][data-chapter="${CSS.escape(ch)}"]`);
+        if (sizeInput && sizeInput.value) {
+            totalSizeSum += parseInt(sizeInput.value, 10) || 0;
+        }
+        if (weekSelect && weekSelect.value) {
+            weekCountMap[weekSelect.value] = (weekCountMap[weekSelect.value] || 0) + 1;
+        }
+    });
+
+    const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
+    const weeks = window.getWeeksForMonth ? window.getWeeksForMonth(targetMonthDate) : [];
+    const weekBreakdown = [];
+    weeks.forEach((w, idx) => {
+        if (weekCountMap[w.key]) {
+            weekBreakdown.push(`W${idx + 1}: ${weekCountMap[w.key]}`);
+        }
+    });
+
+    // Daily breakdown count
+    let scheduledDaysCount = 0;
+    let scheduledTargetsCount = 0;
+    const daysSet = new Set();
+    if (window.monthlyTargetDailyAllocations) {
+        Object.values(window.monthlyTargetDailyAllocations).forEach(arr => {
+            if (Array.isArray(arr)) {
+                arr.forEach(a => {
+                    if (a.dayKey) {
+                        daysSet.add(a.dayKey);
+                        scheduledTargetsCount++;
+                    }
+                });
+            }
+        });
+    }
+    scheduledDaysCount = daysSet.size;
+
+    if (summaryTargetCount) {
+        const weekInfo = weekBreakdown.length > 0 ? ` (${weekBreakdown.join(', ')})` : '';
+        const dayInfo = scheduledTargetsCount > 0 ? ` • ${scheduledTargetsCount} Day Target(s)` : '';
+        summaryTargetCount.textContent = checkedCount === 1 ? `1 Target Selected${weekInfo}${dayInfo}` : `${checkedCount} Targets Selected${weekInfo}${dayInfo}`;
+    }
+    if (summaryTotalSize) {
+        summaryTotalSize.textContent = totalSizeSum > 0 ? `${totalSizeSum} Pages / Units` : 'No Size Specified';
+    }
+    if (bottomSummary) {
+        if (checkedCount === 0) {
+            bottomSummary.textContent = 'Select at least 1 chapter or whole subject across your chosen subjects to create targets.';
+        } else {
+            const subLabel = checkedSubjects.length === 1 ? '1 subject' : `${checkedSubjects.length} subjects`;
+            const weekStr = weekBreakdown.length > 0 ? ` • Weekly: ${weekBreakdown.join(', ')}` : '';
+            const dayStr = scheduledDaysCount > 0 ? ` • ${scheduledTargetsCount} Daily Target(s) across ${scheduledDaysCount} day(s)` : '';
+            bottomSummary.innerHTML = `<strong>${checkedCount} target(s) selected</strong> across ${subLabel} • ${totalSizeSum > 0 ? totalSizeSum + ' total pages/units' : 'Custom scope'}${weekStr}${dayStr}`;
+        }
     }
 };
 
@@ -14780,25 +15655,32 @@ window.applyBulkSizeToMonthlyChapters = function () {
     }
 
     let appliedCount = 0;
-    const wholeSub = document.getElementById('mt-ch-whole-subject');
-    const wholeSubSize = document.getElementById('mt-size-whole-subject');
-    if (wholeSub && wholeSub.checked && wholeSubSize) {
-        wholeSubSize.value = bulkVal;
-        appliedCount++;
-    }
-
-    const checkboxes = document.querySelectorAll('.mt-chapter-checkbox:checked');
-    checkboxes.forEach(cb => {
-        const ch = cb.getAttribute('data-chapter');
-        const sizeInput = document.querySelector(`.mt-chapter-size-input[data-chapter="${CSS.escape(ch)}"]`);
+    const wholeSubs = document.querySelectorAll('.mt-ch-whole-subject:checked');
+    wholeSubs.forEach(ws => {
+        const sub = ws.getAttribute('data-subject');
+        const sizeInput = document.querySelector(`.mt-size-whole-subject[data-subject="${CSS.escape(sub)}"]`);
         if (sizeInput) {
             sizeInput.value = bulkVal;
             appliedCount++;
         }
     });
 
+    const checkboxes = document.querySelectorAll('.mt-chapter-checkbox:checked');
+    checkboxes.forEach(cb => {
+        const sub = cb.getAttribute('data-subject');
+        const ch = cb.getAttribute('data-chapter');
+        const sizeInput = document.querySelector(`.mt-chapter-size-input[data-subject="${CSS.escape(sub)}"][data-chapter="${CSS.escape(ch)}"]`);
+        if (sizeInput) {
+            sizeInput.value = bulkVal;
+            appliedCount++;
+        }
+    });
+
+    window.renderMonthlyTargetDailyAllocations();
+    window.updateMonthlyTargetPageSummary();
+
     if (appliedCount === 0) {
-        showToast("No chapters or whole subject currently selected. Check the chapters you want to apply size to.", "error");
+        showToast("No chapters or whole subjects currently selected. Check the targets you want to apply size to.", "error");
     } else {
         showToast(`Bulk size (${bulkVal}) applied to ${appliedCount} selected target(s)!`, "success");
     }
@@ -14843,8 +15725,9 @@ window.getDaysForMonthOrWeek = function (monthDate = new Date(), weekKey = null)
                     const dayDate = new Date(start);
                     dayDate.setDate(dayDate.getDate() + i);
                     const dateKey = Utils.formatDate(dayDate);
-                    const opt = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
-                    const label = dayDate.toLocaleDateString('en-GB', opt);
+                    const dayStr = dayDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+                    const wkStr = dayDate.toLocaleDateString('en-GB', { weekday: 'short' });
+                    const label = `${dayStr} (${wkStr})`;
                     days.push({ key: dateKey, rawDate: dayDate, label: label });
                 }
                 return days;
@@ -14860,8 +15743,9 @@ window.getDaysForMonthOrWeek = function (monthDate = new Date(), weekKey = null)
     for (let day = 1; day <= totalDays; day++) {
         const dayDate = new Date(year, month, day);
         const dateKey = Utils.formatDate(dayDate);
-        const opt = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
-        const label = dayDate.toLocaleDateString('en-GB', opt);
+        const dayStr = dayDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        const wkStr = dayDate.toLocaleDateString('en-GB', { weekday: 'short' });
+        const label = `${dayStr} (${wkStr})`;
         days.push({ key: dateKey, rawDate: dayDate, label: label });
     }
     return days;
@@ -14870,20 +15754,46 @@ window.getDaysForMonthOrWeek = function (monthDate = new Date(), weekKey = null)
 window.populateMonthlyTargetWeeksAndDays = function (monthDate = new Date(), selectedWeekKey = null, selectedDayKey = null) {
     const weekSelect = document.getElementById('mt-select-week-range');
     const daySelect = document.getElementById('mt-select-day');
-    if (!weekSelect || !daySelect) return;
+    const bulkDaySelect = document.getElementById('mt-bulk-assign-day-select');
 
-    const weeks = window.getWeeksForMonth(monthDate);
-    weekSelect.innerHTML = '<option value="">-- None (Only Monthly Target) --</option>';
-    weeks.forEach(w => {
-        weekSelect.innerHTML += `<option value="${w.key}">${w.label}</option>`;
-    });
-    if (selectedWeekKey && weeks.some(w => w.key === selectedWeekKey)) {
-        weekSelect.value = selectedWeekKey;
-    } else {
-        weekSelect.value = '';
+    const weeks = window.getWeeksForMonth ? window.getWeeksForMonth(monthDate) : [];
+    if (weekSelect) {
+        weekSelect.innerHTML = '<option value="">-- None (Only Monthly Target) --</option>';
+        weeks.forEach(w => {
+            weekSelect.innerHTML += `<option value="${w.key}">${w.label}</option>`;
+        });
+        if (selectedWeekKey && weeks.some(w => w.key === selectedWeekKey)) {
+            weekSelect.value = selectedWeekKey;
+        } else {
+            weekSelect.value = '';
+        }
     }
 
-    window.updateMonthlyTargetDaysDropdown(monthDate, weekSelect.value, selectedDayKey);
+    const days = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(monthDate) : [];
+    if (bulkDaySelect) {
+        const prevBulkVal = bulkDaySelect.value;
+        bulkDaySelect.innerHTML = '<option value="">-- Choose Date for All Chapters --</option>';
+        days.forEach(d => {
+            bulkDaySelect.innerHTML += `<option value="${d.key}">${d.label}</option>`;
+        });
+        if (prevBulkVal && days.some(d => d.key === prevBulkVal)) {
+            bulkDaySelect.value = prevBulkVal;
+        }
+    }
+
+    if (daySelect) {
+        daySelect.innerHTML = '<option value="">-- None (Not Assigned to Day) --</option>';
+        days.forEach(d => {
+            daySelect.innerHTML += `<option value="${d.key}">${d.label}</option>`;
+        });
+        if (selectedDayKey && days.some(d => d.key === selectedDayKey)) {
+            daySelect.value = selectedDayKey;
+        } else {
+            daySelect.value = '';
+        }
+    }
+
+    window.renderMonthlyTargetDailyAllocations();
 };
 
 window.updateMonthlyTargetDaysDropdown = function (monthDate = new Date(), weekKey = null, selectedDayKey = null) {
@@ -14936,21 +15846,20 @@ window.addMonthlyTarget = function () {
     const targetMonthKey = monthSelectEl ? monthSelectEl.value : currentMonthKey;
 
     const progSelectEl = document.getElementById('mt-select-prog');
-    const subSelectEl = document.getElementById('mt-select-sub');
-
     const progName = progSelectEl ? progSelectEl.value : '';
-    const subject = subSelectEl ? subSelectEl.value : '';
 
     if (!progName) {
         return showToast("Please select a Program (minimum 1 target is required).", "error");
-    }
-    if (!subject || subject === 'No Subjects') {
-        return showToast("Please select a Subject (minimum 1 target is required).", "error");
     }
 
     const trackId = window.tracks.find(t => window.customPrograms[t.id] && window.customPrograms[t.id].some(p => (p.name || p) === progName))?.id;
     if (!trackId) {
         return showToast("Program track could not be identified.", "error");
+    }
+
+    const checkedSubjects = Array.from(document.querySelectorAll('.mt-subject-checkbox:checked')).map(cb => cb.getAttribute('data-subject'));
+    if (checkedSubjects.length === 0) {
+        return showToast("Please select at least one subject on the left.", "error");
     }
 
     if (!window.monthlyTargetsDatabase) window.monthlyTargetsDatabase = {};
@@ -14961,47 +15870,62 @@ window.addMonthlyTarget = function () {
     const daySelectEl = document.getElementById('mt-select-day');
     const selectedDayKey = daySelectEl ? daySelectEl.value : '';
 
-    // Collect targets to add
+    // Collect targets to add across all checked subjects
     const targetsToAdd = [];
 
-    // 1. Whole Subject
-    const wholeSubCheckbox = document.getElementById('mt-ch-whole-subject');
-    const wholeSubSizeEl = document.getElementById('mt-size-whole-subject');
-    if (wholeSubCheckbox && wholeSubCheckbox.checked) {
-        const totalSize = wholeSubSizeEl && wholeSubSizeEl.value ? parseInt(wholeSubSizeEl.value, 10) : null;
-        targetsToAdd.push({
-            chapter: 'Whole Subject',
-            targetType: 'subject',
-            scope: 'Whole Subject',
-            totalChapterSize: totalSize
-        });
-    }
+    checkedSubjects.forEach(subject => {
+        // 1. Whole Subject for this subject
+        const wholeSubCheckbox = document.querySelector(`.mt-ch-whole-subject[data-subject="${CSS.escape(subject)}"]`);
+        const wholeSubSizeEl = document.querySelector(`.mt-size-whole-subject[data-subject="${CSS.escape(subject)}"]`);
+        const wholeSubWeekEl = document.querySelector(`.mt-size-whole-subject-week[data-subject="${CSS.escape(subject)}"]`);
+        if (wholeSubCheckbox && wholeSubCheckbox.checked) {
+            const totalSize = wholeSubSizeEl && wholeSubSizeEl.value ? parseInt(wholeSubSizeEl.value, 10) : null;
+            const weekKey = (wholeSubWeekEl && wholeSubWeekEl.value) || selectedWeekKey || null;
+            targetsToAdd.push({
+                subject: subject,
+                chapter: 'Whole Subject',
+                targetType: 'subject',
+                scope: 'Whole Subject',
+                totalChapterSize: totalSize,
+                targetWeek: weekKey
+            });
+        }
 
-    // 2. Individual Chapters
-    const checkedBoxes = document.querySelectorAll('.mt-chapter-checkbox:checked');
-    checkedBoxes.forEach(cb => {
-        const ch = cb.getAttribute('data-chapter');
-        const sizeInput = document.querySelector(`.mt-chapter-size-input[data-chapter="${CSS.escape(ch)}"]`);
-        const totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
-        targetsToAdd.push({
-            chapter: ch,
-            targetType: 'chapter',
-            scope: 'Whole Chapter',
-            totalChapterSize: totalSize
+        // 2. Individual Chapters for this subject
+        const checkedBoxes = document.querySelectorAll(`.mt-chapter-checkbox:checked[data-subject="${CSS.escape(subject)}"]`);
+        checkedBoxes.forEach(cb => {
+            const ch = cb.getAttribute('data-chapter');
+            const sizeInput = document.querySelector(`.mt-chapter-size-input[data-subject="${CSS.escape(subject)}"][data-chapter="${CSS.escape(ch)}"]`);
+            const weekSelect = document.querySelector(`.mt-chapter-week-select[data-subject="${CSS.escape(subject)}"][data-chapter="${CSS.escape(ch)}"]`);
+            const totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+            const weekKey = (weekSelect && weekSelect.value) || selectedWeekKey || null;
+            targetsToAdd.push({
+                subject: subject,
+                chapter: ch,
+                targetType: 'chapter',
+                scope: 'Whole Chapter',
+                totalChapterSize: totalSize,
+                targetWeek: weekKey
+            });
         });
     });
 
     if (targetsToAdd.length === 0) {
-        return showToast("Please select at least one chapter or the whole subject (minimum 1 is required).", "error");
+        return showToast("Please select at least one chapter or whole subject target (minimum 1 is required).", "error");
     }
 
     let addedCount = 0;
     let skippedDuplicateCount = 0;
     let connectedToWeek = false;
     let connectedToDay = false;
+    const addedSubjectsSet = new Set();
+    const connectedWeeksSet = new Set();
+    const connectedDaysSet = new Set();
+    let totalDailyAllocationsAdded = 0;
 
     targetsToAdd.forEach(item => {
         const isSubjectTarget = item.targetType === 'subject';
+        const subject = item.subject;
         const finalChapter = item.chapter;
 
         // Duplicate check
@@ -15048,13 +15972,15 @@ window.addMonthlyTarget = function () {
             totalChapterSize: item.totalChapterSize
         });
         addedCount++;
+        addedSubjectsSet.add(subject);
 
-        // Auto-connect to Weekly Target if selected
-        if (selectedWeekKey) {
+        // Auto-connect to Weekly Target (using item's specific targetWeek or global week)
+        const targetWeekKey = item.targetWeek;
+        if (targetWeekKey) {
             if (!window.weeklyTargetsDatabase) window.weeklyTargetsDatabase = {};
-            if (!window.weeklyTargetsDatabase[selectedWeekKey]) window.weeklyTargetsDatabase[selectedWeekKey] = [];
+            if (!window.weeklyTargetsDatabase[targetWeekKey]) window.weeklyTargetsDatabase[targetWeekKey] = [];
 
-            const wtList = window.weeklyTargetsDatabase[selectedWeekKey];
+            const wtList = window.weeklyTargetsDatabase[targetWeekKey];
             const wtExists = isSubjectTarget
                 ? wtList.some(t => t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
                 : wtList.some(t => t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject');
@@ -15072,11 +15998,57 @@ window.addMonthlyTarget = function () {
                     totalChapterSize: item.totalChapterSize
                 });
                 connectedToWeek = true;
+                connectedWeeksSet.add(targetWeekKey);
             }
         }
 
-        // Auto-connect to Daily Target if selected
-        if (selectedDayKey) {
+        // Auto-connect to Daily Targets from Daily Target Allocator Studio
+        const allocKey = subject + '|||' + finalChapter;
+        const dailyAllocs = (window.monthlyTargetDailyAllocations && window.monthlyTargetDailyAllocations[allocKey]) || [];
+
+        if (dailyAllocs.length > 0) {
+            let runningSum = 0;
+            dailyAllocs.forEach(alloc => {
+                if (alloc.dayKey) {
+                    if (!window.dailyTargetsDatabase) window.dailyTargetsDatabase = {};
+                    if (!window.dailyTargetsDatabase[alloc.dayKey]) window.dailyTargetsDatabase[alloc.dayKey] = [];
+
+                    const prevSum = runningSum;
+                    const portionSize = alloc.portionSize || item.totalChapterSize;
+                    runningSum += (parseInt(portionSize, 10) || 0);
+
+                    const isStar = Boolean(item.totalChapterSize && item.totalChapterSize > 0 && prevSum >= item.totalChapterSize);
+                    const portionLabel = alloc.portionLabel || (isStar ? '⭐ Extra Setup' : (alloc.fraction ? `Fraction ${alloc.fraction}` : ''));
+
+                    const dtList = window.dailyTargetsDatabase[alloc.dayKey];
+                    const dtExists = isSubjectTarget
+                        ? dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters') && (t.portionLabel === portionLabel || t.totalChapterSize === portionSize))
+                        : dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject' && (t.portionLabel === portionLabel || t.totalChapterSize === portionSize));
+
+                    if (!dtExists) {
+                        dtList.push({
+                            track: trackId,
+                            program: progName,
+                            subject: subject,
+                            chapter: finalChapter,
+                            targetType: item.targetType,
+                            completed: isCompletedBefore,
+                            completedAt: completedAtBefore,
+                            scope: item.scope,
+                            totalChapterSize: portionSize,
+                            portionSize: portionSize,
+                            portionLabel: portionLabel,
+                            fraction: alloc.fraction || '',
+                            isStarTarget: isStar
+                        });
+                        connectedToDay = true;
+                        connectedDaysSet.add(alloc.dayKey);
+                        totalDailyAllocationsAdded++;
+                    }
+                }
+            });
+        } else if (selectedDayKey) {
+            // Fallback if single day selected
             if (!window.dailyTargetsDatabase) window.dailyTargetsDatabase = {};
             if (!window.dailyTargetsDatabase[selectedDayKey]) window.dailyTargetsDatabase[selectedDayKey] = [];
 
@@ -15098,6 +16070,8 @@ window.addMonthlyTarget = function () {
                     totalChapterSize: item.totalChapterSize
                 });
                 connectedToDay = true;
+                connectedDaysSet.add(selectedDayKey);
+                totalDailyAllocationsAdded++;
             }
         }
     });
@@ -15119,15 +16093,28 @@ window.addMonthlyTarget = function () {
 
     FirebaseService.saveToCloud();
     renderUI();
-    closeModal('add-monthly-target-modal');
 
-    let toastMsg = addedCount === 1 ? "1 Monthly target added!" : `${addedCount} Monthly targets added!`;
+    // Smoothly return to Daily Actions page and focus monthly targets section
+    window.switchPage('daily-actions');
+    setTimeout(() => {
+        const targetSection = document.getElementById('monthly-targets-section');
+        if (targetSection) {
+            targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 80);
+
+    const subCountStr = addedSubjectsSet.size > 1 ? ` across ${addedSubjectsSet.size} subjects` : '';
+    let toastMsg = addedCount === 1 ? "1 Monthly target added!" : `${addedCount} Monthly targets added${subCountStr}!`;
     if (connectedToWeek && connectedToDay) {
-        toastMsg += " (Connected to Weekly & Daily targets)";
+        const weekCountLabel = connectedWeeksSet.size > 1 ? `${connectedWeeksSet.size} Weeks` : 'Weekly';
+        const dayCountLabel = connectedDaysSet.size > 1 ? `${totalDailyAllocationsAdded} Daily targets across ${connectedDaysSet.size} days` : 'Daily target';
+        toastMsg += ` (Connected to ${weekCountLabel} & ${dayCountLabel})`;
     } else if (connectedToWeek) {
-        toastMsg += " (Connected to Weekly target)";
+        const weekCountLabel = connectedWeeksSet.size > 1 ? `${connectedWeeksSet.size} Weeks` : 'Weekly target';
+        toastMsg += ` (Connected to ${weekCountLabel})`;
     } else if (connectedToDay) {
-        toastMsg += " (Connected to Daily target)";
+        const dayCountLabel = connectedDaysSet.size > 1 ? `${totalDailyAllocationsAdded} Daily targets across ${connectedDaysSet.size} days` : 'Daily target';
+        toastMsg += ` (Connected to ${dayCountLabel})`;
     }
     showToast(toastMsg, "success");
 };
@@ -15362,7 +16349,7 @@ window.renderMonthlyTargets = function () {
                         </div>
                     </div>
                     <div class="flex items-center space-x-1 shrink-0">
-                        <button onclick="window.openEditMonthlyTargetModal(${idx}, '${activeMonthKey}')" class="p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 text-slate-300 hover:text-indigo-550 dark:hover:text-indigo-400 rounded-lg transition-all active:scale-90 shadow-sm" title="Edit Monthly Target">
+                        <button onclick="window.openEditMonthlyTargetPage(${idx}, '${activeMonthKey}')" class="p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 text-slate-300 hover:text-indigo-550 dark:hover:text-indigo-400 rounded-lg transition-all active:scale-90 shadow-sm" title="Edit Monthly Target">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                             </svg>
@@ -15448,18 +16435,47 @@ window.renderMonthlyTargets = function () {
     }
 };
 
-window.openAddMonthlyTargetModal = function () {
+window.openAddMonthlyTargetPage = function () {
     window.editingMonthlyTargetIndex = null;
-    const modalTitle = document.querySelector('#add-monthly-target-modal h2');
-    if (modalTitle) modalTitle.textContent = "Add Monthly Target";
-    const modalBtn = document.querySelector('#add-monthly-target-modal button[onclick*="addMonthlyTarget"], #add-monthly-target-modal button[onclick*="saveMonthlyTarget"]');
-    if (modalBtn) {
-        modalBtn.textContent = "Add Target";
-        modalBtn.setAttribute('onclick', 'window.addMonthlyTarget()');
+
+    window.switchPage('monthly-target-setup');
+
+    const pageTitle = document.getElementById('mt-page-title');
+    if (pageTitle) pageTitle.textContent = "Add Monthly Target";
+
+    const pageSubtitle = document.getElementById('mt-page-subtitle');
+    if (pageSubtitle) pageSubtitle.textContent = "Configure program, subject, chapter breakdown, sizes, and weekly/daily target synchronization";
+
+    const modeBadge = document.getElementById('mt-page-mode-badge');
+    if (modeBadge) modeBadge.textContent = "Target Setup";
+
+    const btnTop = document.getElementById('mt-btn-save-top');
+    if (btnTop) {
+        btnTop.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg><span>Add Target</span>`;
+        btnTop.setAttribute('onclick', 'window.addMonthlyTarget()');
     }
 
-    const sizeInput = document.getElementById('mt-input-size');
-    if (sizeInput) sizeInput.value = '';
+    const btnBottom = document.getElementById('mt-btn-save-bottom');
+    if (btnBottom) {
+        btnBottom.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg><span>Add Target</span>`;
+        btnBottom.setAttribute('onclick', 'window.addMonthlyTarget()');
+    }
+
+    const searchInput = document.getElementById('mt-chapter-search-input');
+    if (searchInput) searchInput.value = '';
+
+    const bulkSizeInput = document.getElementById('mt-bulk-size-input');
+    if (bulkSizeInput) bulkSizeInput.value = '';
+
+    const activeRange = window.getMonthlyTargetRange(window.currentMonthlyTargetsDate || new Date());
+    const activeMonthKey = window.formatMonthRangeKey(activeRange.start, activeRange.end);
+    const monthName = activeRange.start.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+    const monthBadge = document.getElementById('mt-page-month-badge');
+    if (monthBadge) monthBadge.textContent = `${monthName}`;
+
+    const summaryMonth = document.getElementById('mt-summary-month-display');
+    if (summaryMonth) summaryMonth.textContent = `${monthName} (${activeMonthKey})`;
 
     const progDropdown = document.getElementById('mt-select-prog');
     if (progDropdown) {
@@ -15480,13 +16496,17 @@ window.openAddMonthlyTargetModal = function () {
         }
     }
 
+    window.monthlyTargetDailyAllocations = {};
     const activeMonthDate = window.currentMonthlyTargetsDate || new Date();
     window.populateMonthlyTargetWeeksAndDays(activeMonthDate);
-
-    window.openModal('add-monthly-target-modal');
+    window.updateMonthlyTargetPageSummary();
 };
 
-window.openEditMonthlyTargetModal = function (idx, monthKey = null) {
+window.openAddMonthlyTargetModal = function () {
+    window.openAddMonthlyTargetPage();
+};
+
+window.openEditMonthlyTargetPage = function (idx, monthKey = null) {
     if (!monthKey) {
         const range = window.getMonthlyTargetRange();
         monthKey = window.formatMonthRangeKey(range.start, range.end);
@@ -15496,15 +16516,47 @@ window.openEditMonthlyTargetModal = function (idx, monthKey = null) {
     const target = window.monthlyTargetsDatabase[monthKey][idx];
     window.editingMonthlyTargetIndex = idx;
 
-    window.openModal('add-monthly-target-modal');
+    window.switchPage('monthly-target-setup');
 
-    const modalTitle = document.querySelector('#add-monthly-target-modal h2');
-    if (modalTitle) modalTitle.textContent = "Edit Monthly Target";
-    const modalBtn = document.querySelector('#add-monthly-target-modal button[onclick*="addMonthlyTarget"], #add-monthly-target-modal button[onclick*="saveMonthlyTarget"]');
-    if (modalBtn) {
-        modalBtn.textContent = "Save Target";
-        modalBtn.setAttribute('onclick', `window.saveMonthlyTarget(${idx}, '${monthKey}')`);
+    const pageTitle = document.getElementById('mt-page-title');
+    if (pageTitle) pageTitle.textContent = "Edit Monthly Target";
+
+    const pageSubtitle = document.getElementById('mt-page-subtitle');
+    if (pageSubtitle) pageSubtitle.textContent = "Update target details, scope, chapter size, and weekly/daily connections";
+
+    const modeBadge = document.getElementById('mt-page-mode-badge');
+    if (modeBadge) modeBadge.textContent = "Edit Mode";
+
+    const btnTop = document.getElementById('mt-btn-save-top');
+    if (btnTop) {
+        btnTop.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg><span>Save Changes</span>`;
+        btnTop.setAttribute('onclick', `window.saveMonthlyTarget(${idx}, '${monthKey}')`);
     }
+
+    const btnBottom = document.getElementById('mt-btn-save-bottom');
+    if (btnBottom) {
+        btnBottom.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg><span>Save Changes</span>`;
+        btnBottom.setAttribute('onclick', `window.saveMonthlyTarget(${idx}, '${monthKey}')`);
+    }
+
+    const searchInput = document.getElementById('mt-chapter-search-input');
+    if (searchInput) searchInput.value = '';
+
+    const bulkSizeInput = document.getElementById('mt-bulk-size-input');
+    if (bulkSizeInput) bulkSizeInput.value = '';
+
+    const targetMonthDate = (monthKey && Utils.parseStart && !isNaN(Utils.parseStart(monthKey).getTime()))
+        ? Utils.parseStart(monthKey)
+        : (window.currentMonthlyTargetsDate || new Date());
+
+    const activeRange = window.getMonthlyTargetRange(targetMonthDate);
+    const monthName = activeRange.start.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+    const monthBadge = document.getElementById('mt-page-month-badge');
+    if (monthBadge) monthBadge.textContent = `${monthName}`;
+
+    const summaryMonth = document.getElementById('mt-summary-month-display');
+    if (summaryMonth) summaryMonth.textContent = `${monthName} (${monthKey})`;
 
     const progDropdown = document.getElementById('mt-select-prog');
     if (progDropdown) {
@@ -15520,24 +16572,71 @@ window.openEditMonthlyTargetModal = function (idx, monthKey = null) {
         activeProgs.forEach(p => {
             progDropdown.innerHTML += `<option value="${p}">${p}</option>`;
         });
+        progDropdown.value = target.program;
     }
 
-    const progSelect = document.getElementById('mt-select-prog');
-    if (progSelect) {
-        progSelect.value = target.program;
-        window.updateMonthlyTargetSubjectDropdown();
+    // Find if this target is in any weekly target list of the target month
+    let preselectedWeek = null;
+    if (window.weeklyTargetsDatabase) {
+        const weeks = window.getWeeksForMonth ? window.getWeeksForMonth(targetMonthDate) : [];
+        for (const w of weeks) {
+            const wtList = window.weeklyTargetsDatabase[w.key] || [];
+            const isSubject = target.targetType === 'subject';
+            const match = isSubject
+                ? wtList.some(t => t.track === target.track && t.subject === target.subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
+                : wtList.some(t => t.track === target.track && t.subject === target.subject && t.chapter === target.chapter && t.targetType !== 'subject');
+            if (match) {
+                preselectedWeek = w.key;
+                break;
+            }
+        }
     }
 
-    const subSelect = document.getElementById('mt-select-sub');
-    if (subSelect) {
-        subSelect.value = target.subject;
-        window.updateMonthlyTargetChapterDropdown(target.chapter, target.totalChapterSize);
+    // Load existing daily targets for this chapter across the database into daily allocations
+    window.monthlyTargetDailyAllocations = {};
+    if (window.dailyTargetsDatabase) {
+        const isSubject = target.targetType === 'subject';
+        const key = target.subject + '|||' + target.chapter;
+        const existingAllocs = [];
+        Object.keys(window.dailyTargetsDatabase).forEach(dateKey => {
+            const list = window.dailyTargetsDatabase[dateKey] || [];
+            list.forEach(dt => {
+                if (dt.isDeleted) return;
+                const match = isSubject
+                    ? dt.track === target.track && dt.subject === target.subject && (dt.targetType === 'subject' || dt.chapter === 'Whole Subject' || dt.chapter === 'All Chapters')
+                    : dt.track === target.track && dt.subject === target.subject && dt.chapter === target.chapter && dt.targetType !== 'subject';
+                if (match) {
+                    existingAllocs.push({
+                        dayKey: dateKey,
+                        portionSize: dt.totalChapterSize || dt.portionSize || target.totalChapterSize,
+                        fraction: dt.fraction || '',
+                        portionLabel: dt.portionLabel || ''
+                    });
+                }
+            });
+        });
+        if (existingAllocs.length > 0) {
+            window.monthlyTargetDailyAllocations[key] = existingAllocs;
+        }
     }
 
-    const targetMonthDate = (monthKey && Utils.parseStart && !isNaN(Utils.parseStart(monthKey).getTime()))
-        ? Utils.parseStart(monthKey)
-        : (window.currentMonthlyTargetsDate || new Date());
-    window.populateMonthlyTargetWeeksAndDays(targetMonthDate);
+    window.updateMonthlyTargetSubjectDropdown(target.subject, target.chapter, target.totalChapterSize, preselectedWeek);
+    window.populateMonthlyTargetWeeksAndDays(targetMonthDate, preselectedWeek);
+    window.updateMonthlyTargetPageSummary();
+};
+
+window.openEditMonthlyTargetModal = function (idx, monthKey = null) {
+    window.openEditMonthlyTargetPage(idx, monthKey);
+};
+
+window.closeMonthlyTargetPage = function () {
+    window.switchPage('daily-actions');
+    setTimeout(() => {
+        const targetSection = document.getElementById('monthly-targets-section');
+        if (targetSection) {
+            targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 80);
 };
 
 window.saveMonthlyTarget = function (idx, monthKey = null) {
@@ -15550,43 +16649,46 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
     const target = window.monthlyTargetsDatabase[monthKey][idx];
 
     const progSelectEl = document.getElementById('mt-select-prog');
-    const subSelectEl = document.getElementById('mt-select-sub');
-
     const progName = progSelectEl ? progSelectEl.value : '';
-    const subject = subSelectEl ? subSelectEl.value : '';
 
     if (!progName) {
         return showToast("Please select a Program.", "error");
-    }
-    if (!subject || subject === 'No Subjects') {
-        return showToast("Please select a Subject.", "error");
     }
 
     const trackId = window.tracks.find(t => window.customPrograms[t.id] && window.customPrograms[t.id].some(p => (p.name || p) === progName))?.id;
     if (!trackId) return;
 
+    // Find the first checked target in the studio
+    let selectedSubject = '';
     let selectedChapter = '';
     let selectedType = 'chapter';
     let selectedSize = null;
+    let selectedWeek = '';
 
-    const wholeSub = document.getElementById('mt-ch-whole-subject');
-    const wholeSubSize = document.getElementById('mt-size-whole-subject');
-    if (wholeSub && wholeSub.checked) {
+    const wholeSub = document.querySelector('.mt-ch-whole-subject:checked');
+    if (wholeSub) {
+        selectedSubject = wholeSub.getAttribute('data-subject');
         selectedChapter = 'Whole Subject';
         selectedType = 'subject';
+        const wholeSubSize = document.querySelector(`.mt-size-whole-subject[data-subject="${CSS.escape(selectedSubject)}"]`);
+        const wholeSubWeek = document.querySelector(`.mt-size-whole-subject-week[data-subject="${CSS.escape(selectedSubject)}"]`);
         selectedSize = wholeSubSize && wholeSubSize.value ? parseInt(wholeSubSize.value, 10) : null;
+        selectedWeek = wholeSubWeek ? wholeSubWeek.value : '';
     } else {
         const firstChecked = document.querySelector('.mt-chapter-checkbox:checked');
         if (firstChecked) {
+            selectedSubject = firstChecked.getAttribute('data-subject');
             selectedChapter = firstChecked.getAttribute('data-chapter');
             selectedType = 'chapter';
-            const sizeInput = document.querySelector(`.mt-chapter-size-input[data-chapter="${CSS.escape(selectedChapter)}"]`);
+            const sizeInput = document.querySelector(`.mt-chapter-size-input[data-subject="${CSS.escape(selectedSubject)}"][data-chapter="${CSS.escape(selectedChapter)}"]`);
+            const weekSelect = document.querySelector(`.mt-chapter-week-select[data-subject="${CSS.escape(selectedSubject)}"][data-chapter="${CSS.escape(selectedChapter)}"]`);
             selectedSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+            selectedWeek = weekSelect ? weekSelect.value : '';
         }
     }
 
-    if (!selectedChapter) {
-        return showToast("Please select a chapter or whole subject.", "error");
+    if (!selectedSubject || !selectedChapter) {
+        return showToast("Please select at least one chapter or whole subject.", "error");
     }
 
     const isSubjectTarget = selectedType === 'subject';
@@ -15594,14 +16696,14 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
 
     if (isSubjectTarget) {
         const exists = window.monthlyTargetsDatabase[monthKey].some((t, i) =>
-            i !== idx && t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters')
+            i !== idx && t.track === trackId && t.subject === selectedSubject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters')
         );
         if (exists) {
             return showToast("This subject target already exists in your monthly targets list.", "error");
         }
     } else {
         const exists = window.monthlyTargetsDatabase[monthKey].some((t, i) =>
-            i !== idx && t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject'
+            i !== idx && t.track === trackId && t.subject === selectedSubject && t.chapter === finalChapter && t.targetType !== 'subject'
         );
         if (exists) {
             return showToast("This chapter target already exists in your monthly targets list.", "error");
@@ -15610,30 +16712,30 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
 
     target.track = trackId;
     target.program = progName;
-    target.subject = subject;
+    target.subject = selectedSubject;
     target.chapter = finalChapter;
     target.targetType = selectedType;
     target.scope = isSubjectTarget ? 'Whole Subject' : (target.scope || 'Whole Chapter');
     target.totalChapterSize = selectedSize;
 
     const weekSelectEl = document.getElementById('mt-select-week-range');
-    const selectedWeekKey = weekSelectEl ? weekSelectEl.value : '';
+    const targetWeekKey = selectedWeek || (weekSelectEl ? weekSelectEl.value : '');
     let connectedToWeek = false;
 
-    if (selectedWeekKey) {
+    if (targetWeekKey) {
         if (!window.weeklyTargetsDatabase) window.weeklyTargetsDatabase = {};
-        if (!window.weeklyTargetsDatabase[selectedWeekKey]) window.weeklyTargetsDatabase[selectedWeekKey] = [];
+        if (!window.weeklyTargetsDatabase[targetWeekKey]) window.weeklyTargetsDatabase[targetWeekKey] = [];
 
-        const wtList = window.weeklyTargetsDatabase[selectedWeekKey];
+        const wtList = window.weeklyTargetsDatabase[targetWeekKey];
         const wtExists = isSubjectTarget
-            ? wtList.some(t => t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
-            : wtList.some(t => t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject');
+            ? wtList.some(t => t.track === trackId && t.subject === selectedSubject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
+            : wtList.some(t => t.track === trackId && t.subject === selectedSubject && t.chapter === finalChapter && t.targetType !== 'subject');
 
         if (!wtExists) {
             wtList.push({
                 track: trackId,
                 program: progName,
-                subject: subject,
+                subject: selectedSubject,
                 chapter: finalChapter,
                 targetType: selectedType,
                 completed: target.completed,
@@ -15650,21 +16752,68 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
     const daySelectEl = document.getElementById('mt-select-day');
     const selectedDayKey = daySelectEl ? daySelectEl.value : '';
     let connectedToDay = false;
+    let totalDailyAllocationsAdded = 0;
+    const connectedDaysSet = new Set();
 
-    if (selectedDayKey) {
+    // Auto-connect to Daily Targets from Daily Target Allocator Studio
+    const allocKey = selectedSubject + '|||' + finalChapter;
+    const dailyAllocs = (window.monthlyTargetDailyAllocations && window.monthlyTargetDailyAllocations[allocKey]) || [];
+
+    if (dailyAllocs.length > 0) {
+        let runningSum = 0;
+        dailyAllocs.forEach(alloc => {
+            if (alloc.dayKey) {
+                if (!window.dailyTargetsDatabase) window.dailyTargetsDatabase = {};
+                if (!window.dailyTargetsDatabase[alloc.dayKey]) window.dailyTargetsDatabase[alloc.dayKey] = [];
+
+                const prevSum = runningSum;
+                const portionSize = alloc.portionSize || selectedSize;
+                runningSum += (parseInt(portionSize, 10) || 0);
+
+                const isStar = Boolean(selectedSize && selectedSize > 0 && prevSum >= selectedSize);
+                const portionLabel = alloc.portionLabel || (isStar ? '⭐ Extra Setup' : (alloc.fraction ? `Fraction ${alloc.fraction}` : ''));
+
+                const dtList = window.dailyTargetsDatabase[alloc.dayKey];
+                const dtExists = isSubjectTarget
+                    ? dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === selectedSubject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters') && (t.portionLabel === portionLabel || t.totalChapterSize === portionSize))
+                    : dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === selectedSubject && t.chapter === finalChapter && t.targetType !== 'subject' && (t.portionLabel === portionLabel || t.totalChapterSize === portionSize));
+
+                if (!dtExists) {
+                    dtList.push({
+                        track: trackId,
+                        program: progName,
+                        subject: selectedSubject,
+                        chapter: finalChapter,
+                        targetType: selectedType,
+                        completed: target.completed,
+                        completedAt: target.completedAt,
+                        scope: target.scope,
+                        totalChapterSize: portionSize,
+                        portionSize: portionSize,
+                        portionLabel: portionLabel,
+                        fraction: alloc.fraction || '',
+                        isStarTarget: isStar
+                    });
+                    connectedToDay = true;
+                    connectedDaysSet.add(alloc.dayKey);
+                    totalDailyAllocationsAdded++;
+                }
+            }
+        });
+    } else if (selectedDayKey) {
         if (!window.dailyTargetsDatabase) window.dailyTargetsDatabase = {};
         if (!window.dailyTargetsDatabase[selectedDayKey]) window.dailyTargetsDatabase[selectedDayKey] = [];
 
         const dtList = window.dailyTargetsDatabase[selectedDayKey];
         const dtExists = isSubjectTarget
-            ? dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
-            : dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject');
+            ? dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === selectedSubject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
+            : dtList.some(t => !t.isDeleted && t.track === trackId && t.subject === selectedSubject && t.chapter === finalChapter && t.targetType !== 'subject');
 
         if (!dtExists) {
             dtList.push({
                 track: trackId,
                 program: progName,
-                subject: subject,
+                subject: selectedSubject,
                 chapter: finalChapter,
                 targetType: selectedType,
                 completed: target.completed,
@@ -15673,21 +16822,36 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
                 totalChapterSize: selectedSize
             });
             connectedToDay = true;
-            if (typeof window.renderDailyTargets === 'function') window.renderDailyTargets();
+            connectedDaysSet.add(selectedDayKey);
+            totalDailyAllocationsAdded++;
         }
+    }
+
+    if (connectedToDay) {
+        if (typeof window.renderDailyTargets === 'function') window.renderDailyTargets();
     }
 
     FirebaseService.saveToCloud();
     renderUI();
-    closeModal('add-monthly-target-modal');
+
+    // Smoothly return to Daily Actions page and focus monthly targets section
+    window.switchPage('daily-actions');
+    setTimeout(() => {
+        const targetSection = document.getElementById('monthly-targets-section');
+        if (targetSection) {
+            targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 80);
 
     let toastMsg = isSubjectTarget ? "Monthly subject target updated!" : "Monthly chapter target updated!";
     if (connectedToWeek && connectedToDay) {
-        toastMsg += " (Connected to Weekly & Daily targets)";
+        const dayCountLabel = connectedDaysSet.size > 1 ? `${totalDailyAllocationsAdded} Daily targets across ${connectedDaysSet.size} days` : 'Daily target';
+        toastMsg += ` (Connected to Weekly & ${dayCountLabel})`;
     } else if (connectedToWeek) {
         toastMsg += " (Connected to Weekly target)";
     } else if (connectedToDay) {
-        toastMsg += " (Connected to Daily target)";
+        const dayCountLabel = connectedDaysSet.size > 1 ? `${totalDailyAllocationsAdded} Daily targets across ${connectedDaysSet.size} days` : 'Daily target';
+        toastMsg += ` (Connected to ${dayCountLabel})`;
     }
     showToast(toastMsg, "success");
 };
@@ -17754,6 +18918,7 @@ window.renderDailyTargets = function () {
                             <span class="block text-xs font-black text-slate-800 dark:text-slate-100 truncate ${isCompleted ? 'line-through opacity-60' : ''}">
                                 ${displayTitle}
                                 ${target.totalChapterSize ? `<span class="text-[9px] text-blue-500 font-bold ml-1">(${target.totalChapterSize} p)</span>` : ''}
+                                ${(target.isStarTarget || (target.portionLabel && target.portionLabel.includes('⭐'))) ? `<span class="inline-block px-1.5 py-0.5 rounded-[4px] text-[7.5px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 ml-1" title="Extra/Repeat Target">⭐ Extra</span>` : ''}
                                 ${target.scope && target.scope !== 'Whole Chapter' && target.scope !== 'Whole' ? `<span class="inline-block px-1 py-0.5 rounded-[3px] text-[7px] font-black uppercase tracking-widest bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800/50 ml-1">${target.scope}</span>` : ''}
                             </span>
                             <span class="block text-[8px] font-black uppercase text-slate-400 tracking-wider">${displaySubtitle}</span>
@@ -20616,7 +21781,7 @@ window.switchPage = function (pageId) {
     const currentActiveId = activePage ? activePage.id.replace('page-', '') : null;
     const isSamePage = currentActiveId === pageId;
 
-    const pages = ['dashboard', 'spectra-analytics', 'timer', 'daily-actions', 'schedule', 'subjects', 'paces-management', 'master-config', 'outcome', 'exam'];
+    const pages = ['dashboard', 'spectra-analytics', 'timer', 'daily-actions', 'schedule', 'subjects', 'paces-management', 'master-config', 'outcome', 'exam', 'monthly-target-setup'];
     pages.forEach(p => {
         const el = document.getElementById(`page-${p}`);
         if (el) {
@@ -20649,7 +21814,8 @@ window.switchPage = function (pageId) {
         const btn = document.getElementById(`btn-nav-${p}`);
         if (btn) {
             const baseClass = "w-full border-2 px-4 py-3 rounded-2xl font-black text-xs transition-all duration-300 hover:translate-x-1.5 hover:shadow-md active:scale-98 flex items-center gap-3";
-            if (p === pageId) {
+            const isActive = (p === pageId) || (pageId === 'monthly-target-setup' && p === 'daily-actions');
+            if (isActive) {
                 btn.className = `${baseClass} ${buttons[p].active}`;
             } else {
                 btn.className = `${baseClass} bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 ${buttons[p].hover}`;
