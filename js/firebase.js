@@ -129,6 +129,7 @@ window.FirebaseService = {
                 customActions: AppState.customActions || window.customActions || [],
                 paceGoals: AppState.paceGoals || window.paceGoals || [],
                 passedItems: AppState.passedItems || window.passedItems || { programs: [], subjects: [] },
+                celebrationTargets: AppState.celebrationTargets || window.celebrationTargets || { programs: [], subjects: [] },
                 revisionData: AppState.revisionData || window.revisionData || { active: [], progress: {} },
                 timerLogs: AppState.timerLogs || window.timerLogs || [],
                 fiscalLedger: AppState.fiscalLedger || { transactions: [], budgets: [], vaults: [] },
@@ -531,6 +532,24 @@ window.FirebaseService = {
                             const resultCount = (cloudData[key] || []).length;
                             console.log(`SYNC_DEBUG RECONCILE_RESULT (${key}): Local=${localCount}, Cloud=${cloudCount}, Result=${resultCount}`);
                         });
+
+                        if (cloudData.passedItems || AppState.passedItems) {
+                            if (AppState.passedItems && AppState.isLocalDirty) {
+                                cloudData.passedItems = {
+                                    programs: Array.isArray(AppState.passedItems.programs) ? [...AppState.passedItems.programs] : [],
+                                    subjects: Array.isArray(AppState.passedItems.subjects) ? [...AppState.passedItems.subjects] : []
+                                };
+                            }
+                        }
+
+                        if (cloudData.celebrationTargets || AppState.celebrationTargets) {
+                            if (AppState.celebrationTargets && AppState.isLocalDirty) {
+                                cloudData.celebrationTargets = {
+                                    programs: Array.isArray(AppState.celebrationTargets.programs) ? [...AppState.celebrationTargets.programs] : [],
+                                    subjects: Array.isArray(AppState.celebrationTargets.subjects) ? [...AppState.celebrationTargets.subjects] : []
+                                };
+                            }
+                        }
 
                         if (cloudData.fiscalLedger || AppState.fiscalLedger) {
                             const flLocal = AppState.fiscalLedger || { transactions: [], budgets: [], vaults: [] };

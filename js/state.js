@@ -85,6 +85,7 @@ window.AppState = {
     },
 
     passedItems: { programs: [], subjects: [] },
+    celebrationTargets: { programs: [], subjects: [] },
     revisionData: { active: [], progress: {} },
 
 
@@ -149,7 +150,7 @@ const stateKeys = [
     'activeSingleSubjectTrend', 'chartVisibility', 'latestChartStats', 'editingTask',
     'editingPaceId', 'trendTimeFilter', 'subjectTimeLinks', 'subjectDetailsState',
     'currentDadbTab', 'hasShownCongrats', 'successResults', 'editingResultId',
-    'trendDatasetVisibility', 'dashboardConfig', 'passedItems', 'revisionData',
+    'trendDatasetVisibility', 'dashboardConfig', 'passedItems', 'celebrationTargets', 'revisionData',
     'currentGhmTab', 'subjectColors', 'twColors', 'customActions', 'paceGoals',
     'globalStartDate', 'globalEndDate', 'dynamicLineColors', 'isInitialLoad',
     'currentFilter', 'PLAN_START_DATE', 'PLAN_END_DATE', 'showSync', 'serverTimeOffset',
@@ -487,11 +488,30 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
     }
 
     if (data.passedItems !== undefined) {
-        if (window.shouldHydrateField('passedItems', data.passedItems, AppState.passedItems, isExplicitWipe, isCloudAuthoritative)) {
+        if (AppState.isLocalDirty && !isExplicitWipe && AppState.passedItems) {
+            // Retain newer dirty local passedItems during in-flight cloud sync
+            window.passedItems = AppState.passedItems;
+        } else if (window.shouldHydrateField('passedItems', data.passedItems, AppState.passedItems, isExplicitWipe, isCloudAuthoritative)) {
             AppState.passedItems = {
                 programs: Array.isArray(data.passedItems.programs) ? data.passedItems.programs : [],
                 subjects: Array.isArray(data.passedItems.subjects) ? data.passedItems.subjects : []
             };
+            window.passedItems = AppState.passedItems;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
+    if (data.celebrationTargets !== undefined) {
+        if (AppState.isLocalDirty && !isExplicitWipe && AppState.celebrationTargets) {
+            // Retain newer dirty local celebrationTargets during in-flight cloud sync
+            window.celebrationTargets = AppState.celebrationTargets;
+        } else if (window.shouldHydrateField('celebrationTargets', data.celebrationTargets, AppState.celebrationTargets, isExplicitWipe, isCloudAuthoritative)) {
+            AppState.celebrationTargets = {
+                programs: Array.isArray(data.celebrationTargets.programs) ? data.celebrationTargets.programs : [],
+                subjects: Array.isArray(data.celebrationTargets.subjects) ? data.celebrationTargets.subjects : []
+            };
+            window.celebrationTargets = AppState.celebrationTargets;
         } else {
             rejectedAnyField = true;
         }
@@ -756,6 +776,7 @@ window.getDefaultAppState = function() {
         customActions: [],
         paceGoals: [],
         passedItems: { programs: [], subjects: [] },
+        celebrationTargets: { programs: [], subjects: [] },
         revisionData: { active: [], progress: {} },
         programVisibility: {},
         subjectTimeLinks: {},

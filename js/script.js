@@ -3055,6 +3055,7 @@ function renderUI() {
     window.populateTrackDropdowns();
     window.updateManageDropdown();
     window.renderPassConfig();
+    window.renderCelebrationConfig();
     window.togglePaceBundleType();
     const activeSysTab = document.querySelector('[id^="sys-tab-"].bg-blue-600');
     if (activeSysTab) {
@@ -3155,6 +3156,8 @@ function updateCountdown() {
 
 function updateSuccessScore() {
     if (!window.passedItems) window.passedItems = { programs: [], subjects: [] };
+    if (!window.celebrationTargets) window.celebrationTargets = { programs: [], subjects: [] };
+
     let totalSubs = 0;
     let passedSubs = 0;
 
@@ -3183,11 +3186,56 @@ function updateSuccessScore() {
                 </div>
             `);
 
-    if (pct === 100 && totalSubs > 0 && !window.hasShownCongrats) {
+    // Calculate Milestone Celebration Completion
+    const hasCustomCeleb = Boolean(
+        (window.celebrationTargets.programs && window.celebrationTargets.programs.length > 0) ||
+        (window.celebrationTargets.subjects && window.celebrationTargets.subjects.length > 0)
+    );
+
+    let coreTotal = 0;
+    let corePassed = 0;
+    let celebrationMet = false;
+
+    if (hasCustomCeleb) {
+        const requiredSubjectSet = new Set();
+        window.tracks.map(t => t.id).forEach(track => {
+            if (syllabusStructure[track]) {
+                syllabusStructure[track].forEach(s => {
+                    if (
+                        (window.celebrationTargets.programs && window.celebrationTargets.programs.includes(s.program)) ||
+                        (window.celebrationTargets.subjects && window.celebrationTargets.subjects.includes(s.subject))
+                    ) {
+                        requiredSubjectSet.add(s.subject);
+                    }
+                });
+            }
+        });
+
+        coreTotal = requiredSubjectSet.size;
+        requiredSubjectSet.forEach(subName => {
+            const sObj = window.getAllSubjects().find(s => s.subject === subName);
+            const isPassed = (window.passedItems.subjects && window.passedItems.subjects.includes(subName)) ||
+                             (sObj && window.passedItems.programs && window.passedItems.programs.includes(sObj.program));
+            if (isPassed) corePassed++;
+        });
+
+        celebrationMet = (coreTotal > 0 && corePassed === coreTotal);
+    } else {
+        coreTotal = totalSubs;
+        corePassed = passedSubs;
+        celebrationMet = (pct === 100 && totalSubs > 0);
+    }
+
+    if (celebrationMet && !window.hasShownCongrats) {
         window.hasShownCongrats = true;
-        setTimeout(() => window.showCongratsModal(), 800);
-    } else if (pct < 100) {
+        setTimeout(() => window.showCongratsModal(hasCustomCeleb, corePassed, coreTotal), 800);
+    } else if (!celebrationMet) {
         window.hasShownCongrats = false;
+    }
+
+    // Update live celebration status card in Pass Config
+    if (typeof window.updateCelebrationLiveStatus === 'function') {
+        window.updateCelebrationLiveStatus(corePassed, coreTotal, hasCustomCeleb, celebrationMet);
     }
 }
 
@@ -11507,16 +11555,24 @@ window.executeConfirmedDelete = function () {
     window.closeConfirmModal();
 };
 
-window.showCongratsModal = function () {
+window.showCongratsModal = function (isCustom = false, corePassed = 0, coreTotal = 0) {
     const modal = document.getElementById('congrats-modal');
     const backdrop = document.getElementById('congrats-backdrop');
     const content = document.getElementById('congrats-content');
     const dateEl = document.getElementById('congrats-end-date');
+    const statusBadge = document.getElementById('congrats-status-badge');
 
     if (!modal || !backdrop || !content) return;
 
     const today = new Date();
-    dateEl.textContent = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    if (dateEl) dateEl.textContent = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    if (statusBadge) {
+        if (isCustom && coreTotal > 0) {
+            statusBadge.textContent = `${corePassed}/${coreTotal} Core Goals Passed! 🎉`;
+        } else {
+            statusBadge.textContent = '100% Success Score 🎉';
+        }
+    }
 
     window.switchCongratsPage(1);
 
@@ -14426,24 +14482,58 @@ window.toggleOutcomeProgram = function (pName) {
 };
 
 // --- Freeze & Pass System Logic ---
-window.renderPassConfig = function () {
+window.renderPassConfig = function (forceRebuild = false) {
     const container = document.getElementById('outcome-pass-container');
     if (!container) return;
     if (!window.passedItems) window.passedItems = { programs: [], subjects: [] };
 
-    let html = '<p class="text-xs text-slate-500 dark:text-slate-400 mb-4 font-bold">Mark entire programs or specific subjects as "Passed". This freezes them, compressing their UI in the Task List and instantly satisfying their pacing requirements.</p><div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">';
+    // In-place update if DOM is already constructed and full rebuild isn't requested
+    const existingProgInputs = container.querySelectorAll('input[data-pass-type="program"]');
+    const existingSubInputs = container.querySelectorAll('input[data-pass-type="subject"]');
 
-    // Programs Column
-    html += '<div class="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800"><h4 class="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-200 dark:border-slate-700 pb-2 mb-3">Programs (Freeze All Subs)</h4><div class="flex flex-col gap-2 max-h-72 overflow-y-auto custom-scrollbar pr-2">';
+    if (!forceRebuild && existingProgInputs.length > 0 && existingSubInputs.length > 0) {
+        existingProgInputs.forEach(input => {
+            const pName = input.getAttribute('data-pass-prog');
+            const shouldBeChecked = Boolean(window.passedItems.programs && window.passedItems.programs.includes(pName));
+            if (input.checked !== shouldBeChecked) input.checked = shouldBeChecked;
+        });
+        existingSubInputs.forEach(input => {
+            const sName = input.getAttribute('data-pass-subject');
+            const pName = input.getAttribute('data-pass-parent-prog');
+            const isProgPassed = Boolean(window.passedItems.programs && window.passedItems.programs.includes(pName));
+            const shouldBeChecked = Boolean(isProgPassed || (window.passedItems.subjects && window.passedItems.subjects.includes(sName)));
+            if (input.checked !== shouldBeChecked) input.checked = shouldBeChecked;
+        });
+        return;
+    }
+
+    // Preserve open states of existing accordions before rebuilding
+    const openAccordions = new Set();
+    const existingDetails = container.querySelectorAll('details[data-details-prog]');
+    existingDetails.forEach(d => {
+        if (d.open) {
+            const p = d.getAttribute('data-details-prog');
+            if (p) openAccordions.add(p);
+        }
+    });
+
+    let html = `
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 font-bold">Mark entire programs or specific subjects as "Passed". This freezes them, compressing their UI in the Task List and instantly satisfying their pacing requirements.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+    `;
+
+    // Programs Column (Pass)
+    html += '<div class="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800"><h4 class="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-200 dark:border-slate-700 pb-2 mb-3">Programs (Freeze All Subs)</h4><div class="flex flex-col gap-1.5 max-h-72 overflow-y-auto custom-scrollbar pr-2">';
     window.tracks.forEach(track => {
         if (window.customPrograms[track.id] && window.customPrograms[track.id].length > 0) {
             html += `<div class="mt-2 text-[9px] font-black uppercase text-slate-400 border-b border-slate-200 dark:border-slate-700 pb-1">${track.name.toUpperCase()}</div>`;
             window.customPrograms[track.id].forEach(p => {
                 const pName = p.name || p;
                 const isChecked = window.passedItems.programs.includes(pName) ? 'checked' : '';
+                const safePName = pName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 html += `
-                        <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-white dark:hover:bg-slate-800 active:scale-95 transition-all">
-                            <input type="checkbox" onchange="window.togglePassStatus('program', '${pName}', this.checked)" class="form-checkbox h-4 w-4 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500 transition-all" ${isChecked}>
+                        <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-white dark:hover:bg-slate-800/80 active:translate-y-[0.5px] transition-colors duration-75">
+                            <input type="checkbox" data-pass-type="program" data-pass-prog="${pName.replace(/"/g, '&quot;')}" onchange="window.togglePassStatus('program', '${safePName}', this.checked)" class="form-checkbox h-4 w-4 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer active:scale-95 transition-transform duration-75" ${isChecked}>
                             <span class="text-xs font-bold text-slate-700 dark:text-slate-300">${pName}</span>
                         </label>`;
             });
@@ -14451,17 +14541,19 @@ window.renderPassConfig = function () {
     });
     html += '</div></div>';
 
-    // Subjects Column (Updated to Accordions)
-    html += '<div class="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800"><h4 class="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-200 dark:border-slate-700 pb-2 mb-3">Individual Subjects</h4><div class="flex flex-col gap-3 max-h-72 overflow-y-auto custom-scrollbar pr-2">';
+    // Subjects Column (Pass)
+    html += '<div class="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800"><h4 class="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-200 dark:border-slate-700 pb-2 mb-3">Individual Subjects</h4><div class="flex flex-col gap-2.5 max-h-72 overflow-y-auto custom-scrollbar pr-2">';
     window.tracks.forEach(track => {
         if (window.customPrograms[track.id]) {
             window.customPrograms[track.id].forEach(prog => {
                 const progName = prog.name || prog;
                 const subs = (syllabusStructure[track.id] || []).filter(s => s.program === progName);
                 if (subs.length > 0) {
+                    const isOpen = openAccordions.has(progName) ? 'open' : '';
+                    const safeProgName = progName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                     html += `
-                            <details class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm group">
-                                <summary class="cursor-pointer font-black text-[10px] md:text-[11px] uppercase tracking-widest text-slate-700 dark:text-slate-300 p-3 outline-none select-none list-none flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-700/50 active:scale-95 rounded-xl transition-all [&::-webkit-details-marker]:hidden">
+                            <details data-details-prog="${progName.replace(/"/g, '&quot;')}" ${isOpen} class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm group">
+                                <summary class="cursor-pointer font-black text-[10px] md:text-[11px] uppercase tracking-widest text-slate-700 dark:text-slate-300 p-3 outline-none select-none list-none flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors duration-75 [&::-webkit-details-marker]:hidden">
                                     <div class="flex items-center space-x-2">
                                         <span>${progName}</span>
                                         <span class="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md text-[8px]">${subs.length} Subs</span>
@@ -14469,15 +14561,16 @@ window.renderPassConfig = function () {
                                     <svg class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 </summary>
                                 <div class="p-3 pt-0 border-t border-slate-100 dark:border-slate-700">
-                                    <div class="flex flex-col gap-1.5 mt-3">
+                                    <div class="flex flex-col gap-1 mt-2.5">
                             `;
                     subs.forEach(s => {
                         const isProgPassed = window.passedItems.programs.includes(progName);
                         const isChecked = window.passedItems.subjects.includes(s.subject) || isProgPassed ? 'checked' : '';
                         let displaySub = s.subject.replace(s.program + ' - ', '').replace(s.program + ' ', '');
+                        const safeSub = s.subject.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                         html += `
-                                        <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900/50 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800 active:scale-95 transition-all">
-                                            <input type="checkbox" onchange="window.togglePassStatus('subject', '${s.subject}', this.checked)" class="form-checkbox h-4 w-4 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500 transition-all" ${isChecked}>
+                                        <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900/50 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800 active:translate-y-[0.5px] transition-colors duration-75">
+                                            <input type="checkbox" data-pass-type="subject" data-pass-subject="${s.subject.replace(/"/g, '&quot;')}" data-pass-parent-prog="${progName.replace(/"/g, '&quot;')}" onchange="window.togglePassStatus('subject', '${safeSub}', this.checked)" class="form-checkbox h-4 w-4 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer active:scale-95 transition-transform duration-75" ${isChecked}>
                                             <span class="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">${displaySub}</span>
                                         </label>`;
                     });
@@ -14492,6 +14585,573 @@ window.renderPassConfig = function () {
     html += '</div></div></div>';
 
     container.innerHTML = html;
+};
+
+// --- Milestone Celebration Criteria Logic ---
+window.renderCelebrationConfig = function (forceRebuild = false) {
+    const container = document.getElementById('outcome-celebration-container');
+    if (!container) return;
+    if (!window.celebrationTargets) window.celebrationTargets = { programs: [], subjects: [] };
+
+    // In-place update if DOM is already constructed and full rebuild isn't requested
+    const existingCelebProgInputs = container.querySelectorAll('input[data-celeb-type="program"]');
+    const existingCelebSubInputs = container.querySelectorAll('input[data-celeb-type="subject"]');
+
+    if (!forceRebuild && existingCelebProgInputs.length > 0 && existingCelebSubInputs.length > 0) {
+        existingCelebProgInputs.forEach(input => {
+            const pName = input.getAttribute('data-celeb-prog');
+            const shouldBeChecked = Boolean(window.celebrationTargets.programs && window.celebrationTargets.programs.includes(pName));
+            if (input.checked !== shouldBeChecked) input.checked = shouldBeChecked;
+        });
+        existingCelebSubInputs.forEach(input => {
+            const sName = input.getAttribute('data-celeb-subject');
+            const pName = input.getAttribute('data-celeb-parent-prog');
+            const isProgCeleb = Boolean(window.celebrationTargets.programs && window.celebrationTargets.programs.includes(pName));
+            const shouldBeChecked = Boolean(isProgCeleb || (window.celebrationTargets.subjects && window.celebrationTargets.subjects.includes(sName)));
+            if (input.checked !== shouldBeChecked) input.checked = shouldBeChecked;
+        });
+
+        if (typeof updateSuccessScore === 'function') updateSuccessScore();
+        return;
+    }
+
+    // Preserve open states of existing accordions before rebuilding
+    const openCelebAccordions = new Set();
+    const existingCelebDetails = container.querySelectorAll('details[data-celeb-details-prog]');
+    existingCelebDetails.forEach(d => {
+        if (d.open) {
+            const p = d.getAttribute('data-celeb-details-prog');
+            if (p) openCelebAccordions.add(p);
+        }
+    });
+
+    let html = `
+        <div class="mb-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
+                <div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-bold">Select essential courses required to trigger the completion celebration (extra or elective courses won't block your celebration).</p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button onclick="window.selectAllCelebrationTargets('all-passed')" class="px-3 py-1.5 bg-slate-100 dark:bg-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 border border-slate-200/60 dark:border-slate-600/50 shadow-sm">Select Passed</button>
+                    <button onclick="window.selectAllCelebrationTargets('all')" class="px-3 py-1.5 bg-slate-100 dark:bg-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 border border-slate-200/60 dark:border-slate-600/50 shadow-sm">Select All</button>
+                    <button onclick="window.selectAllCelebrationTargets('clear')" class="px-3 py-1.5 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 border border-rose-200/60 dark:border-rose-800/50 shadow-sm">Clear</button>
+                    <button onclick="window.showCongratsModal(true, 1, 1)" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-600 hover:to-emerald-600 text-white text-[10px] font-black uppercase tracking-wider rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5">
+                        <span>🎉</span>
+                        <span>Preview Celebration</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live Status Progress Card -->
+            <div id="celeb-live-status-card" class="bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-teal-500/10 dark:from-amber-950/20 dark:via-emerald-950/20 dark:to-teal-950/20 p-4 rounded-2xl border border-amber-200/60 dark:border-amber-700/40 mb-6 transition-all">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                    <div class="flex items-center gap-2">
+                        <span id="celeb-live-badge" class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5">
+                            <span>⚙️</span>
+                            <span>Default: 100% All</span>
+                        </span>
+                        <span id="celeb-live-text" class="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100">0 of 0 Core Courses Passed (0%)</span>
+                    </div>
+                </div>
+                <div class="w-full bg-slate-200/80 dark:bg-slate-700/80 rounded-full h-2 overflow-hidden mb-2">
+                    <div id="celeb-live-bar" class="h-2 rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-500 shadow-sm" style="width: 0%;"></div>
+                </div>
+                <p id="celeb-live-subtext" class="text-[10px] text-slate-500 dark:text-slate-400 font-bold">Currently set to default. Select core items below to define your celebration criteria.</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+    `;
+
+    // Core Programs Column (Celebration)
+    html += '<div class="bg-amber-50/50 dark:bg-slate-900/50 p-4 rounded-xl border border-amber-100 dark:border-slate-800"><h4 class="text-[10px] font-black uppercase tracking-widest text-amber-600/80 dark:text-amber-400 border-b border-amber-200/60 dark:border-slate-700 pb-2 mb-3 flex items-center justify-between"><span>Core Programs (Require All Subs)</span><span class="text-[8px] bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold">Celebration</span></h4><div class="flex flex-col gap-1.5 max-h-72 overflow-y-auto custom-scrollbar pr-2">';
+    window.tracks.forEach(track => {
+        if (window.customPrograms[track.id] && window.customPrograms[track.id].length > 0) {
+            html += `<div class="mt-2 text-[9px] font-black uppercase text-amber-500/80 dark:text-amber-400/70 border-b border-amber-200/40 dark:border-slate-700/60 pb-1">${track.name.toUpperCase()}</div>`;
+            window.customPrograms[track.id].forEach(p => {
+                const pName = p.name || p;
+                const isChecked = window.celebrationTargets.programs.includes(pName) ? 'checked' : '';
+                const safePName = pName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                html += `
+                        <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-white dark:hover:bg-slate-800/80 active:translate-y-[0.5px] transition-colors duration-75">
+                            <input type="checkbox" data-celeb-type="program" data-celeb-prog="${pName.replace(/"/g, '&quot;')}" onchange="window.toggleCelebrationStatus('program', '${safePName}', this.checked)" class="form-checkbox h-4 w-4 text-amber-500 rounded border-slate-300 focus:ring-amber-500 cursor-pointer active:scale-95 transition-transform duration-75" ${isChecked}>
+                            <span class="text-xs font-bold text-slate-700 dark:text-slate-300">${pName}</span>
+                        </label>`;
+            });
+        }
+    });
+    html += '</div></div>';
+
+    // Core Subjects Column (Celebration)
+    html += '<div class="bg-amber-50/50 dark:bg-slate-900/50 p-4 rounded-xl border border-amber-100 dark:border-slate-800"><h4 class="text-[10px] font-black uppercase tracking-widest text-amber-600/80 dark:text-amber-400 border-b border-amber-200/60 dark:border-slate-700 pb-2 mb-3 flex items-center justify-between"><span>Core Individual Subjects</span><span class="text-[8px] bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold">Celebration</span></h4><div class="flex flex-col gap-2.5 max-h-72 overflow-y-auto custom-scrollbar pr-2">';
+    window.tracks.forEach(track => {
+        if (window.customPrograms[track.id]) {
+            window.customPrograms[track.id].forEach(prog => {
+                const progName = prog.name || prog;
+                const subs = (syllabusStructure[track.id] || []).filter(s => s.program === progName);
+                if (subs.length > 0) {
+                    const isOpen = openCelebAccordions.has(progName) ? 'open' : '';
+                    const safeProgName = progName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    html += `
+                            <details data-celeb-details-prog="${progName.replace(/"/g, '&quot;')}" ${isOpen} class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm group">
+                                <summary class="cursor-pointer font-black text-[10px] md:text-[11px] uppercase tracking-widest text-slate-700 dark:text-slate-300 p-3 outline-none select-none list-none flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors duration-75 [&::-webkit-details-marker]:hidden">
+                                    <div class="flex items-center space-x-2">
+                                        <span>${progName}</span>
+                                        <span class="bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-md text-[8px]">${subs.length} Subs</span>
+                                    </div>
+                                    <svg class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </summary>
+                                <div class="p-3 pt-0 border-t border-slate-100 dark:border-slate-700">
+                                    <div class="flex flex-col gap-1 mt-2.5">
+                            `;
+                    subs.forEach(s => {
+                        const isProgCeleb = window.celebrationTargets.programs.includes(progName);
+                        const isChecked = window.celebrationTargets.subjects.includes(s.subject) || isProgCeleb ? 'checked' : '';
+                        let displaySub = s.subject.replace(s.program + ' - ', '').replace(s.program + ' ', '');
+                        const safeSub = s.subject.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        html += `
+                                        <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-amber-50/50 dark:hover:bg-slate-900/50 border border-transparent hover:border-amber-200 dark:hover:border-amber-800 active:translate-y-[0.5px] transition-colors duration-75">
+                                            <input type="checkbox" data-celeb-type="subject" data-celeb-subject="${s.subject.replace(/"/g, '&quot;')}" data-celeb-parent-prog="${progName.replace(/"/g, '&quot;')}" onchange="window.toggleCelebrationStatus('subject', '${safeSub}', this.checked)" class="form-checkbox h-4 w-4 text-amber-500 rounded border-slate-300 focus:ring-amber-500 cursor-pointer active:scale-95 transition-transform duration-75" ${isChecked}>
+                                            <span class="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">${displaySub}</span>
+                                        </label>`;
+                    });
+                    html += `
+                                    </div>
+                                </div>
+                            </details>`;
+                }
+            });
+        }
+    });
+    html += '</div></div></div>';
+
+    container.innerHTML = html;
+
+    // Immediately trigger live status calculation
+    if (typeof updateSuccessScore === 'function') updateSuccessScore();
+};
+
+window.updateCelebrationLiveStatus = function (corePassed, coreTotal, hasCustomCeleb, celebrationMet) {
+    const card = document.getElementById('celeb-live-status-card');
+    if (!card) return;
+
+    const pct = coreTotal > 0 ? Math.round((corePassed / coreTotal) * 100) : 0;
+    const badgeEl = document.getElementById('celeb-live-badge');
+    const textEl = document.getElementById('celeb-live-text');
+    const barEl = document.getElementById('celeb-live-bar');
+    const subTextEl = document.getElementById('celeb-live-subtext');
+
+    if (badgeEl) {
+        if (celebrationMet) {
+            badgeEl.className = "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500 text-white shadow-lg animate-pulse flex items-center gap-1.5";
+            badgeEl.innerHTML = "<span>🎉</span><span>Celebration Unlocked!</span>";
+        } else if (hasCustomCeleb) {
+            badgeEl.className = "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1.5";
+            badgeEl.innerHTML = "<span>🎯</span><span>Core Target Active</span>";
+        } else {
+            badgeEl.className = "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5";
+            badgeEl.innerHTML = "<span>⚙️</span><span>Default: 100% All</span>";
+        }
+    }
+
+    if (textEl) {
+        if (hasCustomCeleb) {
+            textEl.textContent = `${corePassed} of ${coreTotal} Core Courses Passed (${pct}%)`;
+        } else {
+            textEl.textContent = `${corePassed} of ${coreTotal} Total Courses Passed (${pct}%)`;
+        }
+    }
+
+    if (subTextEl) {
+        if (celebrationMet) {
+            subTextEl.textContent = "All required core milestone courses have been conquered! Celebration modal active.";
+        } else if (hasCustomCeleb) {
+            const remaining = Math.max(0, coreTotal - corePassed);
+            subTextEl.textContent = `${remaining} core course${remaining === 1 ? '' : 's'} remaining until celebration.`;
+        } else {
+            subTextEl.textContent = "Currently set to default (all courses required). Select core items below to customize your celebration criteria.";
+        }
+    }
+
+    if (barEl) {
+        barEl.style.width = `${pct}%`;
+        if (celebrationMet) {
+            barEl.className = "h-2 rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 transition-all duration-500 shadow-sm";
+        } else {
+            barEl.className = "h-2 rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-500 shadow-sm";
+        }
+    }
+};
+
+window.toggleCelebrationStatus = function (type, name, isChecked) {
+    if (!window.celebrationTargets) window.celebrationTargets = { programs: [], subjects: [] };
+    if (!AppState.celebrationTargets) AppState.celebrationTargets = window.celebrationTargets;
+
+    if (type === 'program') {
+        if (isChecked) {
+            if (!window.celebrationTargets.programs.includes(name)) window.celebrationTargets.programs.push(name);
+
+            let progSubs = [];
+            window.tracks.forEach(track => {
+                if (syllabusStructure[track.id]) {
+                    syllabusStructure[track.id].forEach(s => {
+                        if (s.program === name) progSubs.push(s.subject);
+                    });
+                }
+            });
+            progSubs.forEach(sub => {
+                if (!window.celebrationTargets.subjects.includes(sub)) window.celebrationTargets.subjects.push(sub);
+            });
+        } else {
+            window.celebrationTargets.programs = window.celebrationTargets.programs.filter(p => p !== name);
+            let progSubs = [];
+            window.tracks.forEach(track => {
+                if (syllabusStructure[track.id]) {
+                    syllabusStructure[track.id].forEach(s => {
+                        if (s.program === name) progSubs.push(s.subject);
+                    });
+                }
+            });
+            window.celebrationTargets.subjects = window.celebrationTargets.subjects.filter(s => !progSubs.includes(s));
+        }
+    } else if (type === 'subject') {
+        if (isChecked) {
+            if (!window.celebrationTargets.subjects.includes(name)) window.celebrationTargets.subjects.push(name);
+
+            const sObj = window.getAllSubjects().find(s => s.subject === name);
+            if (sObj) {
+                const progName = sObj.program;
+                let allSubsInProg = [];
+                window.tracks.forEach(track => {
+                    if (syllabusStructure[track.id]) {
+                        syllabusStructure[track.id].forEach(s => {
+                            if (s.program === progName) allSubsInProg.push(s.subject);
+                        });
+                    }
+                });
+                const allSelected = allSubsInProg.length > 0 && allSubsInProg.every(sub => window.celebrationTargets.subjects.includes(sub));
+                if (allSelected && !window.celebrationTargets.programs.includes(progName)) {
+                    window.celebrationTargets.programs.push(progName);
+                }
+            }
+        } else {
+            window.celebrationTargets.subjects = window.celebrationTargets.subjects.filter(s => s !== name);
+
+            const sObj = window.getAllSubjects().find(s => s.subject === name);
+            if (sObj) {
+                const progName = sObj.program;
+                window.celebrationTargets.programs = window.celebrationTargets.programs.filter(p => p !== progName);
+            }
+        }
+    }
+
+    // Direct synchronous in-place DOM sync for celebration checkboxes (0ms UI latency)
+    const container = document.getElementById('outcome-celebration-container');
+    if (container) {
+        const escapeSelectorVal = (val) => (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(val) : val.replace(/["\\]/g, '\\$&');
+        if (type === 'program') {
+            const pInput = container.querySelector(`input[data-celeb-type="program"][data-celeb-prog="${escapeSelectorVal(name)}"]`);
+            if (pInput && pInput.checked !== isChecked) pInput.checked = isChecked;
+            const subInputs = container.querySelectorAll(`input[data-celeb-type="subject"][data-celeb-parent-prog="${escapeSelectorVal(name)}"]`);
+            subInputs.forEach(si => {
+                if (si.checked !== isChecked) si.checked = isChecked;
+            });
+        } else if (type === 'subject') {
+            const sInput = container.querySelector(`input[data-celeb-type="subject"][data-celeb-subject="${escapeSelectorVal(name)}"]`);
+            if (sInput && sInput.checked !== isChecked) sInput.checked = isChecked;
+            const sObj = window.getAllSubjects().find(s => s.subject === name);
+            if (sObj) {
+                const progName = sObj.program;
+                const isParentChecked = window.celebrationTargets.programs.includes(progName);
+                const pInput = container.querySelector(`input[data-celeb-type="program"][data-celeb-prog="${escapeSelectorVal(progName)}"]`);
+                if (pInput && pInput.checked !== isParentChecked) pInput.checked = isParentChecked;
+            }
+        }
+    }
+
+    // Persist to local storage & debounced cloud save
+    if (typeof window.markLocalMutation === 'function') {
+        window.markLocalMutation('celebrationTargets');
+    } else if (AppState) {
+        AppState.isLocalDirty = true;
+    }
+    if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
+        window.FirebaseService.saveToCloud(false);
+    }
+
+    // Debounce success score & celebration evaluation
+    if (window._celebScoreDebounceTimer) clearTimeout(window._celebScoreDebounceTimer);
+    window._celebScoreDebounceTimer = setTimeout(() => {
+        window._celebScoreDebounceTimer = null;
+        if (typeof updateSuccessScore === 'function') updateSuccessScore();
+    }, 80);
+
+    // Debounce toast
+    if (window._celebToastTimer) clearTimeout(window._celebToastTimer);
+    window._celebToastTimer = setTimeout(() => {
+        window._celebToastTimer = null;
+        showToast("Milestone celebration criteria updated!", "success");
+    }, 250);
+};
+
+window.selectAllCelebrationTargets = function (mode) {
+    if (!window.celebrationTargets) window.celebrationTargets = { programs: [], subjects: [] };
+    if (!window.passedItems) window.passedItems = { programs: [], subjects: [] };
+
+    if (mode === 'all-passed') {
+        window.celebrationTargets.programs = [...(window.passedItems.programs || [])];
+        window.celebrationTargets.subjects = [...(window.passedItems.subjects || [])];
+        showToast("Set all currently passed courses as celebration criteria!", "success");
+    } else if (mode === 'all') {
+        const allProgs = [];
+        const allSubs = [];
+        window.tracks.forEach(track => {
+            if (window.customPrograms[track.id]) {
+                window.customPrograms[track.id].forEach(p => {
+                    const pName = p.name || p;
+                    if (!allProgs.includes(pName)) allProgs.push(pName);
+                });
+            }
+            if (syllabusStructure[track.id]) {
+                syllabusStructure[track.id].forEach(s => {
+                    if (!allSubs.includes(s.subject)) allSubs.push(s.subject);
+                });
+            }
+        });
+        window.celebrationTargets.programs = allProgs;
+        window.celebrationTargets.subjects = allSubs;
+        showToast("All courses selected for celebration criteria!", "success");
+    } else if (mode === 'clear') {
+        window.celebrationTargets.programs = [];
+        window.celebrationTargets.subjects = [];
+        showToast("Celebration criteria reset to default!", "info");
+    }
+
+    if (AppState) AppState.celebrationTargets = window.celebrationTargets;
+
+    // Persist & sync
+    if (typeof window.markLocalMutation === 'function') {
+        window.markLocalMutation('celebrationTargets');
+    }
+    if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
+        window.FirebaseService.saveToCloud(false);
+    }
+
+    // Re-render celebration checkboxes in place
+    window.renderCelebrationConfig(false);
+    if (typeof updateSuccessScore === 'function') updateSuccessScore();
+};
+
+window.updateCelebrationLiveStatus = function (corePassed, coreTotal, hasCustomCeleb, celebrationMet) {
+    const card = document.getElementById('celeb-live-status-card');
+    if (!card) return;
+
+    const pct = coreTotal > 0 ? Math.round((corePassed / coreTotal) * 100) : 0;
+    const badgeEl = document.getElementById('celeb-live-badge');
+    const textEl = document.getElementById('celeb-live-text');
+    const barEl = document.getElementById('celeb-live-bar');
+    const subTextEl = document.getElementById('celeb-live-subtext');
+
+    if (badgeEl) {
+        if (celebrationMet) {
+            badgeEl.className = "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500 text-white shadow-lg animate-pulse flex items-center gap-1.5";
+            badgeEl.innerHTML = "<span>🎉</span><span>Celebration Unlocked!</span>";
+        } else if (hasCustomCeleb) {
+            badgeEl.className = "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1.5";
+            badgeEl.innerHTML = "<span>🎯</span><span>Core Target Active</span>";
+        } else {
+            badgeEl.className = "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5";
+            badgeEl.innerHTML = "<span>⚙️</span><span>Default: 100% All</span>";
+        }
+    }
+
+    if (textEl) {
+        if (hasCustomCeleb) {
+            textEl.textContent = `${corePassed} of ${coreTotal} Core Courses Passed (${pct}%)`;
+        } else {
+            textEl.textContent = `${corePassed} of ${coreTotal} Total Courses Passed (${pct}%)`;
+        }
+    }
+
+    if (subTextEl) {
+        if (celebrationMet) {
+            subTextEl.textContent = "All required core milestone courses have been conquered! Celebration modal active.";
+        } else if (hasCustomCeleb) {
+            const remaining = Math.max(0, coreTotal - corePassed);
+            subTextEl.textContent = `${remaining} core course${remaining === 1 ? '' : 's'} remaining until celebration.`;
+        } else {
+            subTextEl.textContent = "Currently set to default (all courses required). Select core items below to customize your celebration criteria.";
+        }
+    }
+
+    if (barEl) {
+        barEl.style.width = `${pct}%`;
+        if (celebrationMet) {
+            barEl.className = "h-2 rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 transition-all duration-500 shadow-sm";
+        } else {
+            barEl.className = "h-2 rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-500 shadow-sm";
+        }
+    }
+};
+
+window.toggleCelebrationStatus = function (type, name, isChecked) {
+    if (!window.celebrationTargets) window.celebrationTargets = { programs: [], subjects: [] };
+    if (!AppState.celebrationTargets) AppState.celebrationTargets = window.celebrationTargets;
+
+    if (type === 'program') {
+        if (isChecked) {
+            if (!window.celebrationTargets.programs.includes(name)) window.celebrationTargets.programs.push(name);
+
+            // Checking program automatically marks its subjects as celebration targets
+            let progSubs = [];
+            window.tracks.forEach(track => {
+                if (syllabusStructure[track.id]) {
+                    syllabusStructure[track.id].forEach(s => {
+                        if (s.program === name) progSubs.push(s.subject);
+                    });
+                }
+            });
+            progSubs.forEach(sub => {
+                if (!window.celebrationTargets.subjects.includes(sub)) window.celebrationTargets.subjects.push(sub);
+            });
+        } else {
+            window.celebrationTargets.programs = window.celebrationTargets.programs.filter(p => p !== name);
+            let progSubs = [];
+            window.tracks.forEach(track => {
+                if (syllabusStructure[track.id]) {
+                    syllabusStructure[track.id].forEach(s => {
+                        if (s.program === name) progSubs.push(s.subject);
+                    });
+                }
+            });
+            window.celebrationTargets.subjects = window.celebrationTargets.subjects.filter(s => !progSubs.includes(s));
+        }
+    } else if (type === 'subject') {
+        if (isChecked) {
+            if (!window.celebrationTargets.subjects.includes(name)) window.celebrationTargets.subjects.push(name);
+
+            const sObj = window.getAllSubjects().find(s => s.subject === name);
+            if (sObj) {
+                const progName = sObj.program;
+                let allSubsInProg = [];
+                window.tracks.forEach(track => {
+                    if (syllabusStructure[track.id]) {
+                        syllabusStructure[track.id].forEach(s => {
+                            if (s.program === progName) allSubsInProg.push(s.subject);
+                        });
+                    }
+                });
+                const allSelected = allSubsInProg.length > 0 && allSubsInProg.every(sub => window.celebrationTargets.subjects.includes(sub));
+                if (allSelected && !window.celebrationTargets.programs.includes(progName)) {
+                    window.celebrationTargets.programs.push(progName);
+                }
+            }
+        } else {
+            window.celebrationTargets.subjects = window.celebrationTargets.subjects.filter(s => s !== name);
+
+            const sObj = window.getAllSubjects().find(s => s.subject === name);
+            if (sObj) {
+                const progName = sObj.program;
+                window.celebrationTargets.programs = window.celebrationTargets.programs.filter(p => p !== progName);
+            }
+        }
+    }
+
+    // Direct synchronous in-place DOM sync for celebration checkboxes
+    const container = document.getElementById('outcome-pass-container');
+    if (container) {
+        const escapeSelectorVal = (val) => (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(val) : val.replace(/["\\]/g, '\\$&');
+        if (type === 'program') {
+            const pInput = container.querySelector(`input[data-celeb-type="program"][data-celeb-prog="${escapeSelectorVal(name)}"]`);
+            if (pInput && pInput.checked !== isChecked) pInput.checked = isChecked;
+            const subInputs = container.querySelectorAll(`input[data-celeb-type="subject"][data-celeb-parent-prog="${escapeSelectorVal(name)}"]`);
+            subInputs.forEach(si => {
+                if (si.checked !== isChecked) si.checked = isChecked;
+            });
+        } else if (type === 'subject') {
+            const sInput = container.querySelector(`input[data-celeb-type="subject"][data-celeb-subject="${escapeSelectorVal(name)}"]`);
+            if (sInput && sInput.checked !== isChecked) sInput.checked = isChecked;
+            const sObj = window.getAllSubjects().find(s => s.subject === name);
+            if (sObj) {
+                const progName = sObj.program;
+                const isParentChecked = window.celebrationTargets.programs.includes(progName);
+                const pInput = container.querySelector(`input[data-celeb-type="program"][data-celeb-prog="${escapeSelectorVal(progName)}"]`);
+                if (pInput && pInput.checked !== isParentChecked) pInput.checked = isParentChecked;
+            }
+        }
+    }
+
+    // Persist to local storage & debounced cloud save
+    if (typeof window.markLocalMutation === 'function') {
+        window.markLocalMutation('celebrationTargets');
+    } else if (AppState) {
+        AppState.isLocalDirty = true;
+    }
+    if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
+        window.FirebaseService.saveToCloud(false);
+    }
+
+    // Debounce success score & celebration evaluation
+    if (window._celebScoreDebounceTimer) clearTimeout(window._celebScoreDebounceTimer);
+    window._celebScoreDebounceTimer = setTimeout(() => {
+        window._celebScoreDebounceTimer = null;
+        updateSuccessScore();
+    }, 80);
+
+    // Debounce toast
+    if (window._celebToastTimer) clearTimeout(window._celebToastTimer);
+    window._celebToastTimer = setTimeout(() => {
+        window._celebToastTimer = null;
+        showToast("Milestone celebration criteria updated!", "success");
+    }, 250);
+};
+
+window.selectAllCelebrationTargets = function (mode) {
+    if (!window.celebrationTargets) window.celebrationTargets = { programs: [], subjects: [] };
+    if (!window.passedItems) window.passedItems = { programs: [], subjects: [] };
+
+    if (mode === 'all-passed') {
+        window.celebrationTargets.programs = [...(window.passedItems.programs || [])];
+        window.celebrationTargets.subjects = [...(window.passedItems.subjects || [])];
+        showToast("Set all currently passed courses as celebration criteria!", "success");
+    } else if (mode === 'all') {
+        const allProgs = [];
+        const allSubs = [];
+        window.tracks.forEach(track => {
+            if (window.customPrograms[track.id]) {
+                window.customPrograms[track.id].forEach(p => {
+                    const pName = p.name || p;
+                    if (!allProgs.includes(pName)) allProgs.push(pName);
+                });
+            }
+            if (syllabusStructure[track.id]) {
+                syllabusStructure[track.id].forEach(s => {
+                    if (!allSubs.includes(s.subject)) allSubs.push(s.subject);
+                });
+            }
+        });
+        window.celebrationTargets.programs = allProgs;
+        window.celebrationTargets.subjects = allSubs;
+        showToast("All courses selected for celebration criteria!", "success");
+    } else if (mode === 'clear') {
+        window.celebrationTargets.programs = [];
+        window.celebrationTargets.subjects = [];
+        showToast("Celebration criteria reset to default!", "info");
+    }
+
+    if (AppState) AppState.celebrationTargets = window.celebrationTargets;
+
+    // Persist & sync
+    if (typeof window.markLocalMutation === 'function') {
+        window.markLocalMutation('celebrationTargets');
+    }
+    if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
+        window.FirebaseService.saveToCloud(false);
+    }
+
+    // Re-render celebration checkboxes in place
+    window.renderPassConfig(false);
+    updateSuccessScore();
 };
 
 // --- Monthly Targets System Logic ---
@@ -20932,6 +21592,7 @@ window.updateDtdbTargetSize = function (dateKey, idx, size) {
 
 window.togglePassStatus = function (type, name, isChecked) {
     if (!window.passedItems) window.passedItems = { programs: [], subjects: [] };
+    if (!AppState.passedItems) AppState.passedItems = window.passedItems;
 
     if (type === 'program') {
         if (isChecked) {
@@ -20980,7 +21641,7 @@ window.togglePassStatus = function (type, name, isChecked) {
                         });
                     }
                 });
-                const allPassed = allSubsInProg.every(sub => window.passedItems.subjects.includes(sub));
+                const allPassed = allSubsInProg.length > 0 && allSubsInProg.every(sub => window.passedItems.subjects.includes(sub));
                 if (allPassed && !window.passedItems.programs.includes(progName)) {
                     window.passedItems.programs.push(progName);
                 }
@@ -20998,11 +21659,54 @@ window.togglePassStatus = function (type, name, isChecked) {
         }
     }
 
-    FirebaseService.saveToCloud(true);
-    updateSuccessScore();
-    renderUI();
-    window.renderPassConfig();
-    showToast(name + (isChecked ? " frozen & marked passed!" : " unfrozen!"), "success");
+    // Direct synchronous in-place DOM sync (0ms UI latency)
+    const container = document.getElementById('outcome-pass-container');
+    if (container) {
+        const escapeSelectorVal = (val) => (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(val) : val.replace(/["\\]/g, '\\$&');
+        if (type === 'program') {
+            const pInput = container.querySelector(`input[data-pass-type="program"][data-pass-prog="${escapeSelectorVal(name)}"]`);
+            if (pInput && pInput.checked !== isChecked) pInput.checked = isChecked;
+            const subInputs = container.querySelectorAll(`input[data-pass-type="subject"][data-pass-parent-prog="${escapeSelectorVal(name)}"]`);
+            subInputs.forEach(si => {
+                if (si.checked !== isChecked) si.checked = isChecked;
+            });
+        } else if (type === 'subject') {
+            const sInput = container.querySelector(`input[data-pass-type="subject"][data-pass-subject="${escapeSelectorVal(name)}"]`);
+            if (sInput && sInput.checked !== isChecked) sInput.checked = isChecked;
+            const sObj = window.getAllSubjects().find(s => s.subject === name);
+            if (sObj) {
+                const progName = sObj.program;
+                const isParentChecked = window.passedItems.programs.includes(progName);
+                const pInput = container.querySelector(`input[data-pass-type="program"][data-pass-prog="${escapeSelectorVal(progName)}"]`);
+                if (pInput && pInput.checked !== isParentChecked) pInput.checked = isParentChecked;
+            }
+        }
+    }
+
+    // Persist to local state & schedule debounced cloud save
+    if (typeof window.markLocalMutation === 'function') {
+        window.markLocalMutation('passedItems');
+    } else if (AppState) {
+        AppState.isLocalDirty = true;
+    }
+    if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
+        window.FirebaseService.saveToCloud(false);
+    }
+
+    // Debounce background full-app re-renders so rapid multi-clicks remain ultra-smooth
+    if (window._passConfigDebounceTimer) clearTimeout(window._passConfigDebounceTimer);
+    window._passConfigDebounceTimer = setTimeout(() => {
+        window._passConfigDebounceTimer = null;
+        if (typeof updateSuccessScore === 'function') updateSuccessScore();
+        if (typeof renderUI === 'function') renderUI();
+    }, 80);
+
+    // Debounce toast notifications
+    if (window._passToastTimer) clearTimeout(window._passToastTimer);
+    window._passToastTimer = setTimeout(() => {
+        window._passToastTimer = null;
+        showToast("Pass / Freeze configuration updated!", "success");
+    }, 250);
 };
 
 window.syncPassFreezeFromResults = function () {
@@ -22431,6 +23135,8 @@ window.switchPage = function (pageId) {
         if (typeof window.renderPaceGoals === 'function') window.renderPaceGoals(typeof latestChartStats !== 'undefined' && latestChartStats?.subjects ? latestChartStats.subjects : {});
     } else if (pageId === 'outcome') {
         if (typeof window.renderResults === 'function') window.renderResults();
+        if (typeof window.renderPassConfig === 'function') window.renderPassConfig();
+        if (typeof window.renderCelebrationConfig === 'function') window.renderCelebrationConfig();
         setTimeout(() => {
             if (window.resultsTrendChartInstance) window.resultsTrendChartInstance.resize();
         }, 50);
@@ -22438,6 +23144,7 @@ window.switchPage = function (pageId) {
         if (typeof window.populateTrackDropdowns === 'function') window.populateTrackDropdowns();
         if (typeof window.updateManageDropdown === 'function') window.updateManageDropdown();
         if (typeof window.renderPassConfig === 'function') window.renderPassConfig();
+        if (typeof window.renderCelebrationConfig === 'function') window.renderCelebrationConfig();
         if (typeof window.renderPriorityConfig === 'function') window.renderPriorityConfig();
 
     } else if (pageId === 'schedule') {
