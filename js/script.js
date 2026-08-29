@@ -14957,11 +14957,11 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                             <input type="checkbox" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" data-chapter="${ch}" class="mt-chapter-checkbox form-checkbox h-5 w-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer transition-all shrink-0"
                                 onchange="window.handleMonthlyChapterCheckChange(this, '${CSS.escape(subject)}');"
                                 ${isChPreselected ? 'checked' : ''}>
-                            <div class="min-w-0">
+                            <div class="min-w-0 flex-1">
                                 <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate block">${ch}${stars}</span>
                             </div>
                         </label>
-                        <div class="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start shrink-0 pt-0.5 sm:pt-0">
+                        <div class="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start shrink-0 pt-0.5 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-700/40">
                             <!-- Week Picker per chapter -->
                             <select data-track="${trackId}" data-program="${progName}" data-subject="${subject}" data-chapter="${ch}"
                                 class="mt-chapter-week-select bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-[11px] text-indigo-700 dark:text-indigo-300 font-bold outline-none focus:ring-2 focus:ring-indigo-500 flex-1 sm:flex-none sm:w-[135px] truncate shadow-xs h-9"
@@ -15015,7 +15015,7 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                         <input type="checkbox" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" class="mt-ch-whole-subject form-checkbox h-5 w-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer transition-all shrink-0"
                             onchange="window.handleMonthlyWholeSubjectToggle('${CSS.escape(subject)}', this.checked, '${CSS.escape(trackId)}', '${CSS.escape(progName)}')"
                             ${isWholeSubPreselected ? 'checked' : ''}>
-                        <div class="min-w-0">
+                        <div class="min-w-0 flex-1">
                             <span class="text-xs font-black text-purple-900 dark:text-purple-200 truncate block">📚 Whole Subject (All Chapters)</span>
                             <span class="text-[8.5px] text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider block">Target entirety of ${subject} (${progName})</span>
                         </div>
@@ -15403,48 +15403,50 @@ window.renderMonthlyTargetDailyAllocations = function () {
                     : `<span class="text-[9.5px] sm:text-[10px] font-black text-slate-400 dark:text-slate-500 shrink-0 w-6 sm:w-7 text-center">D${rowIdx + 1}</span>`;
 
                 rowsHtml += `
-                    <div class="mt-daily-alloc-row flex items-center gap-1 sm:gap-1.5 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl ${rowBgClass} border transition-all w-full min-w-0 overflow-x-auto">
+                    <div class="mt-daily-alloc-row flex flex-wrap sm:flex-nowrap items-center gap-1 sm:gap-1.5 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl ${rowBgClass} border transition-all w-full min-w-0">
                         <!-- Day Badge -->
-                        ${dayBadge}
+                        <div class="order-1 sm:order-1 shrink-0 flex items-center justify-center">
+                            ${dayBadge}
+                        </div>
 
                         <!-- Day Select Dropdown -->
                         <select onchange="window.updateDailyAllocationDay('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, this.value)"
-                            class="flex-1 min-w-[90px] sm:min-w-[115px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs text-slate-800 dark:text-slate-100 font-bold outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs truncate cursor-pointer h-8"
+                            class="mt-daily-day-select order-2 sm:order-2 flex-1 min-w-[85px] sm:min-w-[115px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs text-slate-800 dark:text-slate-100 font-bold outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs truncate cursor-pointer h-8"
                             title="Select Target Day">
                             ${dayOptions}
                         </select>
 
-                        <!-- Fraction Quick Pills: 1/2, 1/3, 1/4, 1/5, 1/10, All -->
-                        <div class="flex items-center gap-0.5 shrink-0 bg-slate-200/70 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/80 dark:border-slate-700/80">
-                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.5, '1/2')"
-                                class="h-6 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === '1/2' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate 1/2 of chapter size">1/2</button>
-                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.33333, '1/3')"
-                                class="h-6 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === '1/3' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate 1/3 of chapter size">1/3</button>
-                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.25, '1/4')"
-                                class="h-6 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === '1/4' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate 1/4 of chapter size">1/4</button>
-                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.2, '1/5')"
-                                class="h-6 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === '1/5' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate 1/5 of chapter size">1/5</button>
-                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.1, '1/10')"
-                                class="h-6 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === '1/10' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate 1/10 of chapter size">1/10</button>
-                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 1.0, 'All')"
-                                class="h-6 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === 'All' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate all remaining chapter size">All</button>
-                        </div>
-
                         <!-- Portion/Page Size Input -->
-                        <div class="relative w-14 sm:w-16 shrink-0">
+                        <div class="relative w-14 sm:w-16 shrink-0 order-3 sm:order-4">
                             <input type="number" min="1" placeholder="Size" value="${alloc.portionSize || ''}"
                                 oninput="window.updateDailyAllocationSize('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, this.value, this)"
                                 onchange="window.renderMonthlyTargetDailyAllocations()"
-                                class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl px-1 sm:px-1.5 py-1 text-xs sm:text-sm text-slate-900 dark:text-white font-black outline-none text-center shadow-xs focus:ring-2 focus:ring-emerald-500 h-8"
+                                class="mt-daily-size-input w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl px-1 sm:px-1.5 py-1 text-xs sm:text-sm text-slate-900 dark:text-white font-black outline-none text-center shadow-xs focus:ring-2 focus:ring-emerald-500 h-8"
                                 title="Daily Target Pages/Units" />
                         </div>
 
                         <!-- Remove button -->
                         <button type="button" onclick="window.removeDailyAllocationRow('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx})"
-                            class="w-7.5 h-7.5 sm:w-8 sm:h-8 shrink-0 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg sm:rounded-xl transition-all active:scale-90"
+                            class="order-4 sm:order-5 w-7.5 h-7.5 sm:w-8 sm:h-8 shrink-0 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg sm:rounded-xl transition-all active:scale-90"
                             title="Remove day allocation">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
+
+                        <!-- Fraction Quick Pills: 1/2, 1/3, 1/4, 1/5, 1/10, All (Order 5 on mobile = Full width Line 2; Order 3 on desktop = inline) -->
+                        <div class="mt-fraction-pills-group order-5 sm:order-3 w-full basis-full sm:basis-auto sm:w-auto flex items-center gap-0.5 shrink-0 bg-slate-200/70 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/80 dark:border-slate-700/80 mt-1 sm:mt-0">
+                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.5, '1/2')"
+                                class="flex-1 sm:flex-none h-6.5 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === '1/2' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate 1/2 of chapter size">1/2</button>
+                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.33333, '1/3')"
+                                class="flex-1 sm:flex-none h-6.5 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === '1/3' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate 1/3 of chapter size">1/3</button>
+                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.25, '1/4')"
+                                class="flex-1 sm:flex-none h-6.5 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === '1/4' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate 1/4 of chapter size">1/4</button>
+                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.2, '1/5')"
+                                class="flex-1 sm:flex-none h-6.5 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === '1/5' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate 1/5 of chapter size">1/5</button>
+                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.1, '1/10')"
+                                class="flex-1 sm:flex-none h-6.5 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === '1/10' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate 1/10 of chapter size">1/10</button>
+                            <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 1.0, 'All')"
+                                class="flex-1 sm:flex-none h-6.5 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === 'All' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate all remaining chapter size">All</button>
+                        </div>
                     </div>
                 `;
             });
@@ -15453,8 +15455,8 @@ window.renderMonthlyTargetDailyAllocations = function () {
         html += `
             <div class="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-700/70 bg-white dark:bg-slate-800 shadow-xs space-y-2 transition-all">
                 <!-- Header -->
-                <div class="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-2">
-                    <div class="flex items-center gap-2 min-w-0">
+                <div class="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-2 flex-wrap sm:flex-nowrap">
+                    <div class="flex items-center gap-2 min-w-0 flex-1">
                         <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style="background-color: ${color}"></span>
                         <h5 class="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 truncate">${target.displayTitle}</h5>
                     </div>
@@ -15466,27 +15468,27 @@ window.renderMonthlyTargetDailyAllocations = function () {
 
                 <!-- Action Bar & Split buttons -->
                 <div class="flex items-center justify-between gap-1.5 flex-wrap">
-                    <div class="flex items-center gap-1 flex-wrap">
+                    <div class="grid grid-cols-4 sm:flex items-center gap-1 w-full sm:w-auto flex-1 sm:flex-none">
                         <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 2, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
-                            class="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center">
-                            ⚡ 2 Days
+                            class="px-1.5 sm:px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center justify-center text-center">
+                            ⚡ 2<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
                         </button>
                         <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 3, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
-                            class="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center">
-                            ⚡ 3 Days
+                            class="px-1.5 sm:px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center justify-center text-center">
+                            ⚡ 3<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
                         </button>
                         <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 4, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
-                            class="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center">
-                            ⚡ 4 Days
+                            class="px-1.5 sm:px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center justify-center text-center">
+                            ⚡ 4<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
                         </button>
                         <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 5, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
-                            class="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center">
-                            ⚡ 5 Days
+                            class="px-1.5 sm:px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center justify-center text-center">
+                            ⚡ 5<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
                         </button>
                     </div>
                     <button type="button" onclick="window.addDailyAllocationRow('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', '', null, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
-                        class="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200/60 dark:border-indigo-800/50 text-[9px] font-black transition-all active:scale-95 flex items-center gap-1 min-h-[30px]">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                        class="w-full sm:w-auto px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200/60 dark:border-indigo-800/50 text-[9.5px] font-black transition-all active:scale-95 flex items-center justify-center gap-1 min-h-[30px]">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
                         <span>Add Day</span>
                     </button>
                 </div>

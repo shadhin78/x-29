@@ -1134,7 +1134,7 @@ div[id^="dt-log-"] .overflow-y-auto::-webkit-scrollbar-thumb {
 @media (max-width: 640px) {
     #page-monthly-target-setup {
         -webkit-tap-highlight-color: transparent;
-        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 95px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 125px) !important;
     }
     .mt-chapter-row:hover,
     .mt-subject-card:hover,
@@ -1144,7 +1144,9 @@ div[id^="dt-log-"] .overflow-y-auto::-webkit-scrollbar-thumb {
     .mt-chapter-week-select,
     .mt-size-whole-subject-week,
     .mt-chapter-size-input,
-    .mt-size-whole-subject {
+    .mt-size-whole-subject,
+    .mt-daily-day-select,
+    .mt-daily-size-input {
         font-size: 13px; /* Prevents auto-zoom on iOS Safari */
     }
     #mt-progs-container,
@@ -1154,21 +1156,34 @@ div[id^="dt-log-"] .overflow-y-auto::-webkit-scrollbar-thumb {
         -webkit-overflow-scrolling: touch;
     }
     #mt-bottom-action-block {
-        position: sticky;
-        bottom: 0;
-        z-index: 40;
-        box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.08);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border-top: 1px solid rgba(226, 232, 240, 0.85);
-        margin-left: -0.25rem;
-        margin-right: -0.25rem;
-        border-radius: 1.25rem 1.25rem 0 0;
-        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        z-index: 50 !important;
+        margin: 0 !important;
+        border-radius: 1.5rem 1.5rem 0 0 !important;
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        border-top: 1px solid rgba(226, 232, 240, 0.9) !important;
+        box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.15) !important;
+        padding: 10px 16px !important;
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
     }
     .dark #mt-bottom-action-block {
-        box-shadow: 0 -6px 25px rgba(0, 0, 0, 0.45);
-        border-top: 1px solid rgba(51, 65, 85, 0.85);
+        background: rgba(15, 23, 42, 0.96) !important;
+        border-top: 1px solid rgba(51, 65, 85, 0.85) !important;
+        box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.5) !important;
+    }
+    #mt-btn-save-bottom {
+        font-size: 13px !important;
+        font-weight: 900 !important;
+        min-height: 44px !important;
+    }
+    .mt-fraction-pills-group button {
+        touch-action: manipulation;
     }
 }
 
