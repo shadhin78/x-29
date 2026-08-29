@@ -1120,6 +1120,16 @@ div[id^="dt-log-"] .overflow-y-auto::-webkit-scrollbar-thumb {
     box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
 }
 
+#mt-progs-container {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+#mt-subjects-container {
+    max-height: 350px;
+    overflow-y: auto;
+}
+
 /* Monthly Target Studio Mobile Enhancements */
 @media (max-width: 640px) {
     #page-monthly-target-setup {
@@ -1173,4 +1183,12 @@ div[id^="dt-log-"] .overflow-y-auto::-webkit-scrollbar-thumb {
 
 .dark #mt-daily-allocations-container::-webkit-scrollbar-thumb {
     background: rgba(75, 85, 99, 0.5);
+}
+
+.mt-daily-alloc-row {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.mt-daily-alloc-row::-webkit-scrollbar {
+    display: none;
 }

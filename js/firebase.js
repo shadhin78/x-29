@@ -542,6 +542,24 @@ window.FirebaseService = {
                             };
                         }
 
+                        ['monthlyTargetsDatabase', 'weeklyTargetsDatabase', 'dailyTargetsDatabase'].forEach(dbKey => {
+                            if (cloudData[dbKey] || AppState[dbKey]) {
+                                const localDb = AppState[dbKey] || {};
+                                const cloudDb = cloudData[dbKey] || {};
+                                const mergedDb = {};
+                                const allKeys = new Set([...Object.keys(localDb), ...Object.keys(cloudDb)]);
+
+                                allKeys.forEach(groupKey => {
+                                    const localList = Array.isArray(localDb[groupKey]) ? localDb[groupKey] : [];
+                                    const cloudList = Array.isArray(cloudDb[groupKey]) ? cloudDb[groupKey] : [];
+                                    mergedDb[groupKey] = window.reconcileArrays(localList, cloudList, tombstones, `${dbKey}_${groupKey}`);
+                                });
+
+                                cloudData[dbKey] = mergedDb;
+                                console.log(`SYNC_DEBUG RECONCILE_RESULT (${dbKey}): Reconciled target database across ${allKeys.size} date groups`);
+                            }
+                        });
+
                         if (cloudData.subjectFocusTargets || AppState.subjectFocusTargets) {
                             const cloudSft = cloudData.subjectFocusTargets || {};
                             const localSft = AppState.subjectFocusTargets || {};

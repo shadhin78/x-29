@@ -175,9 +175,6 @@ stateKeys.forEach(key => {
 /**
  * Generates a stable unique ID for an array item across multi-device sync sessions.
  */
-/**
- * Generates a stable unique ID for an array item across multi-device sync sessions.
- */
 window.generateItemId = function(item, arrayKey = 'items') {
     if (!item || (typeof item !== 'object' && typeof item !== 'string' && typeof item !== 'number')) return null;
     if (typeof item === 'string' || typeof item === 'number') return String(item);
@@ -193,6 +190,12 @@ window.generateItemId = function(item, arrayKey = 'items') {
     if (item.blockId !== undefined && item.blockId !== null) return String(item.blockId);
     if (item.groupId !== undefined && item.groupId !== null) return String(item.groupId);
     if (item.key !== undefined && item.key !== null) return String(item.key);
+    if (item.track !== undefined && item.subject !== undefined && item.chapter !== undefined) {
+        const pLabel = item.portionLabel ? `_${item.portionLabel}` : '';
+        const frac = item.fraction ? `_${item.fraction}` : '';
+        const tType = item.targetType ? `_${item.targetType}` : '';
+        return `${arrayKey}_${item.track}_${item.subject}_${item.chapter}${tType}${pLabel}${frac}`;
+    }
     if (item.title && item.date) return `${arrayKey}_${item.title}_${item.date}`;
     if (item.name) return `${arrayKey}_${item.name}`;
     if (item.title) return `${arrayKey}_${item.title}`;
@@ -583,9 +586,68 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
         }
     }
     if (data.dashboardConfig !== undefined) AppState.dashboardConfig = data.dashboardConfig;
-    if (data.weeklyTargetsDatabase !== undefined) AppState.weeklyTargetsDatabase = data.weeklyTargetsDatabase;
-    if (data.monthlyTargetsDatabase !== undefined) AppState.monthlyTargetsDatabase = data.monthlyTargetsDatabase;
-    if (data.dailyTargetsDatabase !== undefined) AppState.dailyTargetsDatabase = data.dailyTargetsDatabase;
+    if (data.weeklyTargetsDatabase !== undefined) {
+        if (window.shouldHydrateField('weeklyTargetsDatabase', data.weeklyTargetsDatabase, AppState.weeklyTargetsDatabase, isExplicitWipe, isCloudAuthoritative)) {
+            if (AppState.isLocalDirty && !isCloudAuthoritative && !isExplicitWipe && AppState.weeklyTargetsDatabase) {
+                const tombstones = AppState._tombstones || {};
+                const merged = {};
+                const allKeys = new Set([...Object.keys(AppState.weeklyTargetsDatabase || {}), ...Object.keys(data.weeklyTargetsDatabase || {})]);
+                allKeys.forEach(k => {
+                    const localList = (AppState.weeklyTargetsDatabase && AppState.weeklyTargetsDatabase[k]) || [];
+                    const cloudList = (data.weeklyTargetsDatabase && data.weeklyTargetsDatabase[k]) || [];
+                    merged[k] = window.reconcileArrays(localList, cloudList, tombstones, `weeklyTargetsDatabase_${k}`);
+                });
+                AppState.weeklyTargetsDatabase = merged;
+            } else {
+                AppState.weeklyTargetsDatabase = data.weeklyTargetsDatabase;
+            }
+            window.weeklyTargetsDatabase = AppState.weeklyTargetsDatabase;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
+    if (data.monthlyTargetsDatabase !== undefined) {
+        if (window.shouldHydrateField('monthlyTargetsDatabase', data.monthlyTargetsDatabase, AppState.monthlyTargetsDatabase, isExplicitWipe, isCloudAuthoritative)) {
+            if (AppState.isLocalDirty && !isCloudAuthoritative && !isExplicitWipe && AppState.monthlyTargetsDatabase) {
+                const tombstones = AppState._tombstones || {};
+                const merged = {};
+                const allKeys = new Set([...Object.keys(AppState.monthlyTargetsDatabase || {}), ...Object.keys(data.monthlyTargetsDatabase || {})]);
+                allKeys.forEach(k => {
+                    const localList = (AppState.monthlyTargetsDatabase && AppState.monthlyTargetsDatabase[k]) || [];
+                    const cloudList = (data.monthlyTargetsDatabase && data.monthlyTargetsDatabase[k]) || [];
+                    merged[k] = window.reconcileArrays(localList, cloudList, tombstones, `monthlyTargetsDatabase_${k}`);
+                });
+                AppState.monthlyTargetsDatabase = merged;
+            } else {
+                AppState.monthlyTargetsDatabase = data.monthlyTargetsDatabase;
+            }
+            window.monthlyTargetsDatabase = AppState.monthlyTargetsDatabase;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
+
+    if (data.dailyTargetsDatabase !== undefined) {
+        if (window.shouldHydrateField('dailyTargetsDatabase', data.dailyTargetsDatabase, AppState.dailyTargetsDatabase, isExplicitWipe, isCloudAuthoritative)) {
+            if (AppState.isLocalDirty && !isCloudAuthoritative && !isExplicitWipe && AppState.dailyTargetsDatabase) {
+                const tombstones = AppState._tombstones || {};
+                const merged = {};
+                const allKeys = new Set([...Object.keys(AppState.dailyTargetsDatabase || {}), ...Object.keys(data.dailyTargetsDatabase || {})]);
+                allKeys.forEach(k => {
+                    const localList = (AppState.dailyTargetsDatabase && AppState.dailyTargetsDatabase[k]) || [];
+                    const cloudList = (data.dailyTargetsDatabase && data.dailyTargetsDatabase[k]) || [];
+                    merged[k] = window.reconcileArrays(localList, cloudList, tombstones, `dailyTargetsDatabase_${k}`);
+                });
+                AppState.dailyTargetsDatabase = merged;
+            } else {
+                AppState.dailyTargetsDatabase = data.dailyTargetsDatabase;
+            }
+            window.dailyTargetsDatabase = AppState.dailyTargetsDatabase;
+        } else {
+            rejectedAnyField = true;
+        }
+    }
 
     if (data.scheduleBlocks !== undefined) {
         if (window.shouldHydrateField('scheduleBlocks', data.scheduleBlocks, AppState.scheduleBlocks, isExplicitWipe, isCloudAuthoritative)) {

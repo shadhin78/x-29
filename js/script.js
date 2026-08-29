@@ -15262,6 +15262,7 @@ window.renderMonthlyTargetDailyAllocations = function () {
     const countBadge = document.getElementById('mt-daily-allocation-count-badge');
     if (!container) return;
 
+    const savedScrollTop = container.scrollTop;
     const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
 
     const checkedTargets = [];
@@ -15394,67 +15395,70 @@ window.renderMonthlyTargetDailyAllocations = function () {
                 });
 
                 const rowBgClass = isStar
-                    ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300/80 dark:border-amber-600/60 shadow-xs'
-                    : 'bg-slate-50 dark:bg-slate-900/70 border-slate-200/80 dark:border-slate-700/60 shadow-xs';
+                    ? 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-300/80 dark:border-amber-600/60 shadow-xs'
+                    : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-700/60 shadow-xs';
 
                 const dayBadge = isStar
-                    ? `<span class="text-[10px] font-black text-amber-500 flex items-center shrink-0 w-7 sm:w-8 justify-center" title="Extra/Repeat Target (Already done 100%)">⭐D${rowIdx + 1}</span>`
-                    : `<span class="text-[10px] font-black text-slate-400 w-7 sm:w-8 text-center shrink-0">D${rowIdx + 1}</span>`;
+                    ? `<span class="text-[9.5px] sm:text-[10px] font-black text-amber-500 shrink-0 w-6 sm:w-7 text-center" title="Extra/Repeat Target (Already done 100%)">⭐D${rowIdx + 1}</span>`
+                    : `<span class="text-[9.5px] sm:text-[10px] font-black text-slate-400 dark:text-slate-500 shrink-0 w-6 sm:w-7 text-center">D${rowIdx + 1}</span>`;
 
                 rowsHtml += `
-                    <div class="flex flex-col gap-2 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl ${rowBgClass} border transition-all w-full">
-                        <!-- Line 1: Day Badge + Day Select Dropdown + Size Input + Delete Button -->
-                        <div class="flex items-center gap-1.5 sm:gap-2 w-full">
-                            ${dayBadge}
-                            <!-- Day Select Dropdown -->
-                            <select onchange="window.updateDailyAllocationDay('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, this.value)"
-                                class="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs text-slate-800 dark:text-slate-100 font-bold outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs truncate cursor-pointer h-9"
-                                title="Select Target Day">
-                                ${dayOptions}
-                            </select>
-                            <!-- Portion/Page Size Input -->
-                            <div class="relative w-20 sm:w-24 shrink-0">
-                                <input type="number" min="1" placeholder="Size" value="${alloc.portionSize || ''}"
-                                    oninput="window.updateDailyAllocationSize('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, this.value)"
-                                    class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs sm:text-sm text-slate-900 dark:text-white font-black outline-none text-center shadow-xs focus:ring-2 focus:ring-emerald-500 h-9"
-                                    title="Daily Target Pages/Units" />
-                            </div>
-                            <!-- Remove button -->
-                            <button type="button" onclick="window.removeDailyAllocationRow('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx})"
-                                class="w-8.5 h-8.5 sm:w-9 sm:h-9 shrink-0 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-all active:scale-90" title="Remove day allocation">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
-                            </button>
-                        </div>
-                        <!-- Line 2: Full-Width Fraction shortcuts: 1/2, 1/3, 1/4, 1/5, 1/10, All -->
-                        <div class="flex items-center gap-1 w-full pt-0.5">
-                            <span class="text-[8.5px] sm:text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 shrink-0 mr-0.5 hidden xs:inline">Fractions:</span>
+                    <div class="mt-daily-alloc-row flex items-center gap-1 sm:gap-1.5 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl ${rowBgClass} border transition-all w-full min-w-0 overflow-x-auto">
+                        <!-- Day Badge -->
+                        ${dayBadge}
+
+                        <!-- Day Select Dropdown -->
+                        <select onchange="window.updateDailyAllocationDay('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, this.value)"
+                            class="flex-1 min-w-[90px] sm:min-w-[115px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs text-slate-800 dark:text-slate-100 font-bold outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs truncate cursor-pointer h-8"
+                            title="Select Target Day">
+                            ${dayOptions}
+                        </select>
+
+                        <!-- Fraction Quick Pills: 1/2, 1/3, 1/4, 1/5, 1/10, All -->
+                        <div class="flex items-center gap-0.5 shrink-0 bg-slate-200/70 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/80 dark:border-slate-700/80">
                             <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.5, '1/2')"
-                                class="flex-1 h-7.5 sm:h-8 flex items-center justify-center text-[10px] sm:text-[11px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80 active:scale-95 text-center shadow-xs transition-all min-w-[30px]" title="Allocate 1/2 of chapter size">1/2</button>
+                                class="h-6 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === '1/2' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate 1/2 of chapter size">1/2</button>
                             <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.33333, '1/3')"
-                                class="flex-1 h-7.5 sm:h-8 flex items-center justify-center text-[10px] sm:text-[11px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80 active:scale-95 text-center shadow-xs transition-all min-w-[30px]" title="Allocate 1/3 of chapter size">1/3</button>
+                                class="h-6 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === '1/3' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate 1/3 of chapter size">1/3</button>
                             <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.25, '1/4')"
-                                class="flex-1 h-7.5 sm:h-8 flex items-center justify-center text-[10px] sm:text-[11px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80 active:scale-95 text-center shadow-xs transition-all min-w-[30px]" title="Allocate 1/4 of chapter size">1/4</button>
+                                class="h-6 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === '1/4' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate 1/4 of chapter size">1/4</button>
                             <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.2, '1/5')"
-                                class="flex-1 h-7.5 sm:h-8 flex items-center justify-center text-[10px] sm:text-[11px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80 active:scale-95 text-center shadow-xs transition-all min-w-[30px]" title="Allocate 1/5 of chapter size">1/5</button>
+                                class="h-6 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === '1/5' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate 1/5 of chapter size">1/5</button>
                             <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.1, '1/10')"
-                                class="flex-1 h-7.5 sm:h-8 flex items-center justify-center text-[10px] sm:text-[11px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80 active:scale-95 text-center shadow-xs transition-all min-w-[30px]" title="Allocate 1/10 of chapter size">1/10</button>
+                                class="h-6 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === '1/10' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate 1/10 of chapter size">1/10</button>
                             <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 1.0, 'All')"
-                                class="flex-1 h-7.5 sm:h-8 flex items-center justify-center text-[10px] sm:text-[11px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80 active:scale-95 text-center shadow-xs transition-all min-w-[30px]" title="Allocate full chapter size">All</button>
+                                class="h-6 sm:h-7 px-1.5 sm:px-2 flex items-center justify-center text-[9px] sm:text-[10px] font-black rounded-md ${alloc.fraction === 'All' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400'} active:scale-95 transition-all" title="Allocate all remaining chapter size">All</button>
                         </div>
+
+                        <!-- Portion/Page Size Input -->
+                        <div class="relative w-14 sm:w-16 shrink-0">
+                            <input type="number" min="1" placeholder="Size" value="${alloc.portionSize || ''}"
+                                oninput="window.updateDailyAllocationSize('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, this.value, this)"
+                                onchange="window.renderMonthlyTargetDailyAllocations()"
+                                class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl px-1 sm:px-1.5 py-1 text-xs sm:text-sm text-slate-900 dark:text-white font-black outline-none text-center shadow-xs focus:ring-2 focus:ring-emerald-500 h-8"
+                                title="Daily Target Pages/Units" />
+                        </div>
+
+                        <!-- Remove button -->
+                        <button type="button" onclick="window.removeDailyAllocationRow('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx})"
+                            class="w-7.5 h-7.5 sm:w-8 sm:h-8 shrink-0 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg sm:rounded-xl transition-all active:scale-90"
+                            title="Remove day allocation">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
                     </div>
                 `;
             });
         }
 
         html += `
-            <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-700/70 bg-white dark:bg-slate-800 shadow-xs space-y-2.5 transition-all">
+            <div class="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-700/70 bg-white dark:bg-slate-800 shadow-xs space-y-2 transition-all">
                 <!-- Header -->
                 <div class="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-2">
                     <div class="flex items-center gap-2 min-w-0">
                         <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style="background-color: ${color}"></span>
                         <h5 class="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 truncate">${target.displayTitle}</h5>
                     </div>
-                    <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
+                    <div class="flex items-center gap-1.5 shrink-0 flex-wrap" data-alloc-badge-key="${CSS.escape(key)}">
                         ${weekBadgeHtml}
                         ${allocationBadgeHtml}
                     </div>
@@ -15496,11 +15500,82 @@ window.renderMonthlyTargetDailyAllocations = function () {
     });
 
     container.innerHTML = html;
+    container.scrollTop = savedScrollTop;
+    requestAnimationFrame(() => {
+        if (container) container.scrollTop = savedScrollTop;
+    });
 
     if (countBadge) {
         const dayCount = scheduledDaysSet.size;
         countBadge.textContent = totalAllocationsCount > 0
             ? `${totalAllocationsCount} Targets (${dayCount} Days)`
+            : "0 Scheduled";
+    }
+};
+
+window.updateDailyAllocationBadgesInPlace = function (subject, chapter) {
+    const key = subject + '|||' + chapter;
+    const badgeContainer = document.querySelector(`[data-alloc-badge-key="${CSS.escape(key)}"]`);
+    const countBadge = document.getElementById('mt-daily-allocation-count-badge');
+
+    const allocations = (window.monthlyTargetDailyAllocations && window.monthlyTargetDailyAllocations[key]) || [];
+    let sumAllocated = 0;
+    allocations.forEach(a => {
+        if (a.portionSize) sumAllocated += parseInt(a.portionSize, 10) || 0;
+    });
+
+    let totalSize = null;
+    if (chapter === 'Whole Subject') {
+        const wholeSubSizeEl = document.querySelector(`.mt-size-whole-subject[data-subject="${CSS.escape(subject)}"]`);
+        totalSize = wholeSubSizeEl && wholeSubSizeEl.value ? parseInt(wholeSubSizeEl.value, 10) : null;
+    } else {
+        const sizeInput = document.querySelector(`.mt-chapter-size-input[data-subject="${CSS.escape(subject)}"][data-chapter="${CSS.escape(chapter)}"]`);
+        totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+    }
+
+    if (badgeContainer) {
+        const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
+        const targetWeekKey = window.getAssignedWeekKeyForTarget ? window.getAssignedWeekKeyForTarget(subject, chapter) : '';
+        let weekBadgeHtml = '';
+        if (targetWeekKey) {
+            const weekRangeDates = targetWeekKey.split(' - ');
+            const weekShort = weekRangeDates.length === 2 ? `${weekRangeDates[0]} - ${weekRangeDates[1]}` : targetWeekKey;
+            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1" title="Bound to week ${targetWeekKey}">📅 ${weekShort}</span>`;
+        }
+
+        let allocationBadgeHtml = '';
+        if (totalSize) {
+            if (allocations.length === 0) {
+                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300">Size: ${totalSize}</span>`;
+            } else if (sumAllocated === totalSize) {
+                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">✓ ${sumAllocated}/${totalSize} (100%)</span>`;
+            } else if (sumAllocated < totalSize) {
+                const left = totalSize - sumAllocated;
+                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">⏳ ${sumAllocated}/${totalSize} (${left} left)</span>`;
+            } else {
+                const over = sumAllocated - totalSize;
+                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 flex items-center gap-0.5" title="100% completed + Extra/Repeat target">⭐ ${sumAllocated}/${totalSize} (+${over} Extra)</span>`;
+            }
+        } else {
+            allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">${allocations.length} Day(s)</span>`;
+        }
+
+        badgeContainer.innerHTML = weekBadgeHtml + allocationBadgeHtml;
+    }
+
+    if (countBadge && window.monthlyTargetDailyAllocations) {
+        let totalAllocationsCount = 0;
+        const scheduledDaysSet = new Set();
+        Object.values(window.monthlyTargetDailyAllocations).forEach(arr => {
+            if (Array.isArray(arr)) {
+                arr.forEach(a => {
+                    if (a.dayKey) scheduledDaysSet.add(a.dayKey);
+                    totalAllocationsCount++;
+                });
+            }
+        });
+        countBadge.textContent = totalAllocationsCount > 0
+            ? `${totalAllocationsCount} Targets (${scheduledDaysSet.size} Days)`
             : "0 Scheduled";
     }
 };
@@ -15615,11 +15690,24 @@ window.updateDailyAllocationDay = function (subject, chapter, rowIdx, dayKey) {
     }
 };
 
-window.updateDailyAllocationSize = function (subject, chapter, rowIdx, sizeVal) {
+window.updateDailyAllocationSize = function (subject, chapter, rowIdx, sizeVal, inputEl) {
     const key = subject + '|||' + chapter;
     if (window.monthlyTargetDailyAllocations && window.monthlyTargetDailyAllocations[key] && window.monthlyTargetDailyAllocations[key][rowIdx]) {
         window.monthlyTargetDailyAllocations[key][rowIdx].portionSize = sizeVal ? parseInt(sizeVal, 10) : null;
-        window.renderMonthlyTargetDailyAllocations();
+        window.monthlyTargetDailyAllocations[key][rowIdx].fraction = '';
+        window.monthlyTargetDailyAllocations[key][rowIdx].portionLabel = '';
+
+        // Deselect fraction pills in this row without destroying DOM or losing focus
+        if (inputEl) {
+            const rowEl = inputEl.closest('.mt-daily-alloc-row');
+            if (rowEl) {
+                rowEl.querySelectorAll('button[onclick*="applyFractionToDailyAllocation"]').forEach(btn => {
+                    btn.className = btn.className.replace(/bg-emerald-600\s+text-white\s+shadow-xs/g, 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400');
+                });
+            }
+        }
+
+        window.updateDailyAllocationBadgesInPlace(subject, chapter);
         window.updateMonthlyTargetPageSummary();
     }
 };
@@ -15636,10 +15724,24 @@ window.applyFractionToDailyAllocation = function (subject, chapter, rowIdx, frac
             totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
         }
 
-        const calculatedSize = totalSize ? Math.round(totalSize * fractionVal) : null;
+        let calculatedSize = null;
+        if (fractionLabel === 'All') {
+            if (totalSize !== null) {
+                // Calculate remaining size: totalSize minus sum of other day rows
+                const otherRowsSum = window.monthlyTargetDailyAllocations[key].reduce((sum, a, idx) => {
+                    if (idx === rowIdx) return sum;
+                    return sum + (parseInt(a.portionSize, 10) || 0);
+                }, 0);
+                const remaining = totalSize - otherRowsSum;
+                calculatedSize = remaining > 0 ? remaining : (otherRowsSum === 0 ? totalSize : 0);
+            }
+        } else {
+            calculatedSize = totalSize ? Math.round(totalSize * fractionVal) : null;
+        }
+
         window.monthlyTargetDailyAllocations[key][rowIdx].portionSize = calculatedSize;
         window.monthlyTargetDailyAllocations[key][rowIdx].fraction = fractionLabel;
-        window.monthlyTargetDailyAllocations[key][rowIdx].portionLabel = `Fraction ${fractionLabel}`;
+        window.monthlyTargetDailyAllocations[key][rowIdx].portionLabel = fractionLabel === 'All' ? 'All Remaining' : `Fraction ${fractionLabel}`;
         window.renderMonthlyTargetDailyAllocations();
         window.updateMonthlyTargetPageSummary();
     }
@@ -16192,6 +16294,7 @@ window.addMonthlyTarget = function () {
         }
 
         window.monthlyTargetsDatabase[targetMonthKey].push({
+            id: item.id || `mt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             track: trackId,
             program: progName,
             subject: subject,
@@ -16200,7 +16303,8 @@ window.addMonthlyTarget = function () {
             completed: isCompletedBefore,
             completedAt: completedAtBefore,
             scope: item.scope,
-            totalChapterSize: item.totalChapterSize
+            totalChapterSize: item.totalChapterSize,
+            updatedAt: Date.now()
         });
         addedCount++;
         addedSubjectsSet.add(subject);
@@ -16218,6 +16322,7 @@ window.addMonthlyTarget = function () {
 
             if (!wtExists) {
                 wtList.push({
+                    id: `wt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     track: trackId,
                     program: progName,
                     subject: subject,
@@ -16226,7 +16331,8 @@ window.addMonthlyTarget = function () {
                     completed: isCompletedBefore,
                     completedAt: completedAtBefore,
                     scope: item.scope,
-                    totalChapterSize: item.totalChapterSize
+                    totalChapterSize: item.totalChapterSize,
+                    updatedAt: Date.now()
                 });
                 connectedToWeek = true;
                 connectedWeeksSet.add(targetWeekKey);
@@ -16258,6 +16364,7 @@ window.addMonthlyTarget = function () {
 
                     if (!dtExists) {
                         dtList.push({
+                            id: `dt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                             track: trackId,
                             program: progName,
                             subject: subject,
@@ -16270,7 +16377,8 @@ window.addMonthlyTarget = function () {
                             portionSize: portionSize,
                             portionLabel: portionLabel,
                             fraction: alloc.fraction || '',
-                            isStarTarget: isStar
+                            isStarTarget: isStar,
+                            updatedAt: Date.now()
                         });
                         connectedToDay = true;
                         connectedDaysSet.add(alloc.dayKey);
@@ -16290,6 +16398,7 @@ window.addMonthlyTarget = function () {
 
             if (!dtExists) {
                 dtList.push({
+                    id: `dt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     track: trackId,
                     program: progName,
                     subject: subject,
@@ -16298,7 +16407,8 @@ window.addMonthlyTarget = function () {
                     completed: isCompletedBefore,
                     completedAt: completedAtBefore,
                     scope: item.scope,
-                    totalChapterSize: item.totalChapterSize
+                    totalChapterSize: item.totalChapterSize,
+                    updatedAt: Date.now()
                 });
                 connectedToDay = true;
                 connectedDaysSet.add(selectedDayKey);
@@ -16313,6 +16423,8 @@ window.addMonthlyTarget = function () {
         }
         return showToast("No targets added.", "error");
     }
+
+    window.markLocalMutation(`add_monthly_targets_${addedCount}`);
 
     if (connectedToWeek) {
         if (typeof window.renderWeeklyTargets === 'function') window.renderWeeklyTargets();
@@ -16350,13 +16462,29 @@ window.addMonthlyTarget = function () {
     showToast(toastMsg, "success");
 };
 
-window.deleteMonthlyTarget = function (idx) {
+window.deleteMonthlyTarget = function (idx, targetId = null) {
     const monthSelectEl = document.getElementById('mt-select-month');
     if (!monthSelectEl) return;
     const selectedMonthKey = monthSelectEl.value;
 
-    if (window.monthlyTargetsDatabase && window.monthlyTargetsDatabase[selectedMonthKey] && window.monthlyTargetsDatabase[selectedMonthKey][idx]) {
-        window.monthlyTargetsDatabase[selectedMonthKey].splice(idx, 1);
+    if (!window.monthlyTargetsDatabase || !window.monthlyTargetsDatabase[selectedMonthKey]) return;
+    const list = window.monthlyTargetsDatabase[selectedMonthKey];
+
+    let targetIdx = idx;
+    if (targetId) {
+        const foundIndex = list.findIndex(t => t && (t.id === targetId || t._id === targetId));
+        if (foundIndex !== -1) targetIdx = foundIndex;
+    }
+
+    if (list && list[targetIdx]) {
+        const target = list[targetIdx];
+        const tid = target.id || targetId || window.generateItemId(target, `monthlyTargetsDatabase_${selectedMonthKey}`);
+        if (tid) {
+            window.recordItemDeletion(tid);
+            if (target.id) window.recordItemDeletion(target.id);
+        }
+        window.markLocalMutation(`delete_monthly_target`);
+        list.splice(targetIdx, 1);
         renderUI();
         showToast("Monthly target removed.", "success");
         FirebaseService.saveToCloud(true);
@@ -16585,7 +16713,7 @@ window.renderMonthlyTargets = function () {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                             </svg>
                         </button>
-                        <button onclick="window.deleteMonthlyTarget(${idx})" class="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-300 hover:text-red-500 rounded-lg transition-all active:scale-90 shadow-sm" title="Delete Monthly Target">
+                        <button onclick="window.deleteMonthlyTarget(${idx}, '${target.id || ''}')" class="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-300 hover:text-red-500 rounded-lg transition-all active:scale-90 shadow-sm" title="Delete Monthly Target">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
@@ -17016,6 +17144,7 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
         }
     }
 
+    if (!target.id) target.id = `mt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     target.track = trackId;
     target.program = progName;
     target.subject = selectedSubject;
@@ -17023,6 +17152,7 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
     target.targetType = selectedType;
     target.scope = isSubjectTarget ? 'Whole Subject' : (target.scope || 'Whole Chapter');
     target.totalChapterSize = selectedSize;
+    target.updatedAt = Date.now();
 
     const weekSelectEl = document.getElementById('mt-select-week-range');
     const targetWeekKey = selectedWeek || (weekSelectEl ? weekSelectEl.value : '');
@@ -17039,6 +17169,7 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
 
         if (!wtExists) {
             wtList.push({
+                id: `wt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 track: trackId,
                 program: progName,
                 subject: selectedSubject,
@@ -17047,7 +17178,8 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
                 completed: target.completed,
                 completedAt: target.completedAt,
                 scope: target.scope,
-                totalChapterSize: selectedSize
+                totalChapterSize: selectedSize,
+                updatedAt: Date.now()
             });
             connectedToWeek = true;
             if (typeof window.renderWeeklyTargets === 'function') window.renderWeeklyTargets();
@@ -17086,6 +17218,7 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
 
                 if (!dtExists) {
                     dtList.push({
+                        id: `dt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                         track: trackId,
                         program: progName,
                         subject: selectedSubject,
@@ -17098,7 +17231,8 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
                         portionSize: portionSize,
                         portionLabel: portionLabel,
                         fraction: alloc.fraction || '',
-                        isStarTarget: isStar
+                        isStarTarget: isStar,
+                        updatedAt: Date.now()
                     });
                     connectedToDay = true;
                     connectedDaysSet.add(alloc.dayKey);
@@ -17117,6 +17251,7 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
 
         if (!dtExists) {
             dtList.push({
+                id: `dt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 track: trackId,
                 program: progName,
                 subject: selectedSubject,
@@ -17125,13 +17260,16 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
                 completed: target.completed,
                 completedAt: target.completedAt,
                 scope: target.scope,
-                totalChapterSize: selectedSize
+                totalChapterSize: selectedSize,
+                updatedAt: Date.now()
             });
             connectedToDay = true;
             connectedDaysSet.add(selectedDayKey);
             totalDailyAllocationsAdded++;
         }
     }
+
+    window.markLocalMutation('edit_monthly_target');
 
     if (connectedToDay) {
         if (typeof window.renderDailyTargets === 'function') window.renderDailyTargets();
@@ -17315,7 +17453,7 @@ window.renderMtdbList = function () {
                         <td class="py-3 px-4 truncate max-w-[120px]" title="${target.subject}">${displaySub}</td>
                         <td class="py-3 px-4">${chapterCell}</td>
                         <td class="py-3 px-4 text-center">
-                            <button onclick="window.deleteMtdbTarget('${monthKey}', ${idx})" class="p-1 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 rounded transition-all active:scale-90 shadow-sm">
+                            <button onclick="window.deleteMtdbTarget('${monthKey}', ${idx}, '${target.id || ''}')" class="p-1 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 rounded transition-all active:scale-90 shadow-sm">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
@@ -17336,10 +17474,26 @@ window.renderMtdbList = function () {
     }
 };
 
-window.deleteMtdbTarget = function (monthKey, idx) {
-    if (window.monthlyTargetsDatabase && window.monthlyTargetsDatabase[monthKey] && window.monthlyTargetsDatabase[monthKey][idx]) {
-        window.monthlyTargetsDatabase[monthKey].splice(idx, 1);
-        FirebaseService.saveToCloud();
+window.deleteMtdbTarget = function (monthKey, idx, targetId = null) {
+    if (!window.monthlyTargetsDatabase || !window.monthlyTargetsDatabase[monthKey]) return;
+    const list = window.monthlyTargetsDatabase[monthKey];
+
+    let targetIdx = idx;
+    if (targetId) {
+        const foundIndex = list.findIndex(t => t && (t.id === targetId || t._id === targetId));
+        if (foundIndex !== -1) targetIdx = foundIndex;
+    }
+
+    if (list && list[targetIdx]) {
+        const target = list[targetIdx];
+        const tid = target.id || targetId || window.generateItemId(target, `monthlyTargetsDatabase_${monthKey}`);
+        if (tid) {
+            window.recordItemDeletion(tid);
+            if (target.id) window.recordItemDeletion(target.id);
+        }
+        window.markLocalMutation(`delete_mtdb_target`);
+        list.splice(targetIdx, 1);
+        FirebaseService.saveToCloud(true);
         renderUI();
         window.renderMtdbList();
         showToast("Monthly target removed.", "success");
@@ -17902,6 +18056,7 @@ window.addWeeklyTarget = function () {
     const completedAtBefore = foundTask ? (foundTask.subTask.completedAt || null) : null;
 
     window.weeklyTargetsDatabase[targetWeekKey].push({
+        id: `wt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         track: trackId,
         program: progName,
         subject: subject,
@@ -17910,12 +18065,15 @@ window.addWeeklyTarget = function () {
         completedAt: completedAtBefore,
         dayName: dayName || null,
         scope: scopeVal,
-        totalChapterSize: totalSize
+        totalChapterSize: totalSize,
+        updatedAt: Date.now()
     });
 
     if (daySelectEl) daySelectEl.value = '';
     if (scopeEl) scopeEl.value = '';
     if (sizeEl) sizeEl.value = '';
+
+    window.markLocalMutation('add_weekly_target');
 
     if (window.autoSyncWeeklyToDailyTargets) window.autoSyncWeeklyToDailyTargets();
 
@@ -17925,13 +18083,28 @@ window.addWeeklyTarget = function () {
     showToast("Weekly target chapter added!", "success");
 };
 
-window.deleteWeeklyTarget = function (idx) {
+window.deleteWeeklyTarget = function (idx, targetId = null) {
     const weekSelectEl = document.getElementById('wt-select-week');
     if (!weekSelectEl) return;
     const selectedWeekKey = weekSelectEl.value;
 
-    if (window.weeklyTargetsDatabase && window.weeklyTargetsDatabase[selectedWeekKey] && window.weeklyTargetsDatabase[selectedWeekKey][idx]) {
-        const target = window.weeklyTargetsDatabase[selectedWeekKey][idx];
+    if (!window.weeklyTargetsDatabase || !window.weeklyTargetsDatabase[selectedWeekKey]) return;
+    const list = window.weeklyTargetsDatabase[selectedWeekKey];
+
+    let targetIdx = idx;
+    if (targetId) {
+        const foundIndex = list.findIndex(t => t && (t.id === targetId || t._id === targetId));
+        if (foundIndex !== -1) targetIdx = foundIndex;
+    }
+
+    if (list && list[targetIdx]) {
+        const target = list[targetIdx];
+        const tid = target.id || targetId || window.generateItemId(target, `weeklyTargetsDatabase_${selectedWeekKey}`);
+        if (tid) {
+            window.recordItemDeletion(tid);
+            if (target.id) window.recordItemDeletion(target.id);
+        }
+        window.markLocalMutation(`delete_weekly_target`);
 
         // Also mark any synced daily targets in this week as deleted
         const trackId = target.track;
@@ -17944,16 +18117,18 @@ window.deleteWeeklyTarget = function (idx) {
                 const startVal = range.start ? range.start.getTime() : new Date().getTime();
                 const d = new Date(startVal + i * 24 * 60 * 60 * 1000);
                 const dateKey = Utils.formatDate(d);
-                const list = window.dailyTargetsDatabase[dateKey] || [];
-                list.forEach(dt => {
+                const dList = window.dailyTargetsDatabase[dateKey] || [];
+                dList.forEach(dt => {
                     if (dt.track === trackId && dt.subject === subject && dt.chapter === chapter) {
                         dt.isDeleted = true;
+                        const dtId = dt.id || window.generateItemId(dt, `dailyTargetsDatabase_${dateKey}`);
+                        if (dtId) window.recordItemDeletion(dtId);
                     }
                 });
             }
         }
 
-        window.weeklyTargetsDatabase[selectedWeekKey].splice(idx, 1);
+        list.splice(targetIdx, 1);
         renderUI();
         showToast("Weekly target removed.", "success");
         FirebaseService.saveToCloud(true);
@@ -18184,7 +18359,7 @@ window.renderWeeklyTargets = function () {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                             </svg>
                         </button>
-                        <button onclick="window.deleteWeeklyTarget(${idx})" class="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-300 hover:text-red-500 rounded-lg transition-all active:scale-90 shadow-sm" title="Delete Weekly Target">
+                        <button onclick="window.deleteWeeklyTarget(${idx}, '${target.id || ''}')" class="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-300 hover:text-red-500 rounded-lg transition-all active:scale-90 shadow-sm" title="Delete Weekly Target">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
@@ -18476,8 +18651,11 @@ window.addDailyTarget = function () {
         existingDeleted.completedAt = completedAtBefore;
         existingDeleted.totalChapterSize = dailySize;
         existingDeleted.scope = 'Whole Chapter';
+        existingDeleted.updatedAt = Date.now();
+        if (!existingDeleted.id) existingDeleted.id = `dt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     } else {
         window.dailyTargetsDatabase[targetDateKey].push({
+            id: `dt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             track: trackId,
             program: progName,
             subject: subject,
@@ -18485,12 +18663,15 @@ window.addDailyTarget = function () {
             completed: isCompletedBefore,
             completedAt: completedAtBefore,
             totalChapterSize: dailySize,
-            scope: 'Whole Chapter'
+            scope: 'Whole Chapter',
+            updatedAt: Date.now()
         });
     }
 
     if (sizeEl) sizeEl.value = '';
     if (totalSizeEl) totalSizeEl.value = '';
+
+    window.markLocalMutation('add_daily_target');
 
     FirebaseService.saveToCloud();
     renderUI();
@@ -18982,15 +19163,19 @@ window.addCustomTodoTarget = function () {
     if (!window.dailyTargetsDatabase[targetDateKey]) window.dailyTargetsDatabase[targetDateKey] = [];
 
     window.dailyTargetsDatabase[targetDateKey].push({
+        id: `dt_todo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         isTodo: true,
         title: title,
         track: track || null,
         completed: false,
-        completedAt: null
+        completedAt: null,
+        updatedAt: Date.now()
     });
 
     if (titleInput) titleInput.value = '';
     if (trackInput) trackInput.value = '';
+
+    window.markLocalMutation('add_custom_todo_target');
 
     FirebaseService.saveToCloud();
     renderUI();
@@ -18998,13 +19183,28 @@ window.addCustomTodoTarget = function () {
     showToast("Custom to-do task added!", "success");
 };
 
-window.deleteDailyTarget = function (idx) {
+window.deleteDailyTarget = function (idx, targetId = null) {
     if (!window.currentDailyTargetsDate) window.currentDailyTargetsDate = new Date();
     const selectedDateKey = Utils.formatDate(window.currentDailyTargetsDate);
 
-    if (window.dailyTargetsDatabase && window.dailyTargetsDatabase[selectedDateKey] && window.dailyTargetsDatabase[selectedDateKey][idx]) {
-        const target = window.dailyTargetsDatabase[selectedDateKey][idx];
+    if (!window.dailyTargetsDatabase || !window.dailyTargetsDatabase[selectedDateKey]) return;
+    const list = window.dailyTargetsDatabase[selectedDateKey];
+
+    let targetIdx = idx;
+    if (targetId) {
+        const foundIndex = list.findIndex(t => t && (t.id === targetId || t._id === targetId));
+        if (foundIndex !== -1) targetIdx = foundIndex;
+    }
+
+    if (list && list[targetIdx]) {
+        const target = list[targetIdx];
         target.isDeleted = true;
+        const tid = target.id || targetId || window.generateItemId(target, `dailyTargetsDatabase_${selectedDateKey}`);
+        if (tid) {
+            window.recordItemDeletion(tid);
+            if (target.id) window.recordItemDeletion(target.id);
+        }
+        window.markLocalMutation(`delete_daily_target`);
 
         // Sync with Weekly Target & Daily Study Task
         const currentRange = window.getWeeklyTargetRange(window.currentDailyTargetsDate);
@@ -19236,7 +19436,7 @@ window.renderDailyTargets = function () {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                             </svg>
                         </button>
-                        <button onclick="window.deleteDailyTarget(${idx})" class="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-300 hover:text-red-500 rounded-lg transition-all active:scale-90 shadow-sm" title="Delete Daily Target">
+                        <button onclick="window.deleteDailyTarget(${idx}, '${target.id || ''}')" class="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-300 hover:text-red-500 rounded-lg transition-all active:scale-90 shadow-sm" title="Delete Daily Target">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
@@ -20140,13 +20340,17 @@ window.addWtdbTarget = function () {
     const completedAtBefore = foundTask ? (foundTask.subTask.completedAt || null) : null;
 
     window.weeklyTargetsDatabase[targetWeek].push({
+        id: `wt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         track: trackId,
         program: progName,
         subject: subject,
         chapter: chapter,
         completed: isCompletedBefore,
-        completedAt: completedAtBefore
+        completedAt: completedAtBefore,
+        updatedAt: Date.now()
     });
+
+    window.markLocalMutation('add_wtdb_target');
 
     FirebaseService.saveToCloud();
     renderUI();
@@ -20154,10 +20358,26 @@ window.addWtdbTarget = function () {
     showToast("Target added to week: " + targetWeek, "success");
 };
 
-window.deleteWtdbTarget = function (weekKey, idx) {
-    if (window.weeklyTargetsDatabase && window.weeklyTargetsDatabase[weekKey] && window.weeklyTargetsDatabase[weekKey][idx]) {
-        window.weeklyTargetsDatabase[weekKey].splice(idx, 1);
-        FirebaseService.saveToCloud();
+window.deleteWtdbTarget = function (weekKey, idx, targetId = null) {
+    if (!window.weeklyTargetsDatabase || !window.weeklyTargetsDatabase[weekKey]) return;
+    const list = window.weeklyTargetsDatabase[weekKey];
+
+    let targetIdx = idx;
+    if (targetId) {
+        const foundIndex = list.findIndex(t => t && (t.id === targetId || t._id === targetId));
+        if (foundIndex !== -1) targetIdx = foundIndex;
+    }
+
+    if (list && list[targetIdx]) {
+        const target = list[targetIdx];
+        const tid = target.id || targetId || window.generateItemId(target, `weeklyTargetsDatabase_${weekKey}`);
+        if (tid) {
+            window.recordItemDeletion(tid);
+            if (target.id) window.recordItemDeletion(target.id);
+        }
+        window.markLocalMutation(`delete_wtdb_target`);
+        list.splice(targetIdx, 1);
+        FirebaseService.saveToCloud(true);
         renderUI();
         window.renderWtdbList();
         showToast("Weekly target removed.", "success");
@@ -20231,7 +20451,7 @@ window.renderWtdbList = function () {
                         <td class="py-3 px-4 truncate max-w-[120px]" title="${target.subject}">${displaySub}</td>
                         <td class="py-3 px-4 text-blue-600 dark:text-blue-400 font-bold">${target.chapter}${starsHtml}</td>
                         <td class="py-3 px-4 text-center">
-                            <button onclick="window.deleteWtdbTarget('${weekKey}', ${idx})" class="p-1 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 rounded transition-all active:scale-90 shadow-sm">
+                            <button onclick="window.deleteWtdbTarget('${weekKey}', ${idx}, '${target.id || ''}')" class="p-1 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 rounded transition-all active:scale-90 shadow-sm">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
