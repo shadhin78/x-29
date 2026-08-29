@@ -1117,6 +1117,24 @@ div[id^="dt-log-"] .overflow-y-auto::-webkit-scrollbar-thumb {
     box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
 }
 
+/* Monthly Target Studio Mobile Enhancements */
+@media (max-width: 640px) {
+    #page-monthly-target-setup {
+        -webkit-tap-highlight-color: transparent;
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+    }
+    .mt-chapter-row:hover,
+    .mt-subject-card:hover {
+        transform: none; /* Avoid hover jumpiness on touch screens */
+    }
+    .mt-chapter-week-select,
+    .mt-size-whole-subject-week,
+    .mt-chapter-size-input,
+    .mt-size-whole-subject {
+        font-size: 13px; /* Prevents auto-zoom on iOS Safari */
+    }
+}
+
 #mt-daily-allocations-container::-webkit-scrollbar {
     width: 4px;
 }
@@ -1129,6 +1147,3 @@ div[id^="dt-log-"] .overflow-y-auto::-webkit-scrollbar-thumb {
 .dark #mt-daily-allocations-container::-webkit-scrollbar-thumb {
     background: rgba(75, 85, 99, 0.5);
 }
-
-
-

@@ -14677,20 +14677,20 @@ window.populateMonthlyProgramsList = function (preselectedProgram = null) {
             : (prog.trackId === 'admission' ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200/50 dark:border-amber-800/50' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200/50 dark:border-emerald-800/50');
 
         const cardHtml = `
-            <div class="mt-prog-card flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-white dark:bg-slate-800 transition-all hover:border-purple-400/80 dark:hover:border-purple-500/80 cursor-pointer shadow-xs hover:shadow-sm"
+            <div class="mt-prog-card flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-white dark:bg-slate-800 transition-all hover:border-purple-400/80 dark:hover:border-purple-500/80 cursor-pointer shadow-xs hover:shadow-sm min-h-[44px]"
                 data-track="${prog.trackId}" data-program="${prog.progName}"
                 onclick="window.toggleMonthlyProgramCard('${CSS.escape(prog.trackId)}', '${CSS.escape(prog.progName)}', event)">
                 <label class="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0 pointer-events-none">
                     <input type="checkbox" data-track="${prog.trackId}" data-program="${prog.progName}"
-                        class="mt-prog-checkbox form-checkbox h-4 w-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer pointer-events-auto"
+                        class="mt-prog-checkbox form-checkbox h-4.5 w-4.5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer pointer-events-auto shrink-0"
                         onchange="window.handleMonthlyProgramToggle(); event.stopPropagation();"
                         ${isSelected ? 'checked' : ''}>
-                    <div class="flex items-center gap-2 min-w-0">
+                    <div class="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-wrap">
                         <span class="text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider ${trackBadgeColor} shrink-0">${prog.trackName}</span>
                         <span class="text-xs font-black text-slate-800 dark:text-slate-100 truncate">${prog.progName}</span>
                     </div>
                 </label>
-                <span class="text-[9px] font-black px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/70 text-slate-500 dark:text-slate-300 shrink-0 ml-2">
+                <span class="text-[8.5px] sm:text-[9px] font-black px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/70 text-slate-500 dark:text-slate-300 shrink-0 ml-1.5">
                     ${prog.subsCount} Sub
                 </span>
             </div>
@@ -14807,12 +14807,12 @@ window.updateMonthlyTargetSubjectDropdown = function (preselectSubject = null, p
             let isSelected = previouslyCheckedSet.has(subKey) || (Boolean(preselectSubject) && s.subject === preselectSubject);
 
             const cardHtml = `
-                <div class="mt-subject-card flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-white dark:bg-slate-800 transition-all hover:border-indigo-400/80 dark:hover:border-indigo-500/80 cursor-pointer shadow-xs hover:shadow-sm"
+                <div class="mt-subject-card flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-white dark:bg-slate-800 transition-all hover:border-indigo-400/80 dark:hover:border-indigo-500/80 cursor-pointer shadow-xs hover:shadow-sm min-h-[44px]"
                     data-track="${trackId}" data-program="${progName}" data-subject="${s.subject}"
                     onclick="window.toggleMonthlySubjectCard('${CSS.escape(trackId)}', '${CSS.escape(progName)}', '${CSS.escape(s.subject)}', event)">
                     <label class="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0 pointer-events-none">
                         <input type="checkbox" data-track="${trackId}" data-program="${progName}" data-subject="${s.subject}"
-                            class="mt-subject-checkbox form-checkbox h-4 w-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer pointer-events-auto"
+                            class="mt-subject-checkbox form-checkbox h-4.5 w-4.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer pointer-events-auto shrink-0"
                             onchange="window.handleMonthlySubjectToggle(); event.stopPropagation();"
                             ${isSelected ? 'checked' : ''}>
                         <div class="flex items-center gap-2 min-w-0">
@@ -14821,7 +14821,7 @@ window.updateMonthlyTargetSubjectDropdown = function (preselectSubject = null, p
                             ${isMultiProg ? `<span class="text-[8px] font-bold text-purple-600 dark:text-purple-400 px-1 py-0.2 rounded bg-purple-50 dark:bg-purple-950/40 border border-purple-200/40 dark:border-purple-800/40 shrink-0">${progName}</span>` : ''}
                         </div>
                     </label>
-                    <span class="text-[9px] font-black px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/70 text-slate-500 dark:text-slate-300 shrink-0 ml-2">
+                    <span class="text-[8.5px] sm:text-[9px] font-black px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/70 text-slate-500 dark:text-slate-300 shrink-0 ml-1.5">
                         ${chs.length} Ch
                     </span>
                 </div>
@@ -14951,26 +14951,26 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                 });
 
                 chaptersHtml += `
-                    <div class="mt-chapter-row flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-700/60 bg-white dark:bg-slate-800/90 transition-all hover:border-indigo-400/60 dark:hover:border-indigo-500/60 hover:shadow-xs gap-2"
+                    <div class="mt-chapter-row flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 bg-white dark:bg-slate-800/90 transition-all hover:border-indigo-400/60 dark:hover:border-indigo-500/60 hover:shadow-xs gap-2"
                          data-track="${trackId}" data-program="${progName}" data-chapter-name="${subject} ${ch}" data-subject="${subject}">
-                        <label class="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
-                            <input type="checkbox" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" data-chapter="${ch}" class="mt-chapter-checkbox form-checkbox h-4.5 w-4.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer transition-all"
+                        <label class="flex items-center gap-2.5 sm:gap-3 cursor-pointer flex-1 min-w-0">
+                            <input type="checkbox" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" data-chapter="${ch}" class="mt-chapter-checkbox form-checkbox h-4.5 w-4.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer transition-all shrink-0"
                                 onchange="window.handleMonthlyChapterCheckChange(this, '${CSS.escape(subject)}');"
                                 ${isChPreselected ? 'checked' : ''}>
                             <div class="min-w-0">
                                 <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate block">${ch}${stars}</span>
                             </div>
                         </label>
-                        <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                        <div class="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start shrink-0 pt-0.5 sm:pt-0">
                             <!-- Week Picker per chapter -->
                             <select data-track="${trackId}" data-program="${progName}" data-subject="${subject}" data-chapter="${ch}"
-                                class="mt-chapter-week-select bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-[10px] text-indigo-700 dark:text-indigo-300 font-bold outline-none focus:ring-2 focus:ring-indigo-500 max-w-[130px] truncate shadow-xs"
+                                class="mt-chapter-week-select bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-[11px] text-indigo-700 dark:text-indigo-300 font-bold outline-none focus:ring-2 focus:ring-indigo-500 flex-1 sm:flex-none sm:w-[130px] truncate shadow-xs h-9"
                                 onchange="window.handleMonthlyChapterWeekSelectChange('${CSS.escape(subject)}', '${CSS.escape(ch)}', this.value, '${CSS.escape(trackId)}', '${CSS.escape(progName)}');">
                                 <option value="">-- No Week --</option>
                                 ${chWeeksOptionsHtml}
                             </select>
                             <!-- Size Input per chapter -->
-                            <input type="number" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" data-chapter="${ch}" class="mt-chapter-size-input w-16 sm:w-20 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-bold outline-none shadow-inner focus:ring-2 focus:ring-indigo-500 transition-all text-center"
+                            <input type="number" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" data-chapter="${ch}" class="mt-chapter-size-input w-20 sm:w-20 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-bold outline-none shadow-inner focus:ring-2 focus:ring-indigo-500 transition-all text-center h-9 shrink-0"
                                 placeholder="Size" min="1"
                                 oninput="window.updateMonthlyTargetPageSummary();"
                                 value="${isChPreselected && preselectSize ? preselectSize : ''}">
@@ -14987,24 +14987,24 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
         }
 
         const groupHtml = `
-            <div class="mt-subject-chapter-group rounded-2xl border border-slate-200/90 dark:border-slate-700/80 bg-white dark:bg-slate-800/95 p-4 shadow-sm space-y-3" data-track="${trackId}" data-program="${progName}" data-subject="${subject}">
+            <div class="mt-subject-chapter-group rounded-2xl border border-slate-200/90 dark:border-slate-700/80 bg-white dark:bg-slate-800/95 p-3.5 sm:p-4 shadow-sm space-y-3" data-track="${trackId}" data-program="${progName}" data-subject="${subject}">
                 <!-- Subject Header -->
                 <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-slate-700/60">
-                    <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-wrap">
                         <span class="w-3 h-3 rounded-full shrink-0 shadow-xs" style="background-color: ${color}"></span>
                         <h4 class="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 truncate">${subject}</h4>
-                        <span class="text-[9px] font-black px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200/50 dark:border-purple-800/50">
+                        <span class="text-[8.5px] sm:text-[9px] font-black px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200/50 dark:border-purple-800/50 shrink-0">
                             ${progName}
                         </span>
-                        <span class="text-[9px] font-black px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700/70 text-slate-500 dark:text-slate-300">
-                            ${chapters.length} Chapters
+                        <span class="text-[8.5px] sm:text-[9px] font-black px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700/70 text-slate-500 dark:text-slate-300 shrink-0">
+                            ${chapters.length} Ch
                         </span>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
                         <button type="button" onclick="window.toggleAllMonthlyChaptersForSubject('${CSS.escape(subject)}', true, '${CSS.escape(trackId)}', '${CSS.escape(progName)}')"
-                            class="text-[9px] font-black text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 px-2 py-0.5 rounded border border-indigo-200/50 dark:border-indigo-800/50 transition-all active:scale-95">Select All</button>
+                            class="text-[9px] font-black text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 px-2 py-1 rounded border border-indigo-200/50 dark:border-indigo-800/50 transition-all active:scale-95 min-h-[26px]">Select All</button>
                         <button type="button" onclick="window.toggleAllMonthlyChaptersForSubject('${CSS.escape(subject)}', false, '${CSS.escape(trackId)}', '${CSS.escape(progName)}')"
-                            class="text-[9px] font-black text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 transition-all active:scale-95">Clear</button>
+                            class="text-[9px] font-black text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-2 py-1 rounded border border-slate-200 dark:border-slate-700 transition-all active:scale-95 min-h-[26px]">Clear</button>
                     </div>
                 </div>
 
@@ -15012,18 +15012,18 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                 <div class="mt-chapter-row flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border border-purple-200/80 dark:border-purple-800/60 bg-purple-50/60 dark:bg-purple-950/30 transition-all hover:bg-purple-50 dark:hover:bg-purple-950/50 shadow-xs gap-2"
                      data-track="${trackId}" data-program="${progName}" data-chapter-name="${subject} Whole Subject All Chapters" data-subject="${subject}">
                     <label class="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
-                        <input type="checkbox" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" class="mt-ch-whole-subject form-checkbox h-4.5 w-4.5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer transition-all"
+                        <input type="checkbox" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" class="mt-ch-whole-subject form-checkbox h-4.5 w-4.5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer transition-all shrink-0"
                             onchange="window.handleMonthlyWholeSubjectToggle('${CSS.escape(subject)}', this.checked, '${CSS.escape(trackId)}', '${CSS.escape(progName)}')"
                             ${isWholeSubPreselected ? 'checked' : ''}>
                         <div class="min-w-0">
                             <span class="text-xs font-black text-purple-900 dark:text-purple-200 truncate block">📚 Whole Subject (All Chapters)</span>
-                            <span class="text-[8px] text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider block">Target entirety of ${subject} (${progName})</span>
+                            <span class="text-[8.5px] text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider block">Target entirety of ${subject} (${progName})</span>
                         </div>
                     </label>
-                    <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                    <div class="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-purple-200/40 dark:border-purple-800/40">
                         <!-- Week Picker for Whole Subject -->
                         <select data-track="${trackId}" data-program="${progName}" data-subject="${subject}"
-                            class="mt-size-whole-subject-week bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/60 rounded-xl px-2 py-1.5 text-[10px] text-purple-700 dark:text-purple-300 font-bold outline-none focus:ring-2 focus:ring-purple-500 max-w-[130px] truncate shadow-xs"
+                            class="mt-size-whole-subject-week bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/60 rounded-xl px-2 py-1.5 text-[11px] text-purple-700 dark:text-purple-300 font-bold outline-none focus:ring-2 focus:ring-purple-500 flex-1 sm:flex-none sm:w-[130px] truncate shadow-xs h-9"
                             onchange="window.handleMonthlyChapterWeekSelectChange('${CSS.escape(subject)}', 'Whole Subject', this.value, '${CSS.escape(trackId)}', '${CSS.escape(progName)}');">
                             <option value="">-- No Week --</option>
                             ${wholeSubWeeksOptionsHtml}
@@ -15032,7 +15032,7 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                         <input type="number" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" placeholder="Size" min="1"
                             oninput="window.updateMonthlyTargetPageSummary();"
                             value="${isWholeSubPreselected && preselectSize ? preselectSize : ''}"
-                            class="mt-size-whole-subject w-16 sm:w-20 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/60 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-bold outline-none shadow-sm focus:ring-2 focus:ring-purple-500 transition-all text-center">
+                            class="mt-size-whole-subject w-20 sm:w-20 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/60 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none shadow-sm focus:ring-2 focus:ring-purple-500 transition-all text-center h-9 shrink-0">
                     </div>
                 </div>
 
@@ -15398,57 +15398,61 @@ window.renderMonthlyTargetDailyAllocations = function () {
                     : 'bg-slate-50 dark:bg-slate-900/70 border-slate-200/80 dark:border-slate-700/60 shadow-xs';
 
                 const dayBadge = isStar
-                    ? `<span class="text-[10px] font-black text-amber-500 flex items-center shrink-0" title="Extra/Repeat Target (Already done 100%)">⭐D${rowIdx + 1}</span>`
-                    : `<span class="text-[10px] font-black text-slate-400 w-5 text-center shrink-0">D${rowIdx + 1}</span>`;
+                    ? `<span class="text-[10px] font-black text-amber-500 flex items-center shrink-0 w-7" title="Extra/Repeat Target (Already done 100%)">⭐D${rowIdx + 1}</span>`
+                    : `<span class="text-[10px] font-black text-slate-400 w-7 text-center shrink-0">D${rowIdx + 1}</span>`;
 
                 rowsHtml += `
-                    <div class="flex items-center gap-2 p-2 sm:p-2.5 rounded-2xl ${rowBgClass} border transition-all w-full">
-                        ${dayBadge}
-                        <!-- Compact Day Select Dropdown -->
-                        <select onchange="window.updateDailyAllocationDay('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, this.value)"
-                            class="w-[108px] sm:w-[122px] shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-[11px] sm:text-xs text-slate-800 dark:text-slate-100 font-bold outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs truncate cursor-pointer"
-                            title="Select Target Day">
-                            ${dayOptions}
-                        </select>
-                        <!-- Clearly Visible Portion/Page Size Input -->
-                        <div class="relative w-16 sm:w-20 shrink-0">
-                            <input type="number" min="1" placeholder="Size" value="${alloc.portionSize || ''}"
-                                oninput="window.updateDailyAllocationSize('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, this.value)"
-                                class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs sm:text-sm text-slate-900 dark:text-white font-black outline-none text-center shadow-xs focus:ring-2 focus:ring-emerald-500"
-                                title="Daily Target Pages/Units" />
+                    <div class="flex flex-col gap-2 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl ${rowBgClass} border transition-all w-full">
+                        <!-- Line 1: Day Badge + Day Select Dropdown + Size Input + Delete Button -->
+                        <div class="flex items-center gap-2 w-full">
+                            ${dayBadge}
+                            <!-- Day Select Dropdown -->
+                            <select onchange="window.updateDailyAllocationDay('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, this.value)"
+                                class="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs text-slate-800 dark:text-slate-100 font-bold outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs truncate cursor-pointer h-9"
+                                title="Select Target Day">
+                                ${dayOptions}
+                            </select>
+                            <!-- Portion/Page Size Input -->
+                            <div class="relative w-20 sm:w-24 shrink-0">
+                                <input type="number" min="1" placeholder="Size" value="${alloc.portionSize || ''}"
+                                    oninput="window.updateDailyAllocationSize('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, this.value)"
+                                    class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs sm:text-sm text-slate-900 dark:text-white font-black outline-none text-center shadow-xs focus:ring-2 focus:ring-emerald-500 h-9"
+                                    title="Daily Target Pages/Units" />
+                            </div>
+                            <!-- Remove button -->
+                            <button type="button" onclick="window.removeDailyAllocationRow('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx})"
+                                class="w-8 h-8 sm:w-9 sm:h-9 shrink-0 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-all active:scale-90" title="Remove day allocation">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
                         </div>
-                        <!-- Full-Width Fraction shortcuts: 1/2, 1/3, 1/4, 1/5, 1/10, All -->
-                        <div class="flex items-center gap-1 flex-1 min-w-0">
+                        <!-- Line 2: Full-Width Fraction shortcuts: 1/2, 1/3, 1/4, 1/5, 1/10, All -->
+                        <div class="flex items-center gap-1 w-full pt-0.5">
+                            <span class="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 shrink-0 mr-0.5 hidden xs:inline">Fractions:</span>
                             <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.5, '1/2')"
-                                class="flex-1 py-1.5 px-0.5 text-[9.5px] sm:text-[10.5px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 hover:border-emerald-300 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-95 text-center shadow-xs transition-all" title="Allocate 1/2 of chapter size">1/2</button>
+                                class="flex-1 h-7 sm:h-8 flex items-center justify-center text-[10px] sm:text-[11px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80 active:scale-95 text-center shadow-xs transition-all" title="Allocate 1/2 of chapter size">1/2</button>
                             <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.33333, '1/3')"
-                                class="flex-1 py-1.5 px-0.5 text-[9.5px] sm:text-[10.5px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 hover:border-emerald-300 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-95 text-center shadow-xs transition-all" title="Allocate 1/3 of chapter size">1/3</button>
+                                class="flex-1 h-7 sm:h-8 flex items-center justify-center text-[10px] sm:text-[11px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80 active:scale-95 text-center shadow-xs transition-all" title="Allocate 1/3 of chapter size">1/3</button>
                             <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.25, '1/4')"
-                                class="flex-1 py-1.5 px-0.5 text-[9.5px] sm:text-[10.5px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 hover:border-emerald-300 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-95 text-center shadow-xs transition-all" title="Allocate 1/4 of chapter size">1/4</button>
+                                class="flex-1 h-7 sm:h-8 flex items-center justify-center text-[10px] sm:text-[11px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80 active:scale-95 text-center shadow-xs transition-all" title="Allocate 1/4 of chapter size">1/4</button>
                             <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.2, '1/5')"
-                                class="flex-1 py-1.5 px-0.5 text-[9.5px] sm:text-[10.5px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 hover:border-emerald-300 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-95 text-center shadow-xs transition-all" title="Allocate 1/5 of chapter size">1/5</button>
+                                class="flex-1 h-7 sm:h-8 flex items-center justify-center text-[10px] sm:text-[11px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80 active:scale-95 text-center shadow-xs transition-all" title="Allocate 1/5 of chapter size">1/5</button>
                             <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 0.1, '1/10')"
-                                class="flex-1 py-1.5 px-0.5 text-[9.5px] sm:text-[10.5px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 hover:border-emerald-300 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-95 text-center shadow-xs transition-all" title="Allocate 1/10 of chapter size">1/10</button>
+                                class="flex-1 h-7 sm:h-8 flex items-center justify-center text-[10px] sm:text-[11px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80 active:scale-95 text-center shadow-xs transition-all" title="Allocate 1/10 of chapter size">1/10</button>
                             <button type="button" onclick="window.applyFractionToDailyAllocation('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, 1.0, 'All')"
-                                class="flex-1 py-1.5 px-0.5 text-[9.5px] sm:text-[10.5px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 hover:border-emerald-300 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-95 text-center shadow-xs transition-all" title="Allocate full chapter size">All</button>
+                                class="flex-1 h-7 sm:h-8 flex items-center justify-center text-[10px] sm:text-[11px] font-black rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80 active:scale-95 text-center shadow-xs transition-all" title="Allocate full chapter size">All</button>
                         </div>
-                        <!-- Remove button -->
-                        <button type="button" onclick="window.removeDailyAllocationRow('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx})"
-                            class="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-all active:scale-90 shrink-0" title="Remove day allocation">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
                     </div>
                 `;
             });
         }
 
         html += `
-            <div class="p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700/70 bg-white dark:bg-slate-800 shadow-xs space-y-2.5 transition-all">
+            <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-700/70 bg-white dark:bg-slate-800 shadow-xs space-y-2.5 transition-all">
                 <!-- Header -->
                 <div class="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-2">
                     <div class="flex items-center gap-2 min-w-0">
                         <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style="background-color: ${color}"></span>
-                        <h5 class="text-xs font-black text-slate-800 dark:text-slate-100 truncate">${target.displayTitle}</h5>
+                        <h5 class="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 truncate">${target.displayTitle}</h5>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
                         ${weekBadgeHtml}
@@ -15457,34 +15461,34 @@ window.renderMonthlyTargetDailyAllocations = function () {
                 </div>
 
                 <!-- Action Bar & Split buttons -->
-                <div class="flex items-center justify-between gap-1 flex-wrap">
+                <div class="flex items-center justify-between gap-1.5 flex-wrap">
                     <div class="flex items-center gap-1 flex-wrap">
                         <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 2, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
-                            class="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[8.5px] font-black transition-all active:scale-95">
+                            class="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 h-7 flex items-center">
                             ⚡ 2 Days
                         </button>
                         <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 3, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
-                            class="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[8.5px] font-black transition-all active:scale-95">
+                            class="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 h-7 flex items-center">
                             ⚡ 3 Days
                         </button>
                         <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 4, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
-                            class="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[8.5px] font-black transition-all active:scale-95">
+                            class="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 h-7 flex items-center">
                             ⚡ 4 Days
                         </button>
                         <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 5, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
-                            class="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[8.5px] font-black transition-all active:scale-95">
+                            class="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 h-7 flex items-center">
                             ⚡ 5 Days
                         </button>
                     </div>
                     <button type="button" onclick="window.addDailyAllocationRow('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', '', null, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
-                        class="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200/60 dark:border-indigo-800/50 text-[8.5px] font-black transition-all active:scale-95 flex items-center gap-0.5">
+                        class="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200/60 dark:border-indigo-800/50 text-[9px] font-black transition-all active:scale-95 flex items-center gap-1 h-7">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
                         <span>Add Day</span>
                     </button>
                 </div>
 
                 <!-- Daily Allocation Rows -->
-                <div class="space-y-1.5">
+                <div class="space-y-2">
                     ${rowsHtml}
                 </div>
             </div>
