@@ -11467,8 +11467,8 @@ window.switchDadbTab = function (tab) {
 
 window.openModal = function (modalId, typeKey = null) {
     if (modalId === 'analytics-modal' && typeKey) populateAnalyticsModal(typeKey);
-    const backdrops = { 'edit-timeline-entry-modal': 'etem-backdrop', 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'monthly-targets-db-modal': 'mtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'edit-daily-action-modal': 'edam-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop' };
-    const contents = { 'edit-timeline-entry-modal': 'etem-content', 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'monthly-targets-db-modal': 'mtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'edit-daily-action-modal': 'edam-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content' };
+    const backdrops = { 'celebration-setup-modal': 'csm-backdrop', 'edit-timeline-entry-modal': 'etem-backdrop', 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'monthly-targets-db-modal': 'mtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'edit-daily-action-modal': 'edam-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop' };
+    const contents = { 'celebration-setup-modal': 'csm-content', 'edit-timeline-entry-modal': 'etem-content', 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'monthly-targets-db-modal': 'mtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'edit-daily-action-modal': 'edam-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content' };
     const modal = document.getElementById(modalId);
     const backdrop = (backdrops[modalId] && document.getElementById(backdrops[modalId])) || (modal ? modal.children[0] : null);
     const content = (contents[modalId] && document.getElementById(contents[modalId])) || (modal ? modal.children[1] : null);
@@ -11517,8 +11517,8 @@ window.openModal = function (modalId, typeKey = null) {
 };
 
 window.closeModal = function (modalId) {
-    const backdrops = { 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-backdrop', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'monthly-targets-db-modal': 'mtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'edit-daily-action-modal': 'edam-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop' };
-    const contents = { 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'monthly-targets-db-modal': 'mtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'edit-daily-action-modal': 'edam-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content' };
+    const backdrops = { 'celebration-setup-modal': 'csm-backdrop', 'global-chapters-modal': 'gcm-backdrop', 'program-completions-modal': 'pcm-completions-backdrop', 'create-schedule-group-modal': 'csgm-backdrop', 'pace-candle-modal': 'pcm-backdrop', 'program-trend-modal': 'ptm-results-backdrop', 'analytics-modal': 'am-backdrop', 'yearly-actions-modal': 'ym-backdrop', 'subject-trend-modal': 'stm-backdrop', 'edit-task-modal': 'etm-backdrop', 'edit-pace-modal': 'epm-backdrop', 'edit-trends-pace-modal': 'etpm-backdrop', 'pace-trend-modal': 'ptm-backdrop', 'goal-details-modal': 'gdm-backdrop', 'revision-manage-modal': 'rmm-backdrop', 'revision-trend-modal': 'rvm-backdrop', 'global-history-modal': 'ghm-backdrop', 'subject-time-modal': 'stm-time-backdrop', 'daily-actions-db-modal': 'dadb-backdrop', 'daily-targets-db-modal': 'dtdb-backdrop', 'weekly-targets-db-modal': 'wtdb-backdrop', 'monthly-targets-db-modal': 'mtdb-backdrop', 'result-modal': 'resm-backdrop', 'edit-subject-modal': 'esm-backdrop', 'edit-track-modal': 'etm-track-backdrop', 'edit-daily-action-modal': 'edam-backdrop', 'custom-timer-modal': 'ctm-backdrop', 'account-settings-modal': 'asm-account-backdrop', 'add-schedule-modal': 'asm-schedule-backdrop', 'add-timer-session-modal': 'atsm-backdrop', 'edit-timer-session-modal': 'etsm-backdrop', 'timer-analytics-modal': 'tam-backdrop', 'add-daily-target-modal': 'adtm-backdrop', 'add-weekly-target-modal': 'wtm-backdrop' };
+    const contents = { 'celebration-setup-modal': 'csm-content', 'global-chapters-modal': 'gcm-content', 'program-completions-modal': 'pcm-completions-content', 'create-schedule-group-modal': 'csgm-content', 'pace-candle-modal': 'pcm-content', 'program-trend-modal': 'ptm-results-content', 'analytics-modal': 'am-content', 'yearly-actions-modal': 'ym-content', 'subject-trend-modal': 'stm-content', 'edit-task-modal': 'etm-content', 'edit-pace-modal': 'epm-content', 'edit-trends-pace-modal': 'etpm-content', 'pace-trend-modal': 'ptm-content', 'goal-details-modal': 'gdm-content', 'revision-manage-modal': 'rmm-content', 'revision-trend-modal': 'rvm-content', 'global-history-modal': 'ghm-content', 'subject-time-modal': 'stm-time-content', 'daily-actions-db-modal': 'dadb-content', 'daily-targets-db-modal': 'dtdb-content', 'weekly-targets-db-modal': 'wtdb-content', 'monthly-targets-db-modal': 'mtdb-content', 'result-modal': 'resm-content', 'edit-subject-modal': 'esm-content', 'edit-track-modal': 'etm-track-content', 'edit-daily-action-modal': 'edam-content', 'custom-timer-modal': 'ctm-content', 'account-settings-modal': 'asm-account-content', 'add-schedule-modal': 'asm-schedule-content', 'add-timer-session-modal': 'atsm-content', 'edit-timer-session-modal': 'etsm-content', 'timer-analytics-modal': 'tam-content', 'add-daily-target-modal': 'adtm-content', 'add-weekly-target-modal': 'wtm-content' };
     const modal = document.getElementById(modalId);
     const backdrop = (backdrops[modalId] && document.getElementById(backdrops[modalId])) || (modal ? modal.children[0] : null);
     const content = (contents[modalId] && document.getElementById(contents[modalId])) || (modal ? modal.children[1] : null);
@@ -14605,138 +14605,123 @@ window.renderCelebrationConfig = function (forceRebuild = false) {
     const container = document.getElementById('outcome-celebration-container');
     if (!container) return;
     if (!window.celebrationTargets) window.celebrationTargets = { programs: [], subjects: [] };
+    if (!window.passedItems) window.passedItems = { programs: [], subjects: [] };
 
-    // In-place update if DOM is already constructed and full rebuild isn't requested
-    const existingCelebProgInputs = container.querySelectorAll('input[data-celeb-type="program"]');
-    const existingCelebSubInputs = container.querySelectorAll('input[data-celeb-type="subject"]');
+    const hasCustomCeleb = Boolean(
+        (window.celebrationTargets.programs && window.celebrationTargets.programs.length > 0) ||
+        (window.celebrationTargets.subjects && window.celebrationTargets.subjects.length > 0)
+    );
 
-    if (!forceRebuild && existingCelebProgInputs.length > 0 && existingCelebSubInputs.length > 0) {
-        existingCelebProgInputs.forEach(input => {
-            const pName = input.getAttribute('data-celeb-prog');
-            const shouldBeChecked = Boolean(window.celebrationTargets.programs && window.celebrationTargets.programs.includes(pName));
-            if (input.checked !== shouldBeChecked) input.checked = shouldBeChecked;
-        });
-        existingCelebSubInputs.forEach(input => {
-            const sName = input.getAttribute('data-celeb-subject');
-            const pName = input.getAttribute('data-celeb-parent-prog');
-            const isProgCeleb = Boolean(window.celebrationTargets.programs && window.celebrationTargets.programs.includes(pName));
-            const shouldBeChecked = Boolean(isProgCeleb || (window.celebrationTargets.subjects && window.celebrationTargets.subjects.includes(sName)));
-            if (input.checked !== shouldBeChecked) input.checked = shouldBeChecked;
-        });
-
-        if (typeof updateSuccessScore === 'function') updateSuccessScore();
-        return;
-    }
-
-    // Preserve open states of existing accordions before rebuilding
-    const openCelebAccordions = new Set();
-    const existingCelebDetails = container.querySelectorAll('details[data-celeb-details-prog]');
-    existingCelebDetails.forEach(d => {
-        if (d.open) {
-            const p = d.getAttribute('data-celeb-details-prog');
-            if (p) openCelebAccordions.add(p);
-        }
-    });
+    const progsCount = (window.celebrationTargets.programs || []).length;
+    const subsCount = (window.celebrationTargets.subjects || []).length;
 
     let html = `
-        <div class="mb-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
+        <div class="space-y-5">
+            <!-- Header description & Action buttons -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 font-bold">Select essential courses required to trigger the completion celebration (extra or elective courses won't block your celebration).</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-bold">
+                        Define which essential programs and subjects must be passed to unlock your completion celebration. Non-selected electives or extra courses won't block your celebration.
+                    </p>
                 </div>
-                <div class="flex items-center gap-2 flex-wrap">
-                    <button onclick="window.selectAllCelebrationTargets('all-passed')" class="px-3 py-1.5 bg-slate-100 dark:bg-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 border border-slate-200/60 dark:border-slate-600/50 shadow-sm">Select Passed</button>
-                    <button onclick="window.selectAllCelebrationTargets('all')" class="px-3 py-1.5 bg-slate-100 dark:bg-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 border border-slate-200/60 dark:border-slate-600/50 shadow-sm">Select All</button>
-                    <button onclick="window.selectAllCelebrationTargets('clear')" class="px-3 py-1.5 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 border border-rose-200/60 dark:border-rose-800/50 shadow-sm">Clear</button>
-                    <button onclick="window.showCongratsModal(true, 1, 1)" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-600 hover:to-emerald-600 text-white text-[10px] font-black uppercase tracking-wider rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5">
+                <div class="flex items-center gap-2 flex-wrap shrink-0">
+                    <button onclick="window.openCelebrationSetupModal()" class="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-[11px] font-black uppercase tracking-wider rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5 border border-amber-400/30">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <span>Setup Criteria</span>
+                    </button>
+                    <button onclick="window.showCongratsModal(true, 1, 1)" class="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-[11px] font-black uppercase tracking-wider rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5 border border-emerald-400/30">
                         <span>🎉</span>
                         <span>Preview Celebration</span>
                     </button>
+                    ${hasCustomCeleb ? `
+                    <button onclick="window.selectAllCelebrationTargets('clear')" class="px-3 py-2 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 border border-rose-200/60 dark:border-rose-800/50 shadow-sm" title="Reset celebration criteria to default (all courses)">
+                        Reset to Default
+                    </button>` : ''}
                 </div>
             </div>
 
             <!-- Live Status Progress Card -->
-            <div id="celeb-live-status-card" class="bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-teal-500/10 dark:from-amber-950/20 dark:via-emerald-950/20 dark:to-teal-950/20 p-4 rounded-2xl border border-amber-200/60 dark:border-amber-700/40 mb-6 transition-all">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                    <div class="flex items-center gap-2">
-                        <span id="celeb-live-badge" class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5">
+            <div id="celeb-live-status-card" class="bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-teal-500/10 dark:from-amber-950/20 dark:via-emerald-950/20 dark:to-teal-950/20 p-4 sm:p-5 rounded-2xl md:rounded-3xl border border-amber-200/60 dark:border-amber-700/40 shadow-sm transition-all">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-2.5">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span id="celeb-live-badge" class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 shadow-sm">
                             <span>⚙️</span>
                             <span>Default: 100% All</span>
                         </span>
                         <span id="celeb-live-text" class="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100">0 of 0 Core Courses Passed (0%)</span>
                     </div>
                 </div>
-                <div class="w-full bg-slate-200/80 dark:bg-slate-700/80 rounded-full h-2 overflow-hidden mb-2">
-                    <div id="celeb-live-bar" class="h-2 rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-500 shadow-sm" style="width: 0%;"></div>
+                <div class="w-full bg-slate-200/80 dark:bg-slate-700/80 rounded-full h-2.5 overflow-hidden mb-2">
+                    <div id="celeb-live-bar" class="h-2.5 rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-500 shadow-sm" style="width: 0%;"></div>
                 </div>
-                <p id="celeb-live-subtext" class="text-[10px] text-slate-500 dark:text-slate-400 font-bold">Currently set to default. Select core items below to define your celebration criteria.</p>
+                <p id="celeb-live-subtext" class="text-[11px] text-slate-500 dark:text-slate-400 font-bold">Currently set to default. Click "Setup Criteria" to select specific core courses.</p>
             </div>
-        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <!-- Configured Core Celebration Targets Section -->
+            <div class="bg-slate-50/70 dark:bg-slate-900/40 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-inner">
+                <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/60 pb-3 mb-3.5">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-amber-500 dark:text-amber-400 text-sm">🎯</span>
+                        <h4 class="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">Configured Celebration Criteria</h4>
+                    </div>
+                    <button onclick="window.openCelebrationSetupModal()" class="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline flex items-center gap-1">
+                        <span>Configure / Edit</span>
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+
+                <div id="celeb-targets-summary-list" class="flex flex-wrap gap-2">
     `;
 
-    // Core Programs Column (Celebration)
-    html += '<div class="bg-amber-50/50 dark:bg-slate-900/50 p-4 rounded-xl border border-amber-100 dark:border-slate-800"><h4 class="text-[10px] font-black uppercase tracking-widest text-amber-600/80 dark:text-amber-400 border-b border-amber-200/60 dark:border-slate-700 pb-2 mb-3 flex items-center justify-between"><span>Core Programs (Require All Subs)</span><span class="text-[8px] bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold">Celebration</span></h4><div class="flex flex-col gap-1.5 max-h-72 overflow-y-auto custom-scrollbar pr-2">';
-    window.tracks.forEach(track => {
-        if (window.customPrograms[track.id] && window.customPrograms[track.id].length > 0) {
-            html += `<div class="mt-2 text-[9px] font-black uppercase text-amber-500/80 dark:text-amber-400/70 border-b border-amber-200/40 dark:border-slate-700/60 pb-1">${track.name.toUpperCase()}</div>`;
-            window.customPrograms[track.id].forEach(p => {
-                const pName = p.name || p;
-                const isChecked = window.celebrationTargets.programs.includes(pName) ? 'checked' : '';
-                const safePName = pName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                html += `
-                        <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-white dark:hover:bg-slate-800/80 active:translate-y-[0.5px] transition-colors duration-75">
-                            <input type="checkbox" data-celeb-type="program" data-celeb-prog="${pName.replace(/"/g, '&quot;')}" onchange="window.toggleCelebrationStatus('program', '${safePName}', this.checked)" class="form-checkbox h-4 w-4 text-amber-500 rounded border-slate-300 focus:ring-amber-500 cursor-pointer active:scale-95 transition-transform duration-75" ${isChecked}>
-                            <span class="text-xs font-bold text-slate-700 dark:text-slate-300">${pName}</span>
-                        </label>`;
-            });
-        }
-    });
-    html += '</div></div>';
+    if (!hasCustomCeleb) {
+        html += `
+            <div class="w-full py-4 px-4 text-center rounded-xl bg-white/60 dark:bg-slate-800/60 border border-dashed border-slate-200 dark:border-slate-700">
+                <p class="text-xs font-bold text-slate-500 dark:text-slate-400">
+                    <span class="text-amber-500 font-black">Default Mode:</span> All subjects across all programs are currently required for the celebration.
+                </p>
+                <button onclick="window.openCelebrationSetupModal()" class="mt-2 text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:underline">
+                    + Select Essential Core Courses
+                </button>
+            </div>
+        `;
+    } else {
+        // Render selected Programs chips
+        (window.celebrationTargets.programs || []).forEach(pName => {
+            const isPassed = Boolean(window.passedItems && window.passedItems.programs && window.passedItems.programs.includes(pName));
+            html += `
+                <div class="flex items-center space-x-2 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-xl border ${isPassed ? 'border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/40 dark:bg-emerald-950/20' : 'border-amber-200/80 dark:border-amber-700/50'} shadow-sm text-xs font-bold">
+                    <span class="text-[9px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-wider ${isPassed ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'}">Program</span>
+                    <span class="text-slate-800 dark:text-slate-200">${pName}</span>
+                    <span class="text-[9px] font-black uppercase tracking-wider ${isPassed ? 'text-emerald-600 dark:text-emerald-400 font-black' : 'text-slate-400'}">${isPassed ? '✓ Passed' : 'Pending'}</span>
+                </div>
+            `;
+        });
 
-    // Core Subjects Column (Celebration)
-    html += '<div class="bg-amber-50/50 dark:bg-slate-900/50 p-4 rounded-xl border border-amber-100 dark:border-slate-800"><h4 class="text-[10px] font-black uppercase tracking-widest text-amber-600/80 dark:text-amber-400 border-b border-amber-200/60 dark:border-slate-700 pb-2 mb-3 flex items-center justify-between"><span>Core Individual Subjects</span><span class="text-[8px] bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold">Celebration</span></h4><div class="flex flex-col gap-2.5 max-h-72 overflow-y-auto custom-scrollbar pr-2">';
-    window.tracks.forEach(track => {
-        if (window.customPrograms[track.id]) {
-            window.customPrograms[track.id].forEach(prog => {
-                const progName = prog.name || prog;
-                const subs = (syllabusStructure[track.id] || []).filter(s => s.program === progName);
-                if (subs.length > 0) {
-                    const isOpen = openCelebAccordions.has(progName) ? 'open' : '';
-                    const safeProgName = progName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                    html += `
-                            <details data-celeb-details-prog="${progName.replace(/"/g, '&quot;')}" ${isOpen} class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm group">
-                                <summary class="cursor-pointer font-black text-[10px] md:text-[11px] uppercase tracking-widest text-slate-700 dark:text-slate-300 p-3 outline-none select-none list-none flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors duration-75 [&::-webkit-details-marker]:hidden">
-                                    <div class="flex items-center space-x-2">
-                                        <span>${progName}</span>
-                                        <span class="bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-md text-[8px]">${subs.length} Subs</span>
-                                    </div>
-                                    <svg class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                </summary>
-                                <div class="p-3 pt-0 border-t border-slate-100 dark:border-slate-700">
-                                    <div class="flex flex-col gap-1 mt-2.5">
-                            `;
-                    subs.forEach(s => {
-                        const isProgCeleb = window.celebrationTargets.programs.includes(progName);
-                        const isChecked = window.celebrationTargets.subjects.includes(s.subject) || isProgCeleb ? 'checked' : '';
-                        let displaySub = s.subject.replace(s.program + ' - ', '').replace(s.program + ' ', '');
-                        const safeSub = s.subject.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                        html += `
-                                        <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-amber-50/50 dark:hover:bg-slate-900/50 border border-transparent hover:border-amber-200 dark:hover:border-amber-800 active:translate-y-[0.5px] transition-colors duration-75">
-                                            <input type="checkbox" data-celeb-type="subject" data-celeb-subject="${s.subject.replace(/"/g, '&quot;')}" data-celeb-parent-prog="${progName.replace(/"/g, '&quot;')}" onchange="window.toggleCelebrationStatus('subject', '${safeSub}', this.checked)" class="form-checkbox h-4 w-4 text-amber-500 rounded border-slate-300 focus:ring-amber-500 cursor-pointer active:scale-95 transition-transform duration-75" ${isChecked}>
-                                            <span class="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">${displaySub}</span>
-                                        </label>`;
-                    });
-                    html += `
-                                    </div>
-                                </div>
-                            </details>`;
-                }
-            });
-        }
-    });
-    html += '</div></div></div>';
+        // Render selected individual Subjects chips (excluding ones whose entire program is already selected)
+        (window.celebrationTargets.subjects || []).forEach(subName => {
+            const sObj = window.getAllSubjects ? window.getAllSubjects().find(s => s.subject === subName) : null;
+            const progName = sObj ? sObj.program : '';
+            if (window.celebrationTargets.programs && window.celebrationTargets.programs.includes(progName)) {
+                return; // Already covered by entire program badge
+            }
+            const isPassed = Boolean(window.passedItems && ((window.passedItems.subjects && window.passedItems.subjects.includes(subName)) || (window.passedItems.programs && window.passedItems.programs.includes(progName))));
+            let displaySub = progName ? subName.replace(progName + ' - ', '').replace(progName + ' ', '') : subName;
+
+            html += `
+                <div class="flex items-center space-x-2 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-xl border ${isPassed ? 'border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/40 dark:bg-emerald-950/20' : 'border-slate-200 dark:border-slate-700'} shadow-sm text-xs font-bold">
+                    <span class="text-[9px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-wider ${isPassed ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}">Subject</span>
+                    <span class="text-slate-800 dark:text-slate-200 truncate max-w-[180px] sm:max-w-xs" title="${subName}">${displaySub}</span>
+                    <span class="text-[9px] font-black uppercase tracking-wider ${isPassed ? 'text-emerald-600 dark:text-emerald-400 font-black' : 'text-slate-400'}">${isPassed ? '✓ Passed' : 'Pending'}</span>
+                </div>
+            `;
+        });
+    }
+
+    html += `
+                </div>
+            </div>
+        </div>
+    `;
 
     container.innerHTML = html;
 
@@ -14744,167 +14729,271 @@ window.renderCelebrationConfig = function (forceRebuild = false) {
     if (typeof updateSuccessScore === 'function') updateSuccessScore();
 };
 
-window.updateCelebrationLiveStatus = function (corePassed, coreTotal, hasCustomCeleb, celebrationMet) {
-    const card = document.getElementById('celeb-live-status-card');
-    if (!card) return;
+window.openCelebrationSetupModal = function () {
+    const modal = document.getElementById('celebration-setup-modal');
+    if (!modal) return;
 
-    const pct = coreTotal > 0 ? Math.round((corePassed / coreTotal) * 100) : 0;
-    const badgeEl = document.getElementById('celeb-live-badge');
-    const textEl = document.getElementById('celeb-live-text');
-    const barEl = document.getElementById('celeb-live-bar');
-    const subTextEl = document.getElementById('celeb-live-subtext');
+    if (!window.celebrationTargets) window.celebrationTargets = { programs: [], subjects: [] };
+    if (!window.passedItems) window.passedItems = { programs: [], subjects: [] };
 
-    if (badgeEl) {
-        if (celebrationMet) {
-            badgeEl.className = "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500 text-white shadow-lg animate-pulse flex items-center gap-1.5";
-            badgeEl.innerHTML = "<span>🎉</span><span>Celebration Unlocked!</span>";
-        } else if (hasCustomCeleb) {
-            badgeEl.className = "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1.5";
-            badgeEl.innerHTML = "<span>🎯</span><span>Core Target Active</span>";
-        } else {
-            badgeEl.className = "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5";
-            badgeEl.innerHTML = "<span>⚙️</span><span>Default: 100% All</span>";
+    // Reset search input
+    const searchInput = document.getElementById('csm-search-input');
+    if (searchInput) searchInput.value = '';
+
+    const container = document.getElementById('csm-checklist-container');
+    if (!container) return;
+
+    let html = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+    `;
+
+    // 1. Programs Column
+    html += `
+        <div class="bg-slate-50 dark:bg-slate-900/60 p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex flex-col csm-column-programs">
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2.5 mb-3">
+                <h4 class="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <span>Entire Programs</span>
+                </h4>
+                <span class="text-[9px] bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-md font-bold">Includes All Subs</span>
+            </div>
+            <div class="flex flex-col gap-1.5 max-h-72 overflow-y-auto custom-scrollbar pr-1" id="csm-programs-list">
+    `;
+
+    window.tracks.forEach(track => {
+        if (window.customPrograms[track.id] && window.customPrograms[track.id].length > 0) {
+            html += `<div class="mt-2 text-[9px] font-black uppercase text-slate-400 border-b border-slate-200/60 dark:border-slate-700/60 pb-1">${track.name.toUpperCase()}</div>`;
+            window.customPrograms[track.id].forEach(p => {
+                const pName = p.name || p;
+                const isChecked = Boolean(window.celebrationTargets.programs && window.celebrationTargets.programs.includes(pName)) ? 'checked' : '';
+                const safePName = pName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const isPassed = Boolean(window.passedItems && window.passedItems.programs && window.passedItems.programs.includes(pName));
+
+                html += `
+                    <label class="csm-program-item flex items-center justify-between space-x-2 cursor-pointer p-2 rounded-xl hover:bg-white dark:hover:bg-slate-800/80 border border-transparent hover:border-amber-200 dark:hover:border-amber-800 active:scale-[0.99] transition-all" data-csm-name="${pName.toLowerCase()}">
+                        <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+                            <input type="checkbox" data-modal-celeb-type="program" data-modal-celeb-prog="${pName.replace(/"/g, '&quot;')}" onchange="window.onModalToggleProgram('${safePName}', this.checked)" class="modal-celeb-prog-cb form-checkbox h-4 w-4 text-amber-500 rounded border-slate-300 dark:border-slate-600 focus:ring-amber-500 cursor-pointer active:scale-95 transition-transform" ${isChecked}>
+                            <span class="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">${pName}</span>
+                        </div>
+                        ${isPassed ? `<span class="text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">Passed</span>` : ''}
+                    </label>
+                `;
+            });
         }
+    });
+
+    html += `</div></div>`;
+
+    // 2. Individual Subjects Column
+    html += `
+        <div class="bg-slate-50 dark:bg-slate-900/60 p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex flex-col csm-column-subjects">
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2.5 mb-3">
+                <h4 class="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <span>Individual Subjects</span>
+                </h4>
+                <span class="text-[9px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md font-bold">Grouped by Program</span>
+            </div>
+            <div class="flex flex-col gap-2 max-h-72 overflow-y-auto custom-scrollbar pr-1" id="csm-subjects-list">
+    `;
+
+    window.tracks.forEach(track => {
+        if (window.customPrograms[track.id]) {
+            window.customPrograms[track.id].forEach(prog => {
+                const progName = prog.name || prog;
+                const subs = (syllabusStructure[track.id] || []).filter(s => s.program === progName);
+                if (subs.length > 0) {
+                    const isProgCeleb = Boolean(window.celebrationTargets.programs && window.celebrationTargets.programs.includes(progName));
+                    const safeProgName = progName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+                    html += `
+                        <details data-csm-details-prog="${progName.replace(/"/g, '&quot;')}" class="csm-subject-group bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm group">
+                            <summary class="cursor-pointer font-black text-[10px] sm:text-[11px] uppercase tracking-widest text-slate-700 dark:text-slate-300 p-2.5 outline-none select-none list-none flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors [&::-webkit-details-marker]:hidden">
+                                <div class="flex items-center space-x-2 min-w-0">
+                                    <span class="truncate">${progName}</span>
+                                    <span class="bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded text-[8px] shrink-0">${subs.length} Subs</span>
+                                </div>
+                                <svg class="w-3.5 h-3.5 text-slate-400 group-open:rotate-180 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </summary>
+                            <div class="p-2.5 pt-0 border-t border-slate-100 dark:border-slate-700">
+                                <div class="flex flex-col gap-1 mt-2">
+                    `;
+
+                    subs.forEach(s => {
+                        const isSubChecked = Boolean(isProgCeleb || (window.celebrationTargets.subjects && window.celebrationTargets.subjects.includes(s.subject)));
+                        const isCheckedStr = isSubChecked ? 'checked' : '';
+                        let displaySub = s.subject.replace(s.program + ' - ', '').replace(s.program + ' ', '');
+                        const safeSub = s.subject.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        const isPassed = Boolean(window.passedItems && ((window.passedItems.subjects && window.passedItems.subjects.includes(s.subject)) || (window.passedItems.programs && window.passedItems.programs.includes(progName))));
+
+                        html += `
+                            <label class="csm-sub-item flex items-center justify-between space-x-2 cursor-pointer p-1.5 rounded-lg hover:bg-amber-50/50 dark:hover:bg-slate-900/50 border border-transparent hover:border-amber-200 dark:hover:border-amber-800 active:scale-[0.99] transition-all" data-csm-subname="${s.subject.toLowerCase()}">
+                                <div class="flex items-center space-x-2 min-w-0 flex-1">
+                                    <input type="checkbox" data-modal-celeb-type="subject" data-modal-celeb-subject="${s.subject.replace(/"/g, '&quot;')}" data-modal-celeb-parent-prog="${progName.replace(/"/g, '&quot;')}" onchange="window.onModalToggleSubject('${safeSub}', '${safeProgName}', this.checked)" class="modal-celeb-sub-cb form-checkbox h-3.5 w-3.5 text-amber-500 rounded border-slate-300 dark:border-slate-600 focus:ring-amber-500 cursor-pointer active:scale-95 transition-transform" ${isCheckedStr}>
+                                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title="${s.subject}">${displaySub}</span>
+                                </div>
+                                ${isPassed ? `<span class="text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">Passed</span>` : ''}
+                            </label>
+                        `;
+                    });
+
+                    html += `</div></div></details>`;
+                }
+            });
+        }
+    });
+
+    html += `</div></div></div>`;
+
+    container.innerHTML = html;
+
+    window.updateModalSelectedCount();
+    openModal('celebration-setup-modal');
+};
+
+window.onModalToggleProgram = function (progName, isChecked) {
+    const modal = document.getElementById('celebration-setup-modal');
+    if (!modal) return;
+
+    const escapeVal = (val) => (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(val) : val.replace(/["\\]/g, '\\$&');
+    const subInputs = modal.querySelectorAll(`input.modal-celeb-sub-cb[data-modal-celeb-parent-prog="${escapeVal(progName)}"]`);
+    subInputs.forEach(input => {
+        input.checked = isChecked;
+    });
+
+    window.updateModalSelectedCount();
+};
+
+window.onModalToggleSubject = function (subName, progName, isChecked) {
+    const modal = document.getElementById('celebration-setup-modal');
+    if (!modal) return;
+
+    const escapeVal = (val) => (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(val) : val.replace(/["\\]/g, '\\$&');
+    const pInput = modal.querySelector(`input.modal-celeb-prog-cb[data-modal-celeb-prog="${escapeVal(progName)}"]`);
+    const siblingSubInputs = modal.querySelectorAll(`input.modal-celeb-sub-cb[data-modal-celeb-parent-prog="${escapeVal(progName)}"]`);
+
+    if (pInput && siblingSubInputs.length > 0) {
+        const allChecked = Array.from(siblingSubInputs).every(si => si.checked);
+        pInput.checked = allChecked;
     }
 
-    if (textEl) {
-        if (hasCustomCeleb) {
-            textEl.textContent = `${corePassed} of ${coreTotal} Core Courses Passed (${pct}%)`;
-        } else {
-            textEl.textContent = `${corePassed} of ${coreTotal} Total Courses Passed (${pct}%)`;
-        }
+    window.updateModalSelectedCount();
+};
+
+window.selectCelebrationModalTargets = function (mode) {
+    const modal = document.getElementById('celebration-setup-modal');
+    if (!modal) return;
+
+    if (!window.passedItems) window.passedItems = { programs: [], subjects: [] };
+
+    const progInputs = modal.querySelectorAll('input.modal-celeb-prog-cb');
+    const subInputs = modal.querySelectorAll('input.modal-celeb-sub-cb');
+
+    if (mode === 'all-passed') {
+        progInputs.forEach(input => {
+            const pName = input.getAttribute('data-modal-celeb-prog');
+            input.checked = Boolean(window.passedItems.programs && window.passedItems.programs.includes(pName));
+        });
+        subInputs.forEach(input => {
+            const sName = input.getAttribute('data-modal-celeb-subject');
+            const pName = input.getAttribute('data-modal-celeb-parent-prog');
+            const isProgPassed = Boolean(window.passedItems.programs && window.passedItems.programs.includes(pName));
+            input.checked = Boolean(isProgPassed || (window.passedItems.subjects && window.passedItems.subjects.includes(sName)));
+        });
+        showToast("Checked passed courses as celebration targets!", "info");
+    } else if (mode === 'all') {
+        progInputs.forEach(input => { input.checked = true; });
+        subInputs.forEach(input => { input.checked = true; });
+        showToast("Checked all courses!", "info");
+    } else if (mode === 'clear') {
+        progInputs.forEach(input => { input.checked = false; });
+        subInputs.forEach(input => { input.checked = false; });
+        showToast("Cleared selection!", "info");
     }
 
-    if (subTextEl) {
-        if (celebrationMet) {
-            subTextEl.textContent = "All required core milestone courses have been conquered! Celebration modal active.";
-        } else if (hasCustomCeleb) {
-            const remaining = Math.max(0, coreTotal - corePassed);
-            subTextEl.textContent = `${remaining} core course${remaining === 1 ? '' : 's'} remaining until celebration.`;
-        } else {
-            subTextEl.textContent = "Currently set to default (all courses required). Select core items below to customize your celebration criteria.";
-        }
-    }
+    window.updateModalSelectedCount();
+};
 
-    if (barEl) {
-        barEl.style.width = `${pct}%`;
-        if (celebrationMet) {
-            barEl.className = "h-2 rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 transition-all duration-500 shadow-sm";
-        } else {
-            barEl.className = "h-2 rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-500 shadow-sm";
+window.filterCelebrationSetupItems = function (query) {
+    const modal = document.getElementById('celebration-setup-modal');
+    if (!modal) return;
+
+    const q = (query || '').toLowerCase().trim();
+    const progItems = modal.querySelectorAll('.csm-program-item');
+    const subGroups = modal.querySelectorAll('.csm-subject-group');
+
+    progItems.forEach(item => {
+        const name = item.getAttribute('data-csm-name') || '';
+        item.style.display = (!q || name.includes(q)) ? 'flex' : 'none';
+    });
+
+    subGroups.forEach(group => {
+        const progName = (group.getAttribute('data-csm-details-prog') || '').toLowerCase();
+        const subItems = group.querySelectorAll('.csm-sub-item');
+        let groupHasMatch = !q || progName.includes(q);
+
+        subItems.forEach(si => {
+            const subName = (si.getAttribute('data-csm-subname') || '');
+            const match = !q || progName.includes(q) || subName.includes(q);
+            si.style.display = match ? 'flex' : 'none';
+            if (match) groupHasMatch = true;
+        });
+
+        group.style.display = groupHasMatch ? 'block' : 'none';
+        if (q && groupHasMatch) {
+            group.open = true;
         }
+    });
+};
+
+window.updateModalSelectedCount = function () {
+    const countEl = document.getElementById('csm-selected-count');
+    if (!countEl) return;
+
+    const modal = document.getElementById('celebration-setup-modal');
+    if (!modal) return;
+
+    const checkedProgs = modal.querySelectorAll('input.modal-celeb-prog-cb:checked').length;
+    const checkedSubs = modal.querySelectorAll('input.modal-celeb-sub-cb:checked').length;
+
+    if (checkedProgs === 0 && checkedSubs === 0) {
+        countEl.innerHTML = `<span class="text-amber-600 dark:text-amber-400 font-black">Default Mode</span> (All courses required)`;
+    } else {
+        countEl.innerHTML = `<span class="font-black text-amber-600 dark:text-amber-400">${checkedProgs}</span> Program${checkedProgs === 1 ? '' : 's'} & <span class="font-black text-amber-600 dark:text-amber-400">${checkedSubs}</span> Subject${checkedSubs === 1 ? '' : 's'} selected`;
     }
 };
 
-window.toggleCelebrationStatus = function (type, name, isChecked) {
-    if (!window.celebrationTargets) window.celebrationTargets = { programs: [], subjects: [] };
-    if (!AppState.celebrationTargets) AppState.celebrationTargets = window.celebrationTargets;
+window.saveCelebrationSetup = function () {
+    const modal = document.getElementById('celebration-setup-modal');
+    if (!modal) return;
 
-    if (type === 'program') {
-        if (isChecked) {
-            if (!window.celebrationTargets.programs.includes(name)) window.celebrationTargets.programs.push(name);
+    const progInputs = modal.querySelectorAll('input.modal-celeb-prog-cb:checked');
+    const subInputs = modal.querySelectorAll('input.modal-celeb-sub-cb:checked');
 
-            let progSubs = [];
-            window.tracks.forEach(track => {
-                if (syllabusStructure[track.id]) {
-                    syllabusStructure[track.id].forEach(s => {
-                        if (s.program === name) progSubs.push(s.subject);
-                    });
-                }
-            });
-            progSubs.forEach(sub => {
-                if (!window.celebrationTargets.subjects.includes(sub)) window.celebrationTargets.subjects.push(sub);
-            });
-        } else {
-            window.celebrationTargets.programs = window.celebrationTargets.programs.filter(p => p !== name);
-            let progSubs = [];
-            window.tracks.forEach(track => {
-                if (syllabusStructure[track.id]) {
-                    syllabusStructure[track.id].forEach(s => {
-                        if (s.program === name) progSubs.push(s.subject);
-                    });
-                }
-            });
-            window.celebrationTargets.subjects = window.celebrationTargets.subjects.filter(s => !progSubs.includes(s));
-        }
-    } else if (type === 'subject') {
-        if (isChecked) {
-            if (!window.celebrationTargets.subjects.includes(name)) window.celebrationTargets.subjects.push(name);
+    const selectedProgs = Array.from(progInputs).map(i => i.getAttribute('data-modal-celeb-prog')).filter(Boolean);
+    const selectedSubs = Array.from(subInputs).map(i => i.getAttribute('data-modal-celeb-subject')).filter(Boolean);
 
-            const sObj = window.getAllSubjects().find(s => s.subject === name);
-            if (sObj) {
-                const progName = sObj.program;
-                let allSubsInProg = [];
-                window.tracks.forEach(track => {
-                    if (syllabusStructure[track.id]) {
-                        syllabusStructure[track.id].forEach(s => {
-                            if (s.program === progName) allSubsInProg.push(s.subject);
-                        });
-                    }
-                });
-                const allSelected = allSubsInProg.length > 0 && allSubsInProg.every(sub => window.celebrationTargets.subjects.includes(sub));
-                if (allSelected && !window.celebrationTargets.programs.includes(progName)) {
-                    window.celebrationTargets.programs.push(progName);
-                }
-            }
-        } else {
-            window.celebrationTargets.subjects = window.celebrationTargets.subjects.filter(s => s !== name);
+    window.celebrationTargets = {
+        programs: selectedProgs,
+        subjects: selectedSubs
+    };
 
-            const sObj = window.getAllSubjects().find(s => s.subject === name);
-            if (sObj) {
-                const progName = sObj.program;
-                window.celebrationTargets.programs = window.celebrationTargets.programs.filter(p => p !== progName);
-            }
-        }
+    if (AppState) {
+        AppState.celebrationTargets = window.celebrationTargets;
+        AppState.isLocalDirty = true;
     }
 
-    // Direct synchronous in-place DOM sync for celebration checkboxes (0ms UI latency)
-    const container = document.getElementById('outcome-celebration-container');
-    if (container) {
-        const escapeSelectorVal = (val) => (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(val) : val.replace(/["\\]/g, '\\$&');
-        if (type === 'program') {
-            const pInput = container.querySelector(`input[data-celeb-type="program"][data-celeb-prog="${escapeSelectorVal(name)}"]`);
-            if (pInput && pInput.checked !== isChecked) pInput.checked = isChecked;
-            const subInputs = container.querySelectorAll(`input[data-celeb-type="subject"][data-celeb-parent-prog="${escapeSelectorVal(name)}"]`);
-            subInputs.forEach(si => {
-                if (si.checked !== isChecked) si.checked = isChecked;
-            });
-        } else if (type === 'subject') {
-            const sInput = container.querySelector(`input[data-celeb-type="subject"][data-celeb-subject="${escapeSelectorVal(name)}"]`);
-            if (sInput && sInput.checked !== isChecked) sInput.checked = isChecked;
-            const sObj = window.getAllSubjects().find(s => s.subject === name);
-            if (sObj) {
-                const progName = sObj.program;
-                const isParentChecked = window.celebrationTargets.programs.includes(progName);
-                const pInput = container.querySelector(`input[data-celeb-type="program"][data-celeb-prog="${escapeSelectorVal(progName)}"]`);
-                if (pInput && pInput.checked !== isParentChecked) pInput.checked = isParentChecked;
-            }
-        }
-    }
-
-    // Persist to local storage & debounced cloud save
+    // Persist & sync
     if (typeof window.markLocalMutation === 'function') {
         window.markLocalMutation('celebrationTargets');
-    } else if (AppState) {
-        AppState.isLocalDirty = true;
     }
     if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
         window.FirebaseService.saveToCloud(false);
     }
 
-    // Debounce success score & celebration evaluation
-    if (window._celebScoreDebounceTimer) clearTimeout(window._celebScoreDebounceTimer);
-    window._celebScoreDebounceTimer = setTimeout(() => {
-        window._celebScoreDebounceTimer = null;
-        if (typeof updateSuccessScore === 'function') updateSuccessScore();
-    }, 80);
+    closeModal('celebration-setup-modal');
+    window.renderCelebrationConfig(true);
+    if (typeof updateSuccessScore === 'function') updateSuccessScore();
 
-    // Debounce toast
-    if (window._celebToastTimer) clearTimeout(window._celebToastTimer);
-    window._celebToastTimer = setTimeout(() => {
-        window._celebToastTimer = null;
-        showToast("Milestone celebration criteria updated!", "success");
-    }, 250);
+    showToast("Milestone celebration criteria saved!", "success");
 };
 
 window.selectAllCelebrationTargets = function (mode) {
@@ -14950,8 +15039,8 @@ window.selectAllCelebrationTargets = function (mode) {
         window.FirebaseService.saveToCloud(false);
     }
 
-    // Re-render celebration checkboxes in place
-    window.renderCelebrationConfig(false);
+    // Re-render celebration config overview
+    window.renderCelebrationConfig(true);
     if (typeof updateSuccessScore === 'function') updateSuccessScore();
 };
 
@@ -15000,171 +15089,11 @@ window.updateCelebrationLiveStatus = function (corePassed, coreTotal, hasCustomC
     if (barEl) {
         barEl.style.width = `${pct}%`;
         if (celebrationMet) {
-            barEl.className = "h-2 rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 transition-all duration-500 shadow-sm";
+            barEl.className = "h-2.5 rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 transition-all duration-500 shadow-sm";
         } else {
-            barEl.className = "h-2 rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-500 shadow-sm";
+            barEl.className = "h-2.5 rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-500 shadow-sm";
         }
     }
-};
-
-window.toggleCelebrationStatus = function (type, name, isChecked) {
-    if (!window.celebrationTargets) window.celebrationTargets = { programs: [], subjects: [] };
-    if (!AppState.celebrationTargets) AppState.celebrationTargets = window.celebrationTargets;
-
-    if (type === 'program') {
-        if (isChecked) {
-            if (!window.celebrationTargets.programs.includes(name)) window.celebrationTargets.programs.push(name);
-
-            // Checking program automatically marks its subjects as celebration targets
-            let progSubs = [];
-            window.tracks.forEach(track => {
-                if (syllabusStructure[track.id]) {
-                    syllabusStructure[track.id].forEach(s => {
-                        if (s.program === name) progSubs.push(s.subject);
-                    });
-                }
-            });
-            progSubs.forEach(sub => {
-                if (!window.celebrationTargets.subjects.includes(sub)) window.celebrationTargets.subjects.push(sub);
-            });
-        } else {
-            window.celebrationTargets.programs = window.celebrationTargets.programs.filter(p => p !== name);
-            let progSubs = [];
-            window.tracks.forEach(track => {
-                if (syllabusStructure[track.id]) {
-                    syllabusStructure[track.id].forEach(s => {
-                        if (s.program === name) progSubs.push(s.subject);
-                    });
-                }
-            });
-            window.celebrationTargets.subjects = window.celebrationTargets.subjects.filter(s => !progSubs.includes(s));
-        }
-    } else if (type === 'subject') {
-        if (isChecked) {
-            if (!window.celebrationTargets.subjects.includes(name)) window.celebrationTargets.subjects.push(name);
-
-            const sObj = window.getAllSubjects().find(s => s.subject === name);
-            if (sObj) {
-                const progName = sObj.program;
-                let allSubsInProg = [];
-                window.tracks.forEach(track => {
-                    if (syllabusStructure[track.id]) {
-                        syllabusStructure[track.id].forEach(s => {
-                            if (s.program === progName) allSubsInProg.push(s.subject);
-                        });
-                    }
-                });
-                const allSelected = allSubsInProg.length > 0 && allSubsInProg.every(sub => window.celebrationTargets.subjects.includes(sub));
-                if (allSelected && !window.celebrationTargets.programs.includes(progName)) {
-                    window.celebrationTargets.programs.push(progName);
-                }
-            }
-        } else {
-            window.celebrationTargets.subjects = window.celebrationTargets.subjects.filter(s => s !== name);
-
-            const sObj = window.getAllSubjects().find(s => s.subject === name);
-            if (sObj) {
-                const progName = sObj.program;
-                window.celebrationTargets.programs = window.celebrationTargets.programs.filter(p => p !== progName);
-            }
-        }
-    }
-
-    // Direct synchronous in-place DOM sync for celebration checkboxes
-    const container = document.getElementById('outcome-pass-container');
-    if (container) {
-        const escapeSelectorVal = (val) => (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(val) : val.replace(/["\\]/g, '\\$&');
-        if (type === 'program') {
-            const pInput = container.querySelector(`input[data-celeb-type="program"][data-celeb-prog="${escapeSelectorVal(name)}"]`);
-            if (pInput && pInput.checked !== isChecked) pInput.checked = isChecked;
-            const subInputs = container.querySelectorAll(`input[data-celeb-type="subject"][data-celeb-parent-prog="${escapeSelectorVal(name)}"]`);
-            subInputs.forEach(si => {
-                if (si.checked !== isChecked) si.checked = isChecked;
-            });
-        } else if (type === 'subject') {
-            const sInput = container.querySelector(`input[data-celeb-type="subject"][data-celeb-subject="${escapeSelectorVal(name)}"]`);
-            if (sInput && sInput.checked !== isChecked) sInput.checked = isChecked;
-            const sObj = window.getAllSubjects().find(s => s.subject === name);
-            if (sObj) {
-                const progName = sObj.program;
-                const isParentChecked = window.celebrationTargets.programs.includes(progName);
-                const pInput = container.querySelector(`input[data-celeb-type="program"][data-celeb-prog="${escapeSelectorVal(progName)}"]`);
-                if (pInput && pInput.checked !== isParentChecked) pInput.checked = isParentChecked;
-            }
-        }
-    }
-
-    // Persist to local storage & debounced cloud save
-    if (typeof window.markLocalMutation === 'function') {
-        window.markLocalMutation('celebrationTargets');
-    } else if (AppState) {
-        AppState.isLocalDirty = true;
-    }
-    if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
-        window.FirebaseService.saveToCloud(false);
-    }
-
-    // Debounce success score & celebration evaluation
-    if (window._celebScoreDebounceTimer) clearTimeout(window._celebScoreDebounceTimer);
-    window._celebScoreDebounceTimer = setTimeout(() => {
-        window._celebScoreDebounceTimer = null;
-        updateSuccessScore();
-    }, 80);
-
-    // Debounce toast
-    if (window._celebToastTimer) clearTimeout(window._celebToastTimer);
-    window._celebToastTimer = setTimeout(() => {
-        window._celebToastTimer = null;
-        showToast("Milestone celebration criteria updated!", "success");
-    }, 250);
-};
-
-window.selectAllCelebrationTargets = function (mode) {
-    if (!window.celebrationTargets) window.celebrationTargets = { programs: [], subjects: [] };
-    if (!window.passedItems) window.passedItems = { programs: [], subjects: [] };
-
-    if (mode === 'all-passed') {
-        window.celebrationTargets.programs = [...(window.passedItems.programs || [])];
-        window.celebrationTargets.subjects = [...(window.passedItems.subjects || [])];
-        showToast("Set all currently passed courses as celebration criteria!", "success");
-    } else if (mode === 'all') {
-        const allProgs = [];
-        const allSubs = [];
-        window.tracks.forEach(track => {
-            if (window.customPrograms[track.id]) {
-                window.customPrograms[track.id].forEach(p => {
-                    const pName = p.name || p;
-                    if (!allProgs.includes(pName)) allProgs.push(pName);
-                });
-            }
-            if (syllabusStructure[track.id]) {
-                syllabusStructure[track.id].forEach(s => {
-                    if (!allSubs.includes(s.subject)) allSubs.push(s.subject);
-                });
-            }
-        });
-        window.celebrationTargets.programs = allProgs;
-        window.celebrationTargets.subjects = allSubs;
-        showToast("All courses selected for celebration criteria!", "success");
-    } else if (mode === 'clear') {
-        window.celebrationTargets.programs = [];
-        window.celebrationTargets.subjects = [];
-        showToast("Celebration criteria reset to default!", "info");
-    }
-
-    if (AppState) AppState.celebrationTargets = window.celebrationTargets;
-
-    // Persist & sync
-    if (typeof window.markLocalMutation === 'function') {
-        window.markLocalMutation('celebrationTargets');
-    }
-    if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') {
-        window.FirebaseService.saveToCloud(false);
-    }
-
-    // Re-render celebration checkboxes in place
-    window.renderPassConfig(false);
-    updateSuccessScore();
 };
 
 // --- Monthly Targets System Logic ---

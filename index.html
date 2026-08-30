@@ -7002,6 +7002,89 @@
 
 
 
+        <!-- Milestone Celebration Targets Setup Modal -->
+        <div id="celebration-setup-modal"
+            class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 sm:p-6 transition-all duration-300">
+            <div id="csm-backdrop"
+                class="fixed inset-0 bg-slate-900/80 backdrop-blur-xl opacity-0 transition-opacity duration-300"
+                onclick="closeModal('celebration-setup-modal')"></div>
+            <div id="csm-content"
+                class="relative bg-white dark:bg-slate-800 p-5 sm:p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-2xl border border-slate-200/50 dark:border-slate-700/50 transform scale-95 opacity-0 translate-y-4 transition-all duration-300 mx-4 z-10 flex flex-col max-h-[90vh]">
+                
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center mb-4 sm:mb-6 border-b border-slate-100 dark:border-slate-700 pb-4 shrink-0">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2.5 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z">
+                                </path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-lg sm:text-xl font-black text-slate-800 dark:text-white">Milestone Celebration Criteria</h2>
+                            <p class="text-[10px] sm:text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+                                Select core courses required to trigger the completion celebration
+                            </p>
+                        </div>
+                    </div>
+                    <button onclick="closeModal('celebration-setup-modal')"
+                        class="p-2 bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-slate-700 dark:hover:text-white rounded-xl hover:rotate-90 transition-transform active:scale-95">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Action Toolbar: Quick Select & Search -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 shrink-0">
+                    <!-- Search Box -->
+                    <div class="relative flex-1">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        <input type="text" id="csm-search-input" oninput="window.filterCelebrationSetupItems(this.value)" placeholder="Search programs or subjects..."
+                            class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-amber-500 outline-none transition-all">
+                    </div>
+
+                    <!-- Quick Preset Buttons -->
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <button onclick="window.selectCelebrationModalTargets('all-passed')" class="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all active:scale-95 border border-slate-200/60 dark:border-slate-600/50 shadow-sm">Select Passed</button>
+                        <button onclick="window.selectCelebrationModalTargets('all')" class="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all active:scale-95 border border-slate-200/60 dark:border-slate-600/50 shadow-sm">Select All</button>
+                        <button onclick="window.selectCelebrationModalTargets('clear')" class="px-2.5 py-1.5 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all active:scale-95 border border-rose-200/60 dark:border-rose-800/50 shadow-sm">Clear</button>
+                    </div>
+                </div>
+
+                <!-- Info note -->
+                <div class="p-3 bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 rounded-xl mb-4 text-[11px] text-amber-800 dark:text-amber-300 font-medium flex items-center gap-2 shrink-0">
+                    <span class="text-sm shrink-0">💡</span>
+                    <span>Only selected courses will be required to unlock the graduation celebration. Non-selected electives/extras won't block your celebration.</span>
+                </div>
+
+                <!-- Selection Checklist Container (Scrollable) -->
+                <div id="csm-checklist-container" class="flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2 flex-1 max-h-[50vh]">
+                    <!-- Dynamically populated via window.populateCelebrationSetupModal() -->
+                </div>
+
+                <!-- Footer Actions -->
+                <div class="flex justify-between items-center mt-auto pt-4 border-t border-slate-100 dark:border-slate-700 gap-3 shrink-0">
+                    <div id="csm-selected-count" class="text-xs font-bold text-slate-500 dark:text-slate-400">
+                        0 Programs & 0 Subjects selected
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="closeModal('celebration-setup-modal')"
+                            class="text-slate-500 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 font-black text-[10px] uppercase tracking-widest py-2.5 px-4 rounded-xl transition-colors active:scale-95">Cancel</button>
+                        <button onclick="window.saveCelebrationSetup()"
+                            class="bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-600 hover:to-emerald-600 text-white font-black text-[10px] uppercase tracking-widest py-2.5 px-6 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-1.5">
+                            <span>💾</span>
+                            <span>Save Criteria</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
         <!-- Final Project Completion / Congrats Modal -->
         <div id="congrats-modal"
             class="fixed inset-0 z-[100] hidden flex items-center justify-center transition-all duration-500 p-4 sm:p-6">
