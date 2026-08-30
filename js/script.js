@@ -60,13 +60,10 @@ function safeSetClass(id, className) { const el = document.getElementById(id); i
 function getTaskDate(task) {
     if (!task) return new Date(NaN);
     if (task.date) {
-        const d = Utils.parseDateSafe(task.date);
+        const d = (typeof Utils !== 'undefined' && typeof Utils.parseDateSafe === 'function')
+            ? Utils.parseDateSafe(task.date)
+            : new Date(task.date);
         if (d && !isNaN(d.getTime())) return d;
-    }
-    if (typeof task.id === 'number' && AppState.PLAN_START_DATE) {
-        const baseDate = new Date(AppState.PLAN_START_DATE.getTime());
-        baseDate.setDate(baseDate.getDate() + (task.id - 1));
-        return baseDate;
     }
     return new Date(NaN);
 }
