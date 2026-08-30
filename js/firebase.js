@@ -797,6 +797,7 @@ window.FirebaseService = {
                 customActions: window.customActions || [],
                 paceGoals: window.paceGoals || [],
                 passedItems: window.passedItems || { programs: [], subjects: [] },
+                celebrationTargets: window.celebrationTargets || AppState.celebrationTargets || { programs: [], subjects: [] },
                 revisionData: window.revisionData || { active: [], progress: {} },
                 programVisibility: window.programVisibility || {},
                 subjectTimeLinks: window.subjectTimeLinks || {},
