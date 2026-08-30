@@ -179,6 +179,18 @@ stateKeys.forEach(key => {
 window.generateItemId = function(item, arrayKey = 'items') {
     if (!item || (typeof item !== 'object' && typeof item !== 'string' && typeof item !== 'number')) return null;
     if (typeof item === 'string' || typeof item === 'number') return String(item);
+    if (arrayKey === 'tasks') {
+        if (item.date) {
+            const d = (typeof Utils !== 'undefined' && typeof Utils.parseDateSafe === 'function')
+                ? Utils.parseDateSafe(item.date)
+                : null;
+            if (d && !isNaN(d.getTime())) {
+                return `task_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            }
+            return `task_${String(item.date).trim()}`;
+        }
+        if (item.id !== undefined && item.id !== null) return `task_${item.id}`;
+    }
     if (item.id !== undefined && item.id !== null) return String(item.id);
     if (item._id !== undefined && item._id !== null) return String(item._id);
     if (item.uid !== undefined && item.uid !== null) return String(item.uid);
@@ -225,10 +237,6 @@ window.rebuildTaskDateMap = function() {
             taskD = Utils.parseDateSafe(t.date);
         } else if (typeof getTaskDate === 'function') {
             taskD = getTaskDate(t);
-        } else if (typeof t.id === 'number' && AppState.PLAN_START_DATE) {
-            const baseDate = new Date(AppState.PLAN_START_DATE.getTime());
-            baseDate.setDate(baseDate.getDate() + (t.id - 1));
-            taskD = baseDate;
         }
 
         if (t.date) {

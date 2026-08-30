@@ -6155,7 +6155,7 @@ window.toggleCommitmentCell = function (dayNum, habitIndex) {
 
     if (!task) {
         task = {
-            id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+            id: 'task_' + dISO + '_' + Date.now().toString(36),
             date: dFormatted || dISO,
             note: '',
             updatedAt: Date.now() + (window.serverTimeOffset || 0)
@@ -8020,7 +8020,7 @@ window.setDailyState = function (type, state) {
 
     if (!task || idx === -1) {
         const newTask = {
-            id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+            id: 'task_' + todayISO + '_' + Date.now().toString(36),
             date: todayStr || todayISO,
             note: '',
             updatedAt: Date.now() + (window.serverTimeOffset || 0)
@@ -13368,9 +13368,10 @@ window.toggleModalDay = function (taskIdOrDate, typeKey, evt) {
                 }
             } else {
                 const dateStr = Utils.formatDate(dObj);
+                const isoDate = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
                 taskDateStr = dateStr;
                 const newTask = {
-                    id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    id: 'task_' + isoDate + '_' + Date.now().toString(36),
                     date: dateStr,
                     note: '',
                     updatedAt: Date.now() + (window.serverTimeOffset || 0)
