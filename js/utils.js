@@ -5,6 +5,14 @@
 
 window.Utils = {
     /**
+     * Returns the active Date for Daily Actions based on standard 12:00 AM midnight reset.
+     * The daily actions cycle cleanly rolls over to the new calendar day at 12:00 AM.
+     */
+    getDailyActionDate: function(d = new Date()) {
+        return new Date(d.getTime());
+    },
+
+    /**
      * Converts a 24-hour time string (HH:MM) to total minutes from midnight.
      */
     toMinutes: function(t) {

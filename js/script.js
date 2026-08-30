@@ -7122,7 +7122,9 @@ function renderTrendCharts() {
     chartStart.setHours(0, 0, 0, 0);
     chartEnd.setHours(23, 59, 59, 999);
 
-    const todayObj = new Date();
+    const todayObj = (typeof Utils !== 'undefined' && typeof Utils.getDailyActionDate === 'function')
+        ? Utils.getDailyActionDate()
+        : new Date();
 
     if (window.trendTimeFilter === '1Y') {
         chartEnd = new Date(chartStart);
@@ -7453,7 +7455,9 @@ function renderTrendCharts() {
 
             // Streak calculation
             let streak = 0;
-            let checkDate = new Date();
+            let checkDate = (typeof Utils !== 'undefined' && typeof Utils.getDailyActionDate === 'function')
+                ? Utils.getDailyActionDate()
+                : new Date();
             checkDate.setHours(0, 0, 0, 0);
 
             const tTodayObj = window.getTaskForDate(checkDate);
@@ -7785,8 +7789,11 @@ window.getActionSVG = function (idOrIcon, title = "") {
 };
 
 window.renderDailyTracker = function () {
-    const todayStr = Utils.formatDate(new Date());
-    const todayTask = window.getTaskForDate(new Date()) || AppState.tasks.find(t => t.date === todayStr);
+    const activeDate = (typeof Utils !== 'undefined' && typeof Utils.getDailyActionDate === 'function')
+        ? Utils.getDailyActionDate()
+        : new Date();
+    const todayStr = Utils.formatDate(activeDate);
+    const todayTask = window.getTaskForDate(activeDate) || AppState.tasks.find(t => t.date === todayStr);
     let c = 0; window.customActions.forEach(a => { if (todayTask && todayTask[a.id]) c++; });
     const dailyPct = window.customActions.length > 0 ? Math.round((c / window.customActions.length) * 100) : 0;
 
@@ -7944,7 +7951,9 @@ window.renderDailyTracker = function () {
 };
 
 window.renderDailyLogs = function () {
-    const today = new Date();
+    const today = (typeof Utils !== 'undefined' && typeof Utils.getDailyActionDate === 'function')
+        ? Utils.getDailyActionDate()
+        : new Date();
     today.setHours(0, 0, 0, 0);
 
     const fill = (elId, actionObj) => {
@@ -8000,7 +8009,9 @@ window.renderDailyLogs = function () {
 
 window.setDailyState = function (type, state) {
     if (!type) return;
-    const now = new Date();
+    const now = (typeof Utils !== 'undefined' && typeof Utils.getDailyActionDate === 'function')
+        ? Utils.getDailyActionDate()
+        : new Date();
     const todayStr = (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function') ? Utils.formatDate(now) : null;
     const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
@@ -8267,7 +8278,9 @@ window.populateAnalyticsModal = function (typeKey) {
     const statLabels = ['am-stat-label-1', 'am-stat-label-2', 'am-stat-label-3'];
     statLabels.forEach(id => safeSetClass(id, `block text-[7px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-0.5 sm:mb-1 md:mb-1.5 leading-tight ${cMap.text}`));
 
-    const today = new Date();
+    const today = (typeof Utils !== 'undefined' && typeof Utils.getDailyActionDate === 'function')
+        ? Utils.getDailyActionDate()
+        : new Date();
     today.setHours(0, 0, 0, 0);
 
     let actStartDate = cfgAct.startDate ? Utils.parseDateSafe(cfgAct.startDate) : null;
@@ -11155,7 +11168,9 @@ window.openDailyActionsDBModal = function () {
     let htmlDate = '';
     let htmlAction = '';
 
-    const today = new Date();
+    const today = (typeof Utils !== 'undefined' && typeof Utils.getDailyActionDate === 'function')
+        ? Utils.getDailyActionDate()
+        : new Date();
     today.setHours(0, 0, 0, 0);
 
     const totalDays = 180;
@@ -24525,12 +24540,13 @@ if (typeof window.BroadcastChannel !== 'undefined') {
 
 // --- Automatic Midnight & New Day Rollover Monitor ---
 window._lastActiveDateStr = (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function')
-    ? Utils.formatDate(new Date())
+    ? Utils.formatDate(typeof Utils.getDailyActionDate === 'function' ? Utils.getDailyActionDate() : new Date())
     : '';
 
 window.checkAndRefreshDateChange = function () {
     if (typeof Utils === 'undefined' || typeof Utils.formatDate !== 'function') return;
-    const currentDateStr = Utils.formatDate(new Date());
+    const activeDate = typeof Utils.getDailyActionDate === 'function' ? Utils.getDailyActionDate() : new Date();
+    const currentDateStr = Utils.formatDate(activeDate);
     if (!window._lastActiveDateStr) {
         window._lastActiveDateStr = currentDateStr;
         return;
