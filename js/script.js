@@ -2706,11 +2706,212 @@ window.saveTrendsSettings = function () {
     showToast("Active pacing timeline updated!", "success");
 };
 
+/**
+ * Returns the Set of subject names targeted by a given pace goal.
+ */
+window.getTargetedSubjectsForGoal = function (goal) {
+    let targetedSubjects = new Set();
+    if (!goal) return targetedSubjects;
+    if (goal.type === 'global') {
+        const isManual = goal.subjects || goal.secondaryPaces;
+        if (isManual) {
+            if (goal.subjects && Array.isArray(goal.subjects)) goal.subjects.forEach(s => targetedSubjects.add(s));
+            if (goal.secondaryPaces && Array.isArray(goal.secondaryPaces)) {
+                goal.secondaryPaces.forEach(pid => {
+                    const g = window.paceGoals ? window.paceGoals.find(x => x.id === pid) : null;
+                    if (g) {
+                        if (g.type === 'bundle') {
+                            if (g.subjects && Array.isArray(g.subjects)) g.subjects.forEach(s => targetedSubjects.add(s));
+                            if (g.programs && Array.isArray(g.programs)) {
+                                (window.getAllSubjects ? window.getAllSubjects() : []).forEach(s => {
+                                    if (g.programs.includes(s.program)) targetedSubjects.add(s.subject);
+                                });
+                            }
+                        } else if (g.type === 'subject') {
+                            if (g.target) targetedSubjects.add(g.target);
+                        } else if (g.type === 'program') {
+                            (window.getAllSubjects ? window.getAllSubjects() : []).forEach(s => {
+                                if (g.target === s.program) targetedSubjects.add(s.subject);
+                            });
+                        }
+                    }
+                });
+            }
+        } else {
+            (window.paceGoals || []).forEach(g => {
+                if (g.id === goal.id) return;
+                if (!AppState.globalStartDate || !AppState.globalEndDate) return;
+                const gStart = g.startDate ? Utils.parseDateSafe(g.startDate) : new Date(AppState.globalStartDate);
+                const gEnd = g.deadline ? Utils.parseDateSafe(g.deadline) : new Date(AppState.globalEndDate);
+                gStart.setHours(0, 0, 0, 0); gEnd.setHours(23, 59, 59, 999);
+                if (gEnd < AppState.globalStartDate || gStart > AppState.globalEndDate) return;
+                if (g.type === 'bundle') {
+                    if (g.subjects && Array.isArray(g.subjects)) g.subjects.forEach(s => targetedSubjects.add(s));
+                    if (g.programs && Array.isArray(g.programs)) {
+                        (window.getAllSubjects ? window.getAllSubjects() : []).forEach(s => {
+                            if (g.programs.includes(s.program)) targetedSubjects.add(s.subject);
+                        });
+                    }
+                } else if (g.type === 'subject') {
+                    if (g.target) targetedSubjects.add(g.target);
+                } else if (g.type === 'program') {
+                    (window.getAllSubjects ? window.getAllSubjects() : []).forEach(s => {
+                        if (g.target === s.program) targetedSubjects.add(s.subject);
+                    });
+                }
+            });
+        }
+    } else if (goal.type === 'bundle') {
+        if (goal.subjects && Array.isArray(goal.subjects)) {
+            goal.subjects.forEach(sub => targetedSubjects.add(sub));
+        }
+        if (goal.programs && Array.isArray(goal.programs)) {
+            (window.getAllSubjects ? window.getAllSubjects() : []).forEach(s => {
+                if (goal.programs.includes(s.program)) targetedSubjects.add(s.subject);
+            });
+        }
+    } else if (goal.type === 'subject') {
+        if (goal.target) targetedSubjects.add(goal.target);
+    } else if (goal.type === 'program') {
+        (window.getAllSubjects ? window.getAllSubjects() : []).forEach(s => {
+            if (s.program === goal.target) targetedSubjects.add(s.subject);
+        });
+    }
+    return targetedSubjects;
+};
+
+/**
+ * Calculates complete, accurate statistics for a single pace goal without NaN/null errors.
+ */
+window.calculatePaceGoalStats = function (goal, subjectStats) {
+    if (!goal) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const msPerDay = 1000 * 60 * 60 * 24;
+
+    // Safety fallback: ensure subjectStats contains objects with totalChapters
+    if (!subjectStats || Object.keys(subjectStats).length === 0 || typeof Object.values(subjectStats)[0] !== 'object' || Object.values(subjectStats)[0] === null || !('totalChapters' in (Object.values(subjectStats)[0] || {}))) {
+        if (window.lastSubjectStats && Object.keys(window.lastSubjectStats).length > 0 && typeof Object.values(window.lastSubjectStats)[0] === 'object' && ('totalChapters' in (Object.values(window.lastSubjectStats)[0] || {}))) {
+            subjectStats = window.lastSubjectStats;
+        } else if (typeof updateMetrics === 'function') {
+            updateMetrics();
+            subjectStats = window.lastSubjectStats || {};
+        } else {
+            subjectStats = subjectStats || {};
+        }
+    }
+
+    const targetedSubjects = typeof window.getTargetedSubjectsForGoal === 'function'
+        ? window.getTargetedSubjectsForGoal(goal)
+        : new Set();
+
+    let total = 0;
+    let completed = 0;
+
+    targetedSubjects.forEach(sub => {
+        if (subjectStats && subjectStats[sub] && typeof subjectStats[sub] === 'object' && typeof subjectStats[sub].totalChapters === 'number') {
+            total += (subjectStats[sub].totalChapters || 0);
+            completed += (subjectStats[sub].effectiveChapters || 0);
+        } else if (window.lastSubjectStats && window.lastSubjectStats[sub] && typeof window.lastSubjectStats[sub] === 'object' && typeof window.lastSubjectStats[sub].totalChapters === 'number') {
+            total += (window.lastSubjectStats[sub].totalChapters || 0);
+            completed += (window.lastSubjectStats[sub].effectiveChapters || 0);
+        } else {
+            const sObj = window.getAllSubjects ? window.getAllSubjects().find(s => s.subject === sub) : null;
+            if (sObj) {
+                total += (sObj.chapters || 0);
+            }
+        }
+    });
+
+    total = isNaN(total) ? 0 : Math.max(0, total);
+    completed = isNaN(completed) ? 0 : Math.max(0, completed);
+    const remaining = Math.max(0, total - completed);
+
+    const startDate = goal.startDate ? Utils.parseDateSafe(goal.startDate) : new Date(AppState.PLAN_START_DATE);
+    const targetDate = Utils.parseDateSafe(goal.deadline);
+    startDate.setHours(0, 0, 0, 0);
+    targetDate.setHours(23, 59, 59, 999);
+
+    const totalDays = Math.max(1, Math.ceil((targetDate - startDate) / msPerDay));
+    const daysElapsed = Math.floor((today - startDate) / msPerDay) + 1;
+    const daysRemaining = Math.max(0, Math.ceil((targetDate - today) / msPerDay));
+
+    let reqPaceVal = 0;
+    let curPaceVal = 0;
+
+    if (total > 0) {
+        if (today < startDate) {
+            reqPaceVal = total / totalDays;
+            curPaceVal = 0;
+        } else if (today > targetDate) {
+            reqPaceVal = remaining > 0 ? remaining : 0;
+            curPaceVal = completed / Math.max(1, daysElapsed);
+        } else {
+            reqPaceVal = remaining > 0 ? remaining / Math.max(1, daysRemaining) : 0;
+            curPaceVal = completed / Math.max(1, daysElapsed);
+        }
+    }
+
+    reqPaceVal = isNaN(reqPaceVal) ? 0 : reqPaceVal;
+    curPaceVal = isNaN(curPaceVal) ? 0 : curPaceVal;
+
+    let finishDisplay = '';
+    let timeGoalCountdownStr = '';
+    let estDaysNeededStr = '<span class="opacity-50 font-normal">Unknown</span>';
+    let diffDaysTG = Math.ceil((targetDate - today) / msPerDay);
+    let projectedDate = new Date(today);
+
+    if (total === 0) {
+        finishDisplay = '<span class="opacity-50">No Target</span>';
+    } else if (remaining <= 0) {
+        finishDisplay = '<span class="text-emerald-400">Finished</span>';
+        timeGoalCountdownStr = '<span class="text-emerald-400">Done</span>';
+        estDaysNeededStr = '<span class="text-emerald-400">0 Days</span>';
+    } else {
+        if (curPaceVal <= 0) {
+            if (today < startDate) finishDisplay = '<span class="text-blue-400 font-bold">Future</span>';
+            else if (today > targetDate) finishDisplay = '<span class="text-red-400 font-bold">Overdue</span>';
+            else finishDisplay = '<span class="opacity-50">No Data</span>';
+        } else {
+            const daysToFinish = remaining / curPaceVal;
+            projectedDate.setDate(today.getDate() + Math.ceil(daysToFinish));
+            finishDisplay = Utils.formatDateResponsive(projectedDate);
+            estDaysNeededStr = `<span class="text-orange-400">${Math.ceil(daysToFinish)} Days Needed</span>`;
+        }
+
+        if (diffDaysTG > 0) timeGoalCountdownStr = `${diffDaysTG} Days Left`;
+        else if (diffDaysTG === 0) timeGoalCountdownStr = `<span class="text-orange-400">Due Today</span>`;
+        else timeGoalCountdownStr = `<span class="text-red-400">${Math.abs(diffDaysTG)} Days Overdue</span>`;
+    }
+
+    return {
+        total,
+        completed,
+        remaining,
+        percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
+        startDate,
+        targetDate,
+        totalDays,
+        daysElapsed,
+        daysRemaining,
+        reqPaceVal,
+        curPaceVal,
+        reqPace: reqPaceVal.toFixed(2),
+        curPace: curPaceVal.toFixed(2),
+        finishDisplay,
+        timeGoalCountdownStr,
+        estDaysNeededStr,
+        diffDaysTG,
+        projectedDate,
+        targetedSubjects
+    };
+};
+
 // Deprecated
 // Currently unused
 // Retained for compatibility
 function calculateIndependentEstFinish() {
-    const subjectStats = window.lastSubjectStats || {};
+    const subjectStats = window.lastSubjectStats || (typeof updateMetrics === 'function' ? (updateMetrics(), window.lastSubjectStats) : {});
     const uniqueSubs = Array.from(new Set(window.getAllSubjects().map(s => s.subject)));
 
     let totalRemaining = 0;
@@ -2799,159 +3000,47 @@ window.updateTrendsBar = function () {
         const activeGoal = activeGoalId ? window.paceGoals.find(g => g.id === activeGoalId) : null;
 
         if (activeGoal) {
-            const startDate = activeGoal.startDate ? Utils.parseDateSafe(activeGoal.startDate) : new Date(AppState.PLAN_START_DATE);
-            const targetDate = Utils.parseDateSafe(activeGoal.deadline);
-            startDate.setHours(0, 0, 0, 0);
-            targetDate.setHours(23, 59, 59, 999);
-
-            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const stats = window.calculatePaceGoalStats(activeGoal, window.lastSubjectStats);
+            if (!stats) return;
 
             // 1. Start Date
-            barStartVal.textContent = startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            barStartVal.textContent = stats.startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
             // 2. Days Passed
-            const daysPassed = Math.floor((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
-            barPassedVal.textContent = Utils.formatDaysPassed(Math.max(0, daysPassed));
+            barPassedVal.textContent = Utils.formatDaysPassed(Math.max(0, stats.daysElapsed));
 
             // 3. Days Remain
-            const diff = targetDate - today;
-            const daysRemain = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-            barRemainVal.textContent = `${daysRemain} Days`;
+            barRemainVal.textContent = `${stats.daysRemaining} Days`;
             barRemainContainer.classList.remove('hidden');
 
-            // 4. Est Finish
-            const subjectStats = window.lastSubjectStats || {};
-            let total = 0; let completed = 0;
-
-            if (activeGoal.type === 'global') {
-                let targetedSubjects = new Set();
-                const isManual = activeGoal.subjects || activeGoal.secondaryPaces;
-
-                if (isManual) {
-                    if (activeGoal.subjects) activeGoal.subjects.forEach(s => targetedSubjects.add(s));
-                    if (activeGoal.secondaryPaces) {
-                        activeGoal.secondaryPaces.forEach(pid => {
-                            const g = window.paceGoals.find(x => x.id === pid);
-                            if (g) {
-                                if (g.type === 'bundle') {
-                                    if (g.subjects) g.subjects.forEach(s => targetedSubjects.add(s));
-                                    if (g.programs) {
-                                        window.tracks.map(t => t.id).forEach(track => {
-                                            if (syllabusStructure[track]) {
-                                                syllabusStructure[track].forEach(s => { if (g.programs.includes(s.program)) targetedSubjects.add(s.subject); });
-                                            }
-                                        });
-                                    }
-                                } else if (g.type === 'subject') {
-                                    targetedSubjects.add(g.target);
-                                } else if (g.type === 'program') {
-                                    window.tracks.map(t => t.id).forEach(track => {
-                                        if (syllabusStructure[track]) {
-                                            syllabusStructure[track].forEach(s => { if (g.target === s.program) targetedSubjects.add(s.subject); });
-                                        }
-                                    });
-                                }
-                            }
-                        });
-                    }
-                } else {
-                    window.paceGoals.forEach(g => {
-                        if (g.id === activeGoal.id) return;
-                        if (!AppState.globalStartDate || !AppState.globalEndDate) return;
-
-                        const gStart = g.startDate ? Utils.parseDateSafe(g.startDate) : new Date(AppState.globalStartDate);
-                        const gEnd = g.deadline ? Utils.parseDateSafe(g.deadline) : new Date(AppState.globalEndDate);
-                        gStart.setHours(0, 0, 0, 0);
-                        gEnd.setHours(23, 59, 59, 999);
-                        if (gEnd < AppState.globalStartDate || gStart > AppState.globalEndDate) return;
-
-                        if (g.type === 'bundle') {
-                            if (g.subjects) g.subjects.forEach(s => targetedSubjects.add(s));
-                            if (g.programs) {
-                                window.tracks.map(t => t.id).forEach(track => {
-                                    if (syllabusStructure[track]) {
-                                        syllabusStructure[track].forEach(s => { if (g.programs.includes(s.program)) targetedSubjects.add(s.subject); });
-                                    }
-                                });
-                            }
-                        } else if (g.type === 'subject') {
-                            targetedSubjects.add(g.target);
-                        } else if (g.type === 'program') {
-                            window.tracks.map(t => t.id).forEach(track => {
-                                if (syllabusStructure[track]) {
-                                    syllabusStructure[track].forEach(s => { if (g.target === s.program) targetedSubjects.add(s.subject); });
-                                }
-                            });
-                        }
-                    });
-                }
-                targetedSubjects.forEach(sub => {
-                    if (subjectStats[sub]) { total += subjectStats[sub].totalChapters; completed += subjectStats[sub].effectiveChapters; }
-                });
-            } else if (activeGoal.type === 'bundle') {
-                if (activeGoal.subjects) {
-                    activeGoal.subjects.forEach(sub => {
-                        if (subjectStats[sub]) { total += subjectStats[sub].totalChapters; completed += subjectStats[sub].effectiveChapters; }
-                    });
-                } else if (activeGoal.programs) {
-                    let programSubs = [];
-                    window.tracks.map(t => t.id).forEach(track => {
-                        if (syllabusStructure[track]) {
-                            syllabusStructure[track].forEach(s => {
-                                if (activeGoal.programs.includes(s.program)) programSubs.push(s.subject);
-                            });
-                        }
-                    });
-                    programSubs.forEach(sub => {
-                        if (subjectStats[sub]) { total += subjectStats[sub].totalChapters; completed += subjectStats[sub].effectiveChapters; }
-                    });
-                }
-            } else if (activeGoal.type === 'subject') {
-                if (subjectStats[activeGoal.target]) { total = subjectStats[activeGoal.target].totalChapters; completed = subjectStats[activeGoal.target].effectiveChapters; }
-            } else if (activeGoal.type === 'program') {
-                const programSubs = [];
-                window.tracks.map(t => t.id).forEach(track => {
-                    if (syllabusStructure[track]) {
-                        syllabusStructure[track].forEach(s => { if (s.program === activeGoal.target) programSubs.push(s.subject); });
-                    }
-                });
-                programSubs.forEach(sub => { if (subjectStats[sub]) { total += subjectStats[sub].totalChapters; completed += subjectStats[sub].effectiveChapters; } });
-            }
-
-            const remaining = Math.max(0, total - completed);
-            let finishDisplay = '--';
-            const reqPaceVal = daysRemain > 0 ? (remaining / daysRemain) : 0;
-            let curPaceVal = 0;
-            if (daysPassed > 0) {
-                curPaceVal = completed / daysPassed;
-            }
-
+            // 4. Req & Actual Pace
             const barReqPaceVal = document.getElementById('trends-bar-req-pace');
             if (barReqPaceVal) {
-                barReqPaceVal.textContent = `${reqPaceVal.toFixed(2)} Ch/Day`;
+                barReqPaceVal.textContent = `${stats.reqPace} Ch/Day`;
             }
             const barActualPaceVal = document.getElementById('trends-bar-actual-pace');
             if (barActualPaceVal) {
-                barActualPaceVal.textContent = `${curPaceVal.toFixed(2)} Ch/Day`;
+                barActualPaceVal.textContent = `${stats.curPace} Ch/Day`;
             }
 
-            if (total === 0) {
-                finishDisplay = 'No Target';
-            } else if (remaining <= 0) {
-                finishDisplay = 'Finished';
-            } else {
-                if (curPaceVal <= 0) {
-                    if (today < startDate) finishDisplay = 'Future';
-                    else if (today > targetDate) finishDisplay = 'Overdue';
-                    else finishDisplay = 'No Data';
+            // 5. Est Finish
+            if (barEstFinishVal) {
+                if (stats.total === 0) {
+                    barEstFinishVal.textContent = 'No Target';
+                } else if (stats.remaining <= 0) {
+                    barEstFinishVal.textContent = 'Finished';
                 } else {
-                    const daysToFinish = remaining / curPaceVal;
-                    const projectedDate = new Date(today); projectedDate.setDate(today.getDate() + daysToFinish);
-                    const finishDateStr = projectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                    finishDisplay = `${finishDateStr} (${Math.ceil(daysToFinish)} Days)`;
+                    if (stats.curPaceVal <= 0) {
+                        const today = new Date(); today.setHours(0, 0, 0, 0);
+                        if (today < stats.startDate) barEstFinishVal.textContent = 'Future';
+                        else if (today > stats.targetDate) barEstFinishVal.textContent = 'Overdue';
+                        else barEstFinishVal.textContent = 'No Data';
+                    } else {
+                        const finishDateStr = stats.projectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        barEstFinishVal.textContent = `${finishDateStr} (${Math.ceil(stats.remaining / stats.curPaceVal)} Days @ ${stats.curPace} Ch/Day)`;
+                    }
                 }
             }
-            barEstFinishVal.textContent = finishDisplay;
         } else {
             barStartVal.textContent = '--';
             barPassedVal.textContent = '--';
@@ -4617,163 +4706,18 @@ window.renderPaceGoals = function (subjectStats) {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const msPerDay = 1000 * 60 * 60 * 24;
 
     let html = '';
     window.paceGoals.forEach(goal => {
-        let total = 0; let completed = 0;
+        const stats = window.calculatePaceGoalStats(goal, subjectStats);
+        if (!stats) return;
 
-        if (goal.type === 'global') {
-            let targetedSubjects = new Set();
-            const isManual = goal.subjects || goal.secondaryPaces;
-
-            if (isManual) {
-                if (goal.subjects) goal.subjects.forEach(s => targetedSubjects.add(s));
-                if (goal.secondaryPaces) {
-                    goal.secondaryPaces.forEach(pid => {
-                        const g = window.paceGoals.find(x => x.id === pid);
-                        if (g) {
-                            if (g.type === 'bundle') {
-                                if (g.subjects) g.subjects.forEach(s => targetedSubjects.add(s));
-                                if (g.programs) {
-                                    window.tracks.map(t => t.id).forEach(track => {
-                                        if (syllabusStructure[track]) {
-                                            syllabusStructure[track].forEach(s => { if (g.programs.includes(s.program)) targetedSubjects.add(s.subject); });
-                                        }
-                                    });
-                                }
-                            } else if (g.type === 'subject') {
-                                targetedSubjects.add(g.target);
-                            } else if (g.type === 'program') {
-                                window.tracks.map(t => t.id).forEach(track => {
-                                    if (syllabusStructure[track]) {
-                                        syllabusStructure[track].forEach(s => { if (g.target === s.program) targetedSubjects.add(s.subject); });
-                                    }
-                                });
-                            }
-                        }
-                    });
-                }
-            } else {
-                // Old fallback auto-aggregation
-                window.paceGoals.forEach(g => {
-                    if (g.id === goal.id) return;
-                    if (!AppState.globalStartDate || !AppState.globalEndDate) return;
-
-                    const gStart = g.startDate ? Utils.parseDateSafe(g.startDate) : new Date(AppState.globalStartDate);
-                    const gEnd = g.deadline ? Utils.parseDateSafe(g.deadline) : new Date(AppState.globalEndDate);
-                    gStart.setHours(0, 0, 0, 0);
-                    gEnd.setHours(23, 59, 59, 999);
-                    if (gEnd < AppState.globalStartDate || gStart > AppState.globalEndDate) return; // Restrict to overlapping scopes
-
-                    if (g.type === 'bundle') {
-                        if (g.subjects) g.subjects.forEach(s => targetedSubjects.add(s));
-                        if (g.programs) {
-                            window.tracks.map(t => t.id).forEach(track => {
-                                if (syllabusStructure[track]) {
-                                    syllabusStructure[track].forEach(s => { if (g.programs.includes(s.program)) targetedSubjects.add(s.subject); });
-                                }
-                            });
-                        }
-                    } else if (g.type === 'subject') {
-                        targetedSubjects.add(g.target);
-                    } else if (g.type === 'program') {
-                        window.tracks.map(t => t.id).forEach(track => {
-                            if (syllabusStructure[track]) {
-                                syllabusStructure[track].forEach(s => { if (g.target === s.program) targetedSubjects.add(s.subject); });
-                            }
-                        });
-                    }
-                });
-            }
-            targetedSubjects.forEach(sub => {
-                if (subjectStats[sub]) { total += subjectStats[sub].totalChapters; completed += subjectStats[sub].effectiveChapters; }
-            });
-        } else if (goal.type === 'bundle') {
-            if (goal.subjects) {
-                goal.subjects.forEach(sub => {
-                    if (subjectStats[sub]) { total += subjectStats[sub].totalChapters; completed += subjectStats[sub].effectiveChapters; }
-                });
-            } else if (goal.programs) {
-                let programSubs = [];
-                window.tracks.map(t => t.id).forEach(track => {
-                    if (syllabusStructure[track]) {
-                        syllabusStructure[track].forEach(s => {
-                            if (goal.programs.includes(s.program)) programSubs.push(s.subject);
-                        });
-                    }
-                });
-                programSubs.forEach(sub => {
-                    if (subjectStats[sub]) { total += subjectStats[sub].totalChapters; completed += subjectStats[sub].effectiveChapters; }
-                });
-            }
-        } else if (goal.type === 'subject') {
-            if (subjectStats[goal.target]) { total = subjectStats[goal.target].totalChapters; completed = subjectStats[goal.target].effectiveChapters; }
-        } else if (goal.type === 'program') {
-            const programSubs = [];
-            window.tracks.map(t => t.id).forEach(track => {
-                if (syllabusStructure[track]) {
-                    syllabusStructure[track].forEach(s => { if (s.program === goal.target) programSubs.push(s.subject); });
-                }
-            });
-            programSubs.forEach(sub => { if (subjectStats[sub]) { total += subjectStats[sub].totalChapters; completed += subjectStats[sub].effectiveChapters; } });
-        }
-
-        const startDate = goal.startDate ? Utils.parseDateSafe(goal.startDate) : new Date(AppState.PLAN_START_DATE);
-        const targetDate = Utils.parseDateSafe(goal.deadline);
-        startDate.setHours(0, 0, 0, 0); targetDate.setHours(23, 59, 59, 999);
-
-        const remaining = Math.max(0, total - completed);
-        const totalDays = Math.max(1, Math.ceil((targetDate - startDate) / msPerDay));
-        const daysElapsed = Math.floor((today - startDate) / msPerDay) + 1;
-        const daysRemaining = Math.max(0, Math.ceil((targetDate - today) / msPerDay));
-
-        let reqPaceVal = 0;
-        let curPaceVal = 0;
-
-        if (total > 0) {
-            if (today < startDate) {
-                reqPaceVal = total / totalDays;
-                curPaceVal = 0;
-            } else if (today > targetDate) {
-                reqPaceVal = remaining > 0 ? remaining : 0;
-                curPaceVal = completed / daysElapsed;
-            } else {
-                reqPaceVal = remaining > 0 ? remaining / Math.max(1, daysRemaining) : 0;
-                curPaceVal = completed / daysElapsed;
-            }
-        }
-
-        const reqPace = reqPaceVal.toFixed(2);
-        const curPace = curPaceVal.toFixed(2);
-
-        let finishDisplay = '';
-        let timeGoalCountdownStr = '';
-        let estDaysNeededStr = '<span class="opacity-50 font-normal">Unknown</span>';
-        let diffDaysTG = Math.ceil((targetDate - today) / msPerDay);
-
-        if (total === 0) {
-            finishDisplay = '<span class="opacity-50">No Target</span>';
-        } else if (remaining <= 0) {
-            finishDisplay = '<span class="text-emerald-400">Finished</span>';
-            timeGoalCountdownStr = '<span class="text-emerald-400">Done</span>';
-            estDaysNeededStr = '<span class="text-emerald-400">0 Days</span>';
-        } else {
-            if (curPaceVal <= 0) {
-                if (today < startDate) finishDisplay = '<span class="text-blue-400 font-bold">Future</span>';
-                else if (today > targetDate) finishDisplay = '<span class="text-red-400 font-bold">Overdue</span>';
-                else finishDisplay = '<span class="opacity-50">No Data</span>';
-            } else {
-                const daysToFinish = remaining / curPaceVal;
-                const projectedDate = new Date(today); projectedDate.setDate(today.getDate() + daysToFinish);
-                finishDisplay = Utils.formatDateResponsive(projectedDate);
-                estDaysNeededStr = `<span class="text-orange-400">${Math.ceil(daysToFinish)} Days Needed</span>`;
-            }
-
-            if (diffDaysTG > 0) timeGoalCountdownStr = `${diffDaysTG} Days Left`;
-            else if (diffDaysTG === 0) timeGoalCountdownStr = `<span class="text-orange-400">Due Today</span>`;
-            else timeGoalCountdownStr = `<span class="text-red-400">${Math.abs(diffDaysTG)} Days Overdue</span>`;
-        }
+        const {
+            total, completed, remaining, percentage,
+            startDate, targetDate, daysElapsed,
+            reqPaceVal, curPaceVal, reqPace, curPace,
+            finishDisplay, timeGoalCountdownStr, estDaysNeededStr
+        } = stats;
 
         const isBehind = remaining > 0 && today >= startDate && curPaceVal < reqPaceVal;
         const reqColor = isBehind ? 'text-red-500' : 'text-emerald-500';
@@ -4805,8 +4749,8 @@ window.renderPaceGoals = function (subjectStats) {
 
         let subText = '';
         if (goal.type === 'bundle') {
-            if (goal.subjects) subText = `<div class="text-[8px] font-bold text-slate-500 dark:text-slate-400 mt-1 line-clamp-1" title="${goal.subjects.join(', ')}">${goal.subjects.join(', ')}</div>`;
-            else if (goal.programs) subText = `<div class="text-[8px] font-bold text-violet-500 dark:text-violet-400 mt-1 line-clamp-1" title="${goal.programs.join(', ')}">${goal.programs.join(', ')}</div>`;
+            if (goal.subjects && goal.subjects.length > 0) subText = `<div class="text-[8px] font-bold text-slate-500 dark:text-slate-400 mt-1 line-clamp-1" title="${goal.subjects.join(', ')}">${goal.subjects.join(', ')}</div>`;
+            else if (goal.programs && goal.programs.length > 0) subText = `<div class="text-[8px] font-bold text-violet-500 dark:text-violet-400 mt-1 line-clamp-1" title="${goal.programs.join(', ')}">${goal.programs.join(', ')}</div>`;
         } else if (goal.type === 'global') {
             const isManual = goal.subjects || goal.secondaryPaces;
             if (isManual) subText = `<div class="text-[8px] font-bold text-blue-500 dark:text-blue-400 mt-1 line-clamp-1">Manual Global Target</div>`;
@@ -4835,10 +4779,10 @@ window.renderPaceGoals = function (subjectStats) {
                     <div>
                         <div class="flex justify-between items-end mb-1">
                             <span class="text-[9px] font-bold text-slate-400">${Math.round(completed)} / ${total} Ch</span>
-                            <span class="text-[9px] font-black text-slate-500">${total > 0 ? Math.round((completed / total) * 100) : 0}%</span>
+                            <span class="text-[9px] font-black text-slate-500">${percentage}%</span>
                         </div>
                         <div class="w-full bg-slate-100 dark:bg-slate-700/50 h-1.5 rounded-full overflow-hidden mb-4 border border-slate-200/50 dark:border-slate-600/30">
-                            <div class="bg-gradient-to-r from-orange-400 to-orange-500 h-full rounded-full transition-all duration-700" style="width: ${total > 0 ? (completed / total) * 100 : 0}%"></div>
+                            <div class="bg-gradient-to-r from-orange-400 to-orange-500 h-full rounded-full transition-all duration-700" style="width: ${percentage}%"></div>
                         </div>
 
                         <div class="grid grid-cols-2 gap-2">
@@ -4876,6 +4820,9 @@ window.renderPaceGoals = function (subjectStats) {
 function renderSubjectProgress(subjectStats) {
     const container = document.getElementById('subject-progress-container');
     if (!container) return;
+    if (!subjectStats || Object.keys(subjectStats).length === 0 || typeof Object.values(subjectStats)[0] !== 'object' || !('totalChapters' in (Object.values(subjectStats)[0] || {}))) {
+        subjectStats = window.lastSubjectStats || {};
+    }
 
     const colorPairs = [
         { bg: "bg-gradient-to-r from-indigo-400 to-indigo-600", text: "text-indigo-500" }, { bg: "bg-gradient-to-r from-emerald-400 to-emerald-600", text: "text-emerald-500" },
@@ -4895,11 +4842,9 @@ function renderSubjectProgress(subjectStats) {
             let trackTotalChapters = 0;
             let trackEffectiveChapters = 0;
             trackSubs.forEach(s => {
-                const stats = subjectStats[s.subject];
-                if (stats) {
-                    trackTotalChapters += stats.totalChapters || 0;
-                    trackEffectiveChapters += stats.effectiveChapters || 0;
-                }
+                const stats = subjectStats[s.subject] || { totalChapters: s.chapters || 0, effectiveChapters: 0 };
+                trackTotalChapters += (stats.totalChapters || 0);
+                trackEffectiveChapters += (stats.effectiveChapters || 0);
             });
             const trackPerc = trackTotalChapters > 0 ? Math.min(100, (trackEffectiveChapters / trackTotalChapters) * 100) : 0;
 
@@ -4937,7 +4882,7 @@ function renderSubjectProgress(subjectStats) {
                         `;
 
                 subs.forEach(sub => {
-                    const stats = subjectStats[sub.subject];
+                    const stats = subjectStats[sub.subject] || { totalChapters: sub.chapters || 0, effectiveChapters: 0 };
                     const perc = stats.totalChapters > 0 ? Math.min(100, (stats.effectiveChapters / stats.totalChapters) * 100) : 0;
 
                     let cleanSubName = sub.subject;
@@ -4954,13 +4899,16 @@ function renderSubjectProgress(subjectStats) {
                                         <span class="ml-1">${Math.round(stats.effectiveChapters)}/${stats.totalChapters} <span class="${cp.text} ml-0.5">(${Math.round(perc)}%)</span></span>
                                     </div>
                                 </div>
-                                <div class="w-full bg-slate-100 dark:bg-slate-700/50 h-1.5 rounded-full overflow-hidden shadow-inner border border-slate-200/40 dark:border-slate-600/30">
+                                <div class="w-full bg-slate-100 dark:bg-slate-700/50 h-2 rounded-full overflow-hidden shadow-inner border border-slate-200/40 dark:border-slate-600/30">
                                     <div class="${cp.bg} h-full rounded-full transition-all duration-700 ease-out shadow-sm" style="width: ${perc}%"></div>
                                 </div>
                             </div>
                             `;
                 });
-                html += `</div></div>`;
+                html += `
+                            </div>
+                        </div>
+                        `;
                 pIdx++;
             });
 
@@ -5018,6 +4966,9 @@ function renderSubjectNavigation() {
 function renderCategoryProgress(subjectStats) {
     const container = document.getElementById('category-progress-container');
     if (!container) return;
+    if (!subjectStats || Object.keys(subjectStats).length === 0 || typeof Object.values(subjectStats)[0] !== 'object' || !('totalChapters' in (Object.values(subjectStats)[0] || {}))) {
+        subjectStats = window.lastSubjectStats || {};
+    }
 
     const colors = ['text-indigo-500', 'text-emerald-500', 'text-violet-500', 'text-rose-500', 'text-amber-500', 'text-cyan-500'];
     const shadows = ['shadow-[0_0_15px_rgba(99,102,241,0.3)]', 'shadow-[0_0_15px_rgba(16,185,129,0.3)]', 'shadow-[0_0_15px_rgba(139,92,246,0.3)]', 'shadow-[0_0_15px_rgba(244,63,94,0.3)]', 'shadow-[0_0_15px_rgba(245,158,11,0.3)]', 'shadow-[0_0_15px_rgba(6,182,212,0.3)]'];
@@ -5033,7 +4984,11 @@ function renderCategoryProgress(subjectStats) {
                 if (subs.length === 0) return;
 
                 let totalChap = 0; let doneChap = 0;
-                subs.forEach(sub => { totalChap += subjectStats[sub.subject].totalChapters; doneChap += subjectStats[sub.subject].effectiveChapters; });
+                subs.forEach(sub => {
+                    const s = subjectStats[sub.subject];
+                    totalChap += (s ? s.totalChapters : sub.chapters) || 0;
+                    doneChap += (s ? s.effectiveChapters : 0) || 0;
+                });
                 const perc = totalChap > 0 ? Math.round((doneChap / totalChap) * 100) : 0;
                 const color = colors[catIdx % colors.length]; const shadow = shadows[catIdx % shadows.length];
 
@@ -5048,6 +5003,9 @@ function renderCategoryProgress(subjectStats) {
 function renderTrackProgress(subjectStats) {
     const container = document.getElementById('track-progress-container');
     if (!container) return;
+    if (!subjectStats || Object.keys(subjectStats).length === 0 || typeof Object.values(subjectStats)[0] !== 'object' || !('totalChapters' in (Object.values(subjectStats)[0] || {}))) {
+        subjectStats = window.lastSubjectStats || {};
+    }
 
     const colors = ['text-blue-500', 'text-purple-500', 'text-teal-500', 'text-rose-500', 'text-orange-500', 'text-emerald-500'];
     const shadows = ['shadow-[0_0_15px_rgba(59,130,246,0.3)]', 'shadow-[0_0_15px_rgba(168,85,247,0.3)]', 'shadow-[0_0_15px_rgba(20,184,166,0.3)]', 'shadow-[0_0_15px_rgba(244,63,94,0.3)]', 'shadow-[0_0_15px_rgba(249,115,22,0.3)]', 'shadow-[0_0_15px_rgba(16,185,129,0.3)]'];
@@ -5062,10 +5020,9 @@ function renderTrackProgress(subjectStats) {
 
         let totalChap = 0; let doneChap = 0;
         subs.forEach(sub => {
-            if (subjectStats[sub.subject]) {
-                totalChap += subjectStats[sub.subject].totalChapters;
-                doneChap += subjectStats[sub.subject].effectiveChapters;
-            }
+            const s = subjectStats[sub.subject];
+            totalChap += (s ? s.totalChapters : sub.chapters) || 0;
+            doneChap += (s ? s.effectiveChapters : 0) || 0;
         });
         const perc = totalChap > 0 ? Math.round((doneChap / totalChap) * 100) : 0;
         const color = colors[trackIdx % colors.length]; const shadow = shadows[trackIdx % shadows.length];
@@ -8545,132 +8502,69 @@ window.populateAnalyticsModal = function (typeKey) {
 
 window.openGoalDetailsModal = function (goalId) {
     const goal = window.paceGoals.find(g => g.id === goalId);
-    if (!goal || !window.lastSubjectStats) return;
+    if (!goal) return;
 
-    const subjectStats = window.lastSubjectStats;
-    let targetedSubjects = new Set();
+    if (!window.lastSubjectStats && typeof updateMetrics === 'function') {
+        updateMetrics();
+    }
+    const subjectStats = window.lastSubjectStats || {};
+    const stats = window.calculatePaceGoalStats(goal, subjectStats);
+    if (!stats) return;
+
+    const {
+        total, completed, remaining, percentage,
+        startDate, targetDate, reqPaceVal, curPaceVal,
+        targetedSubjects
+    } = stats;
+
     let scopeHtml = '';
-
     if (goal.type === 'global') {
         const isManual = goal.subjects || goal.secondaryPaces;
         if (isManual) {
-            if (goal.subjects) goal.subjects.forEach(s => targetedSubjects.add(s));
-            if (goal.secondaryPaces) {
-                goal.secondaryPaces.forEach(pid => {
-                    const g = window.paceGoals.find(x => x.id === pid);
-                    if (g) {
-                        if (g.type === 'bundle') {
-                            if (g.subjects) g.subjects.forEach(s => targetedSubjects.add(s));
-                            if (g.programs) {
-                                window.getAllSubjects().forEach(s => { if (g.programs.includes(s.program)) targetedSubjects.add(s.subject); });
-                            }
-                        } else if (g.type === 'subject') {
-                            targetedSubjects.add(g.target);
-                        } else if (g.type === 'program') {
-                            window.getAllSubjects().forEach(s => { if (g.target === s.program) targetedSubjects.add(s.subject); });
-                        }
-                    }
-                });
-            }
             let detailText = `Manually mapped ${goal.subjects ? goal.subjects.length : 0} explicit Subjects and ${goal.secondaryPaces ? goal.secondaryPaces.length : 0} Secondary Paces.`;
             scopeHtml = `<div class="text-[10px] md:text-xs font-bold text-slate-500 dark:text-slate-400 mb-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 rounded-xl shadow-sm">${detailText}</div>`;
         } else {
-            window.paceGoals.forEach(g => {
-                if (g.id === goal.id) return;
-                const gStart = g.startDate ? Utils.parseDateSafe(g.startDate) : new Date(AppState.globalStartDate);
-                const gEnd = g.deadline ? Utils.parseDateSafe(g.deadline) : new Date(AppState.globalEndDate);
-                gStart.setHours(0, 0, 0, 0); gEnd.setHours(23, 59, 59, 999);
-                if (gEnd < AppState.globalStartDate || gStart > AppState.globalEndDate) return;
-
-                if (g.type === 'bundle') {
-                    if (g.subjects) g.subjects.forEach(s => targetedSubjects.add(s));
-                    if (g.programs) {
-                        window.getAllSubjects().forEach(s => { if (g.programs.includes(s.program)) targetedSubjects.add(s.subject); });
-                    }
-                } else if (g.type === 'subject') targetedSubjects.add(g.target);
-                else if (g.type === 'program') {
-                    window.getAllSubjects().forEach(s => { if (g.target === s.program) targetedSubjects.add(s.subject); });
-                }
-            });
             scopeHtml = `<div class="text-[10px] md:text-xs font-bold text-slate-500 dark:text-slate-400 mb-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 rounded-xl shadow-sm">Aggregates mapped subjects intersecting with the Global Timeline bounds.</div>`;
         }
     } else if (goal.type === 'bundle') {
-        if (goal.subjects) {
-            goal.subjects.forEach(s => targetedSubjects.add(s));
+        if (goal.subjects && goal.subjects.length > 0) {
             scopeHtml = `<div class="text-[10px] md:text-xs font-bold text-slate-500 dark:text-slate-400 mb-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 p-3 rounded-xl shadow-sm">Custom explicit selection of ${goal.subjects.length} subjects.</div>`;
-        } else if (goal.programs) {
+        } else if (goal.programs && goal.programs.length > 0) {
             let pList = goal.programs.join(', ');
             scopeHtml = `<div class="text-[10px] md:text-xs font-bold text-slate-500 dark:text-slate-400 mb-3 bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800 p-3 rounded-xl shadow-sm">Programs Scoped: <span class="text-violet-600 dark:text-violet-400">${pList}</span></div>`;
-            window.getAllSubjects().forEach(s => {
-                if (goal.programs.includes(s.program)) targetedSubjects.add(s.subject);
-            });
         }
-    } else if (goal.type === 'subject') {
-        targetedSubjects.add(goal.target);
     } else if (goal.type === 'program') {
         scopeHtml = `<div class="text-[10px] md:text-xs font-bold text-slate-500 dark:text-slate-400 mb-3 bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800 p-3 rounded-xl shadow-sm">Program Scoped: <span class="text-violet-600 dark:text-violet-400">${goal.target}</span></div>`;
-        window.getAllSubjects().forEach(s => { if (s.program === goal.target) targetedSubjects.add(s.subject); });
     }
 
-    let total = 0; let completed = 0;
     let subjectsListHtml = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">';
     targetedSubjects.forEach(sub => {
-        if (subjectStats[sub]) {
-            total += subjectStats[sub].totalChapters;
-            completed += subjectStats[sub].effectiveChapters;
+        const sObj = window.getAllSubjects ? window.getAllSubjects().find(s => s.subject === sub) : null;
+        const subStat = (subjectStats && subjectStats[sub]) || { totalChapters: sObj ? (sObj.chapters || 0) : 0, effectiveChapters: 0 };
+        const sChTotal = subStat.totalChapters || 0;
+        const sChDone = Math.round(subStat.effectiveChapters || 0);
+        const sPct = sChTotal > 0 ? Math.round((sChDone / sChTotal) * 100) : 0;
+        const color = getSubjectColor(sub);
+        const progName = sObj ? sObj.program : '';
+        const displaySub = sub.replace(progName + ' - ', '').replace(progName + ' ', '');
 
-            let sChTotal = subjectStats[sub].totalChapters;
-            let sChDone = Math.round(subjectStats[sub].effectiveChapters);
-            let sPct = sChTotal > 0 ? Math.round((sChDone / sChTotal) * 100) : 0;
-            let color = getSubjectColor(sub);
-
-            let sObj = window.getAllSubjects().find(s => s.subject === sub);
-            let progName = sObj ? sObj.program : '';
-            let displaySub = sub.replace(progName + ' - ', '').replace(progName + ' ', '');
-
-            subjectsListHtml += `
-                    <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex flex-col gap-1.5 shadow-sm hover:border-emerald-300 dark:hover:border-emerald-700 transition-all">
-                        <div class="flex justify-between items-start mb-0.5">
-                            <div class="flex flex-col pr-2">
-                                <span class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">${progName}</span>
-                                <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 leading-tight" title="${sub}"><div class="inline-block w-1.5 h-1.5 rounded-full mr-1.5 mb-[1px]" style="background-color: ${color}"></div>${displaySub}</span>
-                            </div>
-                            <span class="text-[9px] md:text-[10px] font-black text-slate-500 shrink-0 bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded shadow-sm border border-slate-100 dark:border-slate-700">${sChDone} / ${sChTotal}</span>
+        subjectsListHtml += `
+                <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex flex-col gap-1.5 shadow-sm hover:border-emerald-300 dark:hover:border-emerald-700 transition-all">
+                    <div class="flex justify-between items-start mb-0.5">
+                        <div class="flex flex-col pr-2">
+                            <span class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">${progName}</span>
+                            <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 leading-tight" title="${sub}"><div class="inline-block w-1.5 h-1.5 rounded-full mr-1.5 mb-[1px]" style="background-color: ${color}"></div>${displaySub}</span>
                         </div>
-                        <div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-auto">
-                            <div class="h-full rounded-full transition-all duration-700 shadow-sm" style="width: ${sPct}%; background-color: ${color}"></div>
-                        </div>
-                    </div>`;
-        }
+                        <span class="text-[9px] md:text-[10px] font-black text-slate-500 shrink-0 bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded shadow-sm border border-slate-100 dark:border-slate-700">${sChDone} / ${sChTotal}</span>
+                    </div>
+                    <div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-auto">
+                        <div class="h-full rounded-full transition-all duration-700 shadow-sm" style="width: ${sPct}%; background-color: ${color}"></div>
+                    </div>
+                </div>`;
     });
     subjectsListHtml += '</div>';
 
     if (targetedSubjects.size === 0) subjectsListHtml = '<div class="p-6 text-center border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl"><p class="text-xs font-bold text-slate-400">No subjects currently mapped or active in this scope.</p></div>';
-
-    const startDate = goal.startDate ? Utils.parseDateSafe(goal.startDate) : new Date(AppState.PLAN_START_DATE);
-    const targetDate = Utils.parseDateSafe(goal.deadline);
-    startDate.setHours(0, 0, 0, 0); targetDate.setHours(23, 59, 59, 999);
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const msPerDay = 1000 * 60 * 60 * 24;
-
-    const remaining = Math.max(0, total - completed);
-    const totalDays = Math.max(1, Math.ceil((targetDate - startDate) / msPerDay));
-    const daysElapsed = Math.floor((today - startDate) / msPerDay) + 1;
-    const daysRemaining = Math.max(0, Math.ceil((targetDate - today) / msPerDay));
-
-    let reqPaceVal = 0; let curPaceVal = 0;
-    if (total > 0) {
-        if (today < startDate) {
-            reqPaceVal = total / totalDays;
-            curPaceVal = 0;
-        } else if (today > targetDate) {
-            reqPaceVal = remaining > 0 ? remaining : 0;
-            curPaceVal = completed / daysElapsed;
-        } else {
-            reqPaceVal = remaining > 0 ? remaining / Math.max(1, daysRemaining) : 0;
-            curPaceVal = completed / daysElapsed;
-        }
-    }
 
     safeSetText('gdm-title', goal.target);
     safeSetText('gdm-dates', `Timeline: ${startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} - ${targetDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}`);
@@ -12571,155 +12465,22 @@ window.renderPaceTrendChart = function (goalId) {
     if (goalId && window.paceGoals) {
         const goal = window.paceGoals.find(g => g.id === goalId);
         if (goal) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const msPerDay = 1000 * 60 * 60 * 24;
-            const subjectStats = window.lastSubjectStats || {};
-            let total = 0;
-            let completed = 0;
-
-            if (goal.type === 'global') {
-                let targetedSubjects = new Set();
-                const isManual = goal.subjects || goal.secondaryPaces;
-                if (isManual) {
-                    if (goal.subjects) goal.subjects.forEach(s => targetedSubjects.add(s));
-                    if (goal.secondaryPaces) {
-                        goal.secondaryPaces.forEach(pid => {
-                            const g = window.paceGoals.find(x => x.id === pid);
-                            if (g) {
-                                if (g.type === 'bundle') {
-                                    if (g.subjects) g.subjects.forEach(s => targetedSubjects.add(s));
-                                    if (g.programs) {
-                                        window.tracks.map(t => t.id).forEach(track => {
-                                            if (syllabusStructure[track]) {
-                                                syllabusStructure[track].forEach(s => { if (g.programs.includes(s.program)) targetedSubjects.add(s.subject); });
-                                            }
-                                        });
-                                    }
-                                } else if (g.type === 'subject') {
-                                    targetedSubjects.add(g.target);
-                                } else if (g.type === 'program') {
-                                    window.tracks.map(t => t.id).forEach(track => {
-                                        if (syllabusStructure[track]) {
-                                            syllabusStructure[track].forEach(s => { if (g.target === s.program) targetedSubjects.add(s.subject); });
-                                        }
-                                    });
-                                }
-                            }
-                        });
-                    }
-                } else {
-                    window.paceGoals.forEach(g => {
-                        if (g.id === goal.id) return;
-                        if (!AppState.globalStartDate || !AppState.globalEndDate) return;
-                        const gStart = g.startDate ? Utils.parseDateSafe(g.startDate) : new Date(AppState.globalStartDate);
-                        const gEnd = g.deadline ? Utils.parseDateSafe(g.deadline) : new Date(AppState.globalEndDate);
-                        gStart.setHours(0, 0, 0, 0);
-                        gEnd.setHours(23, 59, 59, 999);
-                        if (gEnd < AppState.globalStartDate || gStart > AppState.globalEndDate) return;
-                        if (g.type === 'bundle') {
-                            if (g.subjects) g.subjects.forEach(s => targetedSubjects.add(s));
-                            if (g.programs) {
-                                window.tracks.map(t => t.id).forEach(track => {
-                                    if (syllabusStructure[track]) {
-                                        syllabusStructure[track].forEach(s => { if (g.programs.includes(s.program)) targetedSubjects.add(s.subject); });
-                                    }
-                                });
-                            }
-                        } else if (g.type === 'subject') {
-                            targetedSubjects.add(g.target);
-                        } else if (g.type === 'program') {
-                            window.tracks.map(t => t.id).forEach(track => {
-                                if (syllabusStructure[track]) {
-                                    syllabusStructure[track].forEach(s => { if (g.target === s.program) targetedSubjects.add(s.subject); });
-                                }
-                            });
-                        }
-                    });
-                }
-                targetedSubjects.forEach(sub => {
-                    if (subjectStats[sub]) { total += subjectStats[sub].totalChapters; completed += subjectStats[sub].effectiveChapters; }
-                });
-            } else if (goal.type === 'bundle') {
-                if (goal.subjects) {
-                    goal.subjects.forEach(sub => {
-                        if (subjectStats[sub]) { total += subjectStats[sub].totalChapters; completed += subjectStats[sub].effectiveChapters; }
-                    });
-                } else if (goal.programs) {
-                    let programSubs = [];
-                    window.tracks.map(t => t.id).forEach(track => {
-                        if (syllabusStructure[track]) {
-                            syllabusStructure[track].forEach(s => {
-                                if (goal.programs.includes(s.program)) programSubs.push(s.subject);
-                            });
-                        }
-                    });
-                    programSubs.forEach(sub => {
-                        if (subjectStats[sub]) { total += subjectStats[sub].totalChapters; completed += subjectStats[sub].effectiveChapters; }
-                    });
-                }
-            } else if (goal.type === 'subject') {
-                if (subjectStats[goal.target]) { total = subjectStats[goal.target].totalChapters; completed = subjectStats[goal.target].effectiveChapters; }
-            } else if (goal.type === 'program') {
-                const programSubs = [];
-                window.tracks.map(t => t.id).forEach(track => {
-                    if (syllabusStructure[track]) {
-                        syllabusStructure[track].forEach(s => { if (s.program === goal.target) programSubs.push(s.subject); });
-                    }
-                });
-                programSubs.forEach(sub => { if (subjectStats[sub]) { total += subjectStats[sub].totalChapters; completed += subjectStats[sub].effectiveChapters; } });
+            const stats = window.calculatePaceGoalStats(goal, window.lastSubjectStats);
+            if (stats) {
+                paceData = {
+                    total: stats.total,
+                    completed: stats.completed,
+                    start: stats.startDate,
+                    end: stats.targetDate,
+                    today: new Date(),
+                    reqPace: stats.reqPaceVal,
+                    curPace: stats.curPaceVal,
+                    projectedDate: stats.projectedDate,
+                    subjects: Array.from(stats.targetedSubjects),
+                    title: goal.target + " Trend",
+                    description: "Burn-up comparison of Required vs Actual trajectories for " + goal.target + "."
+                };
             }
-
-            const startDate = goal.startDate ? Utils.parseDateSafe(goal.startDate) : new Date(AppState.PLAN_START_DATE);
-            const targetDate = Utils.parseDateSafe(goal.deadline);
-            startDate.setHours(0, 0, 0, 0); targetDate.setHours(23, 59, 59, 999);
-
-            const remaining = Math.max(0, total - completed);
-            const totalDays = Math.max(1, Math.ceil((targetDate - startDate) / msPerDay));
-            const daysElapsed = Math.floor((today - startDate) / msPerDay) + 1;
-            const daysRemaining = Math.max(0, Math.ceil((targetDate - today) / msPerDay));
-
-            let reqPaceVal = 0;
-            let curPaceVal = 0;
-
-            if (total > 0) {
-                if (today < startDate) {
-                    reqPaceVal = total / totalDays;
-                    curPaceVal = 0;
-                } else if (today > targetDate) {
-                    reqPaceVal = remaining > 0 ? remaining : 0;
-                    curPaceVal = completed / daysElapsed;
-                } else {
-                    reqPaceVal = remaining > 0 ? remaining / Math.max(1, daysRemaining) : 0;
-                    curPaceVal = completed / daysElapsed;
-                }
-            }
-
-            let projectedDate = new Date(today);
-            if (remaining <= 0) {
-                projectedDate = new Date(today);
-            } else if (curPaceVal > 0) {
-                const daysToFinish = remaining / curPaceVal;
-                projectedDate.setDate(today.getDate() + daysToFinish);
-            } else {
-                projectedDate = new Date(0);
-            }
-
-            const targetSubjects = window.getTargetedSubjectsForGoal(goal);
-
-            paceData = {
-                total: total,
-                completed: completed,
-                start: startDate,
-                end: targetDate,
-                today: today,
-                reqPace: reqPaceVal,
-                curPace: curPaceVal,
-                projectedDate: projectedDate,
-                subjects: Array.from(targetSubjects),
-                title: goal.target + " Trend",
-                description: "Burn-up comparison of Required vs Actual trajectories for " + goal.target + "."
-            };
         }
     }
 
@@ -23055,7 +22816,7 @@ window.switchPage = function (pageId) {
         }
         } else if (pageId === 'subjects') {
         if (typeof renderSubjectNavigation === 'function') renderSubjectNavigation();
-        if (typeof renderCategoryProgress === 'function') renderCategoryProgress(typeof latestChartStats !== 'undefined' && latestChartStats?.subjects ? latestChartStats.subjects : {});
+        if (typeof renderCategoryProgress === 'function') renderCategoryProgress(window.lastSubjectStats || (typeof updateMetrics === 'function' ? (updateMetrics(), window.lastSubjectStats) : {}));
         setTimeout(() => {
             if (AppState.progressChart) {
                 const oldData = AppState.progressChart.data.datasets[0].data.slice();
@@ -23074,7 +22835,7 @@ window.switchPage = function (pageId) {
         if (typeof renderDailyTracker === 'function') renderDailyTracker();
         if (typeof renderDailyLogs === 'function') renderDailyLogs();
     } else if (pageId === 'paces-management') {
-        if (typeof window.renderPaceGoals === 'function') window.renderPaceGoals(typeof latestChartStats !== 'undefined' && latestChartStats?.subjects ? latestChartStats.subjects : {});
+        if (typeof window.renderPaceGoals === 'function') window.renderPaceGoals(window.lastSubjectStats || (typeof updateMetrics === 'function' ? (updateMetrics(), window.lastSubjectStats) : {}));
     } else if (pageId === 'outcome') {
         if (typeof window.renderResults === 'function') window.renderResults();
         if (typeof window.renderPassConfig === 'function') window.renderPassConfig();
