@@ -3422,12 +3422,7 @@ function renderTaskList() {
                     return match && parseInt(match[0]) === chNum;
                 });
 
-                const isStatusComplete = isFrozen || (window.getChapterStatus && window.getChapterStatus(sub, chNum, group.type) === 'complete');
-
                 if (existingTask) {
-                    if (isStatusComplete) {
-                        existingTask.taskObj.completed = true;
-                    }
                     allChapterTasks.push(existingTask);
                 } else {
                     allChapterTasks.push({
@@ -3437,7 +3432,7 @@ function renderTaskList() {
                             subject: sub,
                             chapter: `Ch. ${chNum}`,
                             title: `Topic ${chNum}`,
-                            completed: isStatusComplete,
+                            completed: false,
                             skipped: false
                         },
                         type: group.type || 'ca'
@@ -21479,55 +21474,6 @@ window.togglePassStatus = function (type, name, isChecked) {
     if (!window.passedItems) window.passedItems = { programs: [], subjects: [] };
     if (!AppState.passedItems) AppState.passedItems = window.passedItems;
 
-    const markSubjectChaptersComplete = (subjName) => {
-        const sObj = window.getAllSubjects().find(s => s.subject === subjName);
-        if (!sObj || sObj.chapters <= 0) return;
-        let taskType = null;
-        for (const tid in syllabusStructure) {
-            if (Array.isArray(syllabusStructure[tid]) && syllabusStructure[tid].some(s => s.subject === subjName)) {
-                taskType = tid; break;
-            }
-        }
-        if (!taskType) taskType = 'ca';
-        const key = taskType + 'Tasks';
-        const nowIso = new Date().toISOString();
-
-        for (let chNum = 1; chNum <= sObj.chapters; chNum++) {
-            const formattedCh = `Ch. ${chNum}`;
-            let slotted = false;
-            for (let i = 0; i < AppState.tasks.length; i++) {
-                if (AppState.tasks[i].type === 'study' && Array.isArray(AppState.tasks[i][key])) {
-                    const b = AppState.tasks[i][key].find(b => b.subject === subjName && (b.chapter === formattedCh || b.chapter === String(chNum)));
-                    if (b) {
-                        b.completed = true;
-                        if (!b.completedAt) b.completedAt = nowIso;
-                        slotted = true;
-                        break;
-                    }
-                }
-            }
-            if (!slotted) {
-                for (let i = 0; i < AppState.tasks.length; i++) {
-                    if (AppState.tasks[i].type === 'study' && Array.isArray(AppState.tasks[i][key])) {
-                        const bIdx = AppState.tasks[i][key].findIndex(b => b.subject === 'Revision');
-                        if (bIdx > -1) {
-                            AppState.tasks[i][key][bIdx] = {
-                                subject: subjName,
-                                chapter: formattedCh,
-                                title: `Topic ${chNum}`,
-                                completed: true,
-                                completedAt: nowIso,
-                                id: AppState.tasks[i][key][bIdx].id
-                            };
-                            slotted = true;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    };
-
     if (type === 'program') {
         if (isChecked) {
             if (!window.passedItems.programs.includes(name)) window.passedItems.programs.push(name);
@@ -21543,7 +21489,6 @@ window.togglePassStatus = function (type, name, isChecked) {
             });
             programSubs.forEach(sub => {
                 if (!window.passedItems.subjects.includes(sub)) window.passedItems.subjects.push(sub);
-                markSubjectChaptersComplete(sub);
             });
 
         } else {
@@ -21563,7 +21508,6 @@ window.togglePassStatus = function (type, name, isChecked) {
     } else if (type === 'subject') {
         if (isChecked) {
             if (!window.passedItems.subjects.includes(name)) window.passedItems.subjects.push(name);
-            markSubjectChaptersComplete(name);
 
             // Link: Check if all subjects in the program are now checked
             const sObj = window.getAllSubjects().find(s => s.subject === name);
