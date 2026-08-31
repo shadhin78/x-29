@@ -56,8 +56,36 @@ window.Utils = {
      * Parses the start date of a weekly target date range string.
      */
     parseStart: function(wkStr) {
+        if (!wkStr) return new Date(0);
         const parts = wkStr.split(' - ');
-        return parts[0] ? new Date(parts[0]) : new Date(0);
+        return parts[0] ? (window.Utils && typeof window.Utils.parseDateSafe === 'function' ? window.Utils.parseDateSafe(parts[0]) : new Date(parts[0])) : new Date(0);
+    },
+
+    /**
+     * Parses the end date of a weekly target date range string.
+     */
+    parseEnd: function(wkStr) {
+        if (!wkStr) return new Date(0);
+        const parts = wkStr.split(' - ');
+        return parts[1] ? (window.Utils && typeof window.Utils.parseDateSafe === 'function' ? window.Utils.parseDateSafe(parts[1]) : new Date(parts[1])) : new Date(0);
+    },
+
+    /**
+     * Checks if a date falls strictly within a week range key.
+     */
+    isDateInWeekRange: function(date, wkStr) {
+        if (!date || !wkStr) return false;
+        const parts = wkStr.split(' - ');
+        if (parts.length < 2) return false;
+        const parseFn = window.Utils && typeof window.Utils.parseDateSafe === 'function' ? window.Utils.parseDateSafe : (d => new Date(d));
+        const dObj = (date instanceof Date) ? date : parseFn(date);
+        const start = parseFn(parts[0]);
+        const end = parseFn(parts[1]);
+        if (isNaN(dObj.getTime()) || isNaN(start.getTime()) || isNaN(end.getTime())) return false;
+        const dTime = new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate()).getTime();
+        const startTime = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+        const endTime = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+        return dTime >= startTime && dTime <= endTime;
     },
 
     /**
@@ -343,6 +371,8 @@ window.formatTime12h = window.Utils.formatTime12h;
 window.extractNum = window.Utils.extractNum;
 window.isChapterMatch = window.Utils.isChapterMatch;
 window.parseStart = window.Utils.parseStart;
+window.parseEnd = window.Utils.parseEnd;
+window.isDateInWeekRange = window.Utils.isDateInWeekRange;
 window.formatDaysPassed = window.Utils.formatDaysPassed;
 window.formatDate = window.Utils.formatDate;
 window.formatDateMobile = window.Utils.formatDateMobile;

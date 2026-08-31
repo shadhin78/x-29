@@ -16198,29 +16198,31 @@ window.splitChapterAcrossDays = function (subject, chapter, numDays, track = nul
     const days = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate, targetWeekKey) : [];
     if (days.length === 0) return;
 
+    const effectiveDays = Math.max(1, Math.min(numDays, days.length));
+
     const todayStr = Utils.formatDate(new Date());
     let startIdx = days.findIndex(d => d.key === todayStr);
-    if (startIdx === -1 || startIdx + numDays > days.length) startIdx = 0;
+    if (startIdx === -1 || startIdx + effectiveDays > days.length) startIdx = 0;
 
-    const basePortion = totalSize ? Math.floor(totalSize / numDays) : null;
-    const remainder = totalSize ? (totalSize % numDays) : 0;
+    const basePortion = totalSize ? Math.floor(totalSize / effectiveDays) : null;
+    const remainder = totalSize ? (totalSize % effectiveDays) : 0;
 
     const newAllocations = [];
-    for (let i = 0; i < numDays; i++) {
+    for (let i = 0; i < effectiveDays; i++) {
         const dayObj = days[(startIdx + i) % days.length];
         const daySize = basePortion !== null ? (basePortion + (i === 0 ? remainder : 0)) : null;
         newAllocations.push({
             dayKey: dayObj ? dayObj.key : '',
             portionSize: daySize,
-            fraction: `1/${numDays}`,
-            portionLabel: `Part ${i + 1}/${numDays}`
+            fraction: `1/${effectiveDays}`,
+            portionLabel: `Part ${i + 1}/${effectiveDays}`
         });
     }
 
     window.monthlyTargetDailyAllocations[key] = newAllocations;
     window.renderMonthlyTargetDailyAllocations();
     window.updateMonthlyTargetPageSummary();
-    showToast(`⚡ Split across ${numDays} days successfully!`, "success");
+    showToast(`⚡ Split across ${effectiveDays} days successfully!`, "success");
 };
 
 window.updateDailyAllocationDay = function (subject, chapter, rowIdx, dayKey) {
@@ -16565,29 +16567,40 @@ window.applyBulkSizeToMonthlyChapters = function () {
 
 window.getWeeksForMonth = function (date = new Date()) {
     const d = new Date(date);
-    const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
-    const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const totalDays = new Date(year, month + 1, 0).getDate();
 
     const weeks = [];
-    const seen = new Set();
+    let curDay = 1;
 
-    let cur = new Date(startOfMonth);
-    while (cur <= endOfMonth) {
-        const range = window.getWeeklyTargetRange(cur);
-        const weekKey = window.formatDateRangeKey(range.start, range.end);
-        if (!seen.has(weekKey)) {
-            seen.add(weekKey);
-            const opt = { day: '2-digit', month: 'short' };
-            const label = `Week ${weeks.length + 1}: ${range.start.toLocaleDateString('en-GB', opt)} - ${range.end.toLocaleDateString('en-GB', opt)}`;
-            weeks.push({
-                key: weekKey,
-                start: range.start,
-                end: range.end,
-                label: label
-            });
+    while (curDay <= totalDays) {
+        const start = new Date(year, month, curDay, 0, 1, 0, 0);
+        let endDay = curDay;
+
+        while (endDay < totalDays) {
+            const checkDate = new Date(year, month, endDay);
+            if (checkDate.getDay() === 5) { // Friday
+                break;
+            }
+            endDay++;
         }
-        cur.setDate(cur.getDate() + 1);
+
+        const end = new Date(year, month, endDay, 23, 59, 59, 999);
+        const weekKey = window.formatDateRangeKey(start, end);
+        const opt = { day: '2-digit', month: 'short' };
+        const label = `Week ${weeks.length + 1}: ${start.toLocaleDateString('en-GB', opt)} - ${end.toLocaleDateString('en-GB', opt)}`;
+
+        weeks.push({
+            key: weekKey,
+            start: start,
+            end: end,
+            label: label
+        });
+
+        curDay = endDay + 1;
     }
+
     return weeks;
 };
 
@@ -16596,16 +16609,27 @@ window.getDaysForMonthOrWeek = function (monthDate = new Date(), weekKey = null)
     if (weekKey && weekKey !== 'none' && weekKey !== '') {
         const dates = weekKey.split(' - ');
         if (dates.length === 2) {
-            const start = Utils.parseDateSafe(dates[0]);
-            if (!isNaN(start.getTime())) {
-                for (let i = 0; i < 7; i++) {
-                    const dayDate = new Date(start);
-                    dayDate.setDate(dayDate.getDate() + i);
+            const start = Utils.parseDateSafe ? Utils.parseDateSafe(dates[0]) : new Date(dates[0]);
+            const end = Utils.parseDateSafe ? Utils.parseDateSafe(dates[1]) : new Date(dates[1]);
+            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                const targetMonth = monthDate ? new Date(monthDate).getMonth() : start.getMonth();
+                const targetYear = monthDate ? new Date(monthDate).getFullYear() : start.getFullYear();
+
+                let cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+                const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+                while (cur <= endDay) {
+                    if (monthDate && (cur.getMonth() !== targetMonth || cur.getFullYear() !== targetYear)) {
+                        break;
+                    }
+                    const dayDate = new Date(cur);
                     const dateKey = Utils.formatDate(dayDate);
                     const dayStr = dayDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
                     const wkStr = dayDate.toLocaleDateString('en-GB', { weekday: 'short' });
                     const label = `${dayStr} (${wkStr})`;
                     days.push({ key: dateKey, rawDate: dayDate, label: label });
+
+                    cur.setDate(cur.getDate() + 1);
                 }
                 return days;
             }
@@ -18255,9 +18279,10 @@ window.getCompletedSizeForWeeklyTarget = function (target, weekKey) {
 
     Object.keys(window.dailyTargetsDatabase).forEach(dateKey => {
         const d = window.parseDailyTargetDateKey(dateKey);
-        const range = window.getWeeklyTargetRange(d);
-        const dateWeekKey = window.formatDateRangeKey(range.start, range.end);
-        if (dateWeekKey !== weekKey) return;
+        const isInWeek = window.isDateInWeekRange
+            ? window.isDateInWeekRange(d, weekKey)
+            : (window.Utils && window.Utils.isDateInWeekRange ? window.Utils.isDateInWeekRange(d, weekKey) : false);
+        if (!isInWeek) return;
 
         const dailyTargets = window.dailyTargetsDatabase[dateKey] || [];
         dailyTargets.forEach(dt => {
@@ -18285,9 +18310,10 @@ window.getAllocatedSizeForWeeklyTarget = function (target, weekKey) {
 
     Object.keys(window.dailyTargetsDatabase).forEach(dateKey => {
         const d = window.parseDailyTargetDateKey(dateKey);
-        const range = window.getWeeklyTargetRange(d);
-        const dateWeekKey = window.formatDateRangeKey(range.start, range.end);
-        if (dateWeekKey !== weekKey) return;
+        const isInWeek = window.isDateInWeekRange
+            ? window.isDateInWeekRange(d, weekKey)
+            : (window.Utils && window.Utils.isDateInWeekRange ? window.Utils.isDateInWeekRange(d, weekKey) : false);
+        if (!isInWeek) return;
 
         const dailyTargets = window.dailyTargetsDatabase[dateKey] || [];
         dailyTargets.forEach(dt => {
@@ -18653,12 +18679,15 @@ window.deleteWeeklyTarget = function (idx, targetId = null) {
         const subject = target.subject;
         const chapter = target.chapter;
 
-        const range = Utils.parseStart ? { start: Utils.parseStart(selectedWeekKey) } : window.getWeeklyTargetRange(window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(selectedWeekKey.split(' - ')[0]) : new Date());
-        if (window.dailyTargetsDatabase) {
-            for (let i = 0; i < 7; i++) {
-                const startVal = range.start ? range.start.getTime() : new Date().getTime();
-                const d = new Date(startVal + i * 24 * 60 * 60 * 1000);
-                const dateKey = Utils.formatDate(d);
+        const weekDates = selectedWeekKey ? selectedWeekKey.split(' - ') : [];
+        const startDate = Utils.parseDateSafe ? Utils.parseDateSafe(weekDates[0]) : (Utils.parseStart ? Utils.parseStart(selectedWeekKey) : new Date());
+        const endDate = (weekDates.length === 2 && Utils.parseDateSafe) ? Utils.parseDateSafe(weekDates[1]) : new Date(startDate.getTime() + 6 * 24 * 60 * 60 * 1000);
+
+        if (window.dailyTargetsDatabase && startDate && !isNaN(startDate.getTime())) {
+            let cur = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+            const endDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+            while (cur <= endDay) {
+                const dateKey = Utils.formatDate(cur);
                 const dList = window.dailyTargetsDatabase[dateKey] || [];
                 dList.forEach(dt => {
                     if (dt.track === trackId && dt.subject === subject && dt.chapter === chapter) {
@@ -18667,6 +18696,7 @@ window.deleteWeeklyTarget = function (idx, targetId = null) {
                         if (dtId) window.recordItemDeletion(dtId);
                     }
                 });
+                cur.setDate(cur.getDate() + 1);
             }
         }
 
@@ -18689,12 +18719,15 @@ window.toggleWeeklyTargetCompletion = function (idx, isCompleted) {
     target.completedAt = isCompleted ? new Date().toISOString() : null; // Sync date
 
     // Sync with Daily Targets across the selected week
-    const startDate = Utils.parseStart ? Utils.parseStart(selectedWeekKey) : (window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(selectedWeekKey.split(' - ')[0]) : new Date());
+    const weekDates = selectedWeekKey ? selectedWeekKey.split(' - ') : [];
+    const startDate = Utils.parseDateSafe ? Utils.parseDateSafe(weekDates[0]) : (Utils.parseStart ? Utils.parseStart(selectedWeekKey) : new Date());
+    const endDate = (weekDates.length === 2 && Utils.parseDateSafe) ? Utils.parseDateSafe(weekDates[1]) : new Date(startDate.getTime() + 6 * 24 * 60 * 60 * 1000);
+
     if (startDate && !isNaN(startDate.getTime()) && window.dailyTargetsDatabase) {
-        const range = window.getWeeklyTargetRange(startDate);
-        for (let i = 0; i < 7; i++) {
-            const d = new Date(range.start.getTime() + i * 24 * 60 * 60 * 1000);
-            const dateKey = Utils.formatDate(d);
+        let cur = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const endDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        while (cur <= endDay) {
+            const dateKey = Utils.formatDate(cur);
             const list = window.dailyTargetsDatabase[dateKey] || [];
             list.forEach(matchingDt => {
                 if (matchingDt.track === target.track && matchingDt.subject === target.subject && matchingDt.chapter === target.chapter) {
@@ -18702,6 +18735,7 @@ window.toggleWeeklyTargetCompletion = function (idx, isCompleted) {
                     matchingDt.completedAt = target.completedAt;
                 }
             });
+            cur.setDate(cur.getDate() + 1);
         }
     }
 
@@ -19608,13 +19642,16 @@ window.autoSyncWeeklyToDailyTargets = function () {
         const weeklyTargets = window.weeklyTargetsDatabase[weekKey] || [];
         if (weeklyTargets.length === 0) return;
 
-        const startDate = Utils.parseStart ? Utils.parseStart(weekKey) : (window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(weekKey.split(' - ')[0]) : new Date());
+        const weekDates = weekKey ? weekKey.split(' - ') : [];
+        const startDate = Utils.parseDateSafe ? Utils.parseDateSafe(weekDates[0]) : (Utils.parseStart ? Utils.parseStart(weekKey) : new Date());
+        const endDate = (weekDates.length === 2 && Utils.parseDateSafe) ? Utils.parseDateSafe(weekDates[1]) : new Date(startDate.getTime() + 6 * 24 * 60 * 60 * 1000);
         if (!startDate || isNaN(startDate.getTime())) return;
 
-        const range = window.getWeeklyTargetRange(startDate);
+        let cur = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const endDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
 
-        for (let i = 0; i < 7; i++) {
-            const d = new Date(range.start.getTime() + i * 24 * 60 * 60 * 1000);
+        while (cur <= endDay) {
+            const d = new Date(cur);
             const dayOfWeekName = d.toLocaleDateString('en-US', { weekday: 'long' });
             const dateKey = Utils.formatDate(d);
 
@@ -19661,6 +19698,7 @@ window.autoSyncWeeklyToDailyTargets = function () {
                     }
                 });
             }
+            cur.setDate(cur.getDate() + 1);
         }
     });
 
@@ -19883,9 +19921,23 @@ window.renderDailyTargets = function () {
         const prevVal = wtDropdown.value;
         wtDropdown.innerHTML = '<option value="">-- Choose a Weekly Target --</option>';
 
-        const range = window.getWeeklyTargetRange(window.currentDailyTargetsDate);
-        const weekKey = window.formatDateRangeKey(range.start, range.end);
-        const wtList = (window.weeklyTargetsDatabase && window.weeklyTargetsDatabase[weekKey]) || [];
+        const targetDate = window.currentDailyTargetsDate || new Date();
+        let wtList = [];
+        if (window.weeklyTargetsDatabase) {
+            const allWeeks = Object.keys(window.weeklyTargetsDatabase);
+            const foundWeekKey = allWeeks.find(wk => {
+                return window.isDateInWeekRange
+                    ? window.isDateInWeekRange(targetDate, wk)
+                    : (window.Utils && window.Utils.isDateInWeekRange ? window.Utils.isDateInWeekRange(targetDate, wk) : false);
+            });
+            if (foundWeekKey) {
+                wtList = window.weeklyTargetsDatabase[foundWeekKey] || [];
+            } else {
+                const range = window.getWeeklyTargetRange(targetDate);
+                const weekKey = window.formatDateRangeKey(range.start, range.end);
+                wtList = window.weeklyTargetsDatabase[weekKey] || [];
+            }
+        }
 
         const passedItems = window.passedItems || (window.AppState && window.AppState.passedItems) || { programs: [], subjects: [] };
         wtList.forEach(wt => {
