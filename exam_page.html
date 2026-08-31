@@ -125,8 +125,8 @@
 
             <!-- Filter Tabs -->
             <div class="grid grid-cols-3 w-full sm:w-auto sm:flex items-center bg-slate-100 dark:bg-slate-700/60 p-1 rounded-xl gap-1 shrink-0">
-                <button onclick="window.setExamFilter('all')" id="btn-exam-filter-all" class="justify-center py-2 px-2.5 sm:px-3 sm:py-1.5 rounded-lg text-[10px] sm:text-[11px] font-black uppercase tracking-wider bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm transition-all min-h-[34px] flex items-center">All</button>
-                <button onclick="window.setExamFilter('upcoming')" id="btn-exam-filter-upcoming" class="justify-center py-2 px-2.5 sm:px-3 sm:py-1.5 rounded-lg text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-all min-h-[34px] flex items-center">Upcoming</button>
+                <button onclick="window.setExamFilter('all')" id="btn-exam-filter-all" class="justify-center py-2 px-2.5 sm:px-3 sm:py-1.5 rounded-lg text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-all min-h-[34px] flex items-center">All</button>
+                <button onclick="window.setExamFilter('upcoming')" id="btn-exam-filter-upcoming" class="justify-center py-2 px-2.5 sm:px-3 sm:py-1.5 rounded-lg text-[10px] sm:text-[11px] font-black uppercase tracking-wider bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm transition-all min-h-[34px] flex items-center">Upcoming</button>
                 <button onclick="window.setExamFilter('completed')" id="btn-exam-filter-completed" class="justify-center py-2 px-2.5 sm:px-3 sm:py-1.5 rounded-lg text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-all min-h-[34px] flex items-center">Completed</button>
             </div>
         </div>
@@ -284,7 +284,7 @@
 /* ==========================================
  * EXAM ROUTINE & COUNTDOWN SYSTEM (ARCHIVED)
  * ========================================== */
-window.examCurrentFilter = 'all';
+window.examCurrentFilter = 'upcoming';
 
 window.setExamFilter = function(filter) {
     window.examCurrentFilter = filter;
@@ -796,6 +796,24 @@ window.renderExamRoutine = function() {
     const query = (document.getElementById('exam-search-input')?.value || '').toLowerCase().trim();
     const sessions = (AppState.examSessions || []).slice();
     let exams = (AppState.examRoutine || []).slice();
+    const now = Date.now();
+
+    const parseExamTime = (dStr, tStr) => {
+        if (!dStr) return NaN;
+        const parts = dStr.split('-');
+        if (parts.length !== 3) return NaN;
+        const [yr, mo, dy] = parts.map(Number);
+        const [hr, mn] = (tStr || '00:00').split(':').map(Number);
+        return new Date(yr, mo - 1, dy, hr || 0, mn || 0).getTime();
+    };
+
+    const isExamDoneOrOver = (ex) => {
+        if (!ex) return true;
+        if (ex.status === 'completed') return true;
+        const exTimeMs = parseExamTime(ex.date, ex.time);
+        if (isNaN(exTimeMs)) return false;
+        return exTimeMs <= (now - 7200000);
+    };
 
     sessions.sort((a, b) => {
         if (!a.startDate && !b.startDate) return (b.createdAt || 0) - (a.createdAt || 0);
@@ -805,39 +823,12 @@ window.renderExamRoutine = function() {
     });
 
     exams.sort((a, b) => {
-        const ta = new Date(`${a.date}T${a.time || '00:00'}:00`).getTime();
-        const tb = new Date(`${b.date}T${b.time || '00:00'}:00`).getTime();
+        const ta = parseExamTime(a.date, a.time) || 0;
+        const tb = parseExamTime(b.date, b.time) || 0;
         return ta - tb;
     });
 
-    if (window.examCurrentFilter === 'upcoming') {
-        exams = exams.filter(e => e.status !== 'completed');
-    } else if (window.examCurrentFilter === 'completed') {
-        exams = exams.filter(e => e.status === 'completed');
-    }
-
-    if (query) {
-        exams = exams.filter(e =>
-            (e.title || '').toLowerCase().includes(query) ||
-            (e.subject || '').toLowerCase().includes(query) ||
-            (e.program || '').toLowerCase().includes(query)
-        );
-    }
-
-    if (sessions.length === 0) {
-        container.innerHTML = `
-            <div class="py-10 sm:py-12 px-4 text-center bg-slate-50 dark:bg-slate-800/40 rounded-2xl sm:rounded-3xl border border-dashed border-slate-200 dark:border-slate-700 w-full col-span-full">
-                <div class="w-12 h-12 mx-auto mb-3 text-slate-400 flex items-center justify-center bg-white dark:bg-slate-800 rounded-2xl shadow-sm">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01m-.01 4h.01"></path></svg>
-                </div>
-                <h4 class="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">No Sessions Found</h4>
-                <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">No sessions have been created yet. Click "Add Session" to create your first session block.</p>
-            </div>
-        `;
-        return;
-    }
-
-    const now = Date.now();
+    let renderedBlocksCount = 0;
     let blocksHtml = '';
 
     sessions.forEach(session => {
@@ -847,16 +838,57 @@ window.renderExamRoutine = function() {
             sessionExams.forEach(e => { e.sessionId = session.id; });
         }
 
+        const totalCount = sessionExams.length;
+        const completedCount = sessionExams.filter(isExamDoneOrOver).length;
+        const upcomingCount = totalCount - completedCount;
+
+        const isFullSessionCompleted = (function() {
+            if (totalCount > 0) {
+                return sessionExams.every(isExamDoneOrOver);
+            } else if (session.endDate) {
+                const endMs = new Date(session.endDate + 'T23:59:59').getTime();
+                return !isNaN(endMs) && endMs < now;
+            }
+            return false;
+        })();
+
+        // Filter which exams are displayed based on active filter tab
+        let filteredSessionExams = sessionExams;
+        if (window.examCurrentFilter === 'upcoming') {
+            if (totalCount > 0 && upcomingCount === 0) {
+                return; // Entire session completed, omit from upcoming view
+            }
+            if (totalCount === 0 && isFullSessionCompleted) {
+                return;
+            }
+            // In upcoming filter, show ONLY upcoming subjects (not done and date not over)
+            filteredSessionExams = sessionExams.filter(e => !isExamDoneOrOver(e));
+        } else if (window.examCurrentFilter === 'completed') {
+            if (completedCount === 0 && !isFullSessionCompleted) {
+                return; // No completed subjects in this session, omit from completed view
+            }
+            // In completed filter, show ONLY completed/date-over subjects
+            filteredSessionExams = sessionExams.filter(e => isExamDoneOrOver(e));
+        }
+
+        // Search query filter
+        let displayExams = filteredSessionExams;
         if (query) {
             const matchesSessionName = (session.name || '').toLowerCase().includes(query) || (session.program || '').toLowerCase().includes(query);
-            if (!matchesSessionName && sessionExams.length === 0) {
+            const matchingExams = filteredSessionExams.filter(e =>
+                (e.title || '').toLowerCase().includes(query) ||
+                (e.subject || '').toLowerCase().includes(query) ||
+                (e.program || '').toLowerCase().includes(query)
+            );
+            if (!matchesSessionName && matchingExams.length === 0) {
                 return;
+            }
+            if (!matchesSessionName) {
+                displayExams = matchingExams;
             }
         }
 
-        const totalCount = sessionExams.length;
-        const completedCount = sessionExams.filter(e => e.status === 'completed').length;
-        const upcomingCount = totalCount - completedCount;
+        renderedBlocksCount++;
 
         const isNonProgramSession = session.program === 'Non-Program';
         const sessionDisplayName = session.name ? `${session.program} - ${session.name}` : session.program;
@@ -873,25 +905,16 @@ window.renderExamRoutine = function() {
 
         let examsGridHtml = '';
 
-        if (sessionExams.length === 0) {
+        if (displayExams.length === 0) {
             examsGridHtml = `
                 <div class="col-span-full py-8 text-center bg-white/40 dark:bg-slate-800/10 border border-dashed border-slate-200/50 dark:border-slate-700/50 rounded-2xl">
                     <p class="text-xs text-slate-400 font-medium">No exams scheduled in this session yet.</p>
                 </div>
             `;
         } else {
-            sessionExams.forEach(ex => {
+            displayExams.forEach(ex => {
                 const isCompleted = ex.status === 'completed';
-                
-                const exTimeMs = (function(dStr, tStr) {
-                    if (!dStr) return NaN;
-                    const parts = dStr.split('-');
-                    if (parts.length !== 3) return NaN;
-                    const [yr, mo, dy] = parts.map(Number);
-                    const [hr, mn] = (tStr || '00:00').split(':').map(Number);
-                    return new Date(yr, mo - 1, dy, hr || 0, mn || 0).getTime();
-                })(ex.date, ex.time);
-
+                const exTimeMs = parseExamTime(ex.date, ex.time);
                 const targetExamDt = !isNaN(exTimeMs) ? new Date(exTimeMs) : null;
                 const rem = targetExamDt ? window.calculateExamTimeRemaining(new Date(now), targetExamDt) : null;
 
@@ -951,6 +974,10 @@ window.renderExamRoutine = function() {
             });
         }
 
+        const sessionStatusBadge = isFullSessionCompleted
+            ? `<span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shrink-0">✓ Session Completed</span>`
+            : '';
+
         blocksHtml += `
             <div class="bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-700/70 rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-6 shadow-sm space-y-3.5 sm:space-y-4 w-full">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-slate-200/60 dark:border-slate-700/60">
@@ -962,6 +989,7 @@ window.renderExamRoutine = function() {
                             <h4 class="text-base sm:text-lg font-black text-slate-800 dark:text-white leading-tight flex flex-wrap items-center gap-1.5 sm:gap-2 break-words">
                                 <span>${sessionDisplayName}</span>
                                 ${dateRangeBadge}
+                                ${sessionStatusBadge}
                             </h4>
                             <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1">
                                 <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60 shrink-0">
@@ -997,6 +1025,51 @@ window.renderExamRoutine = function() {
             </div>
         `;
     });
+
+    if (renderedBlocksCount === 0) {
+        if (query) {
+            container.innerHTML = `
+                <div class="py-10 sm:py-12 px-4 text-center bg-slate-50 dark:bg-slate-800/40 rounded-2xl sm:rounded-3xl border border-dashed border-slate-200 dark:border-slate-700 w-full col-span-full">
+                    <div class="w-12 h-12 mx-auto mb-3 text-slate-400 flex items-center justify-center bg-white dark:bg-slate-800 rounded-2xl shadow-sm">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <h4 class="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">No Results Found</h4>
+                    <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">No sessions or exams match "${query}".</p>
+                </div>
+            `;
+        } else if (window.examCurrentFilter === 'upcoming') {
+            container.innerHTML = `
+                <div class="py-10 sm:py-12 px-4 text-center bg-slate-50 dark:bg-slate-800/40 rounded-2xl sm:rounded-3xl border border-dashed border-slate-200 dark:border-slate-700 w-full col-span-full">
+                    <div class="w-12 h-12 mx-auto mb-3 text-slate-400 flex items-center justify-center bg-white dark:bg-slate-800 rounded-2xl shadow-sm">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01m-.01 4h.01"></path></svg>
+                    </div>
+                    <h4 class="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">No Upcoming Exam Sessions</h4>
+                    <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">All scheduled exam sessions are completed, or click "Add Session" to schedule a new one.</p>
+                </div>
+            `;
+        } else if (window.examCurrentFilter === 'completed') {
+            container.innerHTML = `
+                <div class="py-10 sm:py-12 px-4 text-center bg-slate-50 dark:bg-slate-800/40 rounded-2xl sm:rounded-3xl border border-dashed border-slate-200 dark:border-slate-700 w-full col-span-full">
+                    <div class="w-12 h-12 mx-auto mb-3 text-emerald-500 flex items-center justify-center bg-white dark:bg-slate-800 rounded-2xl shadow-sm">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <h4 class="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">No Completed Sessions</h4>
+                    <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Completed subjects and sessions will automatically appear here once their exam is over or marked complete.</p>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="py-10 sm:py-12 px-4 text-center bg-slate-50 dark:bg-slate-800/40 rounded-2xl sm:rounded-3xl border border-dashed border-slate-200 dark:border-slate-700 w-full col-span-full">
+                    <div class="w-12 h-12 mx-auto mb-3 text-slate-400 flex items-center justify-center bg-white dark:bg-slate-800 rounded-2xl shadow-sm">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01m-.01 4h.01"></path></svg>
+                    </div>
+                    <h4 class="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">No Sessions Found</h4>
+                    <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">No sessions have been created yet. Click "Add Session" to create your first session block.</p>
+                </div>
+            `;
+        }
+        return;
+    }
 
     container.innerHTML = blocksHtml;
 };
