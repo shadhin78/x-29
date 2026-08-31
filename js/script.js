@@ -3407,8 +3407,44 @@ function renderTaskList() {
 
     for (const sub in grouped) {
         const group = grouped[sub];
+        const sObj = window.getAllSubjects().find(s => s.subject === sub);
+        const safeSubId = sub.replace(/[^a-zA-Z0-9]/g, '-');
+        const isFrozen = (window.passedItems && window.passedItems.subjects && window.passedItems.subjects.includes(sub)) ||
+            (window.passedItems && window.passedItems.programs && window.passedItems.programs.includes(group.program));
+
+        if (sObj && sObj.chapters > 0) {
+            const allChapterTasks = [];
+            for (let chNum = 1; chNum <= sObj.chapters; chNum++) {
+                const existingTask = group.tasks.find(x => {
+                    const chStr = x.taskObj.chapter;
+                    if (chStr === `Ch. ${chNum}` || chStr === `Ch.${chNum}` || chStr === String(chNum)) return true;
+                    const match = chStr.match(/(\d+)(?!.*\d)/);
+                    return match && parseInt(match[0]) === chNum;
+                });
+
+                if (existingTask) {
+                    allChapterTasks.push(existingTask);
+                } else {
+                    const isComplete = isFrozen || (window.getChapterStatus && window.getChapterStatus(sub, chNum, group.type) === 'complete');
+                    allChapterTasks.push({
+                        dayObj: { studyDay: '—', id: `unsched-${safeSubId}-${chNum}`, date: '' },
+                        taskObj: {
+                            id: `unsched-${group.type || 'ca'}-${safeSubId}-${chNum}`,
+                            subject: sub,
+                            chapter: `Ch. ${chNum}`,
+                            title: `Topic ${chNum}`,
+                            completed: isComplete,
+                            skipped: false
+                        },
+                        type: group.type || 'ca'
+                    });
+                }
+            }
+            group.tasks = allChapterTasks;
+        }
+
         const skippedCount = group.tasks.filter(x => x.taskObj.skipped).length;
-        group.totalChapters = Math.max(0, group.totalChapters - skippedCount);
+        group.totalChapters = Math.max(0, (sObj ? sObj.chapters : group.totalChapters) - skippedCount);
     }
 
     let html = '';
@@ -3863,8 +3899,8 @@ function generateSingleTaskHtml(dayObj, taskObj, type) {
                     <div class="absolute top-0 left-0 w-full h-1" style="${barBgStyle} transition: background-color 0.3s;"></div>
                     
                     <div class="flex justify-between items-start mb-3 mt-1">
-                        <span class="text-[9px] px-2.5 py-1 bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 rounded-md font-black tracking-widest uppercase">DAY ${dayObj.studyDay} ${isSkipped ? '<span class="text-amber-600 dark:text-amber-400 font-extrabold ml-1">(SKIPPED)</span>' : ''}</span>
-                        <button onclick="openEditModal(${dayObj.id}, '${type}', '${taskObj.id}')" class="text-slate-400 hover:text-blue-500 active:scale-90 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 p-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700" title="Edit/Delete Task">
+                        <span class="text-[9px] px-2.5 py-1 bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 rounded-md font-black tracking-widest uppercase">${typeof dayObj.studyDay === 'number' ? `DAY ${dayObj.studyDay}` : 'CH ' + (taskObj.chapter.replace(/\D/g, '') || dayObj.studyDay)} ${isSkipped ? '<span class="text-amber-600 dark:text-amber-400 font-extrabold ml-1">(SKIPPED)</span>' : ''}</span>
+                        <button onclick="openEditModal(${typeof dayObj.id === 'number' ? dayObj.id : `'${dayObj.id}'`}, '${type}', '${taskObj.id}')" class="text-slate-400 hover:text-blue-500 active:scale-90 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 p-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700" title="Edit/Delete Task">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                         </button>
                     </div>
@@ -3876,7 +3912,7 @@ function generateSingleTaskHtml(dayObj, taskObj, type) {
                         </div>
                         <div class="shrink-0 mb-0.5">
                             <div class="relative flex items-center justify-center">
-                                <input type="checkbox" data-stud-id="${dayObj.studyDay}" data-subtask-id="${taskObj.id}" data-type="${type}" class="task-checkbox peer relative appearance-none w-6 h-6 border-2 border-slate-300 dark:border-slate-600 rounded-full bg-white dark:bg-slate-800 checked:bg-emerald-500 checked:border-emerald-500 focus:outline-none cursor-pointer transition-all shadow-sm hover:border-emerald-400" ${isCompleted ? 'checked' : ''} ${isSkipped ? 'disabled bg-slate-100 dark:bg-slate-800 border-slate-200 cursor-not-allowed' : ''}>
+                                <input type="checkbox" data-stud-id="${dayObj.studyDay}" data-subtask-id="${taskObj.id}" data-type="${type}" data-subject="${taskObj.subject}" data-chapter="${taskObj.chapter}" class="task-checkbox peer relative appearance-none w-6 h-6 border-2 border-slate-300 dark:border-slate-600 rounded-full bg-white dark:bg-slate-800 checked:bg-emerald-500 checked:border-emerald-500 focus:outline-none cursor-pointer transition-all shadow-sm hover:border-emerald-400" ${isCompleted ? 'checked' : ''} ${isSkipped ? 'disabled bg-slate-100 dark:bg-slate-800 border-slate-200 cursor-not-allowed' : ''}>
                                 <svg class="absolute w-3.5 h-3.5 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7"></path></svg>
                             </div>
                         </div>
@@ -3888,17 +3924,79 @@ function handleTaskToggle(e) {
     const studyDayId = parseInt(e.target.dataset.studId);
     const type = e.target.dataset.type;
     const subTaskId = e.target.dataset.subtaskId;
-    const taskIndex = AppState.tasks.findIndex(t => t.studyDay === studyDayId && t.type === 'study');
-    if (taskIndex === -1) return;
+    const subj = e.target.dataset.subject;
+    const chapter = e.target.dataset.chapter;
+    let taskIndex = !isNaN(studyDayId) ? AppState.tasks.findIndex(t => t.studyDay === studyDayId && t.type === 'study') : -1;
 
     const isCompleted = e.target.checked;
     const nowIso = new Date().toISOString();
-    let taskObj;
-
+    let taskObj = null;
     const key = type + 'Tasks';
-    if (AppState.tasks[taskIndex][key]) {
+
+    if (taskIndex !== -1 && AppState.tasks[taskIndex][key]) {
         AppState.tasks[taskIndex][key] = AppState.tasks[taskIndex][key].map(b => b.id === subTaskId ? { ...b, completed: isCompleted, completedAt: isCompleted ? nowIso : null } : b);
         taskObj = AppState.tasks[taskIndex][key].find(b => b.id === subTaskId);
+    }
+
+    if (!taskObj && subj && chapter) {
+        // Find existing task by subject & chapter in AppState.tasks
+        for (let i = 0; i < AppState.tasks.length; i++) {
+            if (AppState.tasks[i].type === 'study' && Array.isArray(AppState.tasks[i][key])) {
+                const b = AppState.tasks[i][key].find(b => b.subject === subj && b.chapter === chapter);
+                if (b) {
+                    b.completed = isCompleted;
+                    b.completedAt = isCompleted ? nowIso : null;
+                    taskObj = b;
+                    taskIndex = i;
+                    break;
+                }
+            }
+        }
+
+        // If not in AppState.tasks yet, slot it into the first available Revision slot
+        if (!taskObj) {
+            for (let i = 0; i < AppState.tasks.length; i++) {
+                if (AppState.tasks[i].type === 'study' && Array.isArray(AppState.tasks[i][key])) {
+                    const bIdx = AppState.tasks[i][key].findIndex(b => b.subject === 'Revision');
+                    if (bIdx > -1) {
+                        AppState.tasks[i][key][bIdx] = {
+                            subject: subj,
+                            chapter: chapter,
+                            title: `Topic ${chapter.replace(/\D/g, '') || ''}`,
+                            completed: isCompleted,
+                            completedAt: isCompleted ? nowIso : null,
+                            id: AppState.tasks[i][key][bIdx].id
+                        };
+                        taskObj = AppState.tasks[i][key][bIdx];
+                        taskIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // If still not slotted, append a slot and assign it
+        if (!taskObj) {
+            ensureAvailableSlots(1, type, 0);
+            for (let i = 0; i < AppState.tasks.length; i++) {
+                if (AppState.tasks[i].type === 'study' && Array.isArray(AppState.tasks[i][key])) {
+                    const bIdx = AppState.tasks[i][key].findIndex(b => b.subject === 'Revision');
+                    if (bIdx > -1) {
+                        AppState.tasks[i][key][bIdx] = {
+                            subject: subj,
+                            chapter: chapter,
+                            title: `Topic ${chapter.replace(/\D/g, '') || ''}`,
+                            completed: isCompleted,
+                            completedAt: isCompleted ? nowIso : null,
+                            id: AppState.tasks[i][key][bIdx].id
+                        };
+                        taskObj = AppState.tasks[i][key][bIdx];
+                        taskIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     if (!taskObj) return;
@@ -13366,10 +13464,41 @@ window.toggleModalDay = function (taskIdOrDate, typeKey, evt) {
 };
 
 window.openEditModal = function (taskId, type, subTaskId = null) {
-    const taskIndex = AppState.tasks.findIndex(t => t.id === taskId);
+    let taskIndex = typeof taskId === 'number' ? AppState.tasks.findIndex(t => t.id === taskId) : -1;
+    const key = type + 'Tasks';
+
+    // If it was an unscheduled task (e.g. unsched-...), slot it first or locate it
+    if (taskIndex === -1 && subTaskId && typeof subTaskId === 'string' && subTaskId.startsWith('unsched-')) {
+        const parts = subTaskId.split('-');
+        const chNum = parts[parts.length - 1];
+        const subId = parts.slice(2, parts.length - 1).join('-');
+        const sObj = window.getAllSubjects().find(s => s.subject.replace(/[^a-zA-Z0-9]/g, '-') === subId);
+        const subj = sObj ? sObj.subject : subId;
+        const formattedCh = `Ch. ${chNum}`;
+
+        ensureAvailableSlots(1, type, 0);
+        for (let i = 0; i < AppState.tasks.length; i++) {
+            if (AppState.tasks[i].type === 'study' && Array.isArray(AppState.tasks[i][key])) {
+                const bIdx = AppState.tasks[i][key].findIndex(b => b.subject === 'Revision');
+                if (bIdx > -1) {
+                    AppState.tasks[i][key][bIdx] = {
+                        subject: subj,
+                        chapter: formattedCh,
+                        title: `Topic ${chNum}`,
+                        completed: false,
+                        id: AppState.tasks[i][key][bIdx].id
+                    };
+                    taskIndex = i;
+                    taskId = AppState.tasks[i].id;
+                    subTaskId = AppState.tasks[i][key][bIdx].id;
+                    break;
+                }
+            }
+        }
+    }
+
     if (taskIndex === -1) return;
     const dayTask = AppState.tasks[taskIndex];
-    const key = type + 'Tasks';
     let taskObj = (dayTask[key] || []).find(b => b.id === subTaskId);
     if (!taskObj) return;
 
