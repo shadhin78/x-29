@@ -3416,7 +3416,16 @@ function renderTaskList() {
 
     subjectsToRender.forEach(sub => {
         const group = grouped[sub];
-        if (!group || group.tasks.length === 0) return;
+        if (!group) return;
+
+        const isFrozen = (window.passedItems && window.passedItems.subjects && window.passedItems.subjects.includes(sub)) ||
+            (window.passedItems && window.passedItems.programs && window.passedItems.programs.includes(group.program));
+
+        const isRevising = window.revisionData && window.revisionData.active && window.revisionData.active.includes(sub);
+        const sObj = window.getAllSubjects().find(s => s.subject === sub);
+
+        // If subject has 0 scheduled study tasks and is not frozen, not revising, and has no chapters in syllabus, skip
+        if (group.tasks.length === 0 && !isFrozen && !isRevising && (!sObj || sObj.chapters === 0)) return;
 
         const trackIdx = window.tracks.findIndex(t => t.id === group.type);
         const colorMap = ['indigo', 'emerald', 'violet', 'rose', 'amber', 'cyan'];
@@ -3432,11 +3441,6 @@ function renderTaskList() {
 
         const shadowClass = shadowMap[colorClass];
         const safeSubId = sub.replace(/[^a-zA-Z0-9]/g, '-');
-
-        const isFrozen = (window.passedItems && window.passedItems.subjects && window.passedItems.subjects.includes(sub)) ||
-            (window.passedItems && window.passedItems.programs && window.passedItems.programs.includes(group.program));
-
-        const isRevising = window.revisionData && window.revisionData.active && window.revisionData.active.includes(sub);
         const safeSubQuotes = sub.replace(/'/g, "\\'");
 
         const analyticsBtnHtml = `
@@ -3510,8 +3514,8 @@ function renderTaskList() {
                 }
             }
         });
-        const progressPct = group.totalChapters > 0 ? Math.min(100, Math.round((completedCount / group.totalChapters) * 100)) : 100;
-        const displayCompleted = (completedCount % 1 === 0) ? completedCount : (Math.round(completedCount * 10) / 10);
+        const progressPct = isFrozen ? 100 : (group.totalChapters > 0 ? Math.min(100, Math.round((completedCount / group.totalChapters) * 100)) : 100);
+        const displayCompleted = isFrozen ? group.totalChapters : ((completedCount % 1 === 0) ? completedCount : (Math.round(completedCount * 10) / 10));
 
         let remainingCh = Math.max(0, group.totalChapters - completedCount);
         let actPaceRaw = 0;
@@ -3696,7 +3700,14 @@ function renderTaskList() {
                                 </div>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
-                                    ${group.tasks.map(x => generateSingleTaskHtml(x.dayObj, x.taskObj, x.type)).join('')}
+                                    ${group.tasks.length > 0
+                                        ? group.tasks.map(x => generateSingleTaskHtml(x.dayObj, x.taskObj, x.type)).join('')
+                                        : `<div class="col-span-full py-8 text-center text-slate-400 dark:text-slate-500 bg-white/50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700/60 p-4">
+                                            <span class="text-2xl block mb-2 opacity-60">📅</span>
+                                            <p class="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">No active timeline dates assigned</p>
+                                            <p class="text-[10px] font-bold text-slate-400 mt-1">All ${group.totalChapters} chapters exist in syllabus. Mark Passed & Frozen or configure revisions as needed.</p>
+                                        </div>`
+                                    }
                                 </div>
                     `;
             if (isRevising) {
@@ -3757,7 +3768,7 @@ function renderTaskList() {
             }
         }
 
-        if (!isFrozen) {
+        if (isProgramVisible && !isFrozen) {
             blockHtml += `
                             </div>
                         </details>
