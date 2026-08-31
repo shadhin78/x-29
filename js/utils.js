@@ -109,7 +109,10 @@ window.Utils = {
      * Formats Date object into MMM DD format.
      */
     formatDate: function(dateObj) {
-        return `${dateObj.toLocaleString('en-US', { month: 'short' })} ${dateObj.getDate()}`;
+        if (!dateObj) return '';
+        const d = (dateObj instanceof Date) ? dateObj : window.Utils.parseDateSafe(dateObj);
+        if (!d || isNaN(d.getTime())) return '';
+        return `${d.toLocaleString('en-US', { month: 'short' })} ${d.getDate()}`;
     },
 
     /**
@@ -170,6 +173,9 @@ window.Utils = {
         }
         if (typeof dateStr === 'string') {
             const trimmed = dateStr.trim();
+            if (trimmed === '' || trimmed.includes('Invalid') || trimmed.includes('NaN')) {
+                return new Date(NaN);
+            }
             if (trimmed.includes('-')) {
                 const parts = trimmed.split('T')[0].split('-');
                 if (parts.length === 3) {
@@ -219,7 +225,7 @@ window.Utils = {
         }
         let parsed = new Date(dateStr);
         if (!isNaN(parsed.getTime())) return parsed;
-        return new Date();
+        return new Date(NaN);
     },
 
     /**

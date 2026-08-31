@@ -180,7 +180,7 @@ window.generateItemId = function(item, arrayKey = 'items') {
     if (!item || (typeof item !== 'object' && typeof item !== 'string' && typeof item !== 'number')) return null;
     if (typeof item === 'string' || typeof item === 'number') return String(item);
     if (arrayKey === 'tasks') {
-        if (item.date) {
+        if (item.date && !String(item.date).includes('Invalid') && !String(item.date).includes('NaN')) {
             const d = (typeof Utils !== 'undefined' && typeof Utils.parseDateSafe === 'function')
                 ? Utils.parseDateSafe(item.date)
                 : null;
@@ -228,6 +228,29 @@ window.rebuildTaskDateMap = function() {
         const t = taskList[i];
         if (!t) continue;
 
+        // Auto-heal invalid task dates if neighbor dates are valid
+        if ((!t.date || String(t.date).includes('Invalid') || String(t.date).includes('NaN'))) {
+            const prevT = taskList[i - 1];
+            const nextT = taskList[i + 1];
+            if (prevT && prevT.date && !String(prevT.date).includes('Invalid') && !String(prevT.date).includes('NaN')) {
+                const prevD = (typeof Utils !== 'undefined' && typeof Utils.parseDateSafe === 'function')
+                    ? Utils.parseDateSafe(prevT.date) : new Date(prevT.date);
+                if (prevD && !isNaN(prevD.getTime())) {
+                    prevD.setDate(prevD.getDate() + 1);
+                    t.date = (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function') ? Utils.formatDate(prevD) : null;
+                    t.day = prevD.toLocaleDateString('en-US', { weekday: 'short' });
+                }
+            } else if (nextT && nextT.date && !String(nextT.date).includes('Invalid') && !String(nextT.date).includes('NaN')) {
+                const nextD = (typeof Utils !== 'undefined' && typeof Utils.parseDateSafe === 'function')
+                    ? Utils.parseDateSafe(nextT.date) : new Date(nextT.date);
+                if (nextD && !isNaN(nextD.getTime())) {
+                    nextD.setDate(nextD.getDate() - 1);
+                    t.date = (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function') ? Utils.formatDate(nextD) : null;
+                    t.day = nextD.toLocaleDateString('en-US', { weekday: 'short' });
+                }
+            }
+        }
+
         if (t.id !== undefined && t.id !== null) {
             AppState._tasksDateMap.set(String(t.id), t);
         }
@@ -239,7 +262,7 @@ window.rebuildTaskDateMap = function() {
             taskD = getTaskDate(t);
         }
 
-        if (t.date) {
+        if (t.date && !String(t.date).includes('Invalid') && !String(t.date).includes('NaN')) {
             const rawDate = String(t.date);
             AppState._tasksDateMap.set(rawDate, t);
             const trimmedDate = rawDate.trim();
@@ -253,7 +276,7 @@ window.rebuildTaskDateMap = function() {
             AppState._tasksDateMap.set(ymdKey, t);
             if (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function') {
                 const formatted = Utils.formatDate(taskD);
-                AppState._tasksDateMap.set(formatted, t);
+                if (formatted) AppState._tasksDateMap.set(formatted, t);
             }
         }
     }

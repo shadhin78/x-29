@@ -59,7 +59,7 @@ function safeSetClass(id, className) { const el = document.getElementById(id); i
 
 function getTaskDate(task) {
     if (!task) return new Date(NaN);
-    if (task.date) {
+    if (task.date && !String(task.date).includes('Invalid') && !String(task.date).includes('NaN')) {
         const d = (typeof Utils !== 'undefined' && typeof Utils.parseDateSafe === 'function')
             ? Utils.parseDateSafe(task.date)
             : new Date(task.date);
