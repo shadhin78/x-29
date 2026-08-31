@@ -1644,18 +1644,18 @@
                                 </div>
 
                                 <!-- Subject/Program Selector + Side Fullscreen Button -->
-                                <div id="timer-subject-select-container" class="w-full text-left flex flex-col gap-1">
+                                <div id="timer-subject-select-container" class="w-full min-w-0 max-w-full text-left flex flex-col gap-1">
                                     <label class="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400">Track Time Against:</label>
-                                    <div class="flex items-center gap-2 w-full">
+                                    <div class="flex items-center gap-2 w-full min-w-0 max-w-full">
                                         <select id="timer-subject-select"
-                                            class="bg-slate-950 border border-slate-800 rounded-2xl p-2.5 sm:p-3 text-xs sm:text-sm text-white focus:ring-2 focus:ring-blue-500 font-bold flex-1 cursor-pointer shadow-sm outline-none touch-action-manipulation h-[46px]">
+                                            class="bg-slate-950 border border-slate-800 rounded-2xl p-2.5 sm:p-3 text-xs sm:text-sm text-white focus:ring-2 focus:ring-blue-500 font-bold flex-1 min-w-0 cursor-pointer shadow-sm outline-none touch-action-manipulation h-[46px] truncate">
                                             <option value="General Study">General Study</option>
                                             <!-- Options populated dynamically from tracks/programs/subjects -->
                                         </select>
                                         <!-- Fullscreen Toggle Button (Positioned right on the side of dropdown) -->
                                         <button onclick="window.toggleTimerFullscreen()" id="timer-btn-fullscreen"
-                                            class="p-2.5 sm:p-3 bg-slate-800/90 hover:bg-slate-700/90 rounded-2xl transition-all active:scale-95 text-slate-300 border border-slate-700/60 shadow-md touch-action-manipulation flex items-center justify-center h-[46px] w-[46px] shrink-0"
-                                            title="Toggle Fullscreen">
+                                            class="p-2.5 sm:p-3 bg-slate-800/90 hover:bg-slate-700/90 rounded-2xl transition-all active:scale-95 text-slate-300 border border-slate-700/60 shadow-md touch-action-manipulation flex items-center justify-center h-[46px] w-[46px] min-w-[46px] min-h-[46px] shrink-0 flex-shrink-0"
+                                            title="Toggle Fullscreen" aria-label="Toggle Fullscreen">
                                             <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                                     d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4">

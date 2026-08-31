@@ -98,10 +98,20 @@
 
 /* Fullscreen Toggle Button Hardware Enhancements & Icon Rotation */
 #timer-btn-fullscreen {
+    flex-shrink: 0 !important;
+    width: 46px !important;
+    min-width: 46px !important;
+    height: 46px !important;
+    min-height: 46px !important;
     transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease !important;
     will-change: transform;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+}
+
+#timer-subject-select {
+    min-width: 0 !important;
+    max-width: 100% !important;
 }
 
 #timer-btn-fullscreen:hover {
