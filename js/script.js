@@ -4112,23 +4112,49 @@ function handleTaskToggle(e) {
     const safeSubId = taskObj.subject.replace(/[^a-zA-Z0-9]/g, '-');
     const subName = taskObj.subject;
     const groupTasks = AppState.tasks.flatMap(t => t.type === 'study' ? (t[key] || []) : []).filter(x => x.subject === subName);
+    const sObj = syllabusStructure[type] ? syllabusStructure[type].find(s => s.subject === subName) : null;
+    const isFrozenSub = (window.passedItems && window.passedItems.subjects && window.passedItems.subjects.includes(subName)) ||
+        (window.passedItems && window.passedItems.programs && window.passedItems.programs.includes(sObj ? sObj.program : ''));
+
+    let skippedCount = 0;
     let completedCount = 0;
-    groupTasks.forEach(x => {
-        if (x.completed) {
-            completedCount += 1;
-        } else {
-            const prog = window.getChapterWeeklyTargetProgress ? window.getChapterWeeklyTargetProgress(type, subName, x.chapter) : null;
-            if (prog && prog.isSizeBased && prog.total > 0 && prog.completed > 0) {
-                completedCount += Math.min(1, prog.completed / prog.total);
+    if (sObj && sObj.chapters > 0) {
+        for (let chNum = 1; chNum <= sObj.chapters; chNum++) {
+            const matched = groupTasks.find(x => {
+                const chStr = x.chapter;
+                if (chStr === `Ch. ${chNum}` || chStr === `Ch.${chNum}` || chStr === String(chNum)) return true;
+                const match = chStr.match(/(\d+)(?!.*\d)/);
+                return match && parseInt(match[0]) === chNum;
+            });
+            if (matched && matched.skipped) {
+                skippedCount++;
+            } else if (matched && matched.completed) {
+                completedCount += 1;
+            } else {
+                const prog = window.getChapterWeeklyTargetProgress ? window.getChapterWeeklyTargetProgress(type, subName, `Ch. ${chNum}`) : null;
+                if (prog && prog.isSizeBased && prog.total > 0 && prog.completed > 0) {
+                    completedCount += Math.min(1, prog.completed / prog.total);
+                }
             }
         }
-    });
+    } else {
+        groupTasks.forEach(x => {
+            if (x.skipped) {
+                skippedCount++;
+            } else if (x.completed) {
+                completedCount += 1;
+            } else {
+                const prog = window.getChapterWeeklyTargetProgress ? window.getChapterWeeklyTargetProgress(type, subName, x.chapter) : null;
+                if (prog && prog.isSizeBased && prog.total > 0 && prog.completed > 0) {
+                    completedCount += Math.min(1, prog.completed / prog.total);
+                }
+            }
+        });
+    }
 
-    const sObj = syllabusStructure[type] ? syllabusStructure[type].find(s => s.subject === subName) : null;
-    const skippedCount = window.getSubjectSkippedCount(subName, type);
     const totalChapters = sObj ? Math.max(0, sObj.chapters - skippedCount) : 1;
-    const progressPct = totalChapters > 0 ? Math.round((completedCount / totalChapters) * 100) : 100;
-    const displayCompleted = (completedCount % 1 === 0) ? completedCount : (Math.round(completedCount * 10) / 10);
+    const progressPct = isFrozenSub ? 100 : (totalChapters > 0 ? Math.round((completedCount / totalChapters) * 100) : 100);
+    const displayCompleted = isFrozenSub ? totalChapters : ((completedCount % 1 === 0) ? completedCount : (Math.round(completedCount * 10) / 10));
 
     const textEl = document.getElementById(`group-text-${safeSubId}`);
     if (textEl) textEl.innerHTML = `${displayCompleted} <span class="opacity-60 text-[9px] mx-0.5">/</span> ${totalChapters} <span class="opacity-60">CH</span>`;
@@ -4218,8 +4244,6 @@ function handleTaskToggle(e) {
 
     let estFinishStr = '--';
     let estDaysNeededStr = '<span class="opacity-60">Unknown</span>';
-    const isFrozenSub = (window.passedItems && window.passedItems.subjects && window.passedItems.subjects.includes(subName)) ||
-        (window.passedItems && window.passedItems.programs && window.passedItems.programs.includes(sObj ? sObj.program : ''));
     if (isFrozenSub || completedCount >= totalChapters) {
         estFinishStr = '<span class="text-emerald-500 font-black">Finished</span>';
         estDaysNeededStr = '<span class="text-emerald-500 font-bold">0 Days</span>';
@@ -4293,64 +4317,112 @@ function updateMetrics() {
     const msPerDay = 1000 * 60 * 60 * 24;
 
     const subjectStats = {};
-    window.getAllSubjects().forEach(sub => { subjectStats[sub.subject] = { totalChapters: sub.chapters, tasksAssigned: 0, tasksCompleted: 0, earliestCompletedDate: null }; });
+    const allSubjects = window.getAllSubjects();
 
-    AppState.tasks.filter(t => t.type === 'study').forEach(task => {
-        window.tracks.forEach(track => {
-            const key = track.id + 'Tasks';
-            if (Array.isArray(task[key])) {
-                task[key].forEach(subTask => {
-                    if (subjectStats[subTask.subject]) {
-                        if (subTask.skipped) {
-                            if (subjectStats[subTask.subject].totalChapters > 0) {
-                                subjectStats[subTask.subject].totalChapters--;
-                            }
-                            return;
-                        }
-                        subjectStats[subTask.subject].tasksAssigned++;
-                        if (subTask.completed) {
-                            subjectStats[subTask.subject].tasksCompleted++;
-                            let d = subTask.completedAt ? new Date(subTask.completedAt) : getTaskDate(task);
-                            if (isNaN(d.getTime())) d = getTaskDate(task);
-                            if (!subjectStats[subTask.subject].earliestCompletedDate || d < subjectStats[subTask.subject].earliestCompletedDate) {
-                                subjectStats[subTask.subject].earliestCompletedDate = d;
-                            }
-                        } else {
-                            const prog = window.getChapterWeeklyTargetProgress ? window.getChapterWeeklyTargetProgress(track.id, subTask.subject, subTask.chapter) : null;
-                            if (prog && prog.isSizeBased && prog.total > 0 && prog.completed > 0) {
-                                subjectStats[subTask.subject].tasksCompleted += Math.min(1, prog.completed / prog.total);
-                            }
-                        }
-                    }
-                });
+    allSubjects.forEach(sObj => {
+        const sub = sObj.subject;
+        const totalSyllabusChapters = sObj.chapters || 0;
+        let trackId = sObj.track;
+        if (!trackId) {
+            for (const tid in syllabusStructure) {
+                if (Array.isArray(syllabusStructure[tid]) && syllabusStructure[tid].some(s => s.subject === sub)) {
+                    trackId = tid;
+                    break;
+                }
             }
-        });
-    });
-
-    for (const sub in subjectStats) {
-        const stats = subjectStats[sub];
-        const sObj = window.getAllSubjects().find(s => s.subject === sub);
-        const isFrozen = window.passedItems && ((window.passedItems.subjects && window.passedItems.subjects.includes(sub)) || (window.passedItems.programs && sObj && window.passedItems.programs.includes(sObj.program)));
-
-        if (isFrozen) {
-            stats.effectiveChapters = stats.totalChapters;
-        } else {
-            const ratio = stats.tasksAssigned > 0 ? stats.tasksCompleted / stats.tasksAssigned : 0;
-            stats.effectiveChapters = ratio * stats.totalChapters;
         }
+        trackId = trackId || 'ca';
+
+        const isFrozen = window.passedItems && (
+            (window.passedItems.subjects && window.passedItems.subjects.includes(sub)) ||
+            (window.passedItems.programs && window.passedItems.programs.includes(sObj.program))
+        );
+
+        let skippedChapters = 0;
+        let completedChapters = 0;
+        let earliestCompletedDate = null;
+        let tasksAssigned = 0;
+
+        // Collect all study tasks matching this subject
+        const subTasks = [];
+        AppState.tasks.filter(t => t.type === 'study').forEach(t => {
+            window.tracks.forEach(track => {
+                const key = track.id + 'Tasks';
+                if (Array.isArray(t[key])) {
+                    t[key].forEach(b => {
+                        if (b.subject === sub) {
+                            subTasks.push({ dayObj: t, taskObj: b, trackId: track.id });
+                        }
+                    });
+                }
+            });
+        });
+
+        tasksAssigned = subTasks.filter(x => !x.taskObj.skipped).length;
+
+        if (totalSyllabusChapters > 0) {
+            for (let chNum = 1; chNum <= totalSyllabusChapters; chNum++) {
+                const matchedTaskItem = subTasks.find(x => {
+                    const chStr = x.taskObj.chapter;
+                    if (chStr === `Ch. ${chNum}` || chStr === `Ch.${chNum}` || chStr === String(chNum)) return true;
+                    const match = chStr.match(/(\d+)(?!.*\d)/);
+                    return match && parseInt(match[0]) === chNum;
+                });
+
+                if (matchedTaskItem && matchedTaskItem.taskObj.skipped) {
+                    skippedChapters++;
+                } else if (matchedTaskItem && matchedTaskItem.taskObj.completed) {
+                    completedChapters += 1;
+                    let d = matchedTaskItem.taskObj.completedAt ? new Date(matchedTaskItem.taskObj.completedAt) : getTaskDate(matchedTaskItem.dayObj);
+                    if (isNaN(d.getTime())) d = getTaskDate(matchedTaskItem.dayObj);
+                    if (!earliestCompletedDate || d < earliestCompletedDate) {
+                        earliestCompletedDate = d;
+                    }
+                } else {
+                    const prog = window.getChapterWeeklyTargetProgress ? window.getChapterWeeklyTargetProgress(trackId, sub, `Ch. ${chNum}`) : null;
+                    if (prog && prog.isSizeBased && prog.total > 0 && prog.completed > 0) {
+                        completedChapters += Math.min(1, prog.completed / prog.total);
+                    }
+                }
+            }
+        } else {
+            subTasks.forEach(x => {
+                if (x.taskObj.skipped) {
+                    skippedChapters++;
+                } else if (x.taskObj.completed) {
+                    completedChapters += 1;
+                    let d = x.taskObj.completedAt ? new Date(x.taskObj.completedAt) : getTaskDate(x.dayObj);
+                    if (isNaN(d.getTime())) d = getTaskDate(x.dayObj);
+                    if (!earliestCompletedDate || d < earliestCompletedDate) {
+                        earliestCompletedDate = d;
+                    }
+                }
+            });
+        }
+
+        const totalActiveChapters = Math.max(0, totalSyllabusChapters - skippedChapters);
+        const effectiveChapters = isFrozen ? totalActiveChapters : Math.min(totalActiveChapters, completedChapters);
 
         // Calculate subject actual pace
         let actualPace = 0;
-        if (stats.earliestCompletedDate) {
-            const start = new Date(stats.earliestCompletedDate);
+        if (earliestCompletedDate) {
+            const start = new Date(earliestCompletedDate);
             start.setHours(0, 0, 0, 0);
             if (start <= today) {
                 const daysElapsed = Math.floor((today - start) / msPerDay) + 1;
-                actualPace = stats.effectiveChapters / daysElapsed;
+                actualPace = effectiveChapters / daysElapsed;
             }
         }
-        stats.actualPace = actualPace;
-    }
+
+        subjectStats[sub] = {
+            totalChapters: totalActiveChapters,
+            tasksAssigned: tasksAssigned,
+            tasksCompleted: completedChapters,
+            effectiveChapters: effectiveChapters,
+            earliestCompletedDate: earliestCompletedDate,
+            actualPace: actualPace
+        };
+    });
 
     window.lastSubjectStats = subjectStats; // Cache for the details modal
 
@@ -12120,8 +12192,11 @@ window.openPaceCandleChartModal = function (goalId) {
                             const isFrozen = window.passedItems && ((window.passedItems.subjects && window.passedItems.subjects.includes(b.subject)) || (window.passedItems.programs && sObj && window.passedItems.programs.includes(sObj.program)));
                             if (isFrozen) return;
 
-                            const stats = subjectStats[b.subject] || { totalChapters: 0, tasksAssigned: 1 };
-                            const weight = (stats.tasksAssigned > 0) ? (stats.totalChapters / stats.tasksAssigned) : 0;
+                            let weight = 1;
+                            const prog = window.getChapterWeeklyTargetProgress ? window.getChapterWeeklyTargetProgress(track.id, b.subject, b.chapter) : null;
+                            if (prog && prog.isSizeBased && prog.total > 0) {
+                                weight = Math.min(1, prog.completed / prog.total);
+                            }
 
                             let compDate = b.completedAt ? Utils.parseDateSafe(b.completedAt) : taskDate;
                             if (!compDate || isNaN(compDate.getTime())) compDate = taskDate;
@@ -12363,8 +12438,11 @@ window.buildPaceChartDatasets = function (paceData) {
                             const isFrozen = window.passedItems && ((window.passedItems.subjects && window.passedItems.subjects.includes(b.subject)) || (window.passedItems.programs && sObj && window.passedItems.programs.includes(sObj.program)));
                             if (isFrozen) return; // already in baseline
 
-                            const stats = subjectStats[b.subject] || { totalChapters: 0, tasksAssigned: 1 };
-                            const weight = (stats.tasksAssigned > 0) ? (stats.totalChapters / stats.tasksAssigned) : 0;
+                            let weight = 1;
+                            const prog = window.getChapterWeeklyTargetProgress ? window.getChapterWeeklyTargetProgress(track.id, b.subject, b.chapter) : null;
+                            if (prog && prog.isSizeBased && prog.total > 0) {
+                                weight = Math.min(1, prog.completed / prog.total);
+                            }
 
                             let compDate = b.completedAt ? Utils.parseDateSafe(b.completedAt) : taskDate;
                             if (!compDate || isNaN(compDate.getTime())) compDate = taskDate;
