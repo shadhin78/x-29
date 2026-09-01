@@ -15526,7 +15526,17 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
         if (chapters.length > 0) {
             chapters.forEach(ch => {
                 const count = window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(trackId, subject, ch, 'chapter') : 0;
-                const stars = count > 0 ? ' ' + '★'.repeat(count) : '';
+                const starCount = Math.max(0, count - 1);
+                const starsHtml = starCount > 0 ? `<span class="inline-flex text-amber-500 dark:text-amber-400 text-xs ml-1" title="Targeted ${count} times">${'★'.repeat(starCount)}</span>` : '';
+
+                const isCompleted = window.isChapterCompleted ? window.isChapterCompleted(trackId, subject, ch) : false;
+                const completedTickHtml = isCompleted ? `
+                    <span class="inline-flex items-center justify-center w-4 h-4 ml-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 align-middle shrink-0 shadow-xs" title="Completed">
+                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </span>` : '';
+
                 const isChPreselected = isTargetSub && preselectChapter === ch;
 
                 let chWeeksOptionsHtml = '';
@@ -15544,8 +15554,10 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                             <input type="checkbox" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" data-chapter="${ch}" class="mt-chapter-checkbox form-checkbox h-5 w-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer transition-all shrink-0"
                                 onchange="window.handleMonthlyChapterCheckChange(this, '${CSS.escape(subject)}');"
                                 ${isChPreselected ? 'checked' : ''}>
-                            <div class="min-w-0 flex-1">
-                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate block">${ch}${stars}</span>
+                            <div class="min-w-0 flex-1 flex items-center gap-1">
+                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">${ch}</span>
+                                ${completedTickHtml}
+                                ${starsHtml}
                             </div>
                         </label>
                         <div class="flex items-center gap-2 w-full sm:w-auto min-w-0 shrink-0 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-700/40">
@@ -17355,7 +17367,7 @@ window.renderMonthlyTargets = function () {
         const occurrenceCount = window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(target.track, target.subject, target.chapter, target.targetType) : 0;
         let starsHtml = '';
         if (occurrenceCount > 1) {
-            starsHtml = `<span class="inline-flex text-amber-500 text-[10px] ml-1.5" title="Added as target ${occurrenceCount} times">${'★'.repeat(occurrenceCount)}</span>`;
+            starsHtml = `<span class="inline-flex text-amber-500 text-[10px] ml-1.5" title="Added as target ${occurrenceCount} times">${'★'.repeat(occurrenceCount - 1)}</span>`;
         }
 
         const progressTextHtml = progress.label ? `<span class="text-[9px] text-indigo-500 font-bold ml-1.5">${progress.label}</span>` : '';
@@ -18180,7 +18192,7 @@ window.renderMtdbList = function () {
             const occurrenceCount = window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(target.track, target.subject, target.chapter, target.targetType) : 0;
             let starsHtml = '';
             if (occurrenceCount > 1) {
-                starsHtml = `<span class="inline-flex text-amber-500 text-[9px] ml-1.5" title="Added as target ${occurrenceCount} times">${'★'.repeat(occurrenceCount)}</span>`;
+                starsHtml = `<span class="inline-flex text-amber-500 text-[9px] ml-1.5" title="Added as target ${occurrenceCount} times">${'★'.repeat(occurrenceCount - 1)}</span>`;
             }
 
             const chapterCell = isSubjectTarget
@@ -18668,6 +18680,30 @@ window.consolidateWeeklyTargetsDatabase = function () {
     }
 };
 
+window.isChapterCompleted = function (track, subject, chapter) {
+    if (window.passedItems) {
+        if (window.passedItems.subjects && window.passedItems.subjects.includes(subject)) return true;
+        const prog = (window.syllabusStructure && window.syllabusStructure[track]) ? (window.syllabusStructure[track].find(s => s.subject === subject)?.program) : null;
+        if (prog && window.passedItems.programs && window.passedItems.programs.includes(prog)) return true;
+    }
+
+    const foundTask = window.findTaskChapter ? window.findTaskChapter(track, subject, chapter) : null;
+    if (foundTask && foundTask.subTask) {
+        if (foundTask.subTask.skipped) return false;
+        if (foundTask.subTask.completed) return true;
+        const prog = window.getChapterWeeklyTargetProgress ? window.getChapterWeeklyTargetProgress(track, subject, chapter) : null;
+        if (prog && prog.isSizeBased && prog.total > 0 && prog.percent >= 100) return true;
+    }
+
+    const chNum = (window.Utils && window.Utils.extractNum) ? window.Utils.extractNum(chapter) : (parseInt(String(chapter).replace(/\D/g, ''), 10) || null);
+    if (chNum && window.getChapterStatus) {
+        const st = window.getChapterStatus(subject, chNum, track);
+        if (st === 'complete') return true;
+    }
+
+    return false;
+};
+
 window.isChapterSkipped = function (track, subject, chapter) {
     if (!window.AppState || !Array.isArray(AppState.tasks)) return false;
     const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
@@ -18880,7 +18916,8 @@ window.updateWeeklyTargetChapterDropdown = function () {
     } else {
         chapters.forEach(ch => {
             const count = window.getWeeklyTargetOccurrenceCount ? window.getWeeklyTargetOccurrenceCount(trackId, subject, ch) : 0;
-            const stars = count > 0 ? ' ' + '★'.repeat(count) : '';
+            const starCount = Math.max(0, count - 1);
+            const stars = starCount > 0 ? ' ' + '★'.repeat(starCount) : '';
             chSelect.innerHTML += `<option value="${ch}">${ch}${stars}</option>`;
         });
     }
@@ -19204,7 +19241,7 @@ window.renderWeeklyTargets = function () {
         const occurrenceCount = window.getWeeklyTargetOccurrenceCount ? window.getWeeklyTargetOccurrenceCount(target.track, target.subject, target.chapter) : 0;
         let starsHtml = '';
         if (occurrenceCount > 1) {
-            starsHtml = `<span class="inline-flex text-amber-500 text-[10px] ml-1.5" title="Added as target ${occurrenceCount} times">${'★'.repeat(occurrenceCount)}</span>`;
+            starsHtml = `<span class="inline-flex text-amber-500 text-[10px] ml-1.5" title="Added as target ${occurrenceCount} times">${'★'.repeat(occurrenceCount - 1)}</span>`;
         }
 
         const progressTextHtml = target.totalChapterSize ? `<span class="text-[9px] text-blue-500 font-bold ml-1.5">(${progress.completed}/${progress.total} p)</span>` : '';
@@ -21059,7 +21096,8 @@ window.updateWtdbAddChapterDropdown = function () {
     } else {
         chapters.forEach(ch => {
             const count = window.getWeeklyTargetOccurrenceCount ? window.getWeeklyTargetOccurrenceCount(trackId, subject, ch) : 0;
-            const stars = count > 0 ? ' ' + '★'.repeat(count) : '';
+            const starCount = Math.max(0, count - 1);
+            const stars = starCount > 0 ? ' ' + '★'.repeat(starCount) : '';
             chSelect.innerHTML += `<option value="${ch}">${ch}${stars}</option>`;
         });
     }
@@ -21209,7 +21247,7 @@ window.renderWtdbList = function () {
             const occurrenceCount = window.getWeeklyTargetOccurrenceCount ? window.getWeeklyTargetOccurrenceCount(target.track, target.subject, target.chapter) : 0;
             let starsHtml = '';
             if (occurrenceCount > 1) {
-                starsHtml = `<span class="inline-flex text-amber-500 text-[9px] ml-1.5" title="Added as target ${occurrenceCount} times">${'★'.repeat(occurrenceCount)}</span>`;
+                starsHtml = `<span class="inline-flex text-amber-500 text-[9px] ml-1.5" title="Added as target ${occurrenceCount} times">${'★'.repeat(occurrenceCount - 1)}</span>`;
             }
 
             const row = `
