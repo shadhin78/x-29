@@ -1554,13 +1554,59 @@
         );
     };
 
-    if (window.timerAnalyticsRange === undefined) window.timerAnalyticsRange = 180;
-    if (window.timerAnalyticsChartStyle === undefined) window.timerAnalyticsChartStyle = 'combo';
-    if (window.timerAnalyticsGrouping === undefined) window.timerAnalyticsGrouping = 'daily';
+    if (window.timerAnalyticsRange === undefined) {
+        let stored = null;
+        try { stored = localStorage.getItem('x29_timerAnalyticsRange'); } catch (e) {}
+        window.timerAnalyticsRange = (stored !== null && !isNaN(parseInt(stored, 10))) ? parseInt(stored, 10) : ((window.AppState && window.AppState.timerAnalyticsRange) || 180);
+    }
+    if (window.timerAnalyticsChartStyle === undefined) {
+        let stored = null;
+        try { stored = localStorage.getItem('x29_timerAnalyticsChartStyle'); } catch (e) {}
+        window.timerAnalyticsChartStyle = stored || ((window.AppState && window.AppState.timerAnalyticsChartStyle) || 'combo');
+    }
+    if (window.timerAnalyticsGrouping === undefined) {
+        let stored = null;
+        try { stored = localStorage.getItem('x29_timerAnalyticsGrouping'); } catch (e) {}
+        window.timerAnalyticsGrouping = (stored && stored !== 'hourly') ? stored : ((window.AppState && window.AppState.timerAnalyticsGrouping) || 'daily');
+    }
+    if (window.timerAnalyticsDayOffset === undefined) window.timerAnalyticsDayOffset = 0;
+
+    let _timerPrefsSaveTimer = null;
+    window.debouncedSaveTimerPreferences = function () {
+        if (_timerPrefsSaveTimer) clearTimeout(_timerPrefsSaveTimer);
+        _timerPrefsSaveTimer = setTimeout(() => {
+            _timerPrefsSaveTimer = null;
+            if (window.FirebaseService) {
+                window.FirebaseService.saveToCloud();
+            }
+        }, 800);
+    };
+
+    window.navigateTimerAnalyticsDay = function (delta) {
+        if (window.timerAnalyticsRange !== 1) {
+            window.timerAnalyticsRange = 1;
+            if (window.AppState) window.AppState.timerAnalyticsRange = 1;
+            try { localStorage.setItem('x29_timerAnalyticsRange', '1'); } catch (e) {}
+        }
+        const currentOffset = window.timerAnalyticsDayOffset || 0;
+        const newOffset = currentOffset + delta;
+        if (newOffset > 0) return; // Future days not permitted
+
+        window.timerAnalyticsDayOffset = newOffset;
+        window.updateTimerAnalyticsControls();
+        window.renderTimerAnalyticsChart();
+    };
+
+    window.resetTimerAnalyticsDayOffset = function () {
+        window.timerAnalyticsDayOffset = 0;
+        window.updateTimerAnalyticsControls();
+        window.renderTimerAnalyticsChart();
+    };
 
     window.updateTimerAnalyticsControls = function () {
         const range = window.timerAnalyticsRange || 180;
         const style = window.timerAnalyticsChartStyle || 'combo';
+        if (window.timerAnalyticsGrouping === 'hourly') window.timerAnalyticsGrouping = 'daily';
         const grouping = window.timerAnalyticsGrouping || 'daily';
 
         const activeClass = "shrink-0 px-2 sm:px-2.5 py-1 text-[9px] sm:text-[11px] font-bold rounded-lg transition-all bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200/30 dark:border-slate-700/30";
@@ -1575,28 +1621,88 @@
             if (spectraBtn) spectraBtn.className = d === range ? activeClass : inactiveClass;
         });
 
-        // 2. Manage Grouping buttons based on selected Range
-        if (range === 1) {
-            window.timerAnalyticsGrouping = 'hourly';
-        } else if (range === 7) {
-            if (window.timerAnalyticsGrouping === 'hourly') window.timerAnalyticsGrouping = 'daily';
-        } else if (range === 30) {
-            if (window.timerAnalyticsGrouping === 'hourly' || window.timerAnalyticsGrouping === 'monthly') window.timerAnalyticsGrouping = 'daily';
-        } else {
-            if (window.timerAnalyticsGrouping === 'hourly') window.timerAnalyticsGrouping = 'daily';
+        // 2. Manage Day Stepper for 1 Day Range vs Grouping selector for multi-day
+        const dayOffset = window.timerAnalyticsDayOffset || 0;
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + dayOffset);
+
+        let dateLabel = "Today";
+        if (dayOffset === -1) {
+            dateLabel = "Yesterday";
+        } else if (dayOffset < -1) {
+            dateLabel = targetDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
         }
 
-        const currentGrouping = window.timerAnalyticsGrouping;
+        ['spectra-day-label', 'day-label'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = dateLabel;
+        });
 
-        ['hourly', 'daily', 'weekly', 'monthly'].forEach(g => {
+        const isNextDisabled = dayOffset >= 0;
+
+        ['spectra-day-next-btn', 'day-next-btn'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                if (isNextDisabled || range !== 1) {
+                    btn.setAttribute('disabled', 'true');
+                    btn.classList.add('opacity-30', 'cursor-not-allowed');
+                } else {
+                    btn.removeAttribute('disabled');
+                    btn.classList.remove('opacity-30', 'cursor-not-allowed');
+                }
+            }
+        });
+
+        ['spectra-day-prev-btn', 'day-prev-btn'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                if (range !== 1) {
+                    btn.setAttribute('disabled', 'true');
+                    btn.classList.add('opacity-30', 'cursor-not-allowed');
+                } else {
+                    btn.removeAttribute('disabled');
+                    btn.classList.remove('opacity-30', 'cursor-not-allowed');
+                }
+            }
+        });
+
+        // Toggle visibility between Day Stepper (range === 1) and Grouping Selector (range > 1)
+        ['spectra-day-stepper', 'day-stepper'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.display = range === 1 ? 'flex' : 'none';
+            }
+        });
+
+        const groupingContainers = [
+            document.getElementById('spectra-tag-btn-daily')?.parentElement,
+            document.getElementById('tag-btn-daily')?.parentElement
+        ];
+        groupingContainers.forEach(el => {
+            if (el) {
+                el.style.display = range === 1 ? 'none' : 'flex';
+            }
+        });
+
+        // 3. Manage Grouping buttons based on selected Range
+        if (range === 1) {
+            window.timerAnalyticsGrouping = 'daily';
+        } else if (range === 7) {
+            window.timerAnalyticsGrouping = 'daily';
+        } else if (range === 30) {
+            if (window.timerAnalyticsGrouping === 'monthly') window.timerAnalyticsGrouping = 'daily';
+        }
+
+        const currentGrouping = window.timerAnalyticsGrouping || 'daily';
+
+        ['daily', 'weekly', 'monthly'].forEach(g => {
             const btn = document.getElementById(`tag-btn-${g}`);
             const spectraBtn = document.getElementById(`spectra-tag-btn-${g}`);
             let isDisabled = false;
 
-            if (range === 1 && g !== 'hourly') isDisabled = true;
+            if (range === 1) isDisabled = true;
             else if (range === 7 && g !== 'daily') isDisabled = true;
-            else if (range === 30 && (g === 'monthly' || g === 'hourly')) isDisabled = true;
-            else if (range === 180 && g === 'hourly') isDisabled = true;
+            else if (range === 30 && g === 'monthly') isDisabled = true;
 
             [btn, spectraBtn].forEach(b => {
                 if (!b) return;
@@ -1605,12 +1711,12 @@
                     b.className = disabledClass;
                 } else {
                     b.removeAttribute('disabled');
-                    b.className = g === currentGrouping ? activeClass : inactiveClass;
+                    b.className = (g === currentGrouping && range !== 1) ? activeClass : inactiveClass;
                 }
             });
         });
 
-        // 3. Sync Chart Style buttons styling
+        // 4. Sync Chart Style buttons styling
         ['combo', 'bar', 'line'].forEach(s => {
             const btn = document.getElementById(`tas-btn-${s}`);
             const spectraBtn = document.getElementById(`spectra-tas-btn-${s}`);
@@ -1710,43 +1816,131 @@
 
     window.setTimerAnalyticsRange = function (days) {
         window.timerAnalyticsRange = days;
+        if (days !== 1) {
+            window.timerAnalyticsDayOffset = 0;
+        }
+        if (window.AppState) {
+            window.AppState.timerAnalyticsRange = days;
+            window.AppState._lastFilterChangeTime = Date.now();
+        }
+        try {
+            localStorage.setItem('x29_timerAnalyticsRange', String(days));
+        } catch (e) {}
         window.updateTimerAnalyticsControls();
         window.renderTimerAnalyticsChart();
-        if (window.FirebaseService) {
-            window.FirebaseService.saveToCloud();
+        if (typeof window.debouncedSaveTimerPreferences === 'function') {
+            window.debouncedSaveTimerPreferences();
         }
     };
 
     window.setTimerAnalyticsGrouping = function (grouping) {
         const range = window.timerAnalyticsRange || 180;
-        if (range === 1 && grouping !== 'hourly') return;
+        if (range === 1) return;
         if (range === 7 && grouping !== 'daily') return;
-        if (range === 30 && (grouping === 'monthly' || grouping === 'hourly')) return;
-        if (range === 180 && grouping === 'hourly') return;
+        if (range === 30 && grouping === 'monthly') return;
 
         window.timerAnalyticsGrouping = grouping;
+        if (window.AppState) {
+            window.AppState.timerAnalyticsGrouping = grouping;
+            window.AppState._lastFilterChangeTime = Date.now();
+        }
+        try {
+            localStorage.setItem('x29_timerAnalyticsGrouping', String(grouping));
+        } catch (e) {}
         window.updateTimerAnalyticsControls();
         window.renderTimerAnalyticsChart();
-        if (window.FirebaseService) {
-            window.FirebaseService.saveToCloud();
+        if (typeof window.debouncedSaveTimerPreferences === 'function') {
+            window.debouncedSaveTimerPreferences();
         }
     };
 
     window.setTimerAnalyticsChartStyle = function (style) {
         window.timerAnalyticsChartStyle = style;
+        if (window.AppState) {
+            window.AppState.timerAnalyticsChartStyle = style;
+            window.AppState._lastFilterChangeTime = Date.now();
+        }
+        try {
+            localStorage.setItem('x29_timerAnalyticsChartStyle', String(style));
+        } catch (e) {}
         window.updateTimerAnalyticsControls();
         window.renderTimerAnalyticsChart();
-        if (window.FirebaseService) {
-            window.FirebaseService.saveToCloud();
+        if (typeof window.debouncedSaveTimerPreferences === 'function') {
+            window.debouncedSaveTimerPreferences();
         }
     };
 
-    function buildDatasetsForCanvas(canvasEl, style, grouping, range, chartActuals, chartTargets, actualLabelName, targetLabelName, isDark) {
+    function buildDatasetsForCanvas(canvasEl, style, grouping, range, chartActuals, chartTargets, actualLabelName, targetLabelName, isDark, sumActual = 0, dayTarget = 0) {
         const canvasCtx = canvasEl.getContext('2d');
         const width = canvasEl.clientWidth || 500;
         const height = canvasEl.clientHeight || 300;
 
         let datasets = [];
+
+        if (range === 1) {
+            // Hill Line for Today: Smooth bezier area curve
+            let actualFillGradient = 'rgba(99, 102, 241, 0.35)';
+            let actualLineGradient = '#6366f1';
+            const isGoalMet = sumActual >= dayTarget && dayTarget > 0;
+            const primaryColor = isGoalMet ? '#10b981' : '#6366f1';
+            const secondaryColor = isGoalMet ? '#34d399' : '#818cf8';
+
+            try {
+                const gradFill = canvasCtx.createLinearGradient(0, 0, 0, height || 300);
+                if (isGoalMet) {
+                    gradFill.addColorStop(0, 'rgba(16, 185, 129, 0.55)');
+                    gradFill.addColorStop(0.5, 'rgba(52, 211, 153, 0.25)');
+                    gradFill.addColorStop(1, 'rgba(16, 185, 129, 0.00)');
+                } else {
+                    gradFill.addColorStop(0, 'rgba(99, 102, 241, 0.55)');
+                    gradFill.addColorStop(0.5, 'rgba(129, 140, 248, 0.25)');
+                    gradFill.addColorStop(1, 'rgba(99, 102, 241, 0.00)');
+                }
+                actualFillGradient = gradFill;
+
+                const gradLine = canvasCtx.createLinearGradient(0, 0, width || 500, 0);
+                gradLine.addColorStop(0, secondaryColor);
+                gradLine.addColorStop(0.5, primaryColor);
+                gradLine.addColorStop(1, isGoalMet ? '#059669' : '#4f46e5');
+                actualLineGradient = gradLine;
+            } catch (e) {
+                console.error(e);
+            }
+
+            datasets = [
+                {
+                    type: 'line',
+                    label: actualLabelName,
+                    data: [...chartActuals],
+                    borderColor: actualLineGradient,
+                    borderWidth: 3.5,
+                    backgroundColor: actualFillGradient,
+                    fill: true,
+                    tension: 0.45,
+                    pointRadius: 0,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: isDark ? '#0f172a' : '#ffffff',
+                    pointBorderColor: primaryColor,
+                    pointBorderWidth: 2.5,
+                    pointHoverBackgroundColor: primaryColor,
+                    pointHoverBorderColor: '#ffffff',
+                    pointHoverBorderWidth: 3
+                },
+                {
+                    type: 'line',
+                    label: targetLabelName,
+                    data: [...chartTargets],
+                    borderColor: '#f43f5e',
+                    borderWidth: 2.5,
+                    borderDash: [6, 4],
+                    fill: false,
+                    tension: 0,
+                    pointRadius: 0,
+                    pointHoverRadius: 0
+                }
+            ];
+            return datasets;
+        }
 
         if (style === 'combo') {
             let successBarGrad = 'rgba(16, 185, 129, 1.0)';
@@ -1787,7 +1981,7 @@
                     hoverBackgroundColor: barHoverColors,
                     borderRadius: 8,
                     borderWidth: 0,
-                    barPercentage: range > 30 && grouping === 'daily' ? 0.8 : (grouping === 'hourly' ? 0.7 : 0.6)
+                    barPercentage: range > 30 && grouping === 'daily' ? 0.8 : 0.6
                 },
                 {
                     type: 'line',
@@ -1907,7 +2101,7 @@
         return datasets;
     }
 
-    function updateOrCreateCanvasChart(canvasEl, instanceRefKey, style, chartLabels, datasets, yMax, isDark, isLiveUpdate = false) {
+    function updateOrCreateCanvasChart(canvasEl, instanceRefKey, style, chartLabels, datasets, yMax, isDark, isLiveUpdate = false, range = 180, sumActual = 0, dayTarget = 0) {
         if (!canvasEl) return;
 
         let chartInstance = window[instanceRefKey];
@@ -1918,10 +2112,13 @@
             chartInstance.data.datasets &&
             chartInstance.data.datasets.length === datasets.length &&
             chartInstance.data.datasets.every((ds, idx) => ds.type === datasets[idx].type) &&
-            chartInstance._style === style;
+            chartInstance._style === style &&
+            chartInstance._range === range;
 
         if (canUpdateInPlace) {
             chartInstance.data.labels = chartLabels;
+            chartInstance._sumActual = sumActual;
+            chartInstance._dayTarget = dayTarget;
             datasets.forEach((newDs, idx) => {
                 const targetDs = chartInstance.data.datasets[idx];
                 targetDs.data = newDs.data;
@@ -1931,6 +2128,8 @@
                 targetDs.pointRadius = newDs.pointRadius;
                 if (newDs.borderDash !== undefined) targetDs.borderDash = newDs.borderDash;
                 if (newDs.barPercentage !== undefined) targetDs.barPercentage = newDs.barPercentage;
+                if (newDs.tension !== undefined) targetDs.tension = newDs.tension;
+                if (newDs.fill !== undefined) targetDs.fill = newDs.fill;
             });
 
             if (chartInstance.options.scales && chartInstance.options.scales.y) {
@@ -1940,6 +2139,16 @@
             }
             if (chartInstance.options.scales && chartInstance.options.scales.x) {
                 chartInstance.options.scales.x.ticks.color = isDark ? '#94a3b8' : '#64748b';
+                chartInstance.options.scales.x.ticks.autoSkip = range === 1 ? false : true;
+                chartInstance.options.scales.x.ticks.maxTicksLimit = range === 1 ? undefined : (chartLabels.length > 30 ? 6 : (chartLabels.length > 7 ? 10 : 7));
+                chartInstance.options.scales.x.ticks.callback = function (val, index, ticks) {
+                    if (range === 1) {
+                        if (index === 0) return '12:00 AM';
+                        if (index === ticks.length - 1) return '11:59 PM';
+                        return '';
+                    }
+                    return this.getLabelForValue(val);
+                };
             }
 
             chartInstance.update(isLiveUpdate ? 'none' : 'default');
@@ -2021,7 +2230,7 @@
             }
         };
 
-        const baseType = style === 'bar' ? 'bar' : (style === 'line' ? 'line' : 'bar');
+        const baseType = (range === 1 || style === 'line') ? 'line' : (style === 'bar' ? 'bar' : 'bar');
 
         const chartConfig = {
             type: baseType,
@@ -2089,9 +2298,23 @@
                             label: function (context) {
                                 const label = context.dataset.label || '';
                                 const value = context.parsed.y;
+                                if (range === 1 && context.datasetIndex === 0) {
+                                    return ` Focus Level: ${value !== undefined ? value.toFixed(2) : 0} hrs`;
+                                }
                                 return ` ${label}: ${value !== undefined ? value.toFixed(2) : 0} hrs`;
                             },
                             footer: function (tooltipItems) {
+                                if (range === 1) {
+                                    const actual = (chartInstance && chartInstance._sumActual !== undefined) ? chartInstance._sumActual : sumActual;
+                                    const target = (chartInstance && chartInstance._dayTarget !== undefined) ? chartInstance._dayTarget : dayTarget;
+                                    const diff = actual - target;
+                                    const percent = target > 0 ? Math.round((actual / target) * 100) : 0;
+                                    if (diff >= 0) {
+                                        return `Goal Met! (Total: ${actual.toFixed(2)}h / Target: ${target.toFixed(2)}h, ${percent}%)`;
+                                    } else {
+                                        return `In Progress (Total: ${actual.toFixed(2)}h / Target: ${target.toFixed(2)}h, ${percent}%)`;
+                                    }
+                                }
                                 if (tooltipItems.length >= 2) {
                                     const actual = tooltipItems[0].parsed.y;
                                     const target = tooltipItems[1].parsed.y;
@@ -2147,9 +2370,18 @@
                                 size: 10
                             },
                             padding: 8,
-                            maxTicksLimit: chartLabels.length > 30 ? 6 : (chartLabels.length > 7 ? 10 : 7),
+                            autoSkip: range === 1 ? false : true,
+                            maxTicksLimit: range === 1 ? undefined : (chartLabels.length > 30 ? 6 : (chartLabels.length > 7 ? 10 : 7)),
                             maxRotation: 0,
-                            minRotation: 0
+                            minRotation: 0,
+                            callback: function (val, index, ticks) {
+                                if (range === 1) {
+                                    if (index === 0) return '12:00 AM';
+                                    if (index === ticks.length - 1) return '11:59 PM';
+                                    return '';
+                                }
+                                return this.getLabelForValue(val);
+                            }
                         }
                     }
                 }
@@ -2159,6 +2391,9 @@
 
         const newChart = new Chart(canvasEl.getContext('2d'), chartConfig);
         newChart._style = style;
+        newChart._range = range;
+        newChart._sumActual = sumActual;
+        newChart._dayTarget = dayTarget;
         window[instanceRefKey] = newChart;
     }
 
@@ -2169,46 +2404,62 @@
 
         const range = window.timerAnalyticsRange || 180;
         const style = window.timerAnalyticsChartStyle || 'combo';
+        if (window.timerAnalyticsGrouping === 'hourly') window.timerAnalyticsGrouping = 'daily';
         let grouping = window.timerAnalyticsGrouping || 'daily';
 
         // Range constraints on grouping
         if (range === 1) {
-            grouping = 'hourly';
+            grouping = 'daily';
         } else if (range === 7) {
             grouping = 'daily';
-        } else if (range === 30 && (grouping === 'monthly' || grouping === 'hourly')) {
-            grouping = 'daily';
-        } else if (range > 30 && grouping === 'hourly') {
+        } else if (range === 30 && grouping === 'monthly') {
             grouping = 'daily';
         }
 
         let chartLabels = [];
         let chartActuals = [];
         let chartTargets = [];
+        let sumActual = 0;
+        let dayTarget = 0;
 
-        if (grouping === 'hourly') {
-            const today = new Date();
-            const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).getTime();
-            const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).getTime();
+        if (range === 1) {
+            const dayOffset = window.timerAnalyticsDayOffset || 0;
+            const targetDate = new Date();
+            targetDate.setDate(targetDate.getDate() + dayOffset);
 
-            const hourlyActualSeconds = new Array(24).fill(0);
+            const targetStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0).getTime();
+            const targetEnd = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999).getTime();
 
-            if (AppState.timerLogs) {
+            // Gather selected day's sessions
+            const todaySessions = [];
+            let totalTodaySeconds = 0;
+
+            if (AppState.timerLogs && Array.isArray(AppState.timerLogs)) {
                 AppState.timerLogs.forEach(log => {
                     const logTime = new Date(log.date).getTime();
-                    if (logTime >= todayStart && logTime <= todayEnd) {
-                        const logDate = new Date(log.date);
-                        const hr = logDate.getHours();
-                        if (hr >= 0 && hr < 24) {
-                            hourlyActualSeconds[hr] += parseInt(log.duration || 0, 10);
+                    if (logTime >= targetStart && logTime <= targetEnd) {
+                        const durSec = parseInt(log.duration || 0, 10);
+                        if (durSec > 0) {
+                            totalTodaySeconds += durSec;
+                            const endHour = (logTime - targetStart) / 3600000;
+                            const startHour = Math.max(0, endHour - (durSec / 3600));
+                            todaySessions.push({
+                                startHour,
+                                endHour,
+                                durSec,
+                                durHours: durSec / 3600,
+                                subject: log.subject || 'Focus',
+                                time: new Date(log.date)
+                            });
                         }
                     }
                 });
             }
 
-            // Real-time addition for active timer/stopwatch ONLY if currently running
-            if (AppState.activeTimerState) {
+            // Real-time addition for active timer/stopwatch ONLY if viewing Today (dayOffset === 0) and currently running
+            if (dayOffset === 0 && AppState.activeTimerState) {
                 let activeMs = 0;
+                let activeSubject = 'Focus';
                 if (AppState.activeTimerState.timerStates) {
                     Object.values(AppState.activeTimerState.timerStates).forEach(store => {
                         if (store.isRunning) {
@@ -2217,6 +2468,7 @@
                                 ms += (window.getServerTime() - parseStartTime(store.startTime));
                             }
                             activeMs += ms;
+                            if (store.subject) activeSubject = store.subject;
                         }
                     });
                 } else if (AppState.activeTimerState.isRunning) {
@@ -2224,41 +2476,106 @@
                     if (AppState.activeTimerState.startTime) {
                         activeMs += (window.getServerTime() - parseStartTime(AppState.activeTimerState.startTime));
                     }
+                    if (AppState.activeTimerState.subject) activeSubject = AppState.activeTimerState.subject;
                 }
                 const activeSec = Math.floor(activeMs / 1000);
                 if (activeSec > 0) {
-                    const currentHr = today.getHours();
-                    hourlyActualSeconds[currentHr] += activeSec;
+                    totalTodaySeconds += activeSec;
+                    const nowTime = (typeof window.getServerTime === 'function') ? window.getServerTime() : Date.now();
+                    const endHour = Math.min(24, (nowTime - targetStart) / 3600000);
+                    const startHour = Math.max(0, endHour - (activeSec / 3600));
+                    todaySessions.push({
+                        startHour,
+                        endHour,
+                        durSec: activeSec,
+                        durHours: activeSec / 3600,
+                        subject: activeSubject,
+                        time: new Date(nowTime),
+                        isActive: true
+                    });
                 }
             }
 
-            const dayTarget = window.getDailyFocusHoursTargetForDate(today);
-            const hourlyTarget = parseFloat((dayTarget / 24).toFixed(2));
+            dayTarget = window.getDailyFocusHoursTargetForDate(targetDate);
+            sumActual = parseFloat((totalTodaySeconds / 3600).toFixed(2));
+            const successRate = dayTarget > 0 ? Math.round((sumActual / dayTarget) * 100) : 0;
 
-            let peakHour = { actual: 0, label: "No Data" };
+            // Generate timeline points across the selected day [00:00 to 24:00] (49 sample points, every 30m)
+            const numPoints = 49;
+            const rawHill = new Array(numPoints).fill(0);
 
-            for (let h = 0; h < 24; h++) {
-                const ampm = h >= 12 ? 'PM' : 'AM';
-                let displayHr = h % 12;
+            for (let i = 0; i < numPoints; i++) {
+                const hourFloat = (i / (numPoints - 1)) * 24; // 0.0 to 24.0
+
+                // Construct display time label for tooltip
+                const hrInt = Math.floor(hourFloat) % 24;
+                const minInt = Math.round((hourFloat - Math.floor(hourFloat)) * 60);
+                const ampm = (hourFloat >= 12 && hourFloat < 24) ? 'PM' : 'AM';
+                let displayHr = hrInt % 12;
                 if (displayHr === 0) displayHr = 12;
-                const label = `${displayHr} ${ampm}`;
+                const minStr = minInt === 0 ? '00' : String(minInt).padStart(2, '0');
 
-                const actualHrs = parseFloat((hourlyActualSeconds[h] / 3600).toFixed(2));
-
+                let label = '';
+                if (i === 0) {
+                    label = '12:00 AM';
+                } else if (i === numPoints - 1) {
+                    label = '11:59 PM';
+                } else {
+                    label = `${displayHr}:${minStr} ${ampm}`;
+                }
                 chartLabels.push(label);
-                chartActuals.push(actualHrs);
-                chartTargets.push(hourlyTarget);
 
-                if (actualHrs > peakHour.actual) {
-                    peakHour = { actual: actualHrs, label: label };
+                if (sumActual > 0) {
+                    // Compute contribution from sessions into smooth bell/hill curve
+                    if (todaySessions.length > 0) {
+                        let pointVal = 0;
+                        todaySessions.forEach(s => {
+                            const mid = (s.startHour + s.endHour) / 2;
+                            const spread = Math.max(1.8, (s.endHour - s.startHour) * 1.5);
+                            const dist = hourFloat - mid;
+                            const bell = Math.exp(-Math.pow(dist / spread, 2) * 2.2);
+                            pointVal += s.durHours * bell;
+                        });
+                        rawHill[i] = pointVal;
+                    } else {
+                        const mid = 14;
+                        const spread = 5;
+                        rawHill[i] = sumActual * Math.exp(-Math.pow((hourFloat - mid) / spread, 2) * 2);
+                    }
                 }
             }
 
-            const sumActual = parseFloat((hourlyActualSeconds.reduce((a, b) => a + b, 0) / 3600).toFixed(2));
-            const sumTarget = dayTarget;
-            const successRate = sumTarget > 0 ? Math.round((sumActual / sumTarget) * 100) : 0;
+            // Scale raw hill curve so its crest/height reflects sumActual
+            if (sumActual > 0) {
+                const maxRaw = Math.max(...rawHill);
+                const scale = maxRaw > 0 ? (sumActual / maxRaw) : 1;
+                for (let i = 0; i < numPoints; i++) {
+                    if (i === 0 || i === numPoints - 1) {
+                        chartActuals.push(0);
+                    } else {
+                        const val = parseFloat((rawHill[i] * scale).toFixed(2));
+                        chartActuals.push(val);
+                    }
+                    chartTargets.push(dayTarget);
+                }
+            } else {
+                for (let i = 0; i < numPoints; i++) {
+                    chartActuals.push(0);
+                    chartTargets.push(dayTarget);
+                }
+            }
 
-            // Update Stats UI for Today (both Modal and Analytics page)
+            // Find peak session/period if any
+            let peakSessionStr = "No Data";
+            let peakSessionVal = 0;
+            if (todaySessions.length > 0) {
+                const sortedSessions = [...todaySessions].sort((a, b) => b.durSec - a.durSec);
+                const best = sortedSessions[0];
+                peakSessionVal = best.durHours;
+                peakSessionStr = `${formatHoursToHrMin(best.durHours)} (${best.subject})`;
+            }
+
+            // Update Stats UI for 1 Day (both Modal and Analytics page)
             ['timer-average-focus', 'spectra-timer-average-focus'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.innerText = formatHoursToHrMin(sumActual);
@@ -2266,7 +2583,7 @@
 
             ['timer-average-target', 'spectra-timer-average-target'].forEach(id => {
                 const el = document.getElementById(id);
-                if (el) el.innerText = formatHoursToHrMin(sumTarget);
+                if (el) el.innerText = formatHoursToHrMin(dayTarget);
             });
 
             ['timer-total-focus', 'spectra-timer-total-focus'].forEach(id => {
@@ -2288,19 +2605,26 @@
                 }
             });
 
+            let subtitleText = "Today";
+            if (dayOffset === -1) {
+                subtitleText = "Yesterday";
+            } else if (dayOffset < -1) {
+                subtitleText = targetDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: targetDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined });
+            }
+
             ['timer-success-rate-subtitle', 'spectra-timer-success-rate-subtitle'].forEach(id => {
                 const el = document.getElementById(id);
-                if (el) el.innerText = `Today (Hourly)`;
+                if (el) el.innerText = subtitleText;
             });
 
             ['timer-peak-value', 'spectra-timer-peak-value'].forEach(id => {
                 const el = document.getElementById(id);
-                if (el) el.innerText = peakHour.actual > 0 ? formatHoursToHrMin(peakHour.actual) : "0 min";
+                if (el) el.innerText = sumActual > 0 ? formatHoursToHrMin(peakSessionVal || sumActual) : "0 min";
             });
 
             ['timer-peak-date', 'spectra-timer-peak-date'].forEach(id => {
                 const el = document.getElementById(id);
-                if (el) el.innerText = peakHour.actual > 0 ? peakHour.label : "No Data";
+                if (el) el.innerText = sumActual > 0 ? (peakSessionStr !== "No Data" ? peakSessionStr : subtitleText) : "No Data";
             });
         } else {
             // 1. Gather daily data points
@@ -2323,20 +2647,21 @@
                 }
 
                 const actualHrs = parseFloat((totalSeconds / 3600).toFixed(2));
-                const dayTarget = window.getDailyFocusHoursTargetForDate(d);
+                const targetVal = window.getDailyFocusHoursTargetForDate(d);
 
                 dailyPoints.push({
                     date: d,
                     actual: actualHrs,
-                    target: dayTarget
+                    target: targetVal
                 });
             }
 
             // 2. Compute Analytics Statistics (overall for the selected range)
-            const sumActual = dailyPoints.reduce((acc, p) => acc + p.actual, 0);
+            sumActual = dailyPoints.reduce((acc, p) => acc + p.actual, 0);
             const avgActual = parseFloat((sumActual / range).toFixed(2));
             const sumTarget = dailyPoints.reduce((acc, p) => acc + p.target, 0);
             const avgTarget = parseFloat((sumTarget / range).toFixed(2));
+            dayTarget = avgTarget;
 
             const successRate = avgTarget > 0 ? Math.round((avgActual / avgTarget) * 100) : 0;
             const successDays = dailyPoints.filter(p => p.actual >= p.target).length;
@@ -2408,11 +2733,11 @@
                     const d = new Date(p.date);
                     const dayOfWeek = d.getDay();
                     const diffToSat = (dayOfWeek + 1) % 7;
-                    
+
                     const satDate = new Date(d);
                     satDate.setDate(d.getDate() - diffToSat);
                     satDate.setHours(0, 0, 0, 0);
-                    
+
                     const key = `${satDate.getFullYear()}-${String(satDate.getMonth() + 1).padStart(2, '0')}-${String(satDate.getDate()).padStart(2, '0')}`;
                     if (!weeklyGroups[key]) {
                         weeklyGroups[key] = [];
@@ -2435,7 +2760,7 @@
                     const startD = new Date(key);
                     const endD = new Date(startD);
                     endD.setDate(startD.getDate() + 6);
-                    
+
                     const startStr = startD.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
                     const endStr = endD.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
                     chartLabels.push(`${startStr} - ${endStr}`);
@@ -2473,38 +2798,52 @@
             }
         }
 
-        const maxVal = Math.max(...chartActuals, ...chartTargets);
-        const yMax = maxVal > 0 ? Math.ceil(maxVal * 1.2) : 5;
+        const maxVal = Math.max(...chartActuals, ...chartTargets, range === 1 ? (window.dailyFocusHoursTarget || 0) : 0);
+        const yMax = maxVal > 0 ? Math.ceil(maxVal * 1.25) : 5;
         const isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark') || window.matchMedia('(prefers-color-scheme: dark)').matches;
         const textColor = isDark ? '#94a3b8' : '#64748b';
 
         Chart.defaults.color = textColor;
         Chart.defaults.font.family = 'Inter, ui-sans-serif, system-ui';
 
-        const actualLabelName = grouping === 'hourly'
-            ? 'Hourly Focus Hours'
-            : (grouping === 'daily'
+        let actualLabelName = "1 Day Focus";
+        let targetLabelName = "1 Day Target";
+        if (range === 1) {
+            const dayOffset = window.timerAnalyticsDayOffset || 0;
+            if (dayOffset === 0) {
+                actualLabelName = "Today's Focus";
+                targetLabelName = "Today's Target";
+            } else if (dayOffset === -1) {
+                actualLabelName = "Yesterday's Focus";
+                targetLabelName = "Yesterday's Target";
+            } else {
+                const d = new Date();
+                d.setDate(d.getDate() + dayOffset);
+                const dStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                actualLabelName = `${dStr} Focus`;
+                targetLabelName = `${dStr} Target`;
+            }
+        } else {
+            actualLabelName = grouping === 'daily'
                 ? 'Actual Focus Hours'
                 : (grouping === 'weekly'
                     ? 'Weekly Focus Hours (Avg/Day)'
-                    : 'Monthly Focus Hours (Avg/Day)'));
-
-        const targetLabelName = grouping === 'hourly'
-            ? 'Hourly Target Hours'
-            : (grouping === 'daily'
+                    : 'Monthly Focus Hours (Avg/Day)');
+            targetLabelName = grouping === 'daily'
                 ? 'Target Focus Hours'
                 : (grouping === 'weekly'
                     ? 'Weekly Target Hours (Avg/Day)'
-                    : 'Monthly Target Hours (Avg/Day)'));
+                    : 'Monthly Target Hours (Avg/Day)');
+        }
 
         if (ctx1) {
-            const datasets1 = buildDatasetsForCanvas(ctx1, style, grouping, range, chartActuals, chartTargets, actualLabelName, targetLabelName, isDark);
-            updateOrCreateCanvasChart(ctx1, 'timerAnalyticsChartInstance', style, chartLabels, datasets1, yMax, isDark, isLiveUpdate);
+            const datasets1 = buildDatasetsForCanvas(ctx1, style, grouping, range, chartActuals, chartTargets, actualLabelName, targetLabelName, isDark, sumActual, dayTarget);
+            updateOrCreateCanvasChart(ctx1, 'timerAnalyticsChartInstance', style, chartLabels, datasets1, yMax, isDark, isLiveUpdate, range, sumActual, dayTarget);
         }
 
         if (ctx2) {
-            const datasets2 = buildDatasetsForCanvas(ctx2, style, grouping, range, chartActuals, chartTargets, actualLabelName, targetLabelName, isDark);
-            updateOrCreateCanvasChart(ctx2, 'spectraFocusAnalyticsChartInstance', style, chartLabels, datasets2, yMax, isDark, isLiveUpdate);
+            const datasets2 = buildDatasetsForCanvas(ctx2, style, grouping, range, chartActuals, chartTargets, actualLabelName, targetLabelName, isDark, sumActual, dayTarget);
+            updateOrCreateCanvasChart(ctx2, 'spectraFocusAnalyticsChartInstance', style, chartLabels, datasets2, yMax, isDark, isLiveUpdate, range, sumActual, dayTarget);
         }
 
         if (window.renderSpectraFocusHeatmap) {
@@ -2536,9 +2875,17 @@
     };
 
     window.setSpectraHeatmapRange = function (days) {
+        window.spectraHeatmapRange = days;
+        if (window.AppState) {
+            window.AppState.spectraHeatmapRange = days;
+            window.AppState._lastFilterChangeTime = Date.now();
+        }
+        try {
+            localStorage.setItem('x29_spectraHeatmapRange', String(days));
+        } catch (e) {}
         window.setSpectraHeatmapRangeUI(days);
-        if (window.FirebaseService) {
-            window.FirebaseService.saveToCloud();
+        if (typeof window.debouncedSaveTimerPreferences === 'function') {
+            window.debouncedSaveTimerPreferences();
         }
     };
 
@@ -3407,9 +3754,17 @@
     };
 
     window.setSessionHistoryFilter = function (filter) {
+        window.sessionHistoryFilter = filter;
+        if (window.AppState) {
+            window.AppState.sessionHistoryFilter = filter;
+            window.AppState._lastFilterChangeTime = Date.now();
+        }
+        try {
+            localStorage.setItem('x29_sessionHistoryFilter', String(filter));
+        } catch (e) {}
         window.setSessionHistoryFilterUI(filter);
-        if (window.FirebaseService) {
-            window.FirebaseService.saveToCloud(true);
+        if (typeof window.debouncedSaveTimerPreferences === 'function') {
+            window.debouncedSaveTimerPreferences();
         }
     };
 

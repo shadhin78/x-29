@@ -582,14 +582,37 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
         }
     }
 
+    const hasRecentFilterChange = (Date.now() - (AppState._lastFilterChangeTime || 0)) < 6000;
+
     if (data.dailyFocusHoursTarget !== undefined) AppState.dailyFocusHoursTarget = data.dailyFocusHoursTarget;
     if (data.dailyFocusHoursTargetDate !== undefined) AppState.dailyFocusHoursTargetDate = data.dailyFocusHoursTargetDate;
     if (data.dailyFocusHoursTargetHistory !== undefined) AppState.dailyFocusHoursTargetHistory = data.dailyFocusHoursTargetHistory;
-    if (data.timerAnalyticsRange !== undefined) AppState.timerAnalyticsRange = data.timerAnalyticsRange;
-    if (data.timerAnalyticsGrouping !== undefined) AppState.timerAnalyticsGrouping = data.timerAnalyticsGrouping;
-    if (data.timerAnalyticsChartStyle !== undefined) AppState.timerAnalyticsChartStyle = data.timerAnalyticsChartStyle;
-    if (data.spectraHeatmapRange !== undefined) AppState.spectraHeatmapRange = data.spectraHeatmapRange;
-    if (data.sessionHistoryFilter !== undefined) AppState.sessionHistoryFilter = data.sessionHistoryFilter;
+
+    if (!hasRecentFilterChange) {
+        if (data.timerAnalyticsRange !== undefined) {
+            AppState.timerAnalyticsRange = data.timerAnalyticsRange;
+            window.timerAnalyticsRange = data.timerAnalyticsRange;
+        }
+        if (data.timerAnalyticsGrouping !== undefined) {
+            const g = data.timerAnalyticsGrouping === 'hourly' ? 'daily' : data.timerAnalyticsGrouping;
+            AppState.timerAnalyticsGrouping = g;
+            window.timerAnalyticsGrouping = g;
+        }
+        if (data.timerAnalyticsChartStyle !== undefined) {
+            AppState.timerAnalyticsChartStyle = data.timerAnalyticsChartStyle;
+            window.timerAnalyticsChartStyle = data.timerAnalyticsChartStyle;
+        }
+        if (data.spectraHeatmapRange !== undefined) {
+            AppState.spectraHeatmapRange = data.spectraHeatmapRange;
+            window.spectraHeatmapRange = data.spectraHeatmapRange;
+        }
+        if (data.sessionHistoryFilter !== undefined) {
+            AppState.sessionHistoryFilter = data.sessionHistoryFilter;
+            window.sessionHistoryFilter = data.sessionHistoryFilter;
+        }
+    } else {
+        console.log("HYDRATION_GUARD: Preserving recent local UI filter preferences during cloud sync");
+    }
     if (data.subjectFocusTargets !== undefined) {
         if (window.shouldHydrateField('subjectFocusTargets', data.subjectFocusTargets, AppState.subjectFocusTargets, isExplicitWipe, isCloudAuthoritative)) {
             let sft = Object.assign({}, data.subjectFocusTargets || {});

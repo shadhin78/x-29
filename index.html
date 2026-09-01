@@ -1151,7 +1151,7 @@
                             <div class="flex shrink-0 bg-slate-100 dark:bg-slate-900/60 p-0.5 sm:p-1 rounded-xl border border-slate-200/40 dark:border-slate-800/40">
                                 <button onclick="window.setTimerAnalyticsRange(1)" id="spectra-tar-btn-1"
                                     class="shrink-0 px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
-                                    <span class="inline sm:hidden">1D</span><span class="hidden sm:inline">Today</span>
+                                    <span class="inline sm:hidden">1D</span><span class="hidden sm:inline">1 Day</span>
                                 </button>
                                 <button onclick="window.setTimerAnalyticsRange(7)" id="spectra-tar-btn-7"
                                     class="shrink-0 px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
@@ -1166,12 +1166,21 @@
                                     <span class="inline sm:hidden">6M</span><span class="hidden sm:inline">6 Months</span>
                                 </button>
                             </div>
+                            <!-- Day Stepper (< > for 1 Day filter) -->
+                            <div id="spectra-day-stepper" class="flex shrink-0 items-center bg-slate-100 dark:bg-slate-900/60 p-0.5 sm:p-1 rounded-xl border border-slate-200/40 dark:border-slate-800/40 transition-all">
+                                <button onclick="window.navigateTimerAnalyticsDay(-1)" id="spectra-day-prev-btn" title="Previous Day (-1 Day)"
+                                    class="shrink-0 px-1.5 sm:px-2 py-1 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                                </button>
+                                <button onclick="window.resetTimerAnalyticsDayOffset()" id="spectra-day-label" title="Click to jump to Today"
+                                    class="px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 min-w-[65px] text-center select-none cursor-pointer transition-colors">Today</button>
+                                <button onclick="window.navigateTimerAnalyticsDay(1)" id="spectra-day-next-btn" title="Next Day (+1 Day)"
+                                    class="shrink-0 px-1.5 sm:px-2 py-1 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                                </button>
+                            </div>
                             <!-- Grouping Selector -->
                             <div class="flex shrink-0 bg-slate-100 dark:bg-slate-900/60 p-0.5 sm:p-1 rounded-xl border border-slate-200/40 dark:border-slate-800/40">
-                                <button onclick="window.setTimerAnalyticsGrouping('hourly')" id="spectra-tag-btn-hourly"
-                                    class="shrink-0 px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
-                                    <span class="inline sm:hidden">Hour</span><span class="hidden sm:inline">Hourly</span>
-                                </button>
                                 <button onclick="window.setTimerAnalyticsGrouping('daily')" id="spectra-tag-btn-daily"
                                     class="shrink-0 px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
                                     <span class="inline sm:hidden">Day</span><span class="hidden sm:inline">Daily</span>
@@ -6331,7 +6340,7 @@
                             class="flex shrink-0 bg-slate-100 dark:bg-slate-900/60 p-0.5 sm:p-1 rounded-xl border border-slate-200/40 dark:border-slate-800/40">
                             <button onclick="window.setTimerAnalyticsRange(1)" id="tar-btn-1"
                                 class="shrink-0 px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
-                                <span class="inline sm:hidden">1D</span><span class="hidden sm:inline">Today</span>
+                                <span class="inline sm:hidden">1D</span><span class="hidden sm:inline">1 Day</span>
                             </button>
                             <button onclick="window.setTimerAnalyticsRange(7)" id="tar-btn-7"
                                 class="shrink-0 px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
@@ -6346,13 +6355,22 @@
                                 <span class="inline sm:hidden">6M</span><span class="hidden sm:inline">6 Months</span>
                             </button>
                         </div>
+                        <!-- Day Stepper (< > for 1 Day filter) -->
+                        <div id="day-stepper" class="flex shrink-0 items-center bg-slate-100 dark:bg-slate-900/60 p-0.5 sm:p-1 rounded-xl border border-slate-200/40 dark:border-slate-800/40 transition-all">
+                            <button onclick="window.navigateTimerAnalyticsDay(-1)" id="day-prev-btn" title="Previous Day (-1 Day)"
+                                class="shrink-0 px-1.5 sm:px-2 py-1 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                            </button>
+                            <button onclick="window.resetTimerAnalyticsDayOffset()" id="day-label" title="Click to jump to Today"
+                                class="px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 min-w-[65px] text-center select-none cursor-pointer transition-colors">Today</button>
+                            <button onclick="window.navigateTimerAnalyticsDay(1)" id="day-next-btn" title="Next Day (+1 Day)"
+                                class="shrink-0 px-1.5 sm:px-2 py-1 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                        </div>
                         <!-- Grouping Selector -->
                         <div
                             class="flex shrink-0 bg-slate-100 dark:bg-slate-900/60 p-0.5 sm:p-1 rounded-xl border border-slate-200/40 dark:border-slate-800/40">
-                            <button onclick="window.setTimerAnalyticsGrouping('hourly')" id="tag-btn-hourly"
-                                class="shrink-0 px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
-                                <span class="inline sm:hidden">Hour</span><span class="hidden sm:inline">Hourly</span>
-                            </button>
                             <button onclick="window.setTimerAnalyticsGrouping('daily')" id="tag-btn-daily"
                                 class="shrink-0 px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
                                 <span class="inline sm:hidden">Day</span><span class="hidden sm:inline">Daily</span>
