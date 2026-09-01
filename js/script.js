@@ -18458,22 +18458,59 @@ window.syncTaskChapterCompletion = function (track, subject, chapter, isComplete
 };
 
 window.getChaptersForSubject = function (track, subject) {
-    const key = track + 'Tasks';
     const chapters = new Set();
-    AppState.tasks.forEach(t => {
-        if (t.type === 'study' && Array.isArray(t[key])) {
-            t[key].forEach(b => {
-                if (b.subject === subject && b.chapter && !b.skipped) {
-                    chapters.add(b.chapter);
+    
+    // 1. Gather all chapters defined in syllabusStructure
+    let sObj = null;
+    if (track && syllabusStructure && syllabusStructure[track]) {
+        sObj = syllabusStructure[track].find(s => s.subject === subject);
+    }
+    if (!sObj && syllabusStructure) {
+        for (const t of (window.tracks || [])) {
+            if (syllabusStructure[t.id]) {
+                sObj = syllabusStructure[t.id].find(s => s.subject === subject);
+                if (sObj) {
+                    if (!track) track = t.id;
+                    break;
                 }
+            }
+        }
+    }
+
+    if (sObj) {
+        if (Array.isArray(sObj.topics) && sObj.topics.length > 0) {
+            sObj.topics.forEach((t, i) => {
+                const name = typeof t === 'string' ? t : (t.name || `Ch. ${i + 1}`);
+                if (name) chapters.add(name);
             });
         }
-    });
+        if (typeof sObj.chapters === 'number' && sObj.chapters > 0) {
+            for (let i = 1; i <= sObj.chapters; i++) {
+                chapters.add(`Ch. ${i}`);
+            }
+        }
+    }
+
+    // 2. Gather any custom / active chapters in AppState.tasks
+    const key = track ? track + 'Tasks' : null;
+    if (Array.isArray(AppState.tasks)) {
+        AppState.tasks.forEach(t => {
+            if (t.type === 'study') {
+                const taskLists = key && t[key] ? [t[key]] : (window.tracks || []).map(tr => t[tr.id + 'Tasks']).filter(Boolean);
+                taskLists.forEach(list => {
+                    if (Array.isArray(list)) {
+                        list.forEach(b => {
+                            if (b && b.subject === subject && b.chapter && !b.skipped) {
+                                chapters.add(b.chapter);
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
     return Array.from(chapters).sort((a, b) => {
-        // local helper consolidated
-        // local helper consolidated
-        // local helper consolidated
-        // local helper consolidated
         return Utils.extractNum(a) - Utils.extractNum(b);
     });
 };
