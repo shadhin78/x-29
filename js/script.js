@@ -15259,6 +15259,13 @@ window.populateMonthlyProgramsList = function (preselectedProgram = null) {
 
     allPrograms.forEach(prog => {
         const isSelected = Boolean(preselectedProgram && (prog.progName === preselectedProgram));
+        const isProgPassed = Boolean(
+            (window.passedItems && Array.isArray(window.passedItems.programs) && window.passedItems.programs.includes(prog.progName)) ||
+            (prog.subsCount > 0 && (syllabusStructure[prog.trackId] || [])
+                .filter(s => s.program === prog.progName)
+                .every(s => window.isSubjectPassed && window.isSubjectPassed(prog.trackId, s.subject, prog.progName)))
+        );
+
         const trackBadgeColor = prog.trackId === 'academic'
             ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200/50 dark:border-blue-800/50'
             : (prog.trackId === 'admission' ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200/50 dark:border-amber-800/50' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200/50 dark:border-emerald-800/50');
@@ -15274,12 +15281,19 @@ window.populateMonthlyProgramsList = function (preselectedProgram = null) {
                         ${isSelected ? 'checked' : ''}>
                     <div class="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-wrap">
                         <span class="text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider ${trackBadgeColor} shrink-0">${prog.trackName}</span>
-                        <span class="text-xs font-black text-slate-800 dark:text-slate-100 truncate">${prog.progName}</span>
+                        <span class="text-xs font-black text-slate-800 dark:text-slate-100 truncate">${isProgPassed ? `🏆 ${prog.progName} (Passed)` : prog.progName}</span>
                     </div>
                 </label>
-                <span class="text-[8.5px] sm:text-[9px] font-black px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/70 text-slate-500 dark:text-slate-300 shrink-0 ml-1.5">
-                    ${prog.subsCount} Sub
-                </span>
+                <div class="flex items-center gap-1.5 shrink-0 ml-1.5">
+                    ${isProgPassed ? `
+                        <span class="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50">
+                            Passed
+                        </span>
+                    ` : ''}
+                    <span class="text-[8.5px] sm:text-[9px] font-black px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/70 text-slate-500 dark:text-slate-300">
+                        ${prog.subsCount} Sub
+                    </span>
+                </div>
             </div>
         `;
         container.innerHTML += cardHtml;
@@ -15382,7 +15396,7 @@ window.updateMonthlyTargetSubjectDropdown = function (preselectSubject = null, p
 
         subs.forEach(s => {
             totalSubsRendered++;
-            const isPassed = Boolean(
+            const isPassed = window.isSubjectPassed ? window.isSubjectPassed(trackId, s.subject, progName) : Boolean(
                 (Array.isArray(passedItems.subjects) && passedItems.subjects.includes(s.subject)) ||
                 (Array.isArray(passedItems.programs) && passedItems.programs.includes(s.program || progName))
             );
@@ -15391,26 +15405,38 @@ window.updateMonthlyTargetSubjectDropdown = function (preselectSubject = null, p
             const chs = window.getChaptersForSubject(trackId, s.subject) || [];
             
             const subKey = trackId + '|||' + progName + '|||' + s.subject;
-            let isSelected = previouslyCheckedSet.has(subKey) || (Boolean(preselectSubject) && s.subject === preselectSubject);
+            let isSelected = !isPassed && (previouslyCheckedSet.has(subKey) || (Boolean(preselectSubject) && s.subject === preselectSubject));
+
+            const cardClasses = isPassed
+                ? "mt-subject-card flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-amber-200/50 dark:border-amber-900/40 bg-slate-50/70 dark:bg-slate-900/40 opacity-60 cursor-not-allowed min-h-[46px]"
+                : "mt-subject-card flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-white dark:bg-slate-800 transition-all hover:border-indigo-400/80 dark:hover:border-indigo-500/80 cursor-pointer shadow-xs hover:shadow-sm min-h-[46px] active:scale-[0.99]";
 
             const cardHtml = `
-                <div class="mt-subject-card flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-white dark:bg-slate-800 transition-all hover:border-indigo-400/80 dark:hover:border-indigo-500/80 cursor-pointer shadow-xs hover:shadow-sm min-h-[46px] active:scale-[0.99]"
-                    data-track="${trackId}" data-program="${progName}" data-subject="${s.subject}"
+                <div class="${cardClasses}"
+                    data-track="${trackId}" data-program="${progName}" data-subject="${s.subject}" data-passed="${isPassed ? 'true' : 'false'}"
                     onclick="window.toggleMonthlySubjectCard('${CSS.escape(trackId)}', '${CSS.escape(progName)}', '${CSS.escape(s.subject)}', event)">
-                    <label class="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0 pointer-events-none">
+                    <label class="flex items-center gap-2.5 ${isPassed ? 'cursor-not-allowed' : 'cursor-pointer'} flex-1 min-w-0 pointer-events-none">
                         <input type="checkbox" data-track="${trackId}" data-program="${progName}" data-subject="${s.subject}"
-                            class="mt-subject-checkbox form-checkbox h-5 w-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer pointer-events-auto shrink-0"
+                            class="mt-subject-checkbox form-checkbox h-5 w-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer pointer-events-auto shrink-0 ${isPassed ? 'opacity-30 cursor-not-allowed' : ''}"
                             onchange="window.handleMonthlySubjectToggle(); event.stopPropagation();"
-                            ${isSelected ? 'checked' : ''}>
+                            ${isSelected ? 'checked' : ''}
+                            ${isPassed ? 'disabled title="Subject is passed and cannot be selected"' : ''}>
                         <div class="flex items-center gap-2 min-w-0">
                             <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style="background-color: ${color}"></span>
                             <span class="text-xs font-black text-slate-800 dark:text-slate-100 truncate">${label}</span>
                             ${isMultiProg ? `<span class="text-[8px] font-bold text-purple-600 dark:text-purple-400 px-1 py-0.2 rounded bg-purple-50 dark:bg-purple-950/40 border border-purple-200/40 dark:border-purple-800/40 shrink-0">${progName}</span>` : ''}
                         </div>
                     </label>
-                    <span class="text-[8.5px] sm:text-[9px] font-black px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/70 text-slate-500 dark:text-slate-300 shrink-0 ml-1.5">
-                        ${chs.length} Ch
-                    </span>
+                    <div class="flex items-center gap-1.5 shrink-0 ml-1.5">
+                        ${isPassed ? `
+                            <span class="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50">
+                                Passed
+                            </span>
+                        ` : ''}
+                        <span class="text-[8.5px] sm:text-[9px] font-black px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/70 text-slate-500 dark:text-slate-300">
+                            ${chs.length} Ch
+                        </span>
+                    </div>
                 </div>
             `;
             container.innerHTML += cardHtml;
@@ -15447,15 +15473,20 @@ window.toggleMonthlySubjectCard = function (trackId, progName, subjectName, even
     if (event && event.target && (event.target.tagName === 'INPUT' || event.target.closest('input'))) {
         return;
     }
+    const card = event && event.currentTarget ? event.currentTarget : document.querySelector(`.mt-subject-card[data-track="${CSS.escape(trackId)}"][data-program="${CSS.escape(progName)}"][data-subject="${CSS.escape(subjectName)}"]`);
+    if (card && card.getAttribute('data-passed') === 'true') {
+        showToast(`"${subjectName}" is marked as Passed and cannot be selected.`, "info");
+        return;
+    }
     const cb = document.querySelector(`.mt-subject-checkbox[data-track="${CSS.escape(trackId)}"][data-program="${CSS.escape(progName)}"][data-subject="${CSS.escape(subjectName)}"]`);
-    if (cb) {
+    if (cb && !cb.disabled) {
         cb.checked = !cb.checked;
         window.handleMonthlySubjectToggle();
     }
 };
 
 window.toggleAllMonthlySubjects = function (select) {
-    const checkboxes = document.querySelectorAll('.mt-subject-checkbox');
+    const checkboxes = document.querySelectorAll('.mt-subject-checkbox:not(:disabled)');
     checkboxes.forEach(cb => {
         cb.checked = select;
     });
@@ -16887,6 +16918,10 @@ window.addMonthlyTarget = function () {
         const subject = item.subject;
         const finalChapter = item.chapter;
 
+        if (window.isSubjectPassed && window.isSubjectPassed(trackId, subject, progName)) {
+            return;
+        }
+
         if (!isSubjectTarget && window.isChapterSkipped && window.isChapterSkipped(trackId, subject, finalChapter)) {
             return;
         }
@@ -17824,6 +17859,10 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
     const isSubjectTarget = selectedType === 'subject';
     const finalChapter = selectedChapter;
 
+    if (window.isSubjectPassed && window.isSubjectPassed(trackId, selectedSubject, progName)) {
+        return showToast(`"${selectedSubject}" is marked as Passed and cannot be set as a monthly target.`, "error");
+    }
+
     if (isSubjectTarget) {
         const exists = window.monthlyTargetsDatabase[monthKey].some((t, i) =>
             i !== idx && t.track === trackId && t.subject === selectedSubject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters')
@@ -18678,6 +18717,23 @@ window.consolidateWeeklyTargetsDatabase = function () {
     if (modified && window.AppState) {
         AppState.weeklyTargetsDatabase = window.weeklyTargetsDatabase;
     }
+};
+
+window.isSubjectPassed = function (track, subject, progName = null) {
+    const passedItems = window.passedItems || (window.AppState && window.AppState.passedItems) || { programs: [], subjects: [] };
+    if (Array.isArray(passedItems.subjects) && passedItems.subjects.includes(subject)) {
+        return true;
+    }
+    if (progName && Array.isArray(passedItems.programs) && passedItems.programs.includes(progName)) {
+        return true;
+    }
+    if (track && syllabusStructure && syllabusStructure[track]) {
+        const sObj = syllabusStructure[track].find(s => s.subject === subject);
+        if (sObj && sObj.program && Array.isArray(passedItems.programs) && passedItems.programs.includes(sObj.program)) {
+            return true;
+        }
+    }
+    return false;
 };
 
 window.isChapterCompleted = function (track, subject, chapter) {
