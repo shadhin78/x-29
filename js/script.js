@@ -15270,18 +15270,74 @@ window.getMonthlyTargetOccurrenceCount = function (track, subject, chapter, targ
     if (!window.monthlyTargetsDatabase) return 0;
     const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
     const isSubjectTarget = targetType === 'subject' || chapter === 'Whole Subject' || chapter === 'All Chapters';
+    const cleanSubject = String(subject || '').trim().toLowerCase();
 
     Object.keys(window.monthlyTargetsDatabase).forEach(monthKey => {
         const list = window.monthlyTargetsDatabase[monthKey] || [];
-        const match = list.some(t => {
-            if (t.track !== track || t.subject !== subject) return false;
+        list.forEach(t => {
+            if (!t) return;
+            const tSub = String(t.subject || '').trim().toLowerCase();
+            const subMatch = (tSub === cleanSubject) || (cleanSubject.includes(tSub) && tSub.length > 2) || (tSub.includes(cleanSubject) && cleanSubject.length > 2);
+            if (!subMatch) return;
+            if (track && t.track && t.track !== track) return;
+
             const tIsSubject = t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters';
-            if (isSubjectTarget) return tIsSubject;
-            return !tIsSubject && (matchFn ? matchFn(t.chapter, chapter) : t.chapter === chapter);
+            if (isSubjectTarget) {
+                if (tIsSubject) count++;
+            } else {
+                if (!tIsSubject && (matchFn ? matchFn(t.chapter, chapter) : (String(t.chapter).trim().toLowerCase() === String(chapter).trim().toLowerCase()))) {
+                    count++;
+                }
+            }
         });
-        if (match) count++;
     });
     return count;
+};
+
+/**
+ * Returns 1-based chronological occurrence index of a specific monthly target instance.
+ * Instance 1 = 1st target (0 stars)
+ * Instance 2 = 2nd target (1 star)
+ * Instance 3 = 3rd target (2 stars)
+ */
+window.getMonthlyTargetInstanceOccurrence = function (targetMonthKey, target, targetIdx = -1) {
+    if (!window.monthlyTargetsDatabase || !target) return 1;
+    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
+    const isSubjectTarget = target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters';
+    const cleanSubject = String(target.subject || '').trim().toLowerCase();
+
+    // Sort all months chronologically
+    const allMonths = Object.keys(window.monthlyTargetsDatabase).sort((a, b) => {
+        const da = (window.Utils && Utils.parseStart) ? Utils.parseStart(a) : new Date(a);
+        const db = (window.Utils && Utils.parseStart) ? Utils.parseStart(b) : new Date(b);
+        return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+    });
+
+    let currentOrder = 0;
+    for (const mKey of allMonths) {
+        const list = window.monthlyTargetsDatabase[mKey] || [];
+        for (let i = 0; i < list.length; i++) {
+            const t = list[i];
+            if (!t) continue;
+            const tSub = String(t.subject || '').trim().toLowerCase();
+            const subMatch = (tSub === cleanSubject) || (cleanSubject.includes(tSub) && tSub.length > 2) || (tSub.includes(cleanSubject) && cleanSubject.length > 2);
+            if (!subMatch) continue;
+            if (target.track && t.track && t.track !== target.track) continue;
+
+            const tIsSubject = t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters';
+            const chMatch = isSubjectTarget
+                ? tIsSubject
+                : (!tIsSubject && (matchFn ? matchFn(t.chapter, target.chapter) : (String(t.chapter).trim().toLowerCase() === String(target.chapter).trim().toLowerCase())));
+
+            if (chMatch) {
+                currentOrder++;
+                if (mKey === targetMonthKey && (t.id && target.id ? t.id === target.id : (targetIdx >= 0 && i === targetIdx))) {
+                    return currentOrder;
+                }
+            }
+        }
+    }
+    return currentOrder > 0 ? currentOrder : 1;
 };
 
 window.updateMonthlyTargetColorSync = function () {
@@ -15635,8 +15691,7 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
         if (chapters.length > 0) {
             chapters.forEach(ch => {
                 const count = window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(trackId, subject, ch, 'chapter') : 0;
-                const starCount = Math.max(0, count - 1);
-                const starsHtml = starCount > 0 ? `<span class="inline-flex text-amber-500 dark:text-amber-400 text-xs ml-1" title="Targeted ${count} times">${'★'.repeat(starCount)}</span>` : '';
+                const starsHtml = count > 0 ? `<span class="inline-flex text-amber-500 dark:text-amber-400 text-xs ml-1 font-bold select-none" title="Targeted ${count} time(s) before. Setting now will be Target #${count + 1}">${'★'.repeat(count)}</span>` : '';
 
                 const isCompleted = window.isChapterCompleted ? window.isChapterCompleted(trackId, subject, ch) : false;
                 const completedTickHtml = isCompleted ? `
@@ -15661,12 +15716,12 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                          data-track="${trackId}" data-program="${progName}" data-chapter-name="${subject} ${ch}" data-subject="${subject}">
                         <label class="flex items-center gap-2.5 sm:gap-3 cursor-pointer flex-1 min-w-0">
                             <input type="checkbox" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" data-chapter="${ch}" class="mt-chapter-checkbox form-checkbox h-5 w-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer transition-all shrink-0"
-                                onchange="window.handleMonthlyChapterCheckChange(this, '${CSS.escape(subject)}');"
-                                ${isChPreselected ? 'checked' : ''}>
+                                 onchange="window.handleMonthlyChapterCheckChange(this, '${CSS.escape(subject)}');"
+                                 ${isChPreselected ? 'checked' : ''}>
                             <div class="min-w-0 flex-1 flex items-center gap-1">
                                 <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">${ch}</span>
-                                ${completedTickHtml}
                                 ${starsHtml}
+                                ${completedTickHtml}
                             </div>
                         </label>
                         <div class="flex items-center gap-2 w-full sm:w-auto min-w-0 shrink-0 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-700/40">
@@ -15693,6 +15748,9 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                 </div>
             `;
         }
+
+        const wholeSubCount = window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(trackId, subject, 'Whole Subject', 'subject') : 0;
+        const wholeSubStarsHtml = wholeSubCount > 0 ? `<span class="inline-flex text-amber-500 dark:text-amber-400 text-xs ml-1 font-bold select-none" title="Targeted ${wholeSubCount} time(s) before. Setting now will be Target #${wholeSubCount + 1}">${'★'.repeat(wholeSubCount)}</span>` : '';
 
         const groupHtml = `
             <div class="mt-subject-chapter-group rounded-2xl border border-slate-200/90 dark:border-slate-700/80 bg-white dark:bg-slate-800/95 p-3 sm:p-4 shadow-sm space-y-3" data-track="${trackId}" data-program="${progName}" data-subject="${subject}">
@@ -15724,7 +15782,7 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                             onchange="window.handleMonthlyWholeSubjectToggle('${CSS.escape(subject)}', this.checked, '${CSS.escape(trackId)}', '${CSS.escape(progName)}')"
                             ${isWholeSubPreselected ? 'checked' : ''}>
                         <div class="min-w-0 flex-1">
-                            <span class="text-xs font-black text-purple-900 dark:text-purple-200 truncate block">📚 Whole Subject (All Chapters)</span>
+                            <span class="text-xs font-black text-purple-900 dark:text-purple-200 truncate block">📚 Whole Subject (All Chapters)${wholeSubStarsHtml}</span>
                             <span class="text-[8.5px] text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider block">Target entirety of ${subject} (${progName})</span>
                         </div>
                     </label>
@@ -16910,10 +16968,7 @@ window.handleMonthlyTargetDayChange = function () {
 
 window.addMonthlyTarget = function () {
     const range = window.getMonthlyTargetRange(window.currentMonthlyTargetsDate || new Date());
-    const currentMonthKey = window.formatMonthRangeKey(range.start, range.end);
-
-    const monthSelectEl = document.getElementById('mt-select-month');
-    const targetMonthKey = monthSelectEl ? monthSelectEl.value : currentMonthKey;
+    const targetMonthKey = window.formatMonthRangeKey(range.start, range.end);
 
     const checkedSubjectCbs = Array.from(document.querySelectorAll('.mt-subject-checkbox:checked'));
     if (checkedSubjectCbs.length === 0) {
@@ -17183,6 +17238,11 @@ window.addMonthlyTarget = function () {
     }
 
     window.markLocalMutation(`add_monthly_targets_${addedCount}`);
+
+    // Update active month to the month where target was added
+    window.currentMonthlyTargetsDate = range.start;
+    const monthSelectEl = document.getElementById('mt-select-month');
+    if (monthSelectEl) monthSelectEl.value = targetMonthKey;
 
     if (connectedToWeek) {
         if (typeof window.renderWeeklyTargets === 'function') window.renderWeeklyTargets();
@@ -17477,10 +17537,13 @@ window.renderMonthlyTargets = function () {
 
         let displaySub = target.subject.replace(target.program + ' - ', '').replace(target.program + ' ', '');
 
-        const occurrenceCount = window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(target.track, target.subject, target.chapter, target.targetType) : 0;
+        const instanceIndex = (window.getMonthlyTargetInstanceOccurrence)
+            ? window.getMonthlyTargetInstanceOccurrence(activeMonthKey, target, idx)
+            : (window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(target.track, target.subject, target.chapter, target.targetType) : 1);
+        const starCount = Math.max(0, instanceIndex - 1);
         let starsHtml = '';
-        if (occurrenceCount > 1) {
-            starsHtml = `<span class="inline-flex text-amber-500 text-[10px] ml-1.5" title="Added as target ${occurrenceCount} times">${'★'.repeat(occurrenceCount - 1)}</span>`;
+        if (starCount > 0) {
+            starsHtml = `<span class="inline-flex text-amber-500 text-[10px] ml-1.5 font-bold select-none" title="Target #${instanceIndex} (${starCount} star${starCount > 1 ? 's' : ''})">${'★'.repeat(starCount)}</span>`;
         }
 
         const progressTextHtml = progress.label ? `<span class="text-[9px] text-indigo-500 font-bold ml-1.5">${progress.label}</span>` : '';
@@ -17600,8 +17663,22 @@ window.renderMonthlyTargets = function () {
     }
 };
 
-window.openAddMonthlyTargetPage = function () {
+window.openAddMonthlyTargetPage = function (targetDate = null) {
     window.editingMonthlyTargetIndex = null;
+    window.editingMonthlyTargetMonthKey = null;
+
+    if (targetDate) {
+        if (typeof targetDate === 'string') {
+            const parsed = (window.Utils && Utils.parseStart) ? Utils.parseStart(targetDate) : new Date(targetDate);
+            if (parsed && !isNaN(parsed.getTime())) {
+                window.currentMonthlyTargetsDate = parsed;
+            }
+        } else if (targetDate instanceof Date && !isNaN(targetDate.getTime())) {
+            window.currentMonthlyTargetsDate = targetDate;
+        }
+    } else if (!window.currentMonthlyTargetsDate) {
+        window.currentMonthlyTargetsDate = new Date();
+    }
 
     window.switchPage('monthly-target-setup');
 
@@ -17636,6 +17713,13 @@ window.openAddMonthlyTargetPage = function () {
     const summaryMonth = document.getElementById('mt-summary-month-display');
     if (summaryMonth) summaryMonth.textContent = `${monthName} (${activeMonthKey})`;
 
+    const monthInput = document.getElementById('mt-setup-month-input');
+    if (monthInput) {
+        const y = activeRange.start.getFullYear();
+        const m = String(activeRange.start.getMonth() + 1).padStart(2, '0');
+        monthInput.value = `${y}-${m}`;
+    }
+
     window.populateMonthlyProgramsList();
     if (typeof window.toggleMonthlyProgramsDropdown === 'function') window.toggleMonthlyProgramsDropdown(false);
     if (typeof window.toggleMonthlySubjectsDropdown === 'function') window.toggleMonthlySubjectsDropdown(false);
@@ -17647,21 +17731,47 @@ window.openAddMonthlyTargetPage = function () {
     window.updateMonthlyTargetSetupNavButtons();
 };
 
+window.setMonthlyTargetSetupMonthDate = function (monthVal) {
+    if (!monthVal) return;
+    const parts = monthVal.split('-');
+    if (parts.length === 2) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        if (!isNaN(year) && !isNaN(month)) {
+            window.currentMonthlyTargetsDate = new Date(year, month, 1);
+            window.navigateMonthlyTargetSetupMonth(null);
+        }
+    }
+};
+
 window.updateMonthlyTargetSetupNavButtons = function () {
     const today = new Date();
+    const activeDate = window.currentMonthlyTargetsDate || today;
     const isCurrent = Boolean(
-        window.currentMonthlyTargetsDate &&
-        window.currentMonthlyTargetsDate.getMonth() === today.getMonth() &&
-        window.currentMonthlyTargetsDate.getFullYear() === today.getFullYear()
+        activeDate.getMonth() === today.getMonth() &&
+        activeDate.getFullYear() === today.getFullYear()
     );
 
     const currentBtn = document.getElementById('mt-setup-btn-current');
-    if (currentBtn) {
-        if (isCurrent) {
-            currentBtn.className = "px-3 py-1.5 text-[10px] font-black rounded-xl transition-all bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs active:scale-95 flex items-center gap-1";
-        } else {
-            currentBtn.className = "px-3 py-1.5 text-[10px] font-black rounded-xl transition-all text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 active:scale-95 flex items-center gap-1";
-        }
+    const prevBtn = document.getElementById('mt-setup-btn-prev');
+    const nextBtn = document.getElementById('mt-setup-btn-next');
+
+    const activeRange = window.getMonthlyTargetRange(activeDate);
+    const currentRange = window.getMonthlyTargetRange(today);
+    const startDiff = activeRange.start.getTime() - currentRange.start.getTime();
+
+    const activeClass = "px-3 py-1.5 text-[10px] font-black rounded-xl transition-all bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs active:scale-95 flex items-center gap-1 min-h-[34px]";
+    const inactiveClass = "px-2.5 py-1.5 text-[10px] font-black rounded-xl transition-all text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 active:scale-95 flex items-center gap-1 min-h-[34px]";
+
+    if (currentBtn) currentBtn.className = isCurrent ? activeClass : inactiveClass;
+    if (prevBtn) prevBtn.className = startDiff < 0 ? activeClass : inactiveClass;
+    if (nextBtn) nextBtn.className = startDiff > 0 ? activeClass : inactiveClass;
+
+    const monthInput = document.getElementById('mt-setup-month-input');
+    if (monthInput) {
+        const y = activeDate.getFullYear();
+        const m = String(activeDate.getMonth() + 1).padStart(2, '0');
+        monthInput.value = `${y}-${m}`;
     }
 };
 
@@ -17674,7 +17784,7 @@ window.navigateMonthlyTargetSetupMonth = function (mode) {
         window.currentMonthlyTargetsDate = new Date(window.currentMonthlyTargetsDate.getFullYear(), window.currentMonthlyTargetsDate.getMonth() - 1, 1);
     } else if (mode === 'future') {
         window.currentMonthlyTargetsDate = new Date(window.currentMonthlyTargetsDate.getFullYear(), window.currentMonthlyTargetsDate.getMonth() + 1, 1);
-    } else {
+    } else if (mode === 'present') {
         window.currentMonthlyTargetsDate = new Date();
     }
 
@@ -17760,8 +17870,8 @@ window.navigateMonthlyTargetSetupMonth = function (mode) {
     window.updateMonthlyTargetSetupNavButtons();
 };
 
-window.openAddMonthlyTargetModal = function () {
-    window.openAddMonthlyTargetPage();
+window.openAddMonthlyTargetModal = function (targetDate = null) {
+    window.openAddMonthlyTargetPage(targetDate);
 };
 
 window.openEditMonthlyTargetPage = function (idx, monthKey = null) {
@@ -17773,6 +17883,7 @@ window.openEditMonthlyTargetPage = function (idx, monthKey = null) {
 
     const target = window.monthlyTargetsDatabase[monthKey][idx];
     window.editingMonthlyTargetIndex = idx;
+    window.editingMonthlyTargetMonthKey = monthKey;
 
     window.switchPage('monthly-target-setup');
 
@@ -17801,6 +17912,8 @@ window.openEditMonthlyTargetPage = function (idx, monthKey = null) {
         ? Utils.parseStart(monthKey)
         : (window.currentMonthlyTargetsDate || new Date());
 
+    window.currentMonthlyTargetsDate = targetMonthDate;
+
     const activeRange = window.getMonthlyTargetRange(targetMonthDate);
     const monthName = activeRange.start.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
@@ -17809,6 +17922,13 @@ window.openEditMonthlyTargetPage = function (idx, monthKey = null) {
 
     const summaryMonth = document.getElementById('mt-summary-month-display');
     if (summaryMonth) summaryMonth.textContent = `${monthName} (${monthKey})`;
+
+    const monthInput = document.getElementById('mt-setup-month-input');
+    if (monthInput) {
+        const y = activeRange.start.getFullYear();
+        const m = String(activeRange.start.getMonth() + 1).padStart(2, '0');
+        monthInput.value = `${y}-${m}`;
+    }
 
     window.populateMonthlyProgramsList(target.program);
     if (typeof window.toggleMonthlyProgramsDropdown === 'function') window.toggleMonthlyProgramsDropdown(false);
@@ -17882,14 +18002,17 @@ window.closeMonthlyTargetPage = function () {
     }, 80);
 };
 
-window.saveMonthlyTarget = function (idx, monthKey = null) {
-    if (!monthKey) {
-        const range = window.getMonthlyTargetRange();
-        monthKey = window.formatMonthRangeKey(range.start, range.end);
+window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
+    if (!originalMonthKey) {
+        const range = window.getMonthlyTargetRange(window.currentMonthlyTargetsDate || new Date());
+        originalMonthKey = window.formatMonthRangeKey(range.start, range.end);
     }
-    if (!window.monthlyTargetsDatabase || !window.monthlyTargetsDatabase[monthKey] || !window.monthlyTargetsDatabase[monthKey][idx]) return;
+    if (!window.monthlyTargetsDatabase || !window.monthlyTargetsDatabase[originalMonthKey] || !window.monthlyTargetsDatabase[originalMonthKey][idx]) return;
 
-    const target = window.monthlyTargetsDatabase[monthKey][idx];
+    const target = window.monthlyTargetsDatabase[originalMonthKey][idx];
+
+    const activeRange = window.getMonthlyTargetRange(window.currentMonthlyTargetsDate || new Date());
+    const targetMonthKey = window.formatMonthRangeKey(activeRange.start, activeRange.end);
 
     const progSelectEl = document.getElementById('mt-select-prog');
     const progName = progSelectEl ? progSelectEl.value : '';
@@ -17941,19 +18064,23 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
         return showToast(`"${selectedSubject}" is marked as Passed and cannot be set as a monthly target.`, "error");
     }
 
+    // Duplicate check in targetMonthKey
+    if (!window.monthlyTargetsDatabase[targetMonthKey]) window.monthlyTargetsDatabase[targetMonthKey] = [];
+
+    const isSameMonth = targetMonthKey === originalMonthKey;
     if (isSubjectTarget) {
-        const exists = window.monthlyTargetsDatabase[monthKey].some((t, i) =>
-            i !== idx && t.track === trackId && t.subject === selectedSubject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters')
+        const exists = window.monthlyTargetsDatabase[targetMonthKey].some((t, i) =>
+            (isSameMonth ? i !== idx : true) && t.track === trackId && t.subject === selectedSubject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters')
         );
         if (exists) {
-            return showToast("This subject target already exists in your monthly targets list.", "error");
+            return showToast("This subject target already exists in the target month.", "error");
         }
     } else {
-        const exists = window.monthlyTargetsDatabase[monthKey].some((t, i) =>
-            i !== idx && t.track === trackId && t.subject === selectedSubject && t.chapter === finalChapter && t.targetType !== 'subject'
+        const exists = window.monthlyTargetsDatabase[targetMonthKey].some((t, i) =>
+            (isSameMonth ? i !== idx : true) && t.track === trackId && t.subject === selectedSubject && t.chapter === finalChapter && t.targetType !== 'subject'
         );
         if (exists) {
-            return showToast("This chapter target already exists in your monthly targets list.", "error");
+            return showToast("This chapter target already exists in the target month.", "error");
         }
         if (window.isChapterSkipped && window.isChapterSkipped(trackId, selectedSubject, finalChapter)) {
             return showToast(`"${finalChapter}" is skipped in ${selectedSubject} and cannot be set as a monthly target.`, "error");
@@ -18024,6 +18151,12 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
     target.targetWeek = targetWeekKey || null;
     target.updatedAt = Date.now();
 
+    // If month was changed during edit, move target to new month
+    if (!isSameMonth) {
+        window.monthlyTargetsDatabase[originalMonthKey].splice(idx, 1);
+        window.monthlyTargetsDatabase[targetMonthKey].push(target);
+    }
+
     let connectedToWeek = false;
 
     if (targetWeekKey) {
@@ -18035,7 +18168,7 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
             id: `wt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             monthlyTargetId: mtId,
             source: 'monthly',
-            targetMonth: monthKey,
+            targetMonth: targetMonthKey,
             track: trackId,
             program: progName,
             subject: selectedSubject,
@@ -18088,7 +18221,7 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
                         id: `dt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                         monthlyTargetId: mtId,
                         source: 'monthly',
-                        targetMonth: monthKey,
+                        targetMonth: targetMonthKey,
                         track: trackId,
                         program: progName,
                         subject: selectedSubject,
@@ -18124,7 +18257,7 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
                 id: `dt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 monthlyTargetId: mtId,
                 source: 'monthly',
-                targetMonth: monthKey,
+                targetMonth: targetMonthKey,
                 track: trackId,
                 program: progName,
                 subject: selectedSubject,
@@ -18143,6 +18276,11 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
     }
 
     window.markLocalMutation('edit_monthly_target');
+
+    // Update active month to the edited target's month
+    window.currentMonthlyTargetsDate = activeRange.start;
+    const monthSelectEl = document.getElementById('mt-select-month');
+    if (monthSelectEl) monthSelectEl.value = targetMonthKey;
 
     if (connectedToDay) {
         if (typeof window.renderDailyTargets === 'function') window.renderDailyTargets();
@@ -18306,14 +18444,17 @@ window.renderMtdbList = function () {
 
             let displaySub = target.subject.replace(target.program + ' - ', '').replace(target.program + ' ', '');
 
-            const occurrenceCount = window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(target.track, target.subject, target.chapter, target.targetType) : 0;
+            const instanceIndex = (window.getMonthlyTargetInstanceOccurrence)
+                ? window.getMonthlyTargetInstanceOccurrence(monthKey, target, idx)
+                : (window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(target.track, target.subject, target.chapter, target.targetType) : 1);
+            const starCount = Math.max(0, instanceIndex - 1);
             let starsHtml = '';
-            if (occurrenceCount > 1) {
-                starsHtml = `<span class="inline-flex text-amber-500 text-[9px] ml-1.5" title="Added as target ${occurrenceCount} times">${'★'.repeat(occurrenceCount - 1)}</span>`;
+            if (starCount > 0) {
+                starsHtml = `<span class="inline-flex text-amber-500 text-[9px] ml-1.5 font-bold select-none" title="Target #${instanceIndex} (${starCount} star${starCount > 1 ? 's' : ''})">${'★'.repeat(starCount)}</span>`;
             }
 
             const chapterCell = isSubjectTarget
-                ? `<span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">📚 Whole Subject</span>`
+                ? `<span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">📚 Whole Subject${starsHtml}</span>`
                 : `<span class="text-indigo-600 dark:text-indigo-400 font-bold">${target.chapter}${starsHtml}</span>`;
 
             const row = `
@@ -18326,11 +18467,18 @@ window.renderMtdbList = function () {
                         <td class="py-3 px-4 truncate max-w-[120px]" title="${target.subject}">${displaySub}</td>
                         <td class="py-3 px-4">${chapterCell}</td>
                         <td class="py-3 px-4 text-center">
-                            <button onclick="window.deleteMtdbTarget('${monthKey}', ${idx}, '${target.id || ''}')" class="p-1 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 rounded transition-all active:scale-90 shadow-sm">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
+                            <div class="flex items-center justify-center space-x-1">
+                                <button onclick="window.openEditMonthlyTargetPage(${idx}, '${monthKey}')" class="p-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 text-indigo-500 rounded transition-all active:scale-90 shadow-sm" title="Edit Monthly Target">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                    </svg>
+                                </button>
+                                <button onclick="window.deleteMtdbTarget('${monthKey}', ${idx}, '${target.id || ''}')" class="p-1 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 rounded transition-all active:scale-90 shadow-sm" title="Delete Monthly Target">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </td>
                     </tr>`;
             tbody.innerHTML += row;

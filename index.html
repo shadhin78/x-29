@@ -3535,13 +3535,16 @@
                                 </button>
                             </div>
 
-                            <!-- Active Month Display Badge -->
-                            <div class="flex items-center justify-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 text-[11px] sm:text-xs font-black tracking-wider uppercase shadow-inner w-full sm:w-auto shrink-0 min-h-[34px]">
-                                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <!-- Active Month Display Badge & Direct Month Picker -->
+                            <label for="mt-setup-month-input" class="relative flex items-center justify-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100/70 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 border border-indigo-200/80 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 text-[11px] sm:text-xs font-black tracking-wider uppercase shadow-inner cursor-pointer transition-all active:scale-95 w-full sm:w-auto shrink-0 min-h-[34px]" title="Click to pick any month / year directly">
+                                <svg class="w-3.5 h-3.5 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                 </svg>
-                                <span id="mt-page-month-badge" class="truncate">[ Target Month ]</span>
-                            </div>
+                                <span id="mt-page-month-badge" class="truncate pointer-events-none">[ Target Month ]</span>
+                                <input type="month" id="mt-setup-month-input" onchange="window.setMonthlyTargetSetupMonthDate(this.value)"
+                                    class="opacity-0 absolute inset-0 w-full h-full cursor-pointer pointer-events-auto"
+                                    title="Select Month" />
+                            </label>
                         </div>
                     </div>
 
