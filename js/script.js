@@ -16620,7 +16620,8 @@ window.getDaysForMonthOrWeek = function (monthDate = new Date(), weekKey = null)
 
                 while (cur <= endDay) {
                     if (monthDate && (cur.getMonth() !== targetMonth || cur.getFullYear() !== targetYear)) {
-                        break;
+                        cur.setDate(cur.getDate() + 1);
+                        continue;
                     }
                     const dayDate = new Date(cur);
                     const dateKey = Utils.formatDate(dayDate);
@@ -16878,10 +16879,11 @@ window.addMonthlyTarget = function () {
         // Auto-connect to Weekly Target (using item's specific targetWeek or global week)
         const targetWeekKey = item.targetWeek;
         if (targetWeekKey) {
+            const canonicalWeekKey = window.getCanonicalWeeklyRangeKey ? (window.getCanonicalWeeklyRangeKey(targetWeekKey) || targetWeekKey) : targetWeekKey;
             if (!window.weeklyTargetsDatabase) window.weeklyTargetsDatabase = {};
-            if (!window.weeklyTargetsDatabase[targetWeekKey]) window.weeklyTargetsDatabase[targetWeekKey] = [];
+            if (!window.weeklyTargetsDatabase[canonicalWeekKey]) window.weeklyTargetsDatabase[canonicalWeekKey] = [];
 
-            const wtList = window.weeklyTargetsDatabase[targetWeekKey];
+            const wtList = window.weeklyTargetsDatabase[canonicalWeekKey];
             const wtExists = isSubjectTarget
                 ? wtList.some(t => t.track === trackId && t.program === progName && t.subject === subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
                 : wtList.some(t => t.track === trackId && t.program === progName && t.subject === subject && t.chapter === finalChapter && t.targetType !== 'subject');
@@ -16898,10 +16900,12 @@ window.addMonthlyTarget = function () {
                     completedAt: completedAtBefore,
                     scope: item.scope,
                     totalChapterSize: item.totalChapterSize,
+                    targetWeek: targetWeekKey,
+                    dividedWeekKey: targetWeekKey,
                     updatedAt: Date.now()
                 });
                 connectedToWeek = true;
-                connectedWeeksSet.add(targetWeekKey);
+                connectedWeeksSet.add(canonicalWeekKey);
             }
         }
 
@@ -17575,11 +17579,14 @@ window.openEditMonthlyTargetPage = function (idx, monthKey = null) {
     if (typeof window.toggleMonthlySubjectsDropdown === 'function') window.toggleMonthlySubjectsDropdown(false);
 
     // Find if this target is in any weekly target list of the target month
-    let preselectedWeek = null;
+    let preselectedWeek = target.targetWeek || null;
     if (window.weeklyTargetsDatabase) {
         const weeks = window.getWeeksForMonth ? window.getWeeksForMonth(targetMonthDate) : [];
         for (const w of weeks) {
-            const wtList = window.weeklyTargetsDatabase[w.key] || [];
+            const canonicalKey = window.getCanonicalWeeklyRangeKey ? window.getCanonicalWeeklyRangeKey(w.key) : w.key;
+            const wtList = (window.weeklyTargetsDatabase[w.key] || []).concat(
+                (canonicalKey && canonicalKey !== w.key && window.weeklyTargetsDatabase[canonicalKey]) ? window.weeklyTargetsDatabase[canonicalKey] : []
+            );
             const isSubject = target.targetType === 'subject';
             const match = isSubject
                 ? wtList.some(t => t.track === target.track && t.subject === target.subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
@@ -17725,10 +17732,11 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
     let connectedToWeek = false;
 
     if (targetWeekKey) {
+        const canonicalWeekKey = window.getCanonicalWeeklyRangeKey ? (window.getCanonicalWeeklyRangeKey(targetWeekKey) || targetWeekKey) : targetWeekKey;
         if (!window.weeklyTargetsDatabase) window.weeklyTargetsDatabase = {};
-        if (!window.weeklyTargetsDatabase[targetWeekKey]) window.weeklyTargetsDatabase[targetWeekKey] = [];
+        if (!window.weeklyTargetsDatabase[canonicalWeekKey]) window.weeklyTargetsDatabase[canonicalWeekKey] = [];
 
-        const wtList = window.weeklyTargetsDatabase[targetWeekKey];
+        const wtList = window.weeklyTargetsDatabase[canonicalWeekKey];
         const wtExists = isSubjectTarget
             ? wtList.some(t => t.track === trackId && t.subject === selectedSubject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
             : wtList.some(t => t.track === trackId && t.subject === selectedSubject && t.chapter === finalChapter && t.targetType !== 'subject');
@@ -17745,6 +17753,8 @@ window.saveMonthlyTarget = function (idx, monthKey = null) {
                 completedAt: target.completedAt,
                 scope: target.scope,
                 totalChapterSize: selectedSize,
+                targetWeek: targetWeekKey,
+                dividedWeekKey: targetWeekKey,
                 updatedAt: Date.now()
             });
             connectedToWeek = true;
@@ -18426,6 +18436,70 @@ window.getWeeklyTargetRange = function (date = new Date()) {
     return { start: startOfWeek, end: endOfWeek, daysSinceSat: daysSinceSat };
 };
 
+/**
+ * Resolves any date or week string (including divided month weeks e.g. '01 Sept 2026 - 04 Sept 2026')
+ * to its standard 7-day canonical Saturday-to-Friday week key (e.g. '29 Aug 2026 - 04 Sept 2026').
+ */
+window.getCanonicalWeeklyRangeKey = function (input) {
+    if (!input) return null;
+    let targetDate = null;
+    if (input instanceof Date) {
+        targetDate = input;
+    } else if (typeof input === 'string') {
+        const parts = input.split(' - ');
+        const startStr = parts[0];
+        targetDate = (window.Utils && typeof window.Utils.parseDateSafe === 'function')
+            ? window.Utils.parseDateSafe(startStr)
+            : new Date(startStr);
+    }
+    if (!targetDate || isNaN(targetDate.getTime())) return null;
+    const range = window.getWeeklyTargetRange(targetDate);
+    return window.formatDateRangeKey(range.start, range.end);
+};
+
+/**
+ * Consolidates any non-canonical divided week keys in weeklyTargetsDatabase into canonical 7-day week keys.
+ */
+window.consolidateWeeklyTargetsDatabase = function () {
+    if (!window.weeklyTargetsDatabase || typeof window.weeklyTargetsDatabase !== 'object') return;
+
+    let modified = false;
+    const allKeys = Object.keys(window.weeklyTargetsDatabase);
+
+    allKeys.forEach(wkKey => {
+        const canonicalKey = window.getCanonicalWeeklyRangeKey(wkKey);
+        if (canonicalKey && canonicalKey !== wkKey) {
+            const list = window.weeklyTargetsDatabase[wkKey] || [];
+            if (list.length > 0) {
+                if (!window.weeklyTargetsDatabase[canonicalKey]) {
+                    window.weeklyTargetsDatabase[canonicalKey] = [];
+                }
+                const canonList = window.weeklyTargetsDatabase[canonicalKey];
+                list.forEach(item => {
+                    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
+                    const isSubject = item.targetType === 'subject' || item.chapter === 'Whole Subject';
+                    const exists = isSubject
+                        ? canonList.some(t => t.track === item.track && t.subject === item.subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject'))
+                        : canonList.some(t => t.track === item.track && t.subject === item.subject && (matchFn ? matchFn(t.chapter, item.chapter) : t.chapter === item.chapter));
+                    if (!exists) {
+                        canonList.push({
+                            ...item,
+                            dividedWeekKey: item.dividedWeekKey || item.targetWeek || wkKey
+                        });
+                        modified = true;
+                    }
+                });
+            }
+            delete window.weeklyTargetsDatabase[wkKey];
+            modified = true;
+        }
+    });
+
+    if (modified && window.AppState) {
+        AppState.weeklyTargetsDatabase = window.weeklyTargetsDatabase;
+    }
+};
+
 window.findTaskChapter = function (track, subject, chapter) {
     const key = track + 'Tasks';
     for (let i = 0; i < AppState.tasks.length; i++) {
@@ -18820,6 +18894,9 @@ window.navigateWeek = function (mode) {
 * No logic changes in this phase.
 */
 window.renderWeeklyTargets = function () {
+    if (typeof window.consolidateWeeklyTargetsDatabase === 'function') {
+        window.consolidateWeeklyTargetsDatabase();
+    }
     const listContainer = document.getElementById('weekly-targets-list');
     const progDropdown = document.getElementById('wt-select-prog');
     const weekSelectEl = document.getElementById('wt-select-week');
@@ -19961,14 +20038,9 @@ window.renderDailyTargets = function () {
         const targetDate = window.currentDailyTargetsDate || new Date();
         let wtList = [];
         if (window.weeklyTargetsDatabase) {
-            const allWeeks = Object.keys(window.weeklyTargetsDatabase);
-            const foundWeekKey = allWeeks.find(wk => {
-                return window.isDateInWeekRange
-                    ? window.isDateInWeekRange(targetDate, wk)
-                    : (window.Utils && window.Utils.isDateInWeekRange ? window.Utils.isDateInWeekRange(targetDate, wk) : false);
-            });
-            if (foundWeekKey) {
-                wtList = window.weeklyTargetsDatabase[foundWeekKey] || [];
+            const canonicalKey = window.getCanonicalWeeklyRangeKey ? window.getCanonicalWeeklyRangeKey(targetDate) : null;
+            if (canonicalKey && window.weeklyTargetsDatabase[canonicalKey]) {
+                wtList = window.weeklyTargetsDatabase[canonicalKey];
             } else {
                 const range = window.getWeeklyTargetRange(targetDate);
                 const weekKey = window.formatDateRangeKey(range.start, range.end);
@@ -20328,6 +20400,9 @@ window.toggleDashboardDailyTargetCompletion = function (dateKey, idx, isComplete
 };
 
 window.renderDashboardWeeklyChecklist = function () {
+    if (typeof window.consolidateWeeklyTargetsDatabase === 'function') {
+        window.consolidateWeeklyTargetsDatabase();
+    }
     const listContainer = document.getElementById('db-weekly-targets-checklist');
     const pctEl = document.getElementById('db-weekly-checklist-pct');
     const rangeEl = document.getElementById('db-weekly-checklist-range');
@@ -20775,6 +20850,9 @@ window.toggleDashboardMonthlyTargetCompletion = function (monthKey, idx, isCompl
 
 // --- Weekly Targets Database Modal Controls & Logic ---
 window.openWeeklyTargetsDatabase = function () {
+    if (typeof window.consolidateWeeklyTargetsDatabase === 'function') {
+        window.consolidateWeeklyTargetsDatabase();
+    }
     const modal = document.getElementById('weekly-targets-db-modal');
     if (!modal) return;
 

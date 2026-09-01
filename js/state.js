@@ -676,6 +676,9 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
                 AppState.weeklyTargetsDatabase = data.weeklyTargetsDatabase;
             }
             window.weeklyTargetsDatabase = AppState.weeklyTargetsDatabase;
+            if (typeof window.consolidateWeeklyTargetsDatabase === 'function') {
+                window.consolidateWeeklyTargetsDatabase();
+            }
         } else {
             rejectedAnyField = true;
         }
