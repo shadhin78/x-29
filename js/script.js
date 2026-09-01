@@ -15735,7 +15735,7 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                             <!-- Size Input per chapter -->
                             <input type="number" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" data-chapter="${ch}" class="mt-chapter-size-input w-16 sm:w-20 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-bold outline-none shadow-inner focus:ring-2 focus:ring-indigo-500 transition-all text-center h-9 shrink-0"
                                 placeholder="Size" min="1"
-                                oninput="window.updateMonthlyTargetPageSummary();"
+                                oninput="window.handleMonthlyChapterSizeInputChange(this);"
                                 value="${isChPreselected && preselectSize ? preselectSize : ''}">
                         </div>
                     </div>
@@ -15796,7 +15796,7 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                         </select>
                         <!-- Size Input for Whole Subject -->
                         <input type="number" data-track="${trackId}" data-program="${progName}" data-subject="${subject}" placeholder="Size" min="1"
-                            oninput="window.updateMonthlyTargetPageSummary();"
+                            oninput="window.handleMonthlyChapterSizeInputChange(this);"
                             value="${isWholeSubPreselected && preselectSize ? preselectSize : ''}"
                             class="mt-size-whole-subject w-16 sm:w-20 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/60 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none shadow-sm focus:ring-2 focus:ring-purple-500 transition-all text-center h-9 shrink-0">
                     </div>
@@ -16009,6 +16009,97 @@ window.distributeChaptersAcrossWeeks = function () {
 /* --- Daily Target Allocator & Multi-Day Fraction Management --- */
 window.monthlyTargetDailyAllocations = window.monthlyTargetDailyAllocations || {};
 
+window.recalculateDailyAllocationsForChapter = function (subject, chapter, totalSize) {
+    const key = subject + '|||' + chapter;
+    if (!window.monthlyTargetDailyAllocations) window.monthlyTargetDailyAllocations = {};
+    const allocations = window.monthlyTargetDailyAllocations[key];
+    if (!Array.isArray(allocations) || allocations.length === 0) return;
+
+    const numSize = (totalSize !== null && totalSize !== undefined && totalSize !== '') ? parseInt(totalSize, 10) : null;
+    if (isNaN(numSize) || numSize === null || numSize <= 0) {
+        allocations.forEach(a => {
+            if (a.fraction || a.portionLabel) {
+                a.portionSize = null;
+            }
+        });
+        return;
+    }
+
+    const n = allocations.length;
+    const isUniformSplit = allocations.every((a, idx) => {
+        return a.fraction === `1/${n}` || (a.portionLabel && a.portionLabel.startsWith('Part ')) || (!a.fraction && !a.portionSize);
+    });
+
+    if (isUniformSplit && n > 0) {
+        const base = Math.floor(numSize / n);
+        const rem = numSize % n;
+        allocations.forEach((a, idx) => {
+            a.portionSize = base + (idx < rem ? 1 : 0);
+            if (!a.fraction) a.fraction = `1/${n}`;
+            if (!a.portionLabel) a.portionLabel = `Part ${idx + 1}/${n}`;
+        });
+    } else {
+        let runningAllocated = 0;
+        allocations.forEach((a, idx) => {
+            if (a.fraction === '1/2') {
+                a.portionSize = Math.round(numSize * 0.5);
+            } else if (a.fraction === '1/3') {
+                a.portionSize = Math.round(numSize * (1 / 3));
+            } else if (a.fraction === '1/4') {
+                a.portionSize = Math.round(numSize * 0.25);
+            } else if (a.fraction === '1/5') {
+                a.portionSize = Math.round(numSize * 0.2);
+            } else if (a.fraction === '1/7') {
+                a.portionSize = Math.round(numSize * (1 / 7));
+            } else if (a.fraction === '1/10') {
+                a.portionSize = Math.round(numSize * 0.1);
+            } else if (a.fraction === 'All') {
+                const remaining = numSize - runningAllocated;
+                a.portionSize = Math.max(0, remaining > 0 ? remaining : (runningAllocated === 0 ? numSize : 0));
+            } else if (n === 1) {
+                a.portionSize = numSize;
+                a.fraction = 'All';
+                a.portionLabel = 'Full Chapter';
+            }
+            if (a.portionSize) runningAllocated += parseInt(a.portionSize, 10) || 0;
+        });
+    }
+};
+
+window.handleMonthlyChapterSizeInputChange = function (inputEl) {
+    if (!inputEl) return;
+    const subject = inputEl.getAttribute('data-subject');
+    const chapter = inputEl.getAttribute('data-chapter') || 'Whole Subject';
+    const totalSize = inputEl.value ? parseInt(inputEl.value, 10) : null;
+    const key = subject + '|||' + chapter;
+
+    if (window.recalculateDailyAllocationsForChapter) {
+        window.recalculateDailyAllocationsForChapter(subject, chapter, totalSize);
+    }
+
+    const card = document.querySelector(`.mt-daily-target-card[data-daily-target-key="${CSS.escape(key)}"]`);
+    if (card && window.monthlyTargetDailyAllocations && window.monthlyTargetDailyAllocations[key]) {
+        const sizeInputs = card.querySelectorAll('.mt-daily-size-input');
+        const allocations = window.monthlyTargetDailyAllocations[key];
+        allocations.forEach((alloc, idx) => {
+            if (sizeInputs[idx]) {
+                sizeInputs[idx].value = (alloc.portionSize !== null && alloc.portionSize !== undefined) ? alloc.portionSize : '';
+            }
+        });
+        if (window.updateDailyAllocationBadgesInPlace) {
+            window.updateDailyAllocationBadgesInPlace(subject, chapter);
+        }
+    } else {
+        if (window.renderMonthlyTargetDailyAllocations) {
+            window.renderMonthlyTargetDailyAllocations();
+        }
+    }
+
+    if (window.updateMonthlyTargetPageSummary) {
+        window.updateMonthlyTargetPageSummary();
+    }
+};
+
 window.getAssignedWeekKeyForTarget = function (subject, chapter, track = null, program = null) {
     const trackSelector = track ? `[data-track="${CSS.escape(track)}"]` : '';
     const progSelector = program ? `[data-program="${CSS.escape(program)}"]` : '';
@@ -16092,6 +16183,12 @@ window.renderMonthlyTargetDailyAllocations = function () {
     checkedTargets.forEach((target) => {
         const key = target.subject + '|||' + target.chapter;
         const color = window.getSubjectColor ? window.getSubjectColor(target.subject) : '#6366f1';
+
+        // Recalculate daily allocations if totalSize is present
+        if (target.totalSize && target.totalSize > 0 && window.recalculateDailyAllocationsForChapter) {
+            window.recalculateDailyAllocationsForChapter(target.subject, target.chapter, target.totalSize);
+        }
+
         const allocations = window.monthlyTargetDailyAllocations[key] || [];
 
         // Check if target is bound to a week range
@@ -16184,7 +16281,7 @@ window.renderMonthlyTargetDailyAllocations = function () {
 
                         <!-- Portion/Page Size Input -->
                         <div class="relative w-14 sm:w-16 shrink-0 order-3 sm:order-4">
-                            <input type="number" min="1" placeholder="Size" value="${alloc.portionSize || ''}"
+                            <input type="number" min="1" placeholder="Size" value="${(alloc.portionSize !== null && alloc.portionSize !== undefined) ? alloc.portionSize : ''}"
                                 oninput="window.updateDailyAllocationSize('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, this.value, this)"
                                 onchange="window.renderMonthlyTargetDailyAllocations()"
                                 class="mt-daily-size-input w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl px-1 sm:px-1.5 py-1 text-xs sm:text-sm text-slate-900 dark:text-white font-black outline-none text-center shadow-xs focus:ring-2 focus:ring-emerald-500 h-8"
@@ -16219,7 +16316,7 @@ window.renderMonthlyTargetDailyAllocations = function () {
         }
 
         html += `
-            <div class="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-700/70 bg-white dark:bg-slate-800 shadow-xs space-y-2 transition-all">
+            <div class="mt-daily-target-card p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-700/70 bg-white dark:bg-slate-800 shadow-xs space-y-2 transition-all" data-daily-target-key="${CSS.escape(key)}">
                 <!-- Header -->
                 <div class="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-2 flex-wrap sm:flex-nowrap">
                     <div class="flex items-center gap-2 min-w-0 flex-1">
@@ -16234,7 +16331,7 @@ window.renderMonthlyTargetDailyAllocations = function () {
 
                 <!-- Action Bar & Split buttons -->
                 <div class="flex items-center justify-between gap-1.5 flex-wrap">
-                    <div class="grid grid-cols-4 sm:flex items-center gap-1 w-full sm:w-auto flex-1 sm:flex-none">
+                    <div class="grid grid-cols-5 sm:flex items-center gap-1 w-full sm:w-auto flex-1 sm:flex-none">
                         <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 2, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
                             class="px-1.5 sm:px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center justify-center text-center">
                             ⚡ 2<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
@@ -16250,6 +16347,10 @@ window.renderMonthlyTargetDailyAllocations = function () {
                         <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 5, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
                             class="px-1.5 sm:px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center justify-center text-center">
                             ⚡ 5<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
+                        </button>
+                        <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 7, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
+                            class="px-1.5 sm:px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center justify-center text-center">
+                            ⚡ 7<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
                         </button>
                     </div>
                     <button type="button" onclick="window.addDailyAllocationRow('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', '', null, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
@@ -16449,6 +16550,75 @@ window.splitChapterAcrossDays = function (subject, chapter, numDays, track = nul
     window.renderMonthlyTargetDailyAllocations();
     window.updateMonthlyTargetPageSummary();
     showToast(`⚡ Split across ${effectiveDays} days successfully!`, "success");
+};
+
+window.splitAllChaptersAcrossDays = function (numDays) {
+    const checkedTargets = [];
+    const wholeSubs = document.querySelectorAll('.mt-ch-whole-subject:checked');
+    wholeSubs.forEach(ws => {
+        const track = ws.getAttribute('data-track');
+        const prog = ws.getAttribute('data-program');
+        const sub = ws.getAttribute('data-subject');
+        const sizeInput = document.querySelector(`.mt-size-whole-subject[data-subject="${CSS.escape(sub)}"]${track ? `[data-track="${CSS.escape(track)}"]` : ''}${prog ? `[data-program="${CSS.escape(prog)}"]` : ''}`) ||
+                          document.querySelector(`.mt-size-whole-subject[data-subject="${CSS.escape(sub)}"]`);
+        const totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+        checkedTargets.push({ track: track, program: prog, subject: sub, chapter: 'Whole Subject', totalSize: totalSize });
+    });
+
+    const checkboxes = document.querySelectorAll('.mt-chapter-checkbox:checked');
+    checkboxes.forEach(cb => {
+        const track = cb.getAttribute('data-track');
+        const prog = cb.getAttribute('data-program');
+        const sub = cb.getAttribute('data-subject');
+        const ch = cb.getAttribute('data-chapter');
+        const sizeInput = document.querySelector(`.mt-chapter-size-input[data-subject="${CSS.escape(sub)}"][data-chapter="${CSS.escape(ch)}"]${track ? `[data-track="${CSS.escape(track)}"]` : ''}${prog ? `[data-program="${CSS.escape(prog)}"]` : ''}`) ||
+                          document.querySelector(`.mt-chapter-size-input[data-subject="${CSS.escape(sub)}"][data-chapter="${CSS.escape(ch)}"]`);
+        const totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
+        checkedTargets.push({ track: track, program: prog, subject: sub, chapter: ch, totalSize: totalSize });
+    });
+
+    if (checkedTargets.length === 0) {
+        return showToast("Please check at least one chapter or whole subject first.", "error");
+    }
+
+    if (!window.monthlyTargetDailyAllocations) window.monthlyTargetDailyAllocations = {};
+
+    const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
+    const todayStr = (window.Utils && Utils.formatDate) ? Utils.formatDate(new Date()) : new Date().toISOString().split('T')[0];
+
+    checkedTargets.forEach(target => {
+        const key = target.subject + '|||' + target.chapter;
+        const targetWeekKey = window.getAssignedWeekKeyForTarget ? window.getAssignedWeekKeyForTarget(target.subject, target.chapter, target.track, target.program) : '';
+        const days = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate, targetWeekKey) : [];
+        if (days.length === 0) return;
+
+        const effectiveDays = Math.max(1, Math.min(numDays, days.length));
+
+        let startIdx = days.findIndex(d => d.key === todayStr);
+        if (startIdx === -1 || startIdx + effectiveDays > days.length) startIdx = 0;
+
+        const totalSize = target.totalSize;
+        const basePortion = totalSize ? Math.floor(totalSize / effectiveDays) : null;
+        const remainder = totalSize ? (totalSize % effectiveDays) : 0;
+
+        const newAllocations = [];
+        for (let i = 0; i < effectiveDays; i++) {
+            const dayObj = days[(startIdx + i) % days.length];
+            const daySize = basePortion !== null ? (basePortion + (i === 0 ? remainder : 0)) : null;
+            newAllocations.push({
+                dayKey: dayObj ? dayObj.key : '',
+                portionSize: daySize,
+                fraction: `1/${effectiveDays}`,
+                portionLabel: `Part ${i + 1}/${effectiveDays}`
+            });
+        }
+
+        window.monthlyTargetDailyAllocations[key] = newAllocations;
+    });
+
+    window.renderMonthlyTargetDailyAllocations();
+    window.updateMonthlyTargetPageSummary();
+    showToast(`⚡ All ${checkedTargets.length} target(s) distributed across ${numDays} days!`, "success");
 };
 
 window.updateDailyAllocationDay = function (subject, chapter, rowIdx, dayKey) {
@@ -16767,6 +16937,9 @@ window.applyBulkSizeToMonthlyChapters = function () {
         if (sizeInput) {
             sizeInput.value = bulkVal;
             appliedCount++;
+            if (window.recalculateDailyAllocationsForChapter) {
+                window.recalculateDailyAllocationsForChapter(sub, 'Whole Subject', bulkVal);
+            }
         }
     });
 
@@ -16778,6 +16951,9 @@ window.applyBulkSizeToMonthlyChapters = function () {
         if (sizeInput) {
             sizeInput.value = bulkVal;
             appliedCount++;
+            if (window.recalculateDailyAllocationsForChapter) {
+                window.recalculateDailyAllocationsForChapter(sub, ch, bulkVal);
+            }
         }
     });
 
