@@ -27,7 +27,7 @@ function showSync(state) {
         window._syncFadeTimer = setTimeout(() => {
             el.classList.remove('opacity-100', 'scale-100');
             el.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-        }, 1800);
+        }, 1200);
     } else if (state === 'local') {
         icon.innerHTML = `<circle cx="12" cy="12" r="4" fill="currentColor" />`;
         icon.classList.remove('animate-spin', 'text-red-500', 'text-amber-500', 'text-rose-500');
@@ -108,6 +108,8 @@ window.FirebaseService = {
     _isSaving: false,
     _hasPendingWriteInFlight: false,
     _lastCommittedRevision: 0,
+    _inFlightWriteId: "",
+    _lastCommittedWriteId: "",
     _debounceDurationMs: 180,
     _retryCount: 0,
     _retryTimer: null,
@@ -121,37 +123,57 @@ window.FirebaseService = {
         this._fastPersistLocalStorage();
     },
 
+    _buildCurrentStatePayload: function(customTombstones = null) {
+        const tombstones = customTombstones || AppState._tombstones || {};
+        return {
+            tasks: AppState.tasks || window.tasks || [],
+            tracks: AppState.tracks || window.tracks || [],
+            customSyllabus: AppState.syllabusStructure || window.syllabusStructure || {},
+            syllabusStructure: AppState.syllabusStructure || window.syllabusStructure || {},
+            customPrograms: AppState.customPrograms || window.customPrograms || {},
+            customActions: AppState.customActions || window.customActions || [],
+            paceGoals: AppState.paceGoals || window.paceGoals || [],
+            passedItems: AppState.passedItems || window.passedItems || { programs: [], subjects: [] },
+            celebrationTargets: AppState.celebrationTargets || window.celebrationTargets || { programs: [], subjects: [] },
+            revisionData: AppState.revisionData || window.revisionData || { active: [], progress: {} },
+            programVisibility: AppState.programVisibility || window.programVisibility || {},
+            subjectTimeLinks: AppState.subjectTimeLinks || window.subjectTimeLinks || {},
+            successResults: AppState.successResults || window.successResults || [],
+            timerLogs: AppState.timerLogs || window.timerLogs || [],
+            dailyFocusHoursTarget: AppState.dailyFocusHoursTarget !== undefined ? AppState.dailyFocusHoursTarget : (window.dailyFocusHoursTarget !== undefined ? window.dailyFocusHoursTarget : 0),
+            dailyFocusHoursTargetDate: AppState.dailyFocusHoursTargetDate || window.dailyFocusHoursTargetDate || "",
+            dailyFocusHoursTargetHistory: AppState.dailyFocusHoursTargetHistory || window.dailyFocusHoursTargetHistory || [],
+            timerAnalyticsRange: AppState.timerAnalyticsRange || window.timerAnalyticsRange || 180,
+            timerAnalyticsGrouping: AppState.timerAnalyticsGrouping || window.timerAnalyticsGrouping || 'daily',
+            timerAnalyticsChartStyle: AppState.timerAnalyticsChartStyle || window.timerAnalyticsChartStyle || 'combo',
+            spectraHeatmapRange: AppState.spectraHeatmapRange || window.spectraHeatmapRange || 365,
+            sessionHistoryFilter: AppState.sessionHistoryFilter || window.sessionHistoryFilter || 'all',
+            subjectFocusTargets: AppState.subjectFocusTargets || window.subjectFocusTargets || {},
+            dashboardConfig: AppState.dashboardConfig || window.dashboardConfig || {},
+            weeklyTargetsDatabase: AppState.weeklyTargetsDatabase || window.weeklyTargetsDatabase || {},
+            monthlyTargetsDatabase: AppState.monthlyTargetsDatabase || window.monthlyTargetsDatabase || {},
+            dailyTargetsDatabase: AppState.dailyTargetsDatabase || window.dailyTargetsDatabase || {},
+            scheduleBlocks: AppState.scheduleBlocks || window.scheduleBlocks || [],
+            scheduleBlocks2: AppState.scheduleBlocks2 || window.scheduleBlocks2 || [],
+            scheduleGroups: AppState.scheduleGroups || window.scheduleGroups || [],
+            fiscalLedger: AppState.fiscalLedger || { transactions: [], budgets: [], vaults: [] },
+            examSessions: AppState.examSessions || window.examSessions || [],
+            examRoutine: AppState.examRoutine || window.examRoutine || [],
+            selectedCountdownExamId: AppState.selectedCountdownExamId || window.selectedCountdownExamId || 'auto',
+            activeTimerState: AppState.activeTimerState || window.activeTimerState || {},
+            activeRoutineSet: AppState.activeRoutineSet || window.activeRoutineSet || 1,
+            subjectColors: AppState.subjectColors || window.subjectColors || {},
+            _tombstones: tombstones
+        };
+    },
+
     _fastPersistLocalStorage: function() {
         try {
-            const currentCache = {
-                tasks: AppState.tasks || window.tasks || [],
-                tracks: AppState.tracks || window.tracks || [],
-                customActions: AppState.customActions || window.customActions || [],
-                paceGoals: AppState.paceGoals || window.paceGoals || [],
-                passedItems: AppState.passedItems || window.passedItems || { programs: [], subjects: [] },
-                celebrationTargets: AppState.celebrationTargets || window.celebrationTargets || { programs: [], subjects: [] },
-                revisionData: AppState.revisionData || window.revisionData || { active: [], progress: {} },
-                timerLogs: AppState.timerLogs || window.timerLogs || [],
-                fiscalLedger: AppState.fiscalLedger || { transactions: [], budgets: [], vaults: [] },
-                dashboardConfig: AppState.dashboardConfig || window.dashboardConfig || {},
-                weeklyTargetsDatabase: AppState.weeklyTargetsDatabase || window.weeklyTargetsDatabase || {},
-                monthlyTargetsDatabase: AppState.monthlyTargetsDatabase || window.monthlyTargetsDatabase || {},
-                dailyTargetsDatabase: AppState.dailyTargetsDatabase || window.dailyTargetsDatabase || {},
-                subjectFocusTargets: AppState.subjectFocusTargets || window.subjectFocusTargets || {},
-                scheduleBlocks: AppState.scheduleBlocks || window.scheduleBlocks || [],
-                scheduleBlocks2: AppState.scheduleBlocks2 || window.scheduleBlocks2 || [],
-                scheduleGroups: AppState.scheduleGroups || window.scheduleGroups || [],
-                examSessions: AppState.examSessions || window.examSessions || [],
-                examRoutine: AppState.examRoutine || window.examRoutine || [],
-                selectedCountdownExamId: AppState.selectedCountdownExamId || window.selectedCountdownExamId || 'auto',
-                activeTimerState: AppState.activeTimerState || window.activeTimerState || {},
-                activeRoutineSet: AppState.activeRoutineSet || window.activeRoutineSet || 1,
-                subjectColors: AppState.subjectColors || window.subjectColors || {},
-                _tombstones: AppState._tombstones || {}
-            };
+            const currentCache = this._buildCurrentStatePayload();
             const jsonStr = JSON.stringify(currentCache);
             safeStorage.setItem('local_app_state', jsonStr);
             safeStorage.setItem('appState', jsonStr);
+            AppState.lastLocalPersistTime = Date.now();
         } catch(e) {}
     },
 
@@ -498,6 +520,20 @@ window.FirebaseService = {
                     }
                     console.log(`SYNC_DEBUG SNAPSHOT_UPDATED_AT: ${cloudTime}`);
 
+                    // SELF-WRITE ECHO GUARD: If this snapshot represents our own write that just committed,
+                    // acknowledge it instantly without re-parsing, reconciling, or re-rendering the DOM!
+                    if (AppState.hasLoadedFromCloud && cloudData && cloudData._lastWriteId && (cloudData._lastWriteId === this._lastCommittedWriteId || cloudData._lastWriteId === this._inFlightWriteId)) {
+                        console.log(`SYNC_DEBUG SNAPSHOT_SELF_ECHO_ACKNOWLEDGED: WriteId=${cloudData._lastWriteId}`);
+                        if (cloudTime > 0) {
+                            AppState.lastAppliedCloudTimestamp = Math.max(AppState.lastAppliedCloudTimestamp || 0, cloudTime);
+                        }
+                        if (AppState.saveStatus === 'saving') {
+                            AppState.saveStatus = 'saved';
+                        }
+                        showSync('saved');
+                        return;
+                    }
+
                     const incomingTaskIds = Array.isArray(cloudData.tasks) ? cloudData.tasks.map(t => window.generateItemId(t, 'tasks')) : [];
                     console.log(`SYNC_DEBUG INCOMING_TASK_IDS: ${JSON.stringify(incomingTaskIds)}`);
                     console.log(`SYNC_DEBUG SNAPSHOT_ARRAY_LENGTHS: ${JSON.stringify({
@@ -785,49 +821,15 @@ window.FirebaseService = {
         AppState.saveStatus = 'saving';
         showSync('saving');
 
-        try {
-            const tombstones = AppState._tombstones || {};
+        const clientWriteId = `${captureSessionId || 'sess'}_r${targetRevision}_${Date.now()}`;
+        this._inFlightWriteId = clientWriteId;
 
-            const payload = {
-                tasks: AppState.tasks || [],
-                tracks: window.tracks || [],
-                customSyllabus: AppState.syllabusStructure || window.syllabusStructure || {},
-                syllabusStructure: AppState.syllabusStructure || window.syllabusStructure || {},
-                customPrograms: window.customPrograms || {},
-                customActions: window.customActions || [],
-                paceGoals: window.paceGoals || [],
-                passedItems: window.passedItems || { programs: [], subjects: [] },
-                celebrationTargets: window.celebrationTargets || AppState.celebrationTargets || { programs: [], subjects: [] },
-                revisionData: window.revisionData || { active: [], progress: {} },
-                programVisibility: window.programVisibility || {},
-                subjectTimeLinks: window.subjectTimeLinks || {},
-                successResults: window.successResults || [],
-                timerLogs: window.timerLogs || [],
-                dailyFocusHoursTarget: window.dailyFocusHoursTarget !== undefined ? window.dailyFocusHoursTarget : 0,
-                dailyFocusHoursTargetDate: window.dailyFocusHoursTargetDate || "",
-                dailyFocusHoursTargetHistory: window.dailyFocusHoursTargetHistory || [],
-                timerAnalyticsRange: window.timerAnalyticsRange || 180,
-                timerAnalyticsGrouping: window.timerAnalyticsGrouping || 'daily',
-                timerAnalyticsChartStyle: window.timerAnalyticsChartStyle || 'combo',
-                spectraHeatmapRange: window.spectraHeatmapRange || 365,
-                sessionHistoryFilter: window.sessionHistoryFilter || 'all',
-                subjectFocusTargets: AppState.subjectFocusTargets || window.subjectFocusTargets || {},
-                dashboardConfig: window.dashboardConfig || {},
-                weeklyTargetsDatabase: window.weeklyTargetsDatabase || {},
-                monthlyTargetsDatabase: window.monthlyTargetsDatabase || {},
-                dailyTargetsDatabase: window.dailyTargetsDatabase || {},
-                scheduleBlocks: window.scheduleBlocks || [],
-                scheduleBlocks2: window.scheduleBlocks2 || [],
-                scheduleGroups: window.scheduleGroups || [],
-                fiscalLedger: AppState.fiscalLedger || { transactions: [], budgets: [], vaults: [] },
-                examSessions: AppState.examSessions || window.examSessions || [],
-                examRoutine: AppState.examRoutine || window.examRoutine || [],
-                selectedCountdownExamId: AppState.selectedCountdownExamId || window.selectedCountdownExamId || 'auto',
-                activeTimerState: AppState.activeTimerState || window.activeTimerState || {},
-                activeRoutineSet: AppState.activeRoutineSet || window.activeRoutineSet || 1,
-                subjectColors: AppState.subjectColors || window.subjectColors || {},
-                _tombstones: tombstones
-            };
+        try {
+            const tombstones = Object.assign({}, AppState._tombstones || {});
+
+            const payload = this._buildCurrentStatePayload(tombstones);
+            payload._lastWriteId = clientWriteId;
+            payload._clientWriteTimestamp = Date.now() + (window.serverTimeOffset || 0);
 
             if (payload.subjectFocusTargets && tombstones) {
                 Object.keys(payload.subjectFocusTargets).forEach(k => {
@@ -844,13 +846,14 @@ window.FirebaseService = {
                 });
             }
 
-            // Cache state locally for instant offline fallback
+            // Fast single-pass local storage persist
             window.appState = payload;
             let jsonStr = '';
             try {
                 jsonStr = JSON.stringify(payload);
                 safeStorage.setItem('local_app_state', jsonStr);
                 safeStorage.setItem('appState', jsonStr);
+                AppState.lastLocalPersistTime = Date.now();
             } catch(e) {}
 
             if (AppState.db && user && user.uid && window.location.protocol !== 'file:') {
@@ -904,7 +907,7 @@ window.FirebaseService = {
                     cleanPayload.updatedAt = Date.now();
                 }
 
-                console.log(`SYNC: WRITE_ATTEMPT - UID: ${user.uid}, SaveGen: ${captureGen}, Rev: ${targetRevision}`);
+                console.log(`SYNC: WRITE_ATTEMPT - UID: ${user.uid}, SaveGen: ${captureGen}, Rev: ${targetRevision}, WriteId: ${clientWriteId}`);
                 await AppState.db.collection('users').doc(user.uid).set(cleanPayload, { merge: true });
 
                 // Re-verify generation after async write
@@ -917,6 +920,9 @@ window.FirebaseService = {
                 if (window.AppState) {
                     window.AppState.cloudDocumentExists = true;
                 }
+                this._lastCommittedWriteId = clientWriteId;
+                AppState.lastCommittedWriteId = clientWriteId;
+                AppState._lastWriteId = clientWriteId;
                 this._lastCommittedRevision = targetRevision;
                 AppState.lastCommittedRevision = targetRevision;
                 this._retryCount = 0;
@@ -928,7 +934,7 @@ window.FirebaseService = {
                     console.log(`SYNC: COALESCED_NEXT_WRITE - Scheduling follow-up write for Revision ${AppState.localRevision}`);
                     setTimeout(() => {
                         this._executeSave(isExplicitInitialization, isUserInitiated, captureGen);
-                    }, 50);
+                    }, 60);
                 } else {
                     AppState.isLocalDirty = false;
                     AppState.saveStatus = 'saved';

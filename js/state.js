@@ -131,6 +131,9 @@ window.AppState = {
     localRevision: 0,
     lastCommittedRevision: 0,
     lastLocalEditTime: 0,
+    lastLocalPersistTime: 0,
+    _lastWriteId: "",
+    lastCommittedWriteId: "",
     saveStatus: 'saved',
     syncSessionId: "",
     _tombstones: {},
@@ -159,8 +162,8 @@ const stateKeys = [
     'monthlyTargetsDatabase', 'dailyTargetsDatabase', 'scheduleBlocks', 'scheduleBlocks2', 'scheduleGroups',
     'hasLoadedFromCloud', 'cloudDocumentExists',
     'syncGeneration', 'lastAppliedCloudTimestamp', 'isLocalDirty',
-    'localRevision', 'lastCommittedRevision', 'lastLocalEditTime', 'saveStatus',
-    'syncSessionId', '_tombstones'
+    'localRevision', 'lastCommittedRevision', 'lastLocalEditTime', 'lastLocalPersistTime', 'saveStatus',
+    'syncSessionId', '_lastWriteId', 'lastCommittedWriteId', '_tombstones'
 ];
 
 stateKeys.forEach(key => {
