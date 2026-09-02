@@ -3362,6 +3362,9 @@ function updateSuccessScore() {
     if (typeof window.updateCelebrationLiveStatus === 'function') {
         window.updateCelebrationLiveStatus(corePassed, coreTotal, hasCustomCeleb, celebrationMet);
     }
+    if (typeof window.renderDashboardPassedSubjectsCard === 'function') {
+        window.renderDashboardPassedSubjectsCard();
+    }
 }
 
 window.setFilter = function (val) { AppState.currentFilter = val; window.subjectDetailsState = {}; renderSubjectNavigation(); renderTaskList(); updateMetrics(); renderTrendCharts(); };
@@ -22908,6 +22911,7 @@ window.renderDashboardPassedSubjectsCard = function () {
     const cardEl = document.getElementById('dashboard-passed-subjects-section');
     if (!cardEl) return;
 
+    const rateBadgeEl = document.getElementById('db-passed-subjects-rate-badge');
     const countBadgeEl = document.getElementById('db-passed-subjects-count-badge');
     const listEl = document.getElementById('db-passed-subjects-list');
 
@@ -22923,14 +22927,32 @@ window.renderDashboardPassedSubjectsCard = function () {
         return isProgPassed || isSubPassed;
     });
 
+    const totalCount = allSubjects.length;
+    const successPct = totalCount > 0 ? Math.round((passedSubjectList.length / totalCount) * 100) : 0;
+
+    // Update success rate badge in header (left of the passed count badge)
+    if (rateBadgeEl) {
+        if (passedSubjectList.length > 0) {
+            rateBadgeEl.className = 'text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50 shadow-xs';
+            rateBadgeEl.textContent = `${successPct}%`;
+            rateBadgeEl.title = `Success Rate: ${successPct}% (${passedSubjectList.length} of ${totalCount} subjects passed)`;
+        } else {
+            rateBadgeEl.className = 'text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700';
+            rateBadgeEl.textContent = '0%';
+            rateBadgeEl.title = 'Success Rate: 0%';
+        }
+    }
+
     // Update count badge in header
     if (countBadgeEl) {
         if (passedSubjectList.length > 0) {
             countBadgeEl.className = 'text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50 shadow-xs';
             countBadgeEl.textContent = `${passedSubjectList.length} Passed`;
+            countBadgeEl.title = `${passedSubjectList.length} of ${totalCount} subjects passed`;
         } else {
             countBadgeEl.className = 'text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700';
             countBadgeEl.textContent = '0 Passed';
+            countBadgeEl.title = '0 subjects passed';
         }
     }
 
