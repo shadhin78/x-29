@@ -19011,9 +19011,10 @@ window.deleteMonthlyTargetFromEditPage = function (idx, monthKey = null) {
 };
 
 window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
+    idx = (idx !== undefined && idx !== null) ? parseInt(idx, 10) : (window.editingMonthlyTargetIndex !== null ? parseInt(window.editingMonthlyTargetIndex, 10) : null);
     if (!originalMonthKey) {
         const range = window.getMonthlyTargetRange(window.currentMonthlyTargetsDate || new Date());
-        originalMonthKey = window.formatMonthRangeKey(range.start, range.end);
+        originalMonthKey = window.editingMonthlyTargetMonthKey || window.formatMonthRangeKey(range.start, range.end);
     }
     if (!window.monthlyTargetsDatabase || !window.monthlyTargetsDatabase[originalMonthKey] || !window.monthlyTargetsDatabase[originalMonthKey][idx]) return;
 
@@ -19021,6 +19022,9 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
 
     const activeRange = window.getMonthlyTargetRange(window.currentMonthlyTargetsDate || new Date());
     const targetMonthKey = window.formatMonthRangeKey(activeRange.start, activeRange.end);
+    const targetMonthDate = (originalMonthKey && window.Utils && Utils.parseStart && !isNaN(Utils.parseStart(originalMonthKey).getTime()))
+        ? Utils.parseStart(originalMonthKey)
+        : (activeRange && activeRange.start ? activeRange.start : (window.currentMonthlyTargetsDate || new Date()));
 
     // Find the first checked target in the studio
     let selectedTrack = '';
@@ -19077,14 +19081,14 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
     const isSameMonth = targetMonthKey === originalMonthKey;
     if (isSubjectTarget) {
         const exists = window.monthlyTargetsDatabase[targetMonthKey].some((t, i) =>
-            (isSameMonth ? i !== idx : true) && t.track === trackId && t.subject === selectedSubject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters')
+            (isSameMonth ? Number(i) !== Number(idx) : true) && t.track === trackId && t.subject === selectedSubject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters')
         );
         if (exists) {
             return showToast("This subject target already exists in the target month.", "error");
         }
     } else {
         const exists = window.monthlyTargetsDatabase[targetMonthKey].some((t, i) =>
-            (isSameMonth ? i !== idx : true) && t.track === trackId && t.subject === selectedSubject && t.chapter === finalChapter && t.targetType !== 'subject'
+            (isSameMonth ? Number(i) !== Number(idx) : true) && t.track === trackId && t.subject === selectedSubject && t.chapter === finalChapter && t.targetType !== 'subject'
         );
         if (exists) {
             return showToast("This chapter target already exists in the target month.", "error");
@@ -19098,6 +19102,7 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
     target.id = mtId;
 
     const oldTrack = target.track;
+    const oldProg = target.program;
     const oldSubject = target.subject;
     const oldChapter = target.chapter;
     const oldIsSubject = target.targetType === 'subject' || oldChapter === 'Whole Subject';
@@ -19106,6 +19111,7 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
     window.cascadeDeleteMonthlyTarget({
         id: mtId,
         track: oldTrack,
+        program: oldProg,
         subject: oldSubject,
         chapter: oldChapter,
         targetType: oldIsSubject ? 'subject' : 'chapter'
@@ -19113,6 +19119,7 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
 
     const weekSelectEl = document.getElementById('mt-select-week-range');
     const targetWeekKey = (selectedWeek !== undefined && selectedWeek !== null) ? selectedWeek : (weekSelectEl ? weekSelectEl.value : '');
+    const isNoWeek = !targetWeekKey || targetWeekKey === 'none';
 
     target.track = trackId;
     target.program = progName;
@@ -19121,7 +19128,7 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
     target.targetType = selectedType;
     target.scope = isSubjectTarget ? 'Whole Subject' : (target.scope || 'Whole Chapter');
     target.totalChapterSize = selectedSize;
-    target.targetWeek = targetWeekKey || null;
+    target.targetWeek = isNoWeek ? null : (targetWeekKey || null);
     target.updatedAt = Date.now();
 
     // If month was changed during edit, move target to new month
@@ -19135,7 +19142,13 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
     // Collect all unique weeks spanned by daily allocations (or fallback to targetWeekKey)
     const targetWeeksSet = new Set();
     const allocKey = selectedSubject + '|||' + finalChapter;
-    const dailyAllocs = (window.monthlyTargetDailyAllocations && window.monthlyTargetDailyAllocations[allocKey]) || [];
+    if (isNoWeek && window.monthlyTargetDailyAllocations) {
+        window.monthlyTargetDailyAllocations[allocKey] = [];
+        if (progName) {
+            window.monthlyTargetDailyAllocations[allocKey + '|||' + progName] = [];
+        }
+    }
+    const dailyAllocs = isNoWeek ? [] : ((window.monthlyTargetDailyAllocations && (window.monthlyTargetDailyAllocations[allocKey] || (progName ? window.monthlyTargetDailyAllocations[allocKey + '|||' + progName] : null))) || []);
 
     if (dailyAllocs.length > 0) {
         dailyAllocs.forEach(a => {
@@ -19145,7 +19158,7 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
             }
         });
     }
-    if (targetWeeksSet.size === 0 && targetWeekKey) {
+    if (targetWeeksSet.size === 0 && targetWeekKey && !isNoWeek) {
         targetWeeksSet.add(targetWeekKey);
     }
 
@@ -19191,7 +19204,7 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
     }
 
     const daySelectEl = document.getElementById('mt-select-day');
-    const selectedDayKey = daySelectEl ? daySelectEl.value : '';
+    const selectedDayKey = isNoWeek ? '' : (daySelectEl ? daySelectEl.value : '');
     let connectedToDay = false;
     let totalDailyAllocationsAdded = 0;
     const connectedDaysSet = new Set();
