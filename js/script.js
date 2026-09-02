@@ -4873,7 +4873,9 @@ function updateMetrics() {
         window.renderGlobalPaceTrendChart();
     }
 
-    if (AppState.progressChart) { AppState.progressChart.data.datasets[0].data = [displayCompleted, scopeTotalChapters - displayCompleted]; AppState.progressChart.update(); }
+    if (typeof renderChart === 'function') {
+        renderChart(displayCompleted, scopeTotalChapters);
+    }
 
     // Compact Global Completion for Dashboard
     safeSetText('db-progress-text', `${percentage}%`);
@@ -7296,16 +7298,51 @@ window.renderSubjectTrendCircle = function () {
     window.updateLegends();
 };
 
-function renderChart() {
+function renderChart(completed, total, forceRecreate = false) {
     const canvas = document.getElementById('progressChart');
     if (!canvas) return;
-    if (AppState.progressChart) AppState.progressChart.destroy();
-    AppState.progressChart = new Chart(canvas.getContext('2d'), {
-        type: 'doughnut',
-        data: { datasets: [{ data: [0, totalStaticChapters], backgroundColor: ['#3b82f6', 'rgba(148, 163, 184, 0.1)'], borderWidth: 0 }] },
-        options: { responsive: true, maintainAspectRatio: false, cutout: '82%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
-    });
+
+    let comp = completed;
+    let tot = total;
+
+    if (comp === undefined || tot === undefined) {
+        let scopeTotalChapters = 0;
+        let scopeCompleted = 0;
+        if (window.lastSubjectStats && Object.keys(window.lastSubjectStats).length > 0) {
+            const allSubs = window.getAllSubjects().map(s => s.subject);
+            allSubs.forEach(sub => {
+                if (window.lastSubjectStats[sub]) {
+                    scopeTotalChapters += window.lastSubjectStats[sub].totalChapters || 0;
+                    scopeCompleted += window.lastSubjectStats[sub].effectiveChapters || 0;
+                }
+            });
+            tot = scopeTotalChapters;
+            comp = Math.round(scopeCompleted);
+        } else {
+            tot = totalStaticChapters || 0;
+            comp = 0;
+        }
+    }
+
+    const displayCompleted = Math.round(comp);
+    const remainingChapters = Math.max(0, tot - displayCompleted);
+    const chartData = (displayCompleted === 0 && remainingChapters === 0) ? [0, 1] : [displayCompleted, remainingChapters];
+
+    if (AppState.progressChart && !forceRecreate) {
+        AppState.progressChart.data.datasets[0].data = chartData;
+        AppState.progressChart.update();
+    } else {
+        if (AppState.progressChart) {
+            AppState.progressChart.destroy();
+        }
+        AppState.progressChart = new Chart(canvas.getContext('2d'), {
+            type: 'doughnut',
+            data: { datasets: [{ data: chartData, backgroundColor: ['#3b82f6', 'rgba(148, 163, 184, 0.1)'], borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '82%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+        });
+    }
 }
+window.renderChart = renderChart;
 
 /**
 * Draws all analytical logs charts including monthly trends and revisions history.
@@ -25471,22 +25508,20 @@ window.switchPage = function (pageId, sectionId) {
             }
         }
         } else if (pageId === 'subjects') {
+        if (typeof updateMetrics === 'function') updateMetrics();
         if (typeof renderSubjectNavigation === 'function') renderSubjectNavigation();
-        if (typeof renderCategoryProgress === 'function') renderCategoryProgress(window.lastSubjectStats || (typeof updateMetrics === 'function' ? (updateMetrics(), window.lastSubjectStats) : {}));
+        if (typeof renderCategoryProgress === 'function') renderCategoryProgress(window.lastSubjectStats || {});
         setTimeout(() => {
-            if (AppState.progressChart) {
-                const oldData = AppState.progressChart.data.datasets[0].data.slice();
-                AppState.progressChart.destroy();
-                const canvas = document.getElementById('progressChart');
-                if (canvas) {
-                    AppState.progressChart = new Chart(canvas.getContext('2d'), {
-                        type: 'doughnut',
-                        data: { datasets: [{ data: oldData, backgroundColor: ['#3b82f6', 'rgba(148, 163, 184, 0.1)'], borderWidth: 0 }] },
-                        options: { responsive: true, maintainAspectRatio: false, cutout: '82%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
-                    });
-                }
+            if (typeof renderChart === 'function') {
+                renderChart(undefined, undefined, true);
             }
         }, 50);
+        setTimeout(() => {
+            if (AppState.progressChart && typeof AppState.progressChart.resize === 'function') {
+                AppState.progressChart.resize();
+                AppState.progressChart.update('none');
+            }
+        }, 420);
     } else if (pageId === 'daily-actions') {
         if (typeof renderDailyTracker === 'function') renderDailyTracker();
         if (typeof renderDailyLogs === 'function') renderDailyLogs();
