@@ -16108,6 +16108,76 @@ window.setBulkSizePreset = function (val) {
     }
 };
 
+window.findWeekForDayInMonth = function (dayKey, targetMonthDate = null) {
+    if (!dayKey) return '';
+    const activeMonth = targetMonthDate || window.currentMonthlyTargetsDate || new Date();
+    const targetYear = activeMonth.getFullYear();
+
+    let d = null;
+    if (typeof dayKey === 'string') {
+        const trimmed = dayKey.trim();
+        // Case 1: YYYY-MM-DD
+        if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(trimmed)) {
+            const [y, m, day] = trimmed.split('-').map(Number);
+            d = new Date(y, m - 1, day, 12, 0, 0);
+        }
+        // Case 2: DD-MM-YYYY
+        else if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(trimmed)) {
+            const [day, m, y] = trimmed.split('-').map(Number);
+            d = new Date(y, m - 1, day, 12, 0, 0);
+        }
+        // Case 3: "Sep 15" or "15 Sep" or "15 Sep 2026"
+        else {
+            const withYear = (trimmed.includes(String(targetYear)) || trimmed.includes(String(targetYear - 1)) || trimmed.includes(String(targetYear + 1)))
+                ? trimmed
+                : `${trimmed} ${targetYear}`;
+            d = new Date(withYear + ' 12:00:00');
+            if (isNaN(d.getTime()) && window.Utils && typeof window.Utils.parseDateSafe === 'function') {
+                d = window.Utils.parseDateSafe(withYear);
+            }
+        }
+    } else if (dayKey instanceof Date) {
+        d = dayKey;
+    }
+
+    if (!d || isNaN(d.getTime())) {
+        d = (window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(dayKey) : new Date(dayKey));
+    }
+    if (!d || isNaN(d.getTime())) return '';
+
+    const weeks = window.getWeeksForMonth ? window.getWeeksForMonth(activeMonth) : [];
+    if (!weeks || weeks.length === 0) return '';
+
+    const dTime = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0).getTime();
+    for (const w of weeks) {
+        const startTime = new Date(w.start).setHours(0, 0, 0, 0);
+        const endTime = new Date(w.end).setHours(23, 59, 59, 999);
+        if (dTime >= startTime && dTime <= endTime) {
+            return w.key;
+        }
+    }
+    return '';
+};
+
+window.bindTargetToWeek = function (subject, chapter, weekKey, track = null, program = null) {
+    if (!weekKey) return;
+    const trackSelector = track ? `[data-track="${CSS.escape(track)}"]` : '';
+    const progSelector = program ? `[data-program="${CSS.escape(program)}"]` : '';
+    if (chapter === 'Whole Subject') {
+        const weekSelect = document.querySelector(`.mt-size-whole-subject-week[data-subject="${CSS.escape(subject)}"]${trackSelector}${progSelector}`) ||
+                           document.querySelector(`.mt-size-whole-subject-week[data-subject="${CSS.escape(subject)}"]`);
+        if (weekSelect) {
+            weekSelect.value = weekKey;
+        }
+    } else {
+        const weekSelect = document.querySelector(`.mt-chapter-week-select[data-subject="${CSS.escape(subject)}"][data-chapter="${CSS.escape(chapter)}"]${trackSelector}${progSelector}`) ||
+                           document.querySelector(`.mt-chapter-week-select[data-subject="${CSS.escape(subject)}"][data-chapter="${CSS.escape(chapter)}"]`);
+        if (weekSelect) {
+            weekSelect.value = weekKey;
+        }
+    }
+};
+
 window.adjustDailyAllocationsForTargetWeek = function (subject, chapter, weekKey) {
     const key = subject + '|||' + chapter;
     if (!window.monthlyTargetDailyAllocations || !window.monthlyTargetDailyAllocations[key]) return;
@@ -16125,7 +16195,15 @@ window.adjustDailyAllocationsForTargetWeek = function (subject, chapter, weekKey
 };
 
 window.handleMonthlyChapterWeekSelectChange = function (subject, chapter, weekKey, trackId = null, progName = null) {
-    window.adjustDailyAllocationsForTargetWeek(subject, chapter, weekKey);
+    const key = subject + '|||' + chapter;
+    if (!weekKey || weekKey === 'none') {
+        // Changing to No Week: clear daily allocations so target exists strictly as a Monthly Target
+        if (window.monthlyTargetDailyAllocations) {
+            window.monthlyTargetDailyAllocations[key] = [];
+        }
+    } else {
+        window.adjustDailyAllocationsForTargetWeek(subject, chapter, weekKey);
+    }
     window.renderMonthlyTargetDailyAllocations();
     window.updateMonthlyTargetPageSummary();
 };
@@ -16142,7 +16220,11 @@ window.applyBulkWeekToMonthlyChapters = function () {
         if (weekSelect) {
             weekSelect.value = selectedWeek;
             appliedCount++;
-            window.adjustDailyAllocationsForTargetWeek(sub, 'Whole Subject', selectedWeek);
+            if (!selectedWeek || selectedWeek === 'none') {
+                if (window.monthlyTargetDailyAllocations) window.monthlyTargetDailyAllocations[sub + '|||Whole Subject'] = [];
+            } else {
+                window.adjustDailyAllocationsForTargetWeek(sub, 'Whole Subject', selectedWeek);
+            }
         }
     });
 
@@ -16154,7 +16236,11 @@ window.applyBulkWeekToMonthlyChapters = function () {
         if (weekSelect) {
             weekSelect.value = selectedWeek;
             appliedCount++;
-            window.adjustDailyAllocationsForTargetWeek(sub, ch, selectedWeek);
+            if (!selectedWeek || selectedWeek === 'none') {
+                if (window.monthlyTargetDailyAllocations) window.monthlyTargetDailyAllocations[sub + '|||' + ch] = [];
+            } else {
+                window.adjustDailyAllocationsForTargetWeek(sub, ch, selectedWeek);
+            }
         }
     });
 
@@ -16403,12 +16489,14 @@ window.renderMonthlyTargetDailyAllocations = function () {
             totalAllocationsCount++;
         });
 
-        // Week badge if bound
+        // Week badge if bound or unbound
         let weekBadgeHtml = '';
         if (targetWeekKey) {
             const weekRangeDates = targetWeekKey.split(' - ');
             const weekShort = weekRangeDates.length === 2 ? `${weekRangeDates[0]} - ${weekRangeDates[1]}` : targetWeekKey;
             weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1" title="Bound to week ${targetWeekKey}">📅 ${weekShort}</span>`;
+        } else {
+            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50 flex items-center gap-1" title="No week bound (Monthly only target)">📅 No Week (Month)</span>`;
         }
 
         // Allocation status badge
@@ -16474,7 +16562,7 @@ window.renderMonthlyTargetDailyAllocations = function () {
                         </div>
 
                         <!-- Day Select Dropdown -->
-                        <select onchange="window.updateDailyAllocationDay('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, this.value)"
+                        <select onchange="window.updateDailyAllocationDay('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', ${rowIdx}, this.value, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
                             class="mt-daily-day-select order-2 sm:order-2 flex-1 min-w-[85px] sm:min-w-[115px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs text-slate-800 dark:text-slate-100 font-bold outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs truncate cursor-pointer h-8"
                             title="Select Target Day">
                             ${dayOptions}
@@ -16611,6 +16699,8 @@ window.updateDailyAllocationBadgesInPlace = function (subject, chapter) {
             const weekRangeDates = targetWeekKey.split(' - ');
             const weekShort = weekRangeDates.length === 2 ? `${weekRangeDates[0]} - ${weekRangeDates[1]}` : targetWeekKey;
             weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1" title="Bound to week ${targetWeekKey}">📅 ${weekShort}</span>`;
+        } else {
+            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50 flex items-center gap-1" title="No week bound (Monthly only target)">📅 No Week (Month)</span>`;
         }
 
         let allocationBadgeHtml = '';
@@ -16660,12 +16750,19 @@ window.addDailyAllocationRow = function (subject, chapter, defaultDay = '', defa
     const days = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate, targetWeekKey) : [];
 
     let dayKeyToUse = defaultDay;
-    if (!dayKeyToUse && days.length > 0) {
+    if (!dayKeyToUse && targetWeekKey && days.length > 0) {
         const usedDays = new Set(window.monthlyTargetDailyAllocations[key].map(a => a.dayKey));
         const firstUnused = days.find(d => !usedDays.has(d.key));
         dayKeyToUse = firstUnused ? firstUnused.key : days[0].key;
     } else if (dayKeyToUse && days.length > 0 && !days.some(d => d.key === dayKeyToUse)) {
         dayKeyToUse = days[0].key;
+    }
+
+    if (dayKeyToUse) {
+        const matchingWeekKey = window.findWeekForDayInMonth(dayKeyToUse, targetMonthDate);
+        if (matchingWeekKey) {
+            window.bindTargetToWeek(subject, chapter, matchingWeekKey, track, program);
+        }
     }
 
     let sizeToUse = defaultSize;
@@ -16747,6 +16844,13 @@ window.splitChapterAcrossDays = function (subject, chapter, numDays, track = nul
         });
     }
 
+    if (newAllocations.length > 0 && newAllocations[0].dayKey) {
+        const matchingWeekKey = window.findWeekForDayInMonth(newAllocations[0].dayKey, targetMonthDate);
+        if (matchingWeekKey) {
+            window.bindTargetToWeek(subject, chapter, matchingWeekKey, track, program);
+        }
+    }
+
     window.monthlyTargetDailyAllocations[key] = newAllocations;
     window.renderMonthlyTargetDailyAllocations();
     window.updateMonthlyTargetPageSummary();
@@ -16814,6 +16918,13 @@ window.splitAllChaptersAcrossDays = function (numDays) {
             });
         }
 
+        if (newAllocations.length > 0 && newAllocations[0].dayKey) {
+            const matchingWeekKey = window.findWeekForDayInMonth(newAllocations[0].dayKey, targetMonthDate);
+            if (matchingWeekKey) {
+                window.bindTargetToWeek(target.subject, target.chapter, matchingWeekKey, target.track, target.program);
+            }
+        }
+
         window.monthlyTargetDailyAllocations[key] = newAllocations;
     });
 
@@ -16822,10 +16933,19 @@ window.splitAllChaptersAcrossDays = function (numDays) {
     showToast(`⚡ All ${checkedTargets.length} target(s) distributed across ${numDays} days!`, "success");
 };
 
-window.updateDailyAllocationDay = function (subject, chapter, rowIdx, dayKey) {
+window.updateDailyAllocationDay = function (subject, chapter, rowIdx, dayKey, track = null, program = null) {
     const key = subject + '|||' + chapter;
     if (window.monthlyTargetDailyAllocations && window.monthlyTargetDailyAllocations[key] && window.monthlyTargetDailyAllocations[key][rowIdx]) {
         window.monthlyTargetDailyAllocations[key][rowIdx].dayKey = dayKey;
+
+        if (dayKey) {
+            const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
+            const matchingWeekKey = window.findWeekForDayInMonth(dayKey, targetMonthDate);
+            if (matchingWeekKey) {
+                window.bindTargetToWeek(subject, chapter, matchingWeekKey, track, program);
+            }
+        }
+
         window.renderMonthlyTargetDailyAllocations();
         window.updateMonthlyTargetPageSummary();
     }
@@ -16926,8 +17046,15 @@ window.autoSpreadAllChaptersAcrossDays = function (mode = 'month') {
         const targetWeekKey = window.getAssignedWeekKeyForTarget ? window.getAssignedWeekKeyForTarget(target.subject, target.chapter, target.track, target.program) : '';
         const targetDays = targetWeekKey ? (window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate, targetWeekKey) : allDays) : allDays;
         const assignedDay = targetDays[idx % targetDays.length];
+        const assignedDayKey = assignedDay ? assignedDay.key : '';
+        if (assignedDayKey) {
+            const matchingWeekKey = window.findWeekForDayInMonth(assignedDayKey, targetMonthDate);
+            if (matchingWeekKey) {
+                window.bindTargetToWeek(target.subject, target.chapter, matchingWeekKey, target.track, target.program);
+            }
+        }
         window.monthlyTargetDailyAllocations[key] = [{
-            dayKey: assignedDay ? assignedDay.key : '',
+            dayKey: assignedDayKey,
             portionSize: target.totalSize,
             fraction: 'All',
             portionLabel: 'Full Chapter'
@@ -16975,20 +17102,16 @@ window.applyBulkDayToAllChapters = function () {
     if (!window.monthlyTargetDailyAllocations) window.monthlyTargetDailyAllocations = {};
 
     const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
+    const matchingWeekKey = window.findWeekForDayInMonth(selectedDay, targetMonthDate);
+
     checkedTargets.forEach(target => {
         const key = target.subject + '|||' + target.chapter;
-        const targetWeekKey = window.getAssignedWeekKeyForTarget ? window.getAssignedWeekKeyForTarget(target.subject, target.chapter, target.track, target.program) : '';
-        const targetDays = targetWeekKey ? (window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate, targetWeekKey) : []) : [];
-
-        let dayToAssign = selectedDay;
-        if (targetWeekKey && targetDays.length > 0) {
-            if (!targetDays.some(d => d.key === selectedDay)) {
-                dayToAssign = targetDays[0].key;
-            }
+        if (matchingWeekKey) {
+            window.bindTargetToWeek(target.subject, target.chapter, matchingWeekKey, target.track, target.program);
         }
 
         window.monthlyTargetDailyAllocations[key] = [{
-            dayKey: dayToAssign,
+            dayKey: selectedDay,
             portionSize: target.totalSize,
             fraction: 'All',
             portionLabel: 'Full Chapter'
@@ -18285,8 +18408,8 @@ window.openEditMonthlyTargetPage = function (idx, monthKey = null) {
     if (typeof window.toggleMonthlySubjectsDropdown === 'function') window.toggleMonthlySubjectsDropdown(false);
 
     // Find if this target is in any weekly target list of the target month
-    let preselectedWeek = target.targetWeek || null;
-    if (window.weeklyTargetsDatabase) {
+    let preselectedWeek = (target.targetWeek !== undefined) ? (target.targetWeek || null) : null;
+    if (preselectedWeek === null && target.targetWeek === undefined && window.weeklyTargetsDatabase) {
         const weeks = window.getWeeksForMonth ? window.getWeeksForMonth(targetMonthDate) : [];
         for (const w of weeks) {
             const canonicalKey = window.getCanonicalWeeklyRangeKey ? window.getCanonicalWeeklyRangeKey(w.key) : w.key;
