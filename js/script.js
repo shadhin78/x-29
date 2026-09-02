@@ -16542,18 +16542,27 @@ window.updateChapterMultiWeekBadges = function () {
 };
 
 window.adjustDailyAllocationsForTargetWeek = function (subject, chapter, weekKey) {
-    // Multi-week daily allocations are fully supported across all days of the month without week boundary restrictions.
+    if (!weekKey || weekKey === 'none') return;
+    const key = subject + '|||' + chapter;
+    if (!window.monthlyTargetDailyAllocations || !window.monthlyTargetDailyAllocations[key]) return;
+    const allocations = window.monthlyTargetDailyAllocations[key];
+    if (!Array.isArray(allocations) || allocations.length === 0) return;
+
+    const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
+    const weekDays = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate, weekKey) : [];
+    if (weekDays.length === 0) return;
+
+    allocations.forEach((alloc, idx) => {
+        const dayObj = weekDays[Math.min(idx, weekDays.length - 1)];
+        if (dayObj) {
+            alloc.dayKey = dayObj.key;
+        }
+    });
 };
 
 window.handleMonthlyChapterWeekSelectChange = function (subject, chapter, weekKey, trackId = null, progName = null) {
-    const key = subject + '|||' + chapter;
-    if (!weekKey || weekKey === 'none') {
-        if (window.monthlyTargetDailyAllocations) {
-            window.monthlyTargetDailyAllocations[key] = [];
-            if (progName) {
-                window.monthlyTargetDailyAllocations[key + '|||' + progName] = [];
-            }
-        }
+    if (weekKey && weekKey !== 'none') {
+        window.adjustDailyAllocationsForTargetWeek(subject, chapter, weekKey);
     }
     window.renderMonthlyTargetDailyAllocations();
     if (typeof window.updateChapterMultiWeekBadges === 'function') {
@@ -17156,9 +17165,37 @@ window.addDailyAllocationRow = function (subject, chapter, defaultDay = '', defa
     if (!window.monthlyTargetDailyAllocations[key]) window.monthlyTargetDailyAllocations[key] = [];
 
     const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
+    const targetWeekKey = window.getAssignedWeekKeyForTarget ? window.getAssignedWeekKeyForTarget(subject, chapter, track, program) : '';
     const allDays = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate) : [];
 
     let dayKeyToUse = defaultDay;
+
+    if (targetWeekKey) {
+        const weekDays = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate, targetWeekKey) : [];
+        if (weekDays.length > 0) {
+            if (dayKeyToUse && weekDays.some(d => d.key === dayKeyToUse)) {
+                // keep dayKeyToUse
+            } else {
+                const currentAllocs = window.monthlyTargetDailyAllocations[key];
+                if (currentAllocs.length > 0) {
+                    const lastAlloc = currentAllocs[currentAllocs.length - 1];
+                    if (lastAlloc && lastAlloc.dayKey) {
+                        const lastIdxInWeek = weekDays.findIndex(d => d.key === lastAlloc.dayKey);
+                        if (lastIdxInWeek !== -1 && lastIdxInWeek + 1 < weekDays.length) {
+                            dayKeyToUse = weekDays[lastIdxInWeek + 1].key;
+                        } else {
+                            dayKeyToUse = weekDays[0].key;
+                        }
+                    } else {
+                        dayKeyToUse = weekDays[0].key;
+                    }
+                } else {
+                    dayKeyToUse = weekDays[0].key;
+                }
+            }
+        }
+    }
+
     if (!dayKeyToUse && allDays.length > 0) {
         // 1. If this chapter already has allocated rows, pick the next day after the last allocated row
         const currentAllocs = window.monthlyTargetDailyAllocations[key];
@@ -17210,7 +17247,7 @@ window.addDailyAllocationRow = function (subject, chapter, defaultDay = '', defa
         dayKeyToUse = allDays[0].key;
     }
 
-    if (dayKeyToUse) {
+    if (dayKeyToUse && !targetWeekKey) {
         const matchingWeekKey = window.findWeekForDayInMonth(dayKeyToUse, targetMonthDate);
         if (matchingWeekKey) {
             window.bindTargetToWeek(subject, chapter, matchingWeekKey, track, program);
@@ -17271,6 +17308,81 @@ window.splitChapterAcrossDays = function (subject, chapter, numDays, track = nul
     }
 
     const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
+    const targetWeekKey = window.getAssignedWeekKeyForTarget ? window.getAssignedWeekKeyForTarget(subject, chapter, track, program) : '';
+
+    if (targetWeekKey) {
+        // Chapter is bound to a specific week - allocate strictly within week dates
+        const weekDays = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate, targetWeekKey) : [];
+        if (weekDays.length === 0) return;
+
+        const effectiveDays = Math.max(1, Math.min(numDays, weekDays.length));
+
+        // Find starting index within this week by checking preceding chapters in the same week
+        let startIdx = 0;
+        const allCheckedTargets = [];
+        document.querySelectorAll('.mt-ch-whole-subject:checked').forEach(ws => {
+            allCheckedTargets.push({
+                key: ws.getAttribute('data-subject') + '|||Whole Subject',
+                subject: ws.getAttribute('data-subject'),
+                chapter: 'Whole Subject',
+                track: ws.getAttribute('data-track'),
+                program: ws.getAttribute('data-program')
+            });
+        });
+        document.querySelectorAll('.mt-chapter-checkbox:checked').forEach(cb => {
+            allCheckedTargets.push({
+                key: cb.getAttribute('data-subject') + '|||' + cb.getAttribute('data-chapter'),
+                subject: cb.getAttribute('data-subject'),
+                chapter: cb.getAttribute('data-chapter'),
+                track: cb.getAttribute('data-track'),
+                program: cb.getAttribute('data-program')
+            });
+        });
+
+        const currentIdxInChecked = allCheckedTargets.findIndex(t => t.key === key);
+        if (currentIdxInChecked > 0) {
+            for (let i = currentIdxInChecked - 1; i >= 0; i--) {
+                const prevT = allCheckedTargets[i];
+                const prevWeekKey = window.getAssignedWeekKeyForTarget ? window.getAssignedWeekKeyForTarget(prevT.subject, prevT.chapter, prevT.track, prevT.program) : '';
+                if (prevWeekKey === targetWeekKey) {
+                    const prevAllocs = window.monthlyTargetDailyAllocations[prevT.key];
+                    if (Array.isArray(prevAllocs) && prevAllocs.length > 0) {
+                        const lastPrevAlloc = prevAllocs[prevAllocs.length - 1];
+                        if (lastPrevAlloc && lastPrevAlloc.dayKey) {
+                            const lastDayIdxInWeek = weekDays.findIndex(d => d.key === lastPrevAlloc.dayKey);
+                            if (lastDayIdxInWeek !== -1 && lastDayIdxInWeek + 1 < weekDays.length) {
+                                startIdx = lastDayIdxInWeek + 1;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        const basePortion = totalSize ? Math.floor(totalSize / effectiveDays) : null;
+        const remainder = totalSize ? (totalSize % effectiveDays) : 0;
+
+        const newAllocations = [];
+        for (let i = 0; i < effectiveDays; i++) {
+            const dayObj = weekDays[Math.min(startIdx + i, weekDays.length - 1)];
+            const daySize = basePortion !== null ? (basePortion + (i === 0 ? remainder : 0)) : null;
+            newAllocations.push({
+                dayKey: dayObj ? dayObj.key : '',
+                portionSize: daySize,
+                fraction: `1/${effectiveDays}`,
+                portionLabel: `Part ${i + 1}/${effectiveDays}`
+            });
+        }
+
+        window.monthlyTargetDailyAllocations[key] = newAllocations;
+        window.renderMonthlyTargetDailyAllocations();
+        window.updateMonthlyTargetPageSummary();
+        showToast(`⚡ Split across ${effectiveDays} days in bound week successfully!`, "success");
+        return;
+    }
+
+    // No week bound assigned - divide across month days
     const allDays = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate) : [];
     if (allDays.length === 0) return;
 
@@ -17333,13 +17445,6 @@ window.splitChapterAcrossDays = function (subject, chapter, numDays, track = nul
         });
     }
 
-    if (newAllocations.length > 0 && newAllocations[0].dayKey) {
-        const matchingWeekKey = window.findWeekForDayInMonth(newAllocations[0].dayKey, targetMonthDate);
-        if (matchingWeekKey) {
-            window.bindTargetToWeek(subject, chapter, matchingWeekKey, track, program);
-        }
-    }
-
     window.monthlyTargetDailyAllocations[key] = newAllocations;
     window.renderMonthlyTargetDailyAllocations();
     window.updateMonthlyTargetPageSummary();
@@ -17385,25 +17490,57 @@ window.splitAllChaptersAcrossDays = function (numDays) {
     const bulkSelect = document.getElementById('mt-bulk-assign-day-select');
     const selectedDay = bulkSelect ? bulkSelect.value : '';
 
-    let currentDayIdx = selectedDay ? allDays.findIndex(d => d.key === selectedDay) : -1;
-    if (currentDayIdx === -1) {
-        currentDayIdx = allDays.findIndex(d => d.key === todayStr);
-        if (currentDayIdx === -1) currentDayIdx = 0;
+    let currentMonthDayIdx = selectedDay ? allDays.findIndex(d => d.key === selectedDay) : -1;
+    if (currentMonthDayIdx === -1) {
+        currentMonthDayIdx = allDays.findIndex(d => d.key === todayStr);
+        if (currentMonthDayIdx === -1) currentMonthDayIdx = 0;
     }
 
+    const weekCurrentIndices = {};
     let totalAllocationsCount = 0;
 
     checkedTargets.forEach(target => {
         const key = target.subject + '|||' + target.chapter;
-        const effectiveDays = Math.max(1, Math.min(numDays, allDays.length));
+        const targetWeekKey = window.getAssignedWeekKeyForTarget ? window.getAssignedWeekKeyForTarget(target.subject, target.chapter, target.track, target.program) : '';
 
+        if (targetWeekKey) {
+            const weekDays = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate, targetWeekKey) : [];
+            if (weekDays.length > 0) {
+                const effectiveDays = Math.max(1, Math.min(numDays, weekDays.length));
+                const totalSize = target.totalSize;
+                const basePortion = totalSize ? Math.floor(totalSize / effectiveDays) : null;
+                const remainder = totalSize ? (totalSize % effectiveDays) : 0;
+
+                let startIdx = weekCurrentIndices[targetWeekKey] || 0;
+                if (startIdx >= weekDays.length) startIdx = 0;
+
+                const newAllocations = [];
+                for (let i = 0; i < effectiveDays; i++) {
+                    const dayObj = weekDays[Math.min(startIdx + i, weekDays.length - 1)];
+                    const daySize = basePortion !== null ? (basePortion + (i === 0 ? remainder : 0)) : null;
+                    newAllocations.push({
+                        dayKey: dayObj ? dayObj.key : '',
+                        portionSize: daySize,
+                        fraction: `1/${effectiveDays}`,
+                        portionLabel: `Part ${i + 1}/${effectiveDays}`
+                    });
+                    totalAllocationsCount++;
+                }
+                weekCurrentIndices[targetWeekKey] = (startIdx + effectiveDays) % weekDays.length;
+                window.monthlyTargetDailyAllocations[key] = newAllocations;
+                return;
+            }
+        }
+
+        // Unassigned to week - divide across month
+        const effectiveDays = Math.max(1, Math.min(numDays, allDays.length));
         const totalSize = target.totalSize;
         const basePortion = totalSize ? Math.floor(totalSize / effectiveDays) : null;
         const remainder = totalSize ? (totalSize % effectiveDays) : 0;
 
         const newAllocations = [];
         for (let i = 0; i < effectiveDays; i++) {
-            const dayObj = allDays[Math.min(currentDayIdx, allDays.length - 1)];
+            const dayObj = allDays[Math.min(currentMonthDayIdx, allDays.length - 1)];
             const daySize = basePortion !== null ? (basePortion + (i === 0 ? remainder : 0)) : null;
             newAllocations.push({
                 dayKey: dayObj ? dayObj.key : '',
@@ -17411,15 +17548,8 @@ window.splitAllChaptersAcrossDays = function (numDays) {
                 fraction: `1/${effectiveDays}`,
                 portionLabel: `Part ${i + 1}/${effectiveDays}`
             });
-            currentDayIdx++;
+            currentMonthDayIdx++;
             totalAllocationsCount++;
-        }
-
-        if (newAllocations.length > 0 && newAllocations[0].dayKey) {
-            const matchingWeekKey = window.findWeekForDayInMonth(newAllocations[0].dayKey, targetMonthDate);
-            if (matchingWeekKey) {
-                window.bindTargetToWeek(target.subject, target.chapter, matchingWeekKey, target.track, target.program);
-            }
         }
 
         window.monthlyTargetDailyAllocations[key] = newAllocations;
@@ -17563,27 +17693,15 @@ window.autoSpreadAllChaptersAcrossDays = function (mode = 'month') {
                 portionLabel: 'Full Chapter'
             }];
 
-            if (assignedDayKey) {
-                const matchingWeekKey = window.findWeekForDayInMonth(assignedDayKey, targetMonthDate);
-                if (matchingWeekKey) {
-                    window.bindTargetToWeek(target.subject, target.chapter, matchingWeekKey, target.track, target.program);
-                }
-            }
             currentDayIdx++;
             totalAllocationsSpread++;
         } else {
-            existingAllocs.forEach((row, rIdx) => {
+            existingAllocs.forEach((row) => {
                 const assignedDay = allDays[Math.min(currentDayIdx, allDays.length - 1)];
                 const assignedDayKey = assignedDay ? assignedDay.key : '';
 
                 row.dayKey = assignedDayKey;
 
-                if (rIdx === 0 && assignedDayKey) {
-                    const matchingWeekKey = window.findWeekForDayInMonth(assignedDayKey, targetMonthDate);
-                    if (matchingWeekKey) {
-                        window.bindTargetToWeek(target.subject, target.chapter, matchingWeekKey, target.track, target.program);
-                    }
-                }
                 currentDayIdx++;
                 totalAllocationsSpread++;
             });
@@ -17659,27 +17777,15 @@ window.spreadAllChaptersFromStartDate = function () {
                 portionLabel: 'Full Chapter'
             }];
 
-            if (assignedDayKey) {
-                const matchingWeekKey = window.findWeekForDayInMonth(assignedDayKey, targetMonthDate);
-                if (matchingWeekKey) {
-                    window.bindTargetToWeek(target.subject, target.chapter, matchingWeekKey, target.track, target.program);
-                }
-            }
             currentDayIdx++;
             totalAllocationsSpread++;
         } else {
-            existingAllocs.forEach((row, rIdx) => {
+            existingAllocs.forEach((row) => {
                 const assignedDay = allDays[Math.min(currentDayIdx, allDays.length - 1)];
                 const assignedDayKey = assignedDay ? assignedDay.key : '';
 
                 row.dayKey = assignedDayKey;
 
-                if (rIdx === 0 && assignedDayKey) {
-                    const matchingWeekKey = window.findWeekForDayInMonth(assignedDayKey, targetMonthDate);
-                    if (matchingWeekKey) {
-                        window.bindTargetToWeek(target.subject, target.chapter, matchingWeekKey, target.track, target.program);
-                    }
-                }
                 currentDayIdx++;
                 totalAllocationsSpread++;
             });
