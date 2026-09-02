@@ -15340,15 +15340,54 @@ window.getMonthlyTargetInstanceOccurrence = function (targetMonthKey, target, ta
     return currentOrder > 0 ? currentOrder : 1;
 };
 
+window.isMatchMonthlyTargetWithChild = function (mt, child) {
+    if (!mt || !child) return false;
+    if (child.monthlyTargetId && mt.id && child.monthlyTargetId === mt.id) return true;
+    if (child.track && mt.track && child.track !== mt.track) return false;
+
+    const cSub = String(child.subject || '').trim().toLowerCase();
+    const mSub = String(mt.subject || '').trim().toLowerCase();
+    const cProg = String(child.program || '').trim().toLowerCase();
+    const mProg = String(mt.program || '').trim().toLowerCase();
+    const cCh = String(child.chapter || '').trim().toLowerCase();
+    const mCh = String(mt.chapter || '').trim().toLowerCase();
+
+    const subOrProgMatch = (cSub === mSub) || (cProg && mProg && cProg === mProg) ||
+        (cSub === mProg) || (cProg === mSub) ||
+        (cSub.includes(mSub) && mSub.length > 2) || (mSub.includes(cSub) && cSub.length > 2) ||
+        (cCh.includes(mSub) && mSub.length > 2) || (mCh.includes(cSub) && cSub.length > 2);
+
+    if (!subOrProgMatch) return false;
+
+    const cIsSubject = child.targetType === 'subject' || child.chapter === 'Whole Subject' || child.chapter === 'All Chapters';
+    const mIsSubject = mt.targetType === 'subject' || mt.chapter === 'Whole Subject' || mt.chapter === 'All Chapters';
+
+    if (cIsSubject !== mIsSubject) return false;
+    if (cIsSubject && mIsSubject) return true;
+
+    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
+    if (matchFn && matchFn(child.chapter, mt.chapter)) return true;
+    if (matchFn && matchFn(child.chapter, `${mt.chapter}: ${mt.subject}`)) return true;
+    if (matchFn && matchFn(child.chapter, `${mt.subject} ${mt.chapter}`)) return true;
+    if (matchFn && matchFn(mt.chapter, `${child.chapter}: ${child.subject}`)) return true;
+
+    if (window.Utils && typeof window.Utils.extractNum === 'function') {
+        const n1 = window.Utils.extractNum(child.chapter);
+        const n2 = window.Utils.extractNum(mt.chapter);
+        if (n1 !== null && n2 !== null && n1 !== 999 && n2 !== 999 && n1 === n2) {
+            return true;
+        }
+    }
+
+    return false;
+};
+
 /**
  * Cascade deletes all associated weekly and daily targets linked to a monthly target.
  */
 window.cascadeDeleteMonthlyTarget = function (target, monthKey = null, targetId = null) {
     if (!target) return;
     const mtId = target.id || targetId;
-    const isSubject = target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters';
-    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
-    const cleanSub = String(target.subject || '').trim().toLowerCase();
 
     // Determine month bounds if monthKey is provided
     let monthStart = null;
@@ -15368,35 +15407,19 @@ window.cascadeDeleteMonthlyTarget = function (target, monthKey = null, targetId 
             for (let i = wList.length - 1; i >= 0; i--) {
                 const wt = wList[i];
                 if (!wt) continue;
-                const wtSub = String(wt.subject || '').trim().toLowerCase();
-                const subMatch = (wtSub === cleanSub) || (cleanSub.includes(wtSub) && wtSub.length > 2) || (wtSub.includes(cleanSub) && cleanSub.length > 2);
-                const trackMatch = (!target.track || !wt.track || wt.track === target.track);
 
-                let isMatch = Boolean(mtId && wt.monthlyTargetId === mtId);
-                if (!isMatch && subMatch && trackMatch) {
-                    const wtIsSubject = wt.targetType === 'subject' || wt.chapter === 'Whole Subject' || wt.chapter === 'All Chapters';
-                    const chMatch = isSubject ? wtIsSubject : (!wtIsSubject && (matchFn ? matchFn(wt.chapter, target.chapter) : (String(wt.chapter).trim().toLowerCase() === String(target.chapter).trim().toLowerCase())));
-
-                    if (chMatch) {
-                        if (wt.targetMonth && monthKey && wt.targetMonth === monthKey) {
-                            isMatch = true;
-                        } else if (monthStart && monthEnd && !isNaN(monthStart.getTime()) && !isNaN(monthEnd.getTime())) {
-                            const wDates = weekKey.split(' - ');
-                            const wStart = (window.Utils && Utils.parseDateSafe) ? Utils.parseDateSafe(wDates[0]) : new Date(wDates[0]);
-                            if (wStart && !isNaN(wStart.getTime())) {
-                                if (wStart >= monthStart && wStart <= monthEnd) {
-                                    isMatch = true;
-                                }
-                            } else {
-                                isMatch = true;
+                let isMatch = window.isMatchMonthlyTargetWithChild(target, wt);
+                if (isMatch) {
+                    if (monthStart && monthEnd && !isNaN(monthStart.getTime()) && !isNaN(monthEnd.getTime())) {
+                        const wDates = weekKey.split(' - ');
+                        const wStart = (window.Utils && Utils.parseDateSafe) ? Utils.parseDateSafe(wDates[0]) : new Date(wDates[0]);
+                        if (wStart && !isNaN(wStart.getTime())) {
+                            if (wt.targetMonth && wt.targetMonth !== monthKey && (!mtId || wt.monthlyTargetId !== mtId)) {
+                                continue;
                             }
-                        } else {
-                            isMatch = true;
                         }
                     }
-                }
 
-                if (isMatch) {
                     const wtTid = wt.id || window.generateItemId(wt, `weeklyTargetsDatabase_${weekKey}`);
                     if (wtTid) window.recordItemDeletion(wtTid);
                     if (wt.id) window.recordItemDeletion(wt.id);
@@ -15413,34 +15436,18 @@ window.cascadeDeleteMonthlyTarget = function (target, monthKey = null, targetId 
             for (let i = dList.length - 1; i >= 0; i--) {
                 const dt = dList[i];
                 if (!dt || dt.isTodo) continue;
-                const dtSub = String(dt.subject || '').trim().toLowerCase();
-                const subMatch = (dtSub === cleanSub) || (cleanSub.includes(dtSub) && dtSub.length > 2) || (dtSub.includes(cleanSub) && cleanSub.length > 2);
-                const trackMatch = (!target.track || !dt.track || dt.track === target.track);
 
-                let isMatch = Boolean(mtId && dt.monthlyTargetId === mtId);
-                if (!isMatch && subMatch && trackMatch) {
-                    const dtIsSubject = dt.targetType === 'subject' || dt.chapter === 'Whole Subject' || dt.chapter === 'All Chapters';
-                    const chMatch = isSubject ? dtIsSubject : (!dtIsSubject && (matchFn ? matchFn(dt.chapter, target.chapter) : (String(dt.chapter).trim().toLowerCase() === String(target.chapter).trim().toLowerCase())));
-
-                    if (chMatch) {
-                        if (dt.targetMonth && monthKey && dt.targetMonth === monthKey) {
-                            isMatch = true;
-                        } else if (monthStart && monthEnd && !isNaN(monthStart.getTime()) && !isNaN(monthEnd.getTime())) {
-                            const dDate = window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(dateKey) : ((window.Utils && Utils.parseDateSafe) ? Utils.parseDateSafe(dateKey) : new Date(dateKey));
-                            if (dDate && !isNaN(dDate.getTime())) {
-                                if (dDate >= monthStart && dDate <= monthEnd) {
-                                    isMatch = true;
-                                }
-                            } else {
-                                isMatch = true;
+                let isMatch = window.isMatchMonthlyTargetWithChild(target, dt);
+                if (isMatch) {
+                    if (monthStart && monthEnd && !isNaN(monthStart.getTime()) && !isNaN(monthEnd.getTime())) {
+                        const dDate = window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(dateKey) : ((window.Utils && Utils.parseDateSafe) ? Utils.parseDateSafe(dateKey) : new Date(dateKey));
+                        if (dDate && !isNaN(dDate.getTime())) {
+                            if (dt.targetMonth && dt.targetMonth !== monthKey && (!mtId || dt.monthlyTargetId !== mtId)) {
+                                continue;
                             }
-                        } else {
-                            isMatch = true;
                         }
                     }
-                }
 
-                if (isMatch) {
                     dt.isDeleted = true;
                     const dtTid = dt.id || window.generateItemId(dt, `dailyTargetsDatabase_${dateKey}`);
                     if (dtTid) window.recordItemDeletion(dtTid);
@@ -15454,11 +15461,10 @@ window.cascadeDeleteMonthlyTarget = function (target, monthKey = null, targetId 
 
 /**
  * Reconciles weekly and daily databases, automatically purging orphaned records
- * that have no corresponding monthly target.
+ * that have no corresponding monthly target or whose monthly target is unassigned (No Week).
  */
 window.cleanOrphanedWeeklyAndDailyTargets = function () {
     if (!window.monthlyTargetsDatabase) return;
-    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
     let cleaned = false;
 
     // Collect all monthly targets across all months
@@ -15472,27 +15478,37 @@ window.cleanOrphanedWeeklyAndDailyTargets = function () {
         });
     });
 
-    // 1. Clean weekly targets with no parent monthly target
+    // 1. Clean weekly targets with no parent monthly target, or whose monthly target is unassigned (No Week)
     if (window.weeklyTargetsDatabase) {
         Object.keys(window.weeklyTargetsDatabase).forEach(wKey => {
             const wList = window.weeklyTargetsDatabase[wKey] || [];
             for (let i = wList.length - 1; i >= 0; i--) {
                 const wt = wList[i];
                 if (!wt) continue;
-                const wtSub = String(wt.subject || '').trim().toLowerCase();
-                const isSubject = wt.targetType === 'subject' || wt.chapter === 'Whole Subject' || wt.chapter === 'All Chapters';
 
-                const hasParent = allMonthlyTargets.some(({ target: mt }) => {
-                    if (wt.monthlyTargetId && mt.id && wt.monthlyTargetId === mt.id) return true;
-                    const mtSub = String(mt.subject || '').trim().toLowerCase();
-                    const subMatch = (wtSub === mtSub) || (mtSub.includes(wtSub) && wtSub.length > 2) || (wtSub.includes(mtSub) && mtSub.length > 2);
-                    if (!subMatch) return false;
-                    if (wt.track && mt.track && wt.track !== mt.track) return false;
-                    const mtIsSubject = mt.targetType === 'subject' || mt.chapter === 'Whole Subject' || mt.chapter === 'All Chapters';
-                    return isSubject ? mtIsSubject : (!mtIsSubject && (matchFn ? matchFn(wt.chapter, mt.chapter) : (String(wt.chapter).trim().toLowerCase() === String(mt.chapter).trim().toLowerCase())));
-                });
+                // Find matching monthly target
+                const matchingParent = allMonthlyTargets.find(({ target: mt }) => window.isMatchMonthlyTargetWithChild(mt, wt));
 
-                if (!hasParent) {
+                let shouldKeep = false;
+                if (matchingParent) {
+                    const mt = matchingParent.target;
+                    // If wt was created from monthly target setup (has monthlyTargetId or source: 'monthly') or matches mt
+                    if (wt.monthlyTargetId || wt.source === 'monthly') {
+                        // Parent MUST have a valid targetWeek (not null, not empty, not 'none')
+                        if (mt.targetWeek && mt.targetWeek !== 'none' && mt.targetWeek !== '') {
+                            const canonicalWKey = window.getCanonicalWeeklyRangeKey ? window.getCanonicalWeeklyRangeKey(wKey) : wKey;
+                            const canonicalMtWeek = window.getCanonicalWeeklyRangeKey ? window.getCanonicalWeeklyRangeKey(mt.targetWeek) : mt.targetWeek;
+                            if (canonicalWKey === canonicalMtWeek || wKey === mt.targetWeek) {
+                                shouldKeep = true;
+                            }
+                        }
+                    } else {
+                        // Independent manually added weekly target
+                        shouldKeep = true;
+                    }
+                }
+
+                if (!shouldKeep) {
                     const wtTid = wt.id || window.generateItemId(wt, `weeklyTargetsDatabase_${wKey}`);
                     if (wtTid) window.recordItemDeletion(wtTid);
                     if (wt.id) window.recordItemDeletion(wt.id);
@@ -15503,27 +15519,37 @@ window.cleanOrphanedWeeklyAndDailyTargets = function () {
         });
     }
 
-    // 2. Clean daily targets (excluding isTodo) with no parent monthly target
+    // 2. Clean daily targets (excluding isTodo) with no parent monthly target, or whose monthly target has no daily allocation
     if (window.dailyTargetsDatabase) {
         Object.keys(window.dailyTargetsDatabase).forEach(dKey => {
             const dList = window.dailyTargetsDatabase[dKey] || [];
             for (let i = dList.length - 1; i >= 0; i--) {
                 const dt = dList[i];
                 if (!dt || dt.isTodo) continue;
-                const dtSub = String(dt.subject || '').trim().toLowerCase();
-                const isSubject = dt.targetType === 'subject' || dt.chapter === 'Whole Subject' || dt.chapter === 'All Chapters';
 
-                const hasParent = allMonthlyTargets.some(({ target: mt }) => {
-                    if (dt.monthlyTargetId && mt.id && dt.monthlyTargetId === mt.id) return true;
-                    const mtSub = String(mt.subject || '').trim().toLowerCase();
-                    const subMatch = (dtSub === mtSub) || (mtSub.includes(dtSub) && dtSub.length > 2) || (dtSub.includes(mtSub) && mtSub.length > 2);
-                    if (!subMatch) return false;
-                    if (dt.track && mt.track && dt.track !== mt.track) return false;
-                    const mtIsSubject = mt.targetType === 'subject' || mt.chapter === 'Whole Subject' || mt.chapter === 'All Chapters';
-                    return isSubject ? mtIsSubject : (!mtIsSubject && (matchFn ? matchFn(dt.chapter, mt.chapter) : (String(dt.chapter).trim().toLowerCase() === String(mt.chapter).trim().toLowerCase())));
-                });
+                const matchingParent = allMonthlyTargets.find(({ target: mt }) => window.isMatchMonthlyTargetWithChild(mt, dt));
 
-                if (!hasParent) {
+                let shouldKeep = false;
+                if (matchingParent) {
+                    const mt = matchingParent.target;
+                    if (dt.monthlyTargetId || dt.source === 'monthly') {
+                        // If parent mt has NO week assigned, only keep dt if it is still actively allocated in monthlyTargetDailyAllocations
+                        if (!mt.targetWeek || mt.targetWeek === 'none' || mt.targetWeek === '') {
+                            const allocKey = mt.subject + '|||' + mt.chapter;
+                            const currentAllocations = (window.monthlyTargetDailyAllocations && window.monthlyTargetDailyAllocations[allocKey]) || [];
+                            const hasAlloc = currentAllocations.some(a => a.dayKey === dKey);
+                            if (hasAlloc) {
+                                shouldKeep = true;
+                            }
+                        } else {
+                            shouldKeep = true;
+                        }
+                    } else {
+                        shouldKeep = true;
+                    }
+                }
+
+                if (!shouldKeep) {
                     dt.isDeleted = true;
                     const dtTid = dt.id || window.generateItemId(dt, `dailyTargetsDatabase_${dKey}`);
                     if (dtTid) window.recordItemDeletion(dtTid);
@@ -17497,7 +17523,7 @@ window.addMonthlyTarget = function () {
         const wholeSubWeekEl = document.querySelector(`.mt-size-whole-subject-week[data-subject="${CSS.escape(subject)}"][data-track="${CSS.escape(trackId)}"][data-program="${CSS.escape(progName)}"]`);
         if (wholeSubCheckbox && wholeSubCheckbox.checked) {
             const totalSize = wholeSubSizeEl && wholeSubSizeEl.value ? parseInt(wholeSubSizeEl.value, 10) : null;
-            const weekKey = (wholeSubWeekEl && wholeSubWeekEl.value) || selectedWeekKey || null;
+            const weekKey = (wholeSubWeekEl ? wholeSubWeekEl.value : selectedWeekKey) || null;
             targetsToAdd.push({
                 track: trackId,
                 program: progName,
@@ -17517,7 +17543,7 @@ window.addMonthlyTarget = function () {
             const sizeInput = document.querySelector(`.mt-chapter-size-input[data-subject="${CSS.escape(subject)}"][data-chapter="${CSS.escape(ch)}"][data-track="${CSS.escape(trackId)}"][data-program="${CSS.escape(progName)}"]`);
             const weekSelect = document.querySelector(`.mt-chapter-week-select[data-subject="${CSS.escape(subject)}"][data-chapter="${CSS.escape(ch)}"][data-track="${CSS.escape(trackId)}"][data-program="${CSS.escape(progName)}"]`);
             const totalSize = sizeInput && sizeInput.value ? parseInt(sizeInput.value, 10) : null;
-            const weekKey = (weekSelect && weekSelect.value) || selectedWeekKey || null;
+            const weekKey = (weekSelect ? weekSelect.value : selectedWeekKey) || null;
             targetsToAdd.push({
                 track: trackId,
                 program: progName,
@@ -18517,17 +18543,9 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
     const activeRange = window.getMonthlyTargetRange(window.currentMonthlyTargetsDate || new Date());
     const targetMonthKey = window.formatMonthRangeKey(activeRange.start, activeRange.end);
 
-    const progSelectEl = document.getElementById('mt-select-prog');
-    const progName = progSelectEl ? progSelectEl.value : '';
-
-    if (!progName) {
-        return showToast("Please select a Program.", "error");
-    }
-
-    const trackId = window.tracks.find(t => window.customPrograms[t.id] && window.customPrograms[t.id].some(p => (p.name || p) === progName))?.id;
-    if (!trackId) return;
-
     // Find the first checked target in the studio
+    let selectedTrack = '';
+    let selectedProg = '';
     let selectedSubject = '';
     let selectedChapter = '';
     let selectedType = 'chapter';
@@ -18536,6 +18554,8 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
 
     const wholeSub = document.querySelector('.mt-ch-whole-subject:checked');
     if (wholeSub) {
+        selectedTrack = wholeSub.getAttribute('data-track');
+        selectedProg = wholeSub.getAttribute('data-program');
         selectedSubject = wholeSub.getAttribute('data-subject');
         selectedChapter = 'Whole Subject';
         selectedType = 'subject';
@@ -18546,6 +18566,8 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
     } else {
         const firstChecked = document.querySelector('.mt-chapter-checkbox:checked');
         if (firstChecked) {
+            selectedTrack = firstChecked.getAttribute('data-track');
+            selectedProg = firstChecked.getAttribute('data-program');
             selectedSubject = firstChecked.getAttribute('data-subject');
             selectedChapter = firstChecked.getAttribute('data-chapter');
             selectedType = 'chapter';
@@ -18555,6 +18577,9 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
             selectedWeek = weekSelect ? weekSelect.value : '';
         }
     }
+
+    const progName = selectedProg || (document.getElementById('mt-select-prog') ? document.getElementById('mt-select-prog').value : '') || target.program;
+    const trackId = selectedTrack || target.track || window.tracks.find(t => window.customPrograms[t.id] && window.customPrograms[t.id].some(p => (p.name || p) === progName))?.id;
 
     if (!selectedSubject || !selectedChapter) {
         return showToast("Please select at least one chapter or whole subject.", "error");
@@ -18608,7 +18633,7 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
     }, originalMonthKey, mtId);
 
     const weekSelectEl = document.getElementById('mt-select-week-range');
-    const targetWeekKey = selectedWeek || (weekSelectEl ? weekSelectEl.value : '');
+    const targetWeekKey = (selectedWeek !== undefined && selectedWeek !== null) ? selectedWeek : (weekSelectEl ? weekSelectEl.value : '');
 
     target.track = trackId;
     target.program = progName;
@@ -18751,11 +18776,15 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
     const monthSelectEl = document.getElementById('mt-select-month');
     if (monthSelectEl) monthSelectEl.value = targetMonthKey;
 
-    if (connectedToDay) {
-        if (typeof window.renderDailyTargets === 'function') window.renderDailyTargets();
+    if (typeof window.cleanOrphanedWeeklyAndDailyTargets === 'function') {
+        window.cleanOrphanedWeeklyAndDailyTargets();
     }
+    if (typeof window.renderWeeklyTargets === 'function') window.renderWeeklyTargets();
+    if (typeof window.renderDailyTargets === 'function') window.renderDailyTargets();
+    if (typeof window.renderMonthlyTargets === 'function') window.renderMonthlyTargets();
+    if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
 
-    FirebaseService.saveToCloud();
+    FirebaseService.saveToCloud(true);
     renderUI();
 
     // Smoothly return to Daily Actions page and focus monthly targets section
