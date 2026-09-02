@@ -3126,6 +3126,7 @@ function renderUI() {
         if (typeof window.renderResults === 'function') window.renderResults();
         if (typeof window.renderDashboardOutcomeCard === 'function') window.renderDashboardOutcomeCard();
         if (typeof window.renderDashboardUpcomingExamCard === 'function') window.renderDashboardUpcomingExamCard();
+        if (typeof window.renderDashboardPassedSubjectsCard === 'function') window.renderDashboardPassedSubjectsCard();
         if (typeof window.renderMonthlyTargets === 'function') window.renderMonthlyTargets();
         if (typeof window.renderDashboardMonthlyChecklist === 'function') window.renderDashboardMonthlyChecklist();
         if (typeof window.renderWeeklyTargets === 'function') window.renderWeeklyTargets();
@@ -22246,6 +22247,104 @@ window.renderDashboardUpcomingExamCard = function () {
     }
 };
 
+/**
+ * Renders the Passed Subjects card on the Dashboard.
+ * Displays all subjects that meet the pass/freeze criteria (configured from Outcome page).
+ * Items are static (non-interactive display only).
+ */
+window.renderDashboardPassedSubjectsCard = function () {
+    const cardEl = document.getElementById('dashboard-passed-subjects-section');
+    if (!cardEl) return;
+
+    const countBadgeEl = document.getElementById('db-passed-subjects-count-badge');
+    const listEl = document.getElementById('db-passed-subjects-list');
+
+    const allSubjects = typeof window.getAllSubjects === 'function' ? window.getAllSubjects() : [];
+    const passedProgs = (window.passedItems && Array.isArray(window.passedItems.programs)) ? window.passedItems.programs : [];
+    const passedSubs = (window.passedItems && Array.isArray(window.passedItems.subjects)) ? window.passedItems.subjects : [];
+
+    // Filter all subjects that are marked as passed/frozen (via program or individual subject)
+    const passedSubjectList = allSubjects.filter(s => {
+        if (!s || !s.subject) return false;
+        const isProgPassed = passedProgs.includes(s.program);
+        const isSubPassed = passedSubs.includes(s.subject);
+        return isProgPassed || isSubPassed;
+    });
+
+    // Update count badge in header
+    if (countBadgeEl) {
+        if (passedSubjectList.length > 0) {
+            countBadgeEl.className = 'text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50 shadow-xs';
+            countBadgeEl.textContent = `${passedSubjectList.length} Passed`;
+        } else {
+            countBadgeEl.className = 'text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700';
+            countBadgeEl.textContent = '0 Passed';
+        }
+    }
+
+    if (listEl) {
+        if (passedSubjectList.length === 0) {
+            listEl.innerHTML = `
+                <div class="h-full flex flex-col items-center justify-center py-4 text-center select-none">
+                    <span class="text-2xl mb-1.5 opacity-60">🛡️</span>
+                    <p class="text-xs font-black text-slate-600 dark:text-slate-300">No passed subjects yet</p>
+                    <p class="text-[9px] text-slate-400 mt-0.5 mb-2.5">Configure pass & freeze criteria in Outcome</p>
+                    <button onclick="window.switchPage('outcome')" class="text-[9px] font-black uppercase tracking-wider px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-all active:scale-95 shadow-xs flex items-center gap-1.5 cursor-pointer">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        <span>Manage Pass / Freeze</span>
+                    </button>
+                </div>`;
+        } else {
+            let html = '';
+            passedSubjectList.forEach(s => {
+                const isProgFreeze = passedProgs.includes(s.program);
+                const subjColor = typeof getSubjectColor === 'function' ? getSubjectColor(s.subject || 'General') : '#10b981';
+                const chaptersCount = s.chapters || 0;
+
+                // Clean display name if subject starts with program name
+                let displaySub = s.subject;
+                if (s.program && displaySub.startsWith(s.program + ' - ')) {
+                    displaySub = displaySub.substring((s.program + ' - ').length);
+                } else if (s.program && displaySub.startsWith(s.program + ' ')) {
+                    displaySub = displaySub.substring((s.program + ' ').length);
+                }
+
+                html += `
+                    <div class="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 select-none shadow-2xs">
+                        <!-- Subject & Program Info -->
+                        <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+                            <div class="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style="background-color: ${subjColor}; box-shadow: 0 0 6px ${subjColor}"></div>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <span class="text-[10px] sm:text-[11px] font-black text-slate-800 dark:text-slate-100 truncate" title="${s.subject}">
+                                        ${displaySub}
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-1.5 text-[8px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mt-0.5 truncate">
+                                    <span class="text-emerald-600 dark:text-emerald-400 font-black truncate max-w-[90px] sm:max-w-[120px]">${s.program || 'Custom'}</span>
+                                    <span>•</span>
+                                    <span class="truncate">${chaptersCount} Ch.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Passed / Freeze Status Badge (Static) -->
+                        <div class="shrink-0 flex items-center gap-1">
+                            <span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 shrink-0 inline-flex items-center gap-1">
+                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span>Passed</span>
+                            </span>
+                        </div>
+                    </div>`;
+            });
+
+            listEl.innerHTML = html;
+        }
+    }
+};
+
 window.toggleDashboardMonthlyTargetCompletion = function (monthKey, idx, isCompleted) {
     if (typeof isCompleted === 'undefined' && typeof monthKey === 'number') {
         isCompleted = idx;
@@ -26215,6 +26314,9 @@ window.checkAndRefreshDateChange = function () {
         }
         if (typeof window.renderDashboardUpcomingExamCard === 'function') {
             window.renderDashboardUpcomingExamCard();
+        }
+        if (typeof window.renderDashboardPassedSubjectsCard === 'function') {
+            window.renderDashboardPassedSubjectsCard();
         }
         const dbModal = document.getElementById('daily-actions-db-modal');
         if (dbModal && !dbModal.classList.contains('hidden') && typeof window.openDailyActionsDBModal === 'function') {
