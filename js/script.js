@@ -15340,6 +15340,207 @@ window.getMonthlyTargetInstanceOccurrence = function (targetMonthKey, target, ta
     return currentOrder > 0 ? currentOrder : 1;
 };
 
+/**
+ * Cascade deletes all associated weekly and daily targets linked to a monthly target.
+ */
+window.cascadeDeleteMonthlyTarget = function (target, monthKey = null, targetId = null) {
+    if (!target) return;
+    const mtId = target.id || targetId;
+    const isSubject = target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters';
+    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
+    const cleanSub = String(target.subject || '').trim().toLowerCase();
+
+    // Determine month bounds if monthKey is provided
+    let monthStart = null;
+    let monthEnd = null;
+    if (monthKey) {
+        const parts = monthKey.split(' - ');
+        if (parts.length === 2) {
+            monthStart = (window.Utils && Utils.parseDateSafe) ? Utils.parseDateSafe(parts[0]) : new Date(parts[0]);
+            monthEnd = (window.Utils && Utils.parseDateSafe) ? Utils.parseDateSafe(parts[1]) : new Date(parts[1]);
+        }
+    }
+
+    // 1. Cascade delete associated Weekly Targets
+    if (window.weeklyTargetsDatabase) {
+        Object.keys(window.weeklyTargetsDatabase).forEach(weekKey => {
+            const wList = window.weeklyTargetsDatabase[weekKey] || [];
+            for (let i = wList.length - 1; i >= 0; i--) {
+                const wt = wList[i];
+                if (!wt) continue;
+                const wtSub = String(wt.subject || '').trim().toLowerCase();
+                const subMatch = (wtSub === cleanSub) || (cleanSub.includes(wtSub) && wtSub.length > 2) || (wtSub.includes(cleanSub) && cleanSub.length > 2);
+                const trackMatch = (!target.track || !wt.track || wt.track === target.track);
+
+                let isMatch = Boolean(mtId && wt.monthlyTargetId === mtId);
+                if (!isMatch && subMatch && trackMatch) {
+                    const wtIsSubject = wt.targetType === 'subject' || wt.chapter === 'Whole Subject' || wt.chapter === 'All Chapters';
+                    const chMatch = isSubject ? wtIsSubject : (!wtIsSubject && (matchFn ? matchFn(wt.chapter, target.chapter) : (String(wt.chapter).trim().toLowerCase() === String(target.chapter).trim().toLowerCase())));
+
+                    if (chMatch) {
+                        if (wt.targetMonth && monthKey && wt.targetMonth === monthKey) {
+                            isMatch = true;
+                        } else if (monthStart && monthEnd && !isNaN(monthStart.getTime()) && !isNaN(monthEnd.getTime())) {
+                            const wDates = weekKey.split(' - ');
+                            const wStart = (window.Utils && Utils.parseDateSafe) ? Utils.parseDateSafe(wDates[0]) : new Date(wDates[0]);
+                            if (wStart && !isNaN(wStart.getTime())) {
+                                if (wStart >= monthStart && wStart <= monthEnd) {
+                                    isMatch = true;
+                                }
+                            } else {
+                                isMatch = true;
+                            }
+                        } else {
+                            isMatch = true;
+                        }
+                    }
+                }
+
+                if (isMatch) {
+                    const wtTid = wt.id || window.generateItemId(wt, `weeklyTargetsDatabase_${weekKey}`);
+                    if (wtTid) window.recordItemDeletion(wtTid);
+                    if (wt.id) window.recordItemDeletion(wt.id);
+                    wList.splice(i, 1);
+                }
+            }
+        });
+    }
+
+    // 2. Cascade delete associated Daily Targets
+    if (window.dailyTargetsDatabase) {
+        Object.keys(window.dailyTargetsDatabase).forEach(dateKey => {
+            const dList = window.dailyTargetsDatabase[dateKey] || [];
+            for (let i = dList.length - 1; i >= 0; i--) {
+                const dt = dList[i];
+                if (!dt || dt.isTodo) continue;
+                const dtSub = String(dt.subject || '').trim().toLowerCase();
+                const subMatch = (dtSub === cleanSub) || (cleanSub.includes(dtSub) && dtSub.length > 2) || (dtSub.includes(cleanSub) && cleanSub.length > 2);
+                const trackMatch = (!target.track || !dt.track || dt.track === target.track);
+
+                let isMatch = Boolean(mtId && dt.monthlyTargetId === mtId);
+                if (!isMatch && subMatch && trackMatch) {
+                    const dtIsSubject = dt.targetType === 'subject' || dt.chapter === 'Whole Subject' || dt.chapter === 'All Chapters';
+                    const chMatch = isSubject ? dtIsSubject : (!dtIsSubject && (matchFn ? matchFn(dt.chapter, target.chapter) : (String(dt.chapter).trim().toLowerCase() === String(target.chapter).trim().toLowerCase())));
+
+                    if (chMatch) {
+                        if (dt.targetMonth && monthKey && dt.targetMonth === monthKey) {
+                            isMatch = true;
+                        } else if (monthStart && monthEnd && !isNaN(monthStart.getTime()) && !isNaN(monthEnd.getTime())) {
+                            const dDate = window.parseDailyTargetDateKey ? window.parseDailyTargetDateKey(dateKey) : ((window.Utils && Utils.parseDateSafe) ? Utils.parseDateSafe(dateKey) : new Date(dateKey));
+                            if (dDate && !isNaN(dDate.getTime())) {
+                                if (dDate >= monthStart && dDate <= monthEnd) {
+                                    isMatch = true;
+                                }
+                            } else {
+                                isMatch = true;
+                            }
+                        } else {
+                            isMatch = true;
+                        }
+                    }
+                }
+
+                if (isMatch) {
+                    dt.isDeleted = true;
+                    const dtTid = dt.id || window.generateItemId(dt, `dailyTargetsDatabase_${dateKey}`);
+                    if (dtTid) window.recordItemDeletion(dtTid);
+                    if (dt.id) window.recordItemDeletion(dt.id);
+                    dList.splice(i, 1);
+                }
+            }
+        });
+    }
+};
+
+/**
+ * Reconciles weekly and daily databases, automatically purging orphaned records
+ * that have no corresponding monthly target.
+ */
+window.cleanOrphanedWeeklyAndDailyTargets = function () {
+    if (!window.monthlyTargetsDatabase) return;
+    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
+    let cleaned = false;
+
+    // Collect all monthly targets across all months
+    const allMonthlyTargets = [];
+    Object.keys(window.monthlyTargetsDatabase).forEach(mKey => {
+        const list = window.monthlyTargetsDatabase[mKey] || [];
+        list.forEach(mt => {
+            if (mt) {
+                allMonthlyTargets.push({ target: mt, monthKey: mKey });
+            }
+        });
+    });
+
+    // 1. Clean weekly targets with no parent monthly target
+    if (window.weeklyTargetsDatabase) {
+        Object.keys(window.weeklyTargetsDatabase).forEach(wKey => {
+            const wList = window.weeklyTargetsDatabase[wKey] || [];
+            for (let i = wList.length - 1; i >= 0; i--) {
+                const wt = wList[i];
+                if (!wt) continue;
+                const wtSub = String(wt.subject || '').trim().toLowerCase();
+                const isSubject = wt.targetType === 'subject' || wt.chapter === 'Whole Subject' || wt.chapter === 'All Chapters';
+
+                const hasParent = allMonthlyTargets.some(({ target: mt }) => {
+                    if (wt.monthlyTargetId && mt.id && wt.monthlyTargetId === mt.id) return true;
+                    const mtSub = String(mt.subject || '').trim().toLowerCase();
+                    const subMatch = (wtSub === mtSub) || (mtSub.includes(wtSub) && wtSub.length > 2) || (wtSub.includes(mtSub) && mtSub.length > 2);
+                    if (!subMatch) return false;
+                    if (wt.track && mt.track && wt.track !== mt.track) return false;
+                    const mtIsSubject = mt.targetType === 'subject' || mt.chapter === 'Whole Subject' || mt.chapter === 'All Chapters';
+                    return isSubject ? mtIsSubject : (!mtIsSubject && (matchFn ? matchFn(wt.chapter, mt.chapter) : (String(wt.chapter).trim().toLowerCase() === String(mt.chapter).trim().toLowerCase())));
+                });
+
+                if (!hasParent) {
+                    const wtTid = wt.id || window.generateItemId(wt, `weeklyTargetsDatabase_${wKey}`);
+                    if (wtTid) window.recordItemDeletion(wtTid);
+                    if (wt.id) window.recordItemDeletion(wt.id);
+                    wList.splice(i, 1);
+                    cleaned = true;
+                }
+            }
+        });
+    }
+
+    // 2. Clean daily targets (excluding isTodo) with no parent monthly target
+    if (window.dailyTargetsDatabase) {
+        Object.keys(window.dailyTargetsDatabase).forEach(dKey => {
+            const dList = window.dailyTargetsDatabase[dKey] || [];
+            for (let i = dList.length - 1; i >= 0; i--) {
+                const dt = dList[i];
+                if (!dt || dt.isTodo) continue;
+                const dtSub = String(dt.subject || '').trim().toLowerCase();
+                const isSubject = dt.targetType === 'subject' || dt.chapter === 'Whole Subject' || dt.chapter === 'All Chapters';
+
+                const hasParent = allMonthlyTargets.some(({ target: mt }) => {
+                    if (dt.monthlyTargetId && mt.id && dt.monthlyTargetId === mt.id) return true;
+                    const mtSub = String(mt.subject || '').trim().toLowerCase();
+                    const subMatch = (dtSub === mtSub) || (mtSub.includes(dtSub) && dtSub.length > 2) || (dtSub.includes(mtSub) && mtSub.length > 2);
+                    if (!subMatch) return false;
+                    if (dt.track && mt.track && dt.track !== mt.track) return false;
+                    const mtIsSubject = mt.targetType === 'subject' || mt.chapter === 'Whole Subject' || mt.chapter === 'All Chapters';
+                    return isSubject ? mtIsSubject : (!mtIsSubject && (matchFn ? matchFn(dt.chapter, mt.chapter) : (String(dt.chapter).trim().toLowerCase() === String(mt.chapter).trim().toLowerCase())));
+                });
+
+                if (!hasParent) {
+                    dt.isDeleted = true;
+                    const dtTid = dt.id || window.generateItemId(dt, `dailyTargetsDatabase_${dKey}`);
+                    if (dtTid) window.recordItemDeletion(dtTid);
+                    if (dt.id) window.recordItemDeletion(dt.id);
+                    dList.splice(i, 1);
+                    cleaned = true;
+                }
+            }
+        });
+    }
+
+    if (cleaned) {
+        if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
+        FirebaseService.saveToCloud(true);
+    }
+};
+
 window.updateMonthlyTargetColorSync = function () {
     const subSelect = document.getElementById('mt-select-sub');
     const chSelect = document.getElementById('mt-select-ch');
@@ -17480,50 +17681,8 @@ window.deleteMonthlyTarget = function (idx, targetId = null) {
         }
         window.markLocalMutation(`delete_monthly_target`);
 
-        const isSubject = target.targetType === 'subject' || target.chapter === 'Whole Subject';
-
-        // 1. Cascade delete associated Weekly Targets
-        if (window.weeklyTargetsDatabase) {
-            Object.keys(window.weeklyTargetsDatabase).forEach(weekKey => {
-                const wList = window.weeklyTargetsDatabase[weekKey] || [];
-                for (let i = wList.length - 1; i >= 0; i--) {
-                    const wt = wList[i];
-                    const isMatch = (mtId && wt.monthlyTargetId === mtId) || (
-                        wt.track === target.track && wt.subject === target.subject && (
-                            isSubject
-                                ? (wt.targetType === 'subject' || wt.chapter === 'Whole Subject')
-                                : (wt.chapter === target.chapter && wt.targetType !== 'subject')
-                        )
-                    );
-                    if (isMatch) {
-                        const wtTid = wt.id || window.generateItemId(wt, `weeklyTargetsDatabase_${weekKey}`);
-                        if (wtTid) window.recordItemDeletion(wtTid);
-                        wList.splice(i, 1);
-                    }
-                }
-            });
-        }
-
-        // 2. Cascade delete associated Daily Targets
-        if (window.dailyTargetsDatabase) {
-            Object.keys(window.dailyTargetsDatabase).forEach(dateKey => {
-                const dList = window.dailyTargetsDatabase[dateKey] || [];
-                dList.forEach(dt => {
-                    const isMatch = (mtId && dt.monthlyTargetId === mtId) || (
-                        dt.track === target.track && dt.subject === target.subject && (
-                            isSubject
-                                ? (dt.targetType === 'subject' || dt.chapter === 'Whole Subject')
-                                : (dt.chapter === target.chapter && dt.targetType !== 'subject')
-                        )
-                    );
-                    if (isMatch) {
-                        dt.isDeleted = true;
-                        const dtTid = dt.id || window.generateItemId(dt, `dailyTargetsDatabase_${dateKey}`);
-                        if (dtTid) window.recordItemDeletion(dtTid);
-                    }
-                });
-            });
-        }
+        // Cascade delete associated weekly and daily targets
+        window.cascadeDeleteMonthlyTarget(target, selectedMonthKey, mtId);
 
         list.splice(targetIdx, 1);
         if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
@@ -17593,6 +17752,10 @@ window.renderMonthlyTargets = function () {
     const progDropdown = document.getElementById('mt-select-prog');
     const monthSelectEl = document.getElementById('mt-select-month');
     if (!listContainer || !monthSelectEl) return;
+
+    if (typeof window.cleanOrphanedWeeklyAndDailyTargets === 'function') {
+        window.cleanOrphanedWeeklyAndDailyTargets();
+    }
 
     if (!window.currentMonthlyTargetsDate) {
         const currentSelectedMonth = monthSelectEl.value;
@@ -17873,6 +18036,11 @@ window.openAddMonthlyTargetPage = function (targetDate = null) {
         btnBottom.setAttribute('onclick', 'window.addMonthlyTarget()');
     }
 
+    const btnDeleteBottom = document.getElementById('mt-btn-delete-bottom');
+    if (btnDeleteBottom) {
+        btnDeleteBottom.classList.add('hidden');
+    }
+
     const searchInput = document.getElementById('mt-chapter-search-input');
     if (searchInput) searchInput.value = '';
 
@@ -18078,6 +18246,12 @@ window.openEditMonthlyTargetPage = function (idx, monthKey = null) {
         btnBottom.setAttribute('onclick', `window.saveMonthlyTarget(${idx}, '${monthKey}')`);
     }
 
+    const btnDeleteBottom = document.getElementById('mt-btn-delete-bottom');
+    if (btnDeleteBottom) {
+        btnDeleteBottom.classList.remove('hidden');
+        btnDeleteBottom.setAttribute('onclick', `window.deleteMonthlyTargetFromEditPage(${idx}, '${monthKey}')`);
+    }
+
     const searchInput = document.getElementById('mt-chapter-search-input');
     if (searchInput) searchInput.value = '';
 
@@ -18178,6 +18352,36 @@ window.closeMonthlyTargetPage = function () {
     }, 80);
 };
 
+window.deleteMonthlyTargetFromEditPage = function (idx, monthKey = null) {
+    if (!monthKey) {
+        const range = window.getMonthlyTargetRange(window.currentMonthlyTargetsDate || new Date());
+        monthKey = window.formatMonthRangeKey(range.start, range.end);
+    }
+    if (!window.monthlyTargetsDatabase || !window.monthlyTargetsDatabase[monthKey] || !window.monthlyTargetsDatabase[monthKey][idx]) return;
+
+    const target = window.monthlyTargetsDatabase[monthKey][idx];
+    const mtId = target.id;
+    const tid = mtId || window.generateItemId(target, `monthlyTargetsDatabase_${monthKey}`);
+    if (tid) {
+        window.recordItemDeletion(tid);
+        if (target.id) window.recordItemDeletion(target.id);
+    }
+    window.markLocalMutation('delete_monthly_target_from_edit');
+
+    // Cascade delete associated weekly and daily targets
+    window.cascadeDeleteMonthlyTarget(target, monthKey, mtId);
+
+    // Remove from monthlyTargetsDatabase
+    window.monthlyTargetsDatabase[monthKey].splice(idx, 1);
+
+    if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
+    renderUI();
+    FirebaseService.saveToCloud(true);
+
+    showToast("Monthly target and its weekly/daily schedules removed.", "success");
+    window.closeMonthlyTargetPage();
+};
+
 window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
     if (!originalMonthKey) {
         const range = window.getMonthlyTargetRange(window.currentMonthlyTargetsDate || new Date());
@@ -18271,48 +18475,14 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
     const oldChapter = target.chapter;
     const oldIsSubject = target.targetType === 'subject' || oldChapter === 'Whole Subject';
 
-    // 1. Clean up previous Weekly Targets linked to this monthly target before applying changes
-    if (window.weeklyTargetsDatabase) {
-        Object.keys(window.weeklyTargetsDatabase).forEach(weekKey => {
-            const wList = window.weeklyTargetsDatabase[weekKey] || [];
-            for (let i = wList.length - 1; i >= 0; i--) {
-                const wt = wList[i];
-                const isMatch = (wt.monthlyTargetId === mtId) || (
-                    wt.track === oldTrack && wt.subject === oldSubject && (
-                        oldIsSubject
-                            ? (wt.targetType === 'subject' || wt.chapter === 'Whole Subject')
-                            : (wt.chapter === oldChapter && wt.targetType !== 'subject')
-                    )
-                );
-                if (isMatch) {
-                    const wtTid = wt.id || window.generateItemId(wt, `weeklyTargetsDatabase_${weekKey}`);
-                    if (wtTid) window.recordItemDeletion(wtTid);
-                    wList.splice(i, 1);
-                }
-            }
-        });
-    }
-
-    // 2. Clean up previous Daily Targets linked to this monthly target before applying changes
-    if (window.dailyTargetsDatabase) {
-        Object.keys(window.dailyTargetsDatabase).forEach(dateKey => {
-            const dList = window.dailyTargetsDatabase[dateKey] || [];
-            dList.forEach(dt => {
-                const isMatch = (dt.monthlyTargetId === mtId) || (
-                    dt.track === oldTrack && dt.subject === oldSubject && (
-                        oldIsSubject
-                            ? (dt.targetType === 'subject' || dt.chapter === 'Whole Subject')
-                            : (dt.chapter === oldChapter && dt.targetType !== 'subject')
-                    )
-                );
-                if (isMatch) {
-                    dt.isDeleted = true;
-                    const dtTid = dt.id || window.generateItemId(dt, `dailyTargetsDatabase_${dateKey}`);
-                    if (dtTid) window.recordItemDeletion(dtTid);
-                }
-            });
-        });
-    }
+    // Clean up previous Weekly & Daily Targets linked to this monthly target before applying changes
+    window.cascadeDeleteMonthlyTarget({
+        id: mtId,
+        track: oldTrack,
+        subject: oldSubject,
+        chapter: oldChapter,
+        targetType: oldIsSubject ? 'subject' : 'chapter'
+    }, originalMonthKey, mtId);
 
     const weekSelectEl = document.getElementById('mt-select-week-range');
     const targetWeekKey = selectedWeek || (weekSelectEl ? weekSelectEl.value : '');
@@ -18585,6 +18755,10 @@ window.renderMtdbList = function () {
     const tbody = document.getElementById('mtdb-targets-tbody');
     if (!tbody) return;
 
+    if (typeof window.cleanOrphanedWeeklyAndDailyTargets === 'function') {
+        window.cleanOrphanedWeeklyAndDailyTargets();
+    }
+
     const mFilter = document.getElementById('mtdb-filter-month') ? document.getElementById('mtdb-filter-month').value : 'all';
     const pFilter = document.getElementById('mtdb-filter-prog') ? document.getElementById('mtdb-filter-prog').value : 'all';
     const sFilter = document.getElementById('mtdb-filter-sub') ? document.getElementById('mtdb-filter-sub').value : 'all';
@@ -18683,17 +18857,23 @@ window.deleteMtdbTarget = function (monthKey, idx, targetId = null) {
 
     if (list && list[targetIdx]) {
         const target = list[targetIdx];
-        const tid = target.id || targetId || window.generateItemId(target, `monthlyTargetsDatabase_${monthKey}`);
+        const mtId = target.id || targetId;
+        const tid = mtId || window.generateItemId(target, `monthlyTargetsDatabase_${monthKey}`);
         if (tid) {
             window.recordItemDeletion(tid);
             if (target.id) window.recordItemDeletion(target.id);
         }
         window.markLocalMutation(`delete_mtdb_target`);
+
+        // Cascade delete associated weekly and daily targets
+        window.cascadeDeleteMonthlyTarget(target, monthKey, mtId);
+
         list.splice(targetIdx, 1);
+        if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
         FirebaseService.saveToCloud(true);
         renderUI();
         window.renderMtdbList();
-        showToast("Monthly target removed.", "success");
+        showToast("Monthly target and its weekly/daily schedules removed.", "success");
     }
 };
 
@@ -19457,13 +19637,17 @@ window.deleteWeeklyTarget = function (idx, targetId = null) {
     const selectedWeekKey = weekSelectEl ? weekSelectEl.value : null;
 
     let target = null;
+    let actualWeekKey = selectedWeekKey;
+    let actualIdx = idx;
     if (selectedWeekKey && window.weeklyTargetsDatabase && window.weeklyTargetsDatabase[selectedWeekKey]) {
         target = window.weeklyTargetsDatabase[selectedWeekKey][idx];
     } else if (targetId && window.weeklyTargetsDatabase) {
         for (const wk of Object.keys(window.weeklyTargetsDatabase)) {
-            const found = (window.weeklyTargetsDatabase[wk] || []).find(t => t && (t.id === targetId || t._id === targetId));
-            if (found) {
-                target = found;
+            const foundIdx = (window.weeklyTargetsDatabase[wk] || []).findIndex(t => t && (t.id === targetId || t._id === targetId));
+            if (foundIdx !== -1) {
+                target = window.weeklyTargetsDatabase[wk][foundIdx];
+                actualWeekKey = wk;
+                actualIdx = foundIdx;
                 break;
             }
         }
@@ -19477,10 +19661,19 @@ window.deleteWeeklyTarget = function (idx, targetId = null) {
 
     let foundMonth = null;
     let foundIdx = -1;
+    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
     if (window.monthlyTargetsDatabase) {
         for (const mKey of Object.keys(window.monthlyTargetsDatabase)) {
             const mList = window.monthlyTargetsDatabase[mKey] || [];
-            const idxInM = mList.findIndex(mt => (target.monthlyTargetId && mt.id === target.monthlyTargetId) || (mt.track === target.track && mt.subject === target.subject && (mt.targetType === 'subject' ? (target.targetType === 'subject' || target.chapter === 'Whole Subject') : mt.chapter === target.chapter)));
+            const idxInM = mList.findIndex(mt => {
+                if (target.monthlyTargetId && mt.id === target.monthlyTargetId) return true;
+                const subMatch = String(mt.subject || '').trim().toLowerCase() === String(target.subject || '').trim().toLowerCase();
+                if (!subMatch) return false;
+                if (target.track && mt.track && target.track !== mt.track) return false;
+                const mtIsSubject = mt.targetType === 'subject' || mt.chapter === 'Whole Subject' || mt.chapter === 'All Chapters';
+                const isSubject = target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters';
+                return isSubject ? mtIsSubject : (!mtIsSubject && (matchFn ? matchFn(mt.chapter, target.chapter) : String(mt.chapter).trim().toLowerCase() === String(target.chapter).trim().toLowerCase()));
+            });
             if (idxInM !== -1) {
                 foundMonth = mKey;
                 foundIdx = idxInM;
@@ -19493,8 +19686,23 @@ window.deleteWeeklyTarget = function (idx, targetId = null) {
         showToast("Opening Monthly Target Setup to edit/delete this target...", "info");
         window.openEditMonthlyTargetPage(foundIdx, foundMonth);
     } else {
-        showToast("Weekly and Daily targets are set and managed from Add Monthly Target page.", "info");
-        window.switchPage('monthly-target-setup');
+        // Orphaned target - directly purge
+        if (actualWeekKey && window.weeklyTargetsDatabase && window.weeklyTargetsDatabase[actualWeekKey]) {
+            const tid = target.id || window.generateItemId(target, `weeklyTargetsDatabase_${actualWeekKey}`);
+            if (tid) {
+                window.recordItemDeletion(tid);
+                if (target.id) window.recordItemDeletion(target.id);
+            }
+            window.markLocalMutation('delete_weekly_target');
+            window.weeklyTargetsDatabase[actualWeekKey].splice(actualIdx, 1);
+            if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
+            FirebaseService.saveToCloud(true);
+            renderUI();
+            showToast("Orphaned weekly target removed.", "success");
+        } else {
+            showToast("Weekly and Daily targets are set and managed from Add Monthly Target page.", "info");
+            window.switchPage('monthly-target-setup');
+        }
     }
 };
 
@@ -19574,6 +19782,9 @@ window.navigateWeek = function (mode) {
 * No logic changes in this phase.
 */
 window.renderWeeklyTargets = function () {
+    if (typeof window.cleanOrphanedWeeklyAndDailyTargets === 'function') {
+        window.cleanOrphanedWeeklyAndDailyTargets();
+    }
     if (typeof window.consolidateWeeklyTargetsDatabase === 'function') {
         window.consolidateWeeklyTargetsDatabase();
     }
@@ -20077,10 +20288,19 @@ window.openEditWeeklyTargetModal = function (idx, weekKey = null) {
     const target = window.weeklyTargetsDatabase[weekKey][idx];
     let foundMonth = null;
     let foundIdx = -1;
+    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
     if (window.monthlyTargetsDatabase) {
         for (const mKey of Object.keys(window.monthlyTargetsDatabase)) {
             const mList = window.monthlyTargetsDatabase[mKey] || [];
-            const idxInM = mList.findIndex(mt => (target.monthlyTargetId && mt.id === target.monthlyTargetId) || (mt.track === target.track && mt.subject === target.subject && (mt.targetType === 'subject' ? (target.targetType === 'subject' || target.chapter === 'Whole Subject') : mt.chapter === target.chapter)));
+            const idxInM = mList.findIndex(mt => {
+                if (target.monthlyTargetId && mt.id === target.monthlyTargetId) return true;
+                const subMatch = String(mt.subject || '').trim().toLowerCase() === String(target.subject || '').trim().toLowerCase();
+                if (!subMatch) return false;
+                if (target.track && mt.track && target.track !== mt.track) return false;
+                const mtIsSubject = mt.targetType === 'subject' || mt.chapter === 'Whole Subject' || mt.chapter === 'All Chapters';
+                const isSubject = target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters';
+                return isSubject ? mtIsSubject : (!mtIsSubject && (matchFn ? matchFn(mt.chapter, target.chapter) : String(mt.chapter).trim().toLowerCase() === String(target.chapter).trim().toLowerCase()));
+            });
             if (idxInM !== -1) {
                 foundMonth = mKey;
                 foundIdx = idxInM;
@@ -20182,12 +20402,28 @@ window.openEditDailyTargetModal = function (idx, dateKey = null) {
     }
 
     const target = window.dailyTargetsDatabase[dateKey][idx];
+    if (target.isTodo) {
+        if (typeof window.openEditDailyActionModal === 'function') {
+            window.openEditDailyActionModal(idx);
+        }
+        return;
+    }
+
     let foundMonth = null;
     let foundIdx = -1;
+    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
     if (window.monthlyTargetsDatabase) {
         for (const mKey of Object.keys(window.monthlyTargetsDatabase)) {
             const mList = window.monthlyTargetsDatabase[mKey] || [];
-            const idxInM = mList.findIndex(mt => (target.monthlyTargetId && mt.id === target.monthlyTargetId) || (mt.track === target.track && mt.subject === target.subject && (mt.targetType === 'subject' ? (target.targetType === 'subject' || target.chapter === 'Whole Subject') : mt.chapter === target.chapter)));
+            const idxInM = mList.findIndex(mt => {
+                if (target.monthlyTargetId && mt.id === target.monthlyTargetId) return true;
+                const subMatch = String(mt.subject || '').trim().toLowerCase() === String(target.subject || '').trim().toLowerCase();
+                if (!subMatch) return false;
+                if (target.track && mt.track && target.track !== mt.track) return false;
+                const mtIsSubject = mt.targetType === 'subject' || mt.chapter === 'Whole Subject' || mt.chapter === 'All Chapters';
+                const isSubject = target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters';
+                return isSubject ? mtIsSubject : (!mtIsSubject && (matchFn ? matchFn(mt.chapter, target.chapter) : String(mt.chapter).trim().toLowerCase() === String(target.chapter).trim().toLowerCase()));
+            });
             if (idxInM !== -1) {
                 foundMonth = mKey;
                 foundIdx = idxInM;
@@ -20410,13 +20646,18 @@ window.deleteDailyTarget = function (idx, targetId = null) {
     const selectedDateKey = Utils.formatDate(window.currentDailyTargetsDate);
 
     let target = null;
+    let actualDateKey = selectedDateKey;
+    let actualIdx = idx;
+
     if (window.dailyTargetsDatabase && window.dailyTargetsDatabase[selectedDateKey] && window.dailyTargetsDatabase[selectedDateKey][idx]) {
         target = window.dailyTargetsDatabase[selectedDateKey][idx];
     } else if (targetId && window.dailyTargetsDatabase) {
         for (const dk of Object.keys(window.dailyTargetsDatabase)) {
-            const found = (window.dailyTargetsDatabase[dk] || []).find(t => t && (t.id === targetId || t._id === targetId));
-            if (found) {
-                target = found;
+            const foundIdx = (window.dailyTargetsDatabase[dk] || []).findIndex(t => t && (t.id === targetId || t._id === targetId));
+            if (foundIdx !== -1) {
+                target = window.dailyTargetsDatabase[dk][foundIdx];
+                actualDateKey = dk;
+                actualIdx = foundIdx;
                 break;
             }
         }
@@ -20430,12 +20671,15 @@ window.deleteDailyTarget = function (idx, targetId = null) {
 
     if (target.isTodo) {
         target.isDeleted = true;
-        const tid = target.id || targetId || window.generateItemId(target, `dailyTargetsDatabase_${selectedDateKey}`);
+        const tid = target.id || targetId || window.generateItemId(target, `dailyTargetsDatabase_${actualDateKey}`);
         if (tid) {
             window.recordItemDeletion(tid);
             if (target.id) window.recordItemDeletion(target.id);
         }
         window.markLocalMutation(`delete_daily_target`);
+        if (window.dailyTargetsDatabase[actualDateKey]) {
+            window.dailyTargetsDatabase[actualDateKey].splice(actualIdx, 1);
+        }
         renderUI();
         showToast("To-Do task removed.", "success");
         FirebaseService.saveToCloud(true);
@@ -20444,10 +20688,19 @@ window.deleteDailyTarget = function (idx, targetId = null) {
 
     let foundMonth = null;
     let foundIdx = -1;
+    const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
     if (window.monthlyTargetsDatabase) {
         for (const mKey of Object.keys(window.monthlyTargetsDatabase)) {
             const mList = window.monthlyTargetsDatabase[mKey] || [];
-            const idxInM = mList.findIndex(mt => (target.monthlyTargetId && mt.id === target.monthlyTargetId) || (mt.track === target.track && mt.subject === target.subject && (mt.targetType === 'subject' ? (target.targetType === 'subject' || target.chapter === 'Whole Subject') : mt.chapter === target.chapter)));
+            const idxInM = mList.findIndex(mt => {
+                if (target.monthlyTargetId && mt.id === target.monthlyTargetId) return true;
+                const subMatch = String(mt.subject || '').trim().toLowerCase() === String(target.subject || '').trim().toLowerCase();
+                if (!subMatch) return false;
+                if (target.track && mt.track && target.track !== mt.track) return false;
+                const mtIsSubject = mt.targetType === 'subject' || mt.chapter === 'Whole Subject' || mt.chapter === 'All Chapters';
+                const isSubject = target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters';
+                return isSubject ? mtIsSubject : (!mtIsSubject && (matchFn ? matchFn(mt.chapter, target.chapter) : String(mt.chapter).trim().toLowerCase() === String(target.chapter).trim().toLowerCase()));
+            });
             if (idxInM !== -1) {
                 foundMonth = mKey;
                 foundIdx = idxInM;
@@ -20460,8 +20713,24 @@ window.deleteDailyTarget = function (idx, targetId = null) {
         showToast("Opening Monthly Target Setup to edit/delete this target...", "info");
         window.openEditMonthlyTargetPage(foundIdx, foundMonth);
     } else {
-        showToast("Weekly and Daily targets are set and managed from Add Monthly Target page.", "info");
-        window.switchPage('monthly-target-setup');
+        // Orphaned daily target - directly purge
+        if (actualDateKey && window.dailyTargetsDatabase && window.dailyTargetsDatabase[actualDateKey]) {
+            target.isDeleted = true;
+            const tid = target.id || targetId || window.generateItemId(target, `dailyTargetsDatabase_${actualDateKey}`);
+            if (tid) {
+                window.recordItemDeletion(tid);
+                if (target.id) window.recordItemDeletion(target.id);
+            }
+            window.markLocalMutation(`delete_daily_target`);
+            window.dailyTargetsDatabase[actualDateKey].splice(actualIdx, 1);
+            if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
+            FirebaseService.saveToCloud(true);
+            renderUI();
+            showToast("Orphaned daily target removed.", "success");
+        } else {
+            showToast("Weekly and Daily targets are set and managed from Add Monthly Target page.", "info");
+            window.switchPage('monthly-target-setup');
+        }
     }
 };
 
@@ -20538,6 +20807,10 @@ window.renderDailyTargets = function () {
     const wtDropdown = document.getElementById('dt-select-from-wt');
     const progDropdown = document.getElementById('dt-select-prog');
     if (!listContainer) return;
+
+    if (typeof window.cleanOrphanedWeeklyAndDailyTargets === 'function') {
+        window.cleanOrphanedWeeklyAndDailyTargets();
+    }
 
     if (!window.currentDailyTargetsDate) window.currentDailyTargetsDate = new Date();
     const targetDateKey = Utils.formatDate(window.currentDailyTargetsDate);
@@ -21627,13 +21900,21 @@ window.deleteWtdbTarget = function (weekKey, idx, targetId = null) {
 
     if (list && list[targetIdx]) {
         const target = list[targetIdx];
-        closeModal('weekly-targets-db-modal');
         let foundMonth = null;
         let foundIdx = -1;
+        const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
         if (window.monthlyTargetsDatabase) {
             for (const mKey of Object.keys(window.monthlyTargetsDatabase)) {
                 const mList = window.monthlyTargetsDatabase[mKey] || [];
-                const idxInM = mList.findIndex(mt => (target.monthlyTargetId && mt.id === target.monthlyTargetId) || (mt.track === target.track && mt.subject === target.subject && (mt.targetType === 'subject' ? (target.targetType === 'subject' || target.chapter === 'Whole Subject') : mt.chapter === target.chapter)));
+                const idxInM = mList.findIndex(mt => {
+                    if (target.monthlyTargetId && mt.id === target.monthlyTargetId) return true;
+                    const subMatch = String(mt.subject || '').trim().toLowerCase() === String(target.subject || '').trim().toLowerCase();
+                    if (!subMatch) return false;
+                    if (target.track && mt.track && target.track !== mt.track) return false;
+                    const mtIsSubject = mt.targetType === 'subject' || mt.chapter === 'Whole Subject' || mt.chapter === 'All Chapters';
+                    const isSubject = target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters';
+                    return isSubject ? mtIsSubject : (!mtIsSubject && (matchFn ? matchFn(mt.chapter, target.chapter) : String(mt.chapter).trim().toLowerCase() === String(target.chapter).trim().toLowerCase()));
+                });
                 if (idxInM !== -1) {
                     foundMonth = mKey;
                     foundIdx = idxInM;
@@ -21642,11 +21923,23 @@ window.deleteWtdbTarget = function (weekKey, idx, targetId = null) {
             }
         }
         if (foundMonth && foundIdx !== -1) {
+            closeModal('weekly-targets-db-modal');
             showToast("Opening Monthly Target Setup to edit/delete this target...", "info");
             window.openEditMonthlyTargetPage(foundIdx, foundMonth);
         } else {
-            showToast("Weekly and Daily targets are managed from Monthly Target Setup.", "info");
-            window.switchPage('monthly-target-setup');
+            // Orphaned target - directly purge
+            const tid = target.id || window.generateItemId(target, `weeklyTargetsDatabase_${weekKey}`);
+            if (tid) {
+                window.recordItemDeletion(tid);
+                if (target.id) window.recordItemDeletion(target.id);
+            }
+            window.markLocalMutation('delete_wtdb_target');
+            list.splice(targetIdx, 1);
+            if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
+            FirebaseService.saveToCloud(true);
+            renderUI();
+            window.renderWtdbList();
+            showToast("Orphaned weekly target removed.", "success");
         }
     }
 };
@@ -21674,6 +21967,10 @@ window.toggleWtdbTargetCompletion = function (weekKey, idx, isCompleted) {
 window.renderWtdbList = function () {
     const tbody = document.getElementById('wtdb-targets-tbody');
     if (!tbody) return;
+
+    if (typeof window.cleanOrphanedWeeklyAndDailyTargets === 'function') {
+        window.cleanOrphanedWeeklyAndDailyTargets();
+    }
 
     const wFilter = document.getElementById('wtdb-filter-week').value;
     const pFilter = document.getElementById('wtdb-filter-prog').value;
@@ -21718,11 +22015,18 @@ window.renderWtdbList = function () {
                         <td class="py-3 px-4 truncate max-w-[120px]" title="${target.subject}">${displaySub}</td>
                         <td class="py-3 px-4 text-blue-600 dark:text-blue-400 font-bold">${target.chapter}${starsHtml}</td>
                         <td class="py-3 px-4 text-center">
-                            <button onclick="window.deleteWtdbTarget('${weekKey}', ${idx}, '${target.id || ''}')" class="p-1 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 rounded transition-all active:scale-90 shadow-sm">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
+                            <div class="flex items-center justify-center space-x-1">
+                                <button onclick="window.openEditWeeklyTargetModalFromWtdb('${weekKey}', ${idx})" class="p-1 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-500 rounded transition-all active:scale-90 shadow-sm" title="Edit in Monthly Target Setup">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                    </svg>
+                                </button>
+                                <button onclick="window.deleteWtdbTarget('${weekKey}', ${idx}, '${target.id || ''}')" class="p-1 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 rounded transition-all active:scale-90 shadow-sm" title="Delete Target">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </td>
                     </tr>`;
             tbody.innerHTML += row;
@@ -22001,6 +22305,10 @@ window.renderDtdbList = function () {
     const tbody = document.getElementById('dtdb-targets-tbody');
     if (!tbody) return;
 
+    if (typeof window.cleanOrphanedWeeklyAndDailyTargets === 'function') {
+        window.cleanOrphanedWeeklyAndDailyTargets();
+    }
+
     const dFilter = document.getElementById('dtdb-filter-date').value;
     const pFilter = document.getElementById('dtdb-filter-prog').value;
     const sFilter = document.getElementById('dtdb-filter-sub').value;
@@ -22052,11 +22360,18 @@ window.renderDtdbList = function () {
                             `}
                         </td>
                         <td class="py-3 px-4 text-center">
-                            <button onclick="window.deleteDtdbTarget('${dateKey}', ${idx})" class="p-1 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 rounded transition-all active:scale-90 shadow-sm">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
+                            <div class="flex items-center justify-center space-x-1">
+                                <button onclick="window.openEditDailyTargetModalFromDtdb('${dateKey}', ${idx})" class="p-1 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-500 rounded transition-all active:scale-90 shadow-sm" title="Edit in Monthly Target Setup">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                    </svg>
+                                </button>
+                                <button onclick="window.deleteDtdbTarget('${dateKey}', ${idx})" class="p-1 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 rounded transition-all active:scale-90 shadow-sm" title="Delete Target">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </td>
                     </tr>`;
             tbody.innerHTML += row;
@@ -22134,13 +22449,37 @@ window.toggleDtdbTargetCompletion = function (dateKey, idx, isCompleted) {
 window.deleteDtdbTarget = function (dateKey, idx) {
     if (window.dailyTargetsDatabase && window.dailyTargetsDatabase[dateKey] && window.dailyTargetsDatabase[dateKey][idx]) {
         const target = window.dailyTargetsDatabase[dateKey][idx];
-        closeModal('daily-targets-db-modal');
+        if (target.isTodo) {
+            target.isDeleted = true;
+            const tid = target.id || window.generateItemId(target, `dailyTargetsDatabase_${dateKey}`);
+            if (tid) {
+                window.recordItemDeletion(tid);
+                if (target.id) window.recordItemDeletion(target.id);
+            }
+            window.markLocalMutation('delete_dtdb_target');
+            window.dailyTargetsDatabase[dateKey].splice(idx, 1);
+            FirebaseService.saveToCloud(true);
+            renderUI();
+            window.renderDtdbList();
+            showToast("To-Do task removed.", "success");
+            return;
+        }
+
         let foundMonth = null;
         let foundIdx = -1;
+        const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
         if (window.monthlyTargetsDatabase) {
             for (const mKey of Object.keys(window.monthlyTargetsDatabase)) {
                 const mList = window.monthlyTargetsDatabase[mKey] || [];
-                const idxInM = mList.findIndex(mt => (target.monthlyTargetId && mt.id === target.monthlyTargetId) || (mt.track === target.track && mt.subject === target.subject && (mt.targetType === 'subject' ? (target.targetType === 'subject' || target.chapter === 'Whole Subject') : mt.chapter === target.chapter)));
+                const idxInM = mList.findIndex(mt => {
+                    if (target.monthlyTargetId && mt.id === target.monthlyTargetId) return true;
+                    const subMatch = String(mt.subject || '').trim().toLowerCase() === String(target.subject || '').trim().toLowerCase();
+                    if (!subMatch) return false;
+                    if (target.track && mt.track && target.track !== mt.track) return false;
+                    const mtIsSubject = mt.targetType === 'subject' || mt.chapter === 'Whole Subject' || mt.chapter === 'All Chapters';
+                    const isSubject = target.targetType === 'subject' || target.chapter === 'Whole Subject' || target.chapter === 'All Chapters';
+                    return isSubject ? mtIsSubject : (!mtIsSubject && (matchFn ? matchFn(mt.chapter, target.chapter) : String(mt.chapter).trim().toLowerCase() === String(target.chapter).trim().toLowerCase()));
+                });
                 if (idxInM !== -1) {
                     foundMonth = mKey;
                     foundIdx = idxInM;
@@ -22149,11 +22488,24 @@ window.deleteDtdbTarget = function (dateKey, idx) {
             }
         }
         if (foundMonth && foundIdx !== -1) {
+            closeModal('daily-targets-db-modal');
             showToast("Opening Monthly Target Setup to edit/delete this target...", "info");
             window.openEditMonthlyTargetPage(foundIdx, foundMonth);
         } else {
-            showToast("Weekly and Daily targets are managed from Monthly Target Setup.", "info");
-            window.switchPage('monthly-target-setup');
+            // Orphaned daily target - directly purge
+            target.isDeleted = true;
+            const tid = target.id || window.generateItemId(target, `dailyTargetsDatabase_${dateKey}`);
+            if (tid) {
+                window.recordItemDeletion(tid);
+                if (target.id) window.recordItemDeletion(target.id);
+            }
+            window.markLocalMutation('delete_dtdb_target');
+            window.dailyTargetsDatabase[dateKey].splice(idx, 1);
+            if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
+            FirebaseService.saveToCloud(true);
+            renderUI();
+            window.renderDtdbList();
+            showToast("Orphaned daily target removed.", "success");
         }
     }
 };

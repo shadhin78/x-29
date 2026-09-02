@@ -350,17 +350,28 @@ window.Utils = {
     },
 
     /**
-     * Flexibly matches two chapter identifiers (e.g., "Ch. 1", "1", "Chapter 1").
+     * Flexibly matches two chapter identifiers (e.g., "Ch. 1", "1", "Chapter 1", "Ch. 11: Assurance", "Ch. 11 ★").
      */
     isChapterMatch: function(ch1, ch2) {
         if (ch1 === ch2) return true;
         if (!ch1 || !ch2) return false;
-        const s1 = String(ch1).trim();
-        const s2 = String(ch2).trim();
+        const s1 = String(ch1).replace(/[★⭐*]/g, '').trim();
+        const s2 = String(ch2).replace(/[★⭐*]/g, '').trim();
         if (s1.toLowerCase() === s2.toLowerCase()) return true;
+
         const clean1 = s1.replace(/^(ch\.|chapter)\s*/i, '').trim();
         const clean2 = s2.replace(/^(ch\.|chapter)\s*/i, '').trim();
         if (clean1.toLowerCase() === clean2.toLowerCase()) return true;
+
+        // Split on colon if present (e.g. "Ch. 11: Assurance" -> "Ch. 11")
+        const prefix1 = s1.split(':')[0].trim();
+        const prefix2 = s2.split(':')[0].trim();
+        if (prefix1.toLowerCase() === prefix2.toLowerCase()) return true;
+
+        const cleanPrefix1 = prefix1.replace(/^(ch\.|chapter)\s*/i, '').trim();
+        const cleanPrefix2 = prefix2.replace(/^(ch\.|chapter)\s*/i, '').trim();
+        if (cleanPrefix1.toLowerCase() === cleanPrefix2.toLowerCase()) return true;
+
         if (typeof window.Utils.extractNum === 'function') {
             const n1 = window.Utils.extractNum(s1);
             const n2 = window.Utils.extractNum(s2);
