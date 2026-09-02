@@ -1547,10 +1547,19 @@ window.updateActiveScheduleSlot = function () {
                             <div class="flex items-center space-x-2">
                                 <h3 class="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Active Now</h3>
                             </div>
-                            <span class="flex h-2 w-2 relative">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                            </span>
+                            <div class="flex items-center space-x-2 shrink-0">
+                                <span class="flex h-2 w-2 relative">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                <button onclick="event.stopPropagation(); window.switchPage('schedule')"
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
+                                    title="Go to Daily Schedule" aria-label="Go to Daily Schedule">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         
                         <div class="flex-1 p-4 relative overflow-hidden flex flex-col justify-between group cursor-pointer transition-all active:scale-98 rounded-b-[22px] rounded-t-none"
@@ -1621,9 +1630,18 @@ window.updateActiveScheduleSlot = function () {
                             <div class="flex items-center space-x-2">
                                 <h3 class="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Active Now</h3>
                             </div>
-                            <span class="flex h-2 w-2 relative">
-                                <span class="relative inline-flex rounded-full h-2 w-2 bg-slate-350 dark:bg-slate-650"></span>
-                            </span>
+                            <div class="flex items-center space-x-2 shrink-0">
+                                <span class="flex h-2 w-2 relative">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-slate-350 dark:bg-slate-650"></span>
+                                </span>
+                                <button onclick="event.stopPropagation(); window.switchPage('schedule')"
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
+                                    title="Go to Daily Schedule" aria-label="Go to Daily Schedule">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         
                         <div class="bg-slate-50/40 dark:bg-slate-900/20 flex flex-col items-center justify-center text-center transition-all cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-900/40 select-none active:scale-98 flex-1 rounded-b-[22px] rounded-t-none p-5"
@@ -1658,9 +1676,18 @@ window.updateActiveScheduleSlot = function () {
                             <div class="flex items-center space-x-2">
                                 <h3 class="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Focus Timer</h3>
                             </div>
-                            <span class="flex h-2 w-2 relative">
-                                ${statusDot}
-                            </span>
+                            <div class="flex items-center space-x-2 shrink-0">
+                                <span class="flex h-2 w-2 relative">
+                                    ${statusDot}
+                                </span>
+                                <button onclick="event.stopPropagation(); window.switchPage('timer')"
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
+                                    title="Go to Focus Timer" aria-label="Go to Focus Timer">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         
                         <div id="dash-timer-card-body" class="flex-1 p-4 relative overflow-hidden flex flex-col justify-between group cursor-pointer transition-all active:scale-98 rounded-b-[22px] rounded-t-none"
@@ -1731,9 +1758,18 @@ window.updateActiveScheduleSlot = function () {
                             <div class="flex items-center space-x-2">
                                 <h3 class="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Focus Timer</h3>
                             </div>
-                            <span class="flex h-2 w-2 relative">
-                                <span class="relative inline-flex rounded-full h-2 w-2 bg-slate-350 dark:bg-slate-650"></span>
-                            </span>
+                            <div class="flex items-center space-x-2 shrink-0">
+                                <span class="flex h-2 w-2 relative">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-slate-350 dark:bg-slate-650"></span>
+                                </span>
+                                <button onclick="event.stopPropagation(); window.switchPage('timer')"
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
+                                    title="Go to Focus Timer" aria-label="Go to Focus Timer">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         
                         <div class="bg-slate-50/40 dark:bg-slate-900/20 flex flex-col items-center justify-between text-center transition-all cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-900/40 select-none active:scale-98 flex-1 rounded-b-[22px] rounded-t-none p-4"
@@ -5175,7 +5211,16 @@ function renderCategoryProgress(subjectStats) {
                 const perc = totalChap > 0 ? Math.round((doneChap / totalChap) * 100) : 0;
                 const color = colors[catIdx % colors.length]; const shadow = shadows[catIdx % shadows.length];
 
-                html += `<div class="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-3xl md:rounded-[2rem] shadow-sm hover:shadow-lg transition-all duration-300 border border-slate-100 dark:border-slate-700/60 flex items-center justify-between group"><div><h3 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight group-hover:translate-x-1 transition-transform">${progName}</h3><p class="text-[10px] text-slate-400 uppercase font-black mt-1 tracking-widest">${Math.round(doneChap)} / ${totalChap} Chapters</p></div><button onclick="window.openProgramCompletionsModal('${track}', '${progName.replace(/'/g, "\\'")}')" class="relative flex items-center justify-center w-12 h-12 md:w-14 md:h-14 ${shadow} rounded-full bg-white dark:bg-slate-800 shrink-0 hover:scale-105 active:scale-95 transition-all focus:outline-none cursor-pointer border-0 p-0" title="View Subject Completions"><svg class="w-full h-full transform -rotate-90 drop-shadow-md" viewBox="0 0 36 36"><path class="text-slate-100 dark:text-slate-700/50" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /><path class="${color}" stroke-width="3.5" stroke-dasharray="${perc}, 100" stroke="currentColor" fill="none" stroke-linecap="round" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /></svg><span class="absolute text-[9px] md:text-[10px] font-black ${color}">${perc}%</span></button></div>`;
+                html += `<div class="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-3xl md:rounded-[2rem] shadow-sm hover:shadow-lg transition-all duration-300 border border-slate-100 dark:border-slate-700/60 flex items-center justify-between group">
+                    <div>
+                        <h3 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight group-hover:translate-x-1 transition-transform">${progName}</h3>
+                        <p class="text-[10px] text-slate-400 uppercase font-black mt-1 tracking-widest">${Math.round(doneChap)} / ${totalChap} Chapters</p>
+                    </div>
+                    <button onclick="window.openProgramCompletionsModal('${track}', '${progName.replace(/'/g, "\\'")}')" class="relative flex items-center justify-center w-12 h-12 md:w-14 md:h-14 ${shadow} rounded-full bg-white dark:bg-slate-800 shrink-0 hover:scale-105 active:scale-95 transition-all focus:outline-none cursor-pointer border-0 p-0" title="View Subject Completions">
+                        <svg class="w-full h-full transform -rotate-90 drop-shadow-md" viewBox="0 0 36 36"><path class="text-slate-100 dark:text-slate-700/50" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /><path class="${color}" stroke-width="3.5" stroke-dasharray="${perc}, 100" stroke="currentColor" fill="none" stroke-linecap="round" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /></svg>
+                        <span class="absolute text-[9px] md:text-[10px] font-black ${color}">${perc}%</span>
+                    </button>
+                </div>`;
                 catIdx++;
             });
         }
@@ -24673,7 +24718,7 @@ window.closeMobileSidebar = function () {
     }
 };
 
-window.switchPage = function (pageId) {
+window.switchPage = function (pageId, sectionId) {
     const activePage = document.querySelector('[id^="page-"]:not(.hidden)');
     const currentActiveId = activePage ? activePage.id.replace('page-', '') : null;
     const isSamePage = currentActiveId === pageId;
@@ -24724,7 +24769,14 @@ window.switchPage = function (pageId) {
         window.renderExamPage();
     }
 
-    if (!isSamePage) {
+    if (sectionId) {
+        setTimeout(() => {
+            const target = document.getElementById(sectionId);
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 120);
+    } else if (!isSamePage) {
         const contentPanel = document.getElementById('main-content-panel');
         if (contentPanel) {
             contentPanel.scrollTo({ top: 0, behavior: 'smooth' });

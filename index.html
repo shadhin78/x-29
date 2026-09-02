@@ -353,8 +353,8 @@
                         class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col animate-page-enter select-none h-[225px] md:h-[250px] min-h-[225px] md:min-h-[250px]">
                         <!-- Card Header -->
                         <div
-                            class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100 dark:border-slate-700/60 shrink-0">
-                            <div class="flex items-center space-x-2.5 min-w-0">
+                            class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100 dark:border-slate-700/60 shrink-0 gap-1.5">
+                            <div class="flex items-center space-x-2.5 min-w-0 flex-1">
                                 <div
                                     class="p-1.5 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0 border border-indigo-100 dark:border-indigo-800/40 shadow-xs">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -369,6 +369,16 @@
                                     <span
                                         class="text-[9px] text-slate-400 uppercase tracking-wider block font-extrabold truncate">Overview & Baseline</span>
                                 </div>
+                            </div>
+                            <div class="flex items-center space-x-1.5 shrink-0">
+                                <button onclick="window.switchPage('paces-management')"
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
+                                    title="Go to Pace Management" aria-label="Go to Pace Management">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
 
@@ -464,8 +474,8 @@
                                     <!-- Dynamic date & duration detail -->
                                 </div>
                                 <button onclick="window.switchPage('spectra-analytics')"
-                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0"
-                                    title="Go to Analytics Heatmap">
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
+                                    title="Go to Analytics Heatmap" aria-label="Go to Analytics Heatmap">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                             d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
@@ -485,8 +495,8 @@
                     <!-- Monthly Targets Checklist Card -->
                     <div id="dashboard-monthly-targets-section"
                         class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col animate-page-enter select-none h-[225px] md:h-[250px] min-h-[225px] md:min-h-[250px]">
-                        <div class="flex justify-between items-center mb-2">
-                            <div class="flex items-center space-x-2 min-w-0">
+                        <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100 dark:border-slate-700/60 shrink-0 gap-1.5">
+                            <div class="flex items-center space-x-2 min-w-0 flex-1">
                                 <div
                                     class="p-1.5 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded-lg shrink-0">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -506,9 +516,17 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="text-right shrink-0">
+                            <div class="flex items-center space-x-1.5 shrink-0">
                                 <span id="db-monthly-checklist-pct"
                                     class="text-xs font-black text-indigo-600 dark:text-indigo-400">0%</span>
+                                <button onclick="window.switchPage('daily-actions', 'monthly-targets-section')"
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
+                                    title="Go to Monthly Targets" aria-label="Go to Monthly Targets">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
 
@@ -531,8 +549,8 @@
                     <!-- Global Overall Completion Dashboard Card -->
                     <div id="dashboard-global-completion"
                         class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col animate-page-enter select-none h-[225px] md:h-[250px] min-h-[225px] md:min-h-[250px]">
-                        <div class="flex justify-between items-center mb-2">
-                            <div class="flex items-center space-x-2">
+                        <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100 dark:border-slate-700/60 shrink-0 gap-1.5">
+                            <div class="flex items-center space-x-2 min-w-0 flex-1">
                                 <div
                                     class="p-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg shrink-0">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -549,6 +567,16 @@
                                         class="text-[8px] text-slate-400 uppercase tracking-wider block font-black truncate">Syllabus
                                         Overview</span>
                                 </div>
+                            </div>
+                            <div class="flex items-center space-x-1.5 shrink-0">
+                                <button onclick="window.switchPage('subjects')"
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
+                                    title="Go to Subjects" aria-label="Go to Subjects">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
 
@@ -644,8 +672,8 @@
                     <!-- Daily Targets Checklist Card -->
                     <div id="dashboard-daily-targets-section"
                         class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col animate-page-enter select-none h-[225px] md:h-[250px] min-h-[225px] md:min-h-[250px]">
-                        <div class="flex justify-between items-center mb-2">
-                            <div class="flex items-center space-x-2">
+                        <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100 dark:border-slate-700/60 shrink-0 gap-1.5">
+                            <div class="flex items-center space-x-2 min-w-0 flex-1">
                                 <div
                                     class="p-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg shrink-0">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -665,9 +693,17 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="text-right">
+                            <div class="flex items-center space-x-1.5 shrink-0">
                                 <span id="db-daily-checklist-pct"
                                     class="text-xs font-black text-blue-600 dark:text-blue-400">0%</span>
+                                <button onclick="window.switchPage('daily-actions', 'daily-targets-setup-section')"
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
+                                    title="Go to Daily Targets" aria-label="Go to Daily Targets">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
 
@@ -690,8 +726,8 @@
                     <!-- Weekly Targets Checklist Card -->
                     <div id="dashboard-weekly-targets-section"
                         class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col animate-page-enter select-none h-[225px] md:h-[250px] min-h-[225px] md:min-h-[250px]">
-                        <div class="flex justify-between items-center mb-2">
-                            <div class="flex items-center space-x-2">
+                        <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100 dark:border-slate-700/60 shrink-0 gap-1.5">
+                            <div class="flex items-center space-x-2 min-w-0 flex-1">
                                 <div
                                     class="p-1.5 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 rounded-lg shrink-0">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -711,9 +747,17 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="text-right">
+                            <div class="flex items-center space-x-1.5 shrink-0">
                                 <span id="db-weekly-checklist-pct"
                                     class="text-xs font-black text-emerald-600 dark:text-emerald-400">0%</span>
+                                <button onclick="window.switchPage('daily-actions', 'weekly-targets-section')"
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
+                                    title="Go to Weekly Targets" aria-label="Go to Weekly Targets">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
 
@@ -737,7 +781,7 @@
                     <div id="dashboard-daily-actions-section"
                         class="bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 rounded-3xl p-4 shadow-sm flex flex-col select-none h-[225px] md:h-[250px] min-h-[225px] md:min-h-[250px]">
                         <div
-                            class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2 mb-2">
+                            class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2 mb-2 gap-1.5">
                             <div>
                                 <h3
                                     class="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
@@ -746,7 +790,7 @@
                                     class="text-[8px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mt-0.5">
                                     Quick Check-in</p>
                             </div>
-                            <div class="flex items-center space-x-2">
+                            <div class="flex items-center space-x-2 shrink-0">
                                 <span id="dashboard-daily-actions-percent"
                                     class="text-[10px] font-black text-slate-700 dark:text-slate-200">0%</span>
                                 <div
@@ -754,6 +798,14 @@
                                     <div id="dashboard-daily-actions-progress"
                                         class="h-full rounded-full bg-blue-500 transition-all duration-500 w-0"></div>
                                 </div>
+                                <button onclick="window.switchPage('daily-actions', 'daily-actions-tracker')"
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
+                                    title="Go to Daily Actions" aria-label="Go to Daily Actions">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
 
@@ -792,8 +844,8 @@
                                     --
                                 </span>
                                 <button onclick="window.switchPage('exam')"
-                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0"
-                                    title="Go to Exam Routine Page">
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
+                                    title="Go to Exam Routine Page" aria-label="Go to Exam Routine Page">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                             d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
@@ -838,8 +890,8 @@
                                     --
                                 </span>
                                 <button onclick="window.switchPage('outcome')"
-                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0"
-                                    title="Manage in Outcome Page">
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
+                                    title="Manage in Outcome Page" aria-label="Manage in Outcome Page">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                             d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
