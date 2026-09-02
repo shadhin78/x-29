@@ -585,6 +585,52 @@
                         </div>
                     </div>
 
+                    <!-- Outcome / Results Summary Dashboard Card -->
+                    <div id="dashboard-outcome-section"
+                        class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col animate-page-enter select-none h-[225px] md:h-[250px] min-h-[225px] md:min-h-[250px]">
+                        <!-- Card Header -->
+                        <div
+                            class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100 dark:border-slate-700/60 shrink-0 gap-1.5">
+                            <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+                                <div
+                                    class="p-1.5 bg-yellow-50 dark:bg-yellow-950/30 text-yellow-600 dark:text-yellow-400 rounded-xl shrink-0 border border-yellow-100 dark:border-yellow-800/40 shadow-xs">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <div class="min-w-0">
+                                    <h3
+                                        class="text-xs md:text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 truncate">
+                                        Outcome & CGPA</h3>
+                                    <span
+                                        class="text-[9px] text-slate-400 uppercase tracking-wider block font-extrabold truncate">[ Name • Target • Actual ]</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-1.5 shrink-0">
+                                <span id="db-outcome-overall-badge"
+                                    class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border bg-yellow-50 dark:bg-yellow-950/40 text-yellow-600 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50">
+                                    --
+                                </span>
+                                <button onclick="window.switchPage('outcome')"
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0"
+                                    title="Go to Outcome Page">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Mini Program Breakdown List (Scrollable) -->
+                        <div id="db-outcome-program-list"
+                            class="space-y-1.5 overflow-y-auto pr-1 flex-1 min-h-0 custom-scrollbar text-[10px] mt-1">
+                            <!-- Loaded dynamically via JS -->
+                        </div>
+                    </div>
+
                     <!-- Focus Timer Card Container -->
                     <div id="dashboard-focus-timer-container" class="w-full">
                         <!-- Populated dynamically by updateActiveScheduleSlot() -->
@@ -714,6 +760,52 @@
                         <div id="dashboard-daily-actions-compact"
                             class="grid gap-2 flex-1 min-h-0 overflow-y-auto mt-2 pr-0.5 custom-scrollbar">
                             <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Upcoming Exam Subjects Dashboard Card -->
+                    <div id="dashboard-upcoming-exams-section"
+                        class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col animate-page-enter select-none h-[225px] md:h-[250px] min-h-[225px] md:min-h-[250px]">
+                        <!-- Card Header -->
+                        <div
+                            class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100 dark:border-slate-700/60 shrink-0 gap-1.5">
+                            <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+                                <div
+                                    class="p-1.5 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl shrink-0 border border-rose-100 dark:border-rose-800/40 shadow-xs">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <div class="min-w-0">
+                                    <h3
+                                        class="text-xs md:text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 truncate">
+                                        Upcoming Exams</h3>
+                                    <span
+                                        class="text-[9px] text-slate-400 uppercase tracking-wider block font-extrabold truncate">[ Subject • Date • Countdown ]</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-1.5 shrink-0">
+                                <span id="db-upcoming-exams-count-badge"
+                                    class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800/50 shadow-xs">
+                                    --
+                                </span>
+                                <button onclick="window.switchPage('exam')"
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0"
+                                    title="Go to Exam Routine Page">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Mini Upcoming Exams List (Scrollable) -->
+                        <div id="db-upcoming-exams-list"
+                            class="space-y-1.5 overflow-y-auto pr-1 flex-1 min-h-0 custom-scrollbar text-[10px] mt-1">
+                            <!-- Loaded dynamically via JS -->
                         </div>
                     </div>
 
@@ -3130,6 +3222,23 @@
                             <div id="track-averages-container"
                                 class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex flex-wrap justify-center gap-2.5">
                             </div>
+                        </div>
+                    <!-- Results Header & Date Sort Controls Bar -->
+                    <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Logged Results</span>
+                            <span id="outcome-results-count-badge" class="text-[9px] font-black px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">0</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="outcome-date-sort-btn" onclick="window.toggleOutcomeDateSort()"
+                                class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-[10px] md:text-xs font-black uppercase tracking-wider transition-all shadow-2xs active:scale-95 flex items-center gap-2 cursor-pointer group"
+                                title="Toggle date sort order (Newest / Oldest)">
+                                <span class="text-slate-400 dark:text-slate-500 group-hover:text-yellow-500 transition-colors">Sort:</span>
+                                <span id="outcome-date-sort-text" class="text-slate-800 dark:text-slate-100">Date: Newest First</span>
+                                <svg id="outcome-date-sort-icon" class="w-3.5 h-3.5 text-yellow-500 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
+                                </svg>
+                            </button>
                         </div>
                     </div>
 

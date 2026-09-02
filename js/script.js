@@ -3124,6 +3124,8 @@ function renderUI() {
         if (typeof window.renderSpectraCommitmentsChart === 'function') window.renderSpectraCommitmentsChart();
         if (typeof renderTrendCharts === 'function') renderTrendCharts();
         if (typeof window.renderResults === 'function') window.renderResults();
+        if (typeof window.renderDashboardOutcomeCard === 'function') window.renderDashboardOutcomeCard();
+        if (typeof window.renderDashboardUpcomingExamCard === 'function') window.renderDashboardUpcomingExamCard();
         if (typeof window.renderMonthlyTargets === 'function') window.renderMonthlyTargets();
         if (typeof window.renderDashboardMonthlyChecklist === 'function') window.renderDashboardMonthlyChecklist();
         if (typeof window.renderWeeklyTargets === 'function') window.renderWeeklyTargets();
@@ -10021,16 +10023,50 @@ window.renderSuccessResults = function () {
 * Split during module extraction.
 * No logic changes in this phase.
 */
+window.outcomeDateSortOrder = (typeof localStorage !== 'undefined' ? localStorage.getItem('outcome_date_sort_order') : null) || 'desc';
+
+window.toggleOutcomeDateSort = function () {
+    window.outcomeDateSortOrder = (window.outcomeDateSortOrder === 'asc') ? 'desc' : 'asc';
+    try {
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('outcome_date_sort_order', window.outcomeDateSortOrder);
+        }
+    } catch (e) {}
+    window.renderResults();
+    if (typeof window.renderDashboardOutcomeCard === 'function') {
+        window.renderDashboardOutcomeCard();
+    }
+};
+
 window.renderResults = function () {
+    if (typeof window.renderDashboardOutcomeCard === 'function') {
+        window.renderDashboardOutcomeCard();
+    }
     const container = document.getElementById('results-container');
     const trendContainer = document.getElementById('results-trend-container');
     if (!container) return;
+
+    const sortOrder = window.outcomeDateSortOrder || 'desc';
+    const isAsc = sortOrder === 'asc';
+
+    // Update sort button and badge in UI
+    const sortBtnText = document.getElementById('outcome-date-sort-text');
+    const sortBtnIcon = document.getElementById('outcome-date-sort-icon');
+    const countBadge = document.getElementById('outcome-results-count-badge');
+
+    if (sortBtnText) {
+        sortBtnText.textContent = isAsc ? 'Date: Oldest First' : 'Date: Newest First';
+    }
+    if (sortBtnIcon) {
+        sortBtnIcon.style.transform = isAsc ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
 
     const activeResults = window.getProcessedResults();
 
     if (!activeResults || activeResults.length === 0) {
         container.innerHTML = '<div class="col-span-full py-8 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl"><span class="text-3xl mb-3 grayscale opacity-50">🏆</span><p class="text-slate-400 text-[10px] md:text-xs font-black uppercase tracking-widest text-center">No results logged yet. Add your first achievement!</p></div>';
         if (trendContainer) trendContainer.classList.add('hidden');
+        if (countBadge) countBadge.textContent = '0';
         return;
     }
 
@@ -10065,7 +10101,15 @@ window.renderResults = function () {
     const mergedList = [
         ...Object.values(programGroups),
         ...achievements
-    ].sort((a, b) => Utils.parseDateSafe(b.date) - Utils.parseDateSafe(a.date));
+    ].sort((a, b) => {
+        const timeA = Utils.parseDateSafe(a.date).getTime();
+        const timeB = Utils.parseDateSafe(b.date).getTime();
+        return isAsc ? (timeA - timeB) : (timeB - timeA);
+    });
+
+    if (countBadge) {
+        countBadge.textContent = mergedList.length;
+    }
 
     let html = '';
     mergedList.forEach(item => {
@@ -10378,7 +10422,11 @@ window.renderResults = function () {
     // Filter CGPAs for the Progression Trend Chart (Overall Program CGPAs only, no subject CGPAs)
     let cgpaResults = activeResults
         .filter(r => r.type === 'cgpa' && !r.subject)
-        .sort((a, b) => Utils.parseDateSafe(a.date) - Utils.parseDateSafe(b.date));
+        .sort((a, b) => {
+            const timeA = Utils.parseDateSafe(a.date).getTime();
+            const timeB = Utils.parseDateSafe(b.date).getTime();
+            return isAsc ? (timeA - timeB) : (timeB - timeA);
+        });
 
     if (selectedProgFilter !== 'ALL') {
         cgpaResults = cgpaResults.filter(r => r.title === selectedProgFilter);
@@ -21782,6 +21830,422 @@ window.renderDashboardMonthlyChecklist = function () {
     if (progressEl) progressEl.style.width = `${pct}%`;
 };
 
+/**
+ * Renders the Academic Outcome / Results summary card on the Dashboard.
+ * ONLY displays results that have been inputted by the user, formatted as [ Name - Target - Actual ].
+ */
+window.renderDashboardOutcomeCard = function () {
+    const cardEl = document.getElementById('dashboard-outcome-section');
+    if (!cardEl) return;
+
+    const overallBadgeEl = document.getElementById('db-outcome-overall-badge');
+    const listEl = document.getElementById('db-outcome-program-list');
+
+    const activeResults = typeof window.getProcessedResults === 'function' ? window.getProcessedResults() : [];
+
+    // Group only logged results by program name
+    const programGroups = {};
+    const achievements = [];
+
+    activeResults.forEach(res => {
+        if (res.type === 'cgpa') {
+            const progName = res.title || '';
+            if (!progName) return;
+            if (!programGroups[progName]) {
+                programGroups[progName] = {
+                    name: progName,
+                    overall: null,
+                    subjects: [],
+                    date: res.date
+                };
+            }
+            if (Utils.parseDateSafe(res.date) > Utils.parseDateSafe(programGroups[progName].date)) {
+                programGroups[progName].date = res.date;
+            }
+            if (!res.subject) {
+                programGroups[progName].overall = res;
+            } else {
+                programGroups[progName].subjects.push(res);
+            }
+        } else {
+            achievements.push(res);
+        }
+    });
+
+    const inputtedItems = [];
+
+    // Filter and collect ONLY programs with actual user input / logged scores
+    Object.values(programGroups).forEach(group => {
+        const progName = group.name;
+        const overall = group.overall;
+        const subjects = group.subjects;
+
+        const hasOverallScore = Boolean(overall && ((overall.value && overall.value !== '') || (overall.grade && overall.grade !== '')));
+        const hasSubjectScores = subjects.some(s => (s.value && s.value !== '') || (s.grade && s.grade !== ''));
+
+        // If no scores inputted at all, exclude from card
+        if (!hasOverallScore && !hasSubjectScores) return;
+
+        const evalType = (overall && overall.evaluationType) || (subjects.length > 0 && subjects[0].evaluationType) || 'cgpa';
+        const isGradeMode = evalType === 'grade';
+
+        let actCgpa = overall?.value || '';
+        let actGrade = overall?.grade || '';
+
+        if (!actCgpa && !actGrade && subjects.length > 0) {
+            const subjectsWithScores = subjects.filter(s => s.value && !isNaN(parseFloat(s.value)));
+            if (subjectsWithScores.length > 0) {
+                const sum = subjectsWithScores.reduce((acc, s) => acc + parseFloat(s.value), 0);
+                const avg = sum / subjectsWithScores.length;
+                actCgpa = Utils.formatCgpaMin2Dec(avg);
+                actGrade = Utils.mapCgpaToGrade(avg, evalType);
+            }
+        }
+
+        if (!actGrade && actCgpa && !isNaN(parseFloat(actCgpa))) {
+            actGrade = Utils.mapCgpaToGrade(parseFloat(actCgpa), evalType);
+        }
+        if (!actCgpa && actGrade) {
+            actCgpa = Utils.formatCgpaMin2Dec(Utils.mapGradeToNumeric(actGrade, evalType));
+        }
+
+        const mainTarget = typeof window.getProgramMainTarget === 'function' ? window.getProgramMainTarget(progName) : { targetCGPA: '', targetGrade: '' };
+        const targetCGPA = (overall && overall.targetCGPA) || mainTarget.targetCGPA || '';
+        const targetGrade = (overall && overall.targetGrade) || mainTarget.targetGrade || (targetCGPA && targetCGPA !== 'none' ? Utils.mapCgpaToGrade(targetCGPA, evalType) : '');
+
+        const hasTgt = targetCGPA && targetCGPA !== 'none' && targetCGPA !== '';
+
+        let isGoalMet = false;
+        if (hasTgt) {
+            if (isGradeMode && actGrade && targetGrade && targetGrade !== 'none') {
+                isGoalMet = Utils.mapGradeToNumeric(actGrade, 'grade') >= Utils.mapGradeToNumeric(targetGrade, 'grade');
+            } else if (actCgpa && targetCGPA) {
+                const actVal = parseFloat(actCgpa);
+                const tgtVal = parseFloat(targetCGPA);
+                if (!isNaN(actVal) && !isNaN(tgtVal)) {
+                    isGoalMet = actVal >= tgtVal;
+                }
+            }
+        }
+
+        const color = typeof window.getProgramColor === 'function' ? window.getProgramColor(progName) : '#eab308';
+
+        inputtedItems.push({
+            type: 'program',
+            name: progName,
+            date: group.date,
+            hasTgt,
+            tgtCgpa: hasTgt ? (isNaN(parseFloat(targetCGPA)) ? targetCGPA : Utils.formatCgpaMin2Dec(targetCGPA)) : '—',
+            tgtGrade: hasTgt ? (targetGrade || '—') : '—',
+            actCgpa: actCgpa ? (isNaN(parseFloat(actCgpa)) ? actCgpa : Utils.formatCgpaMin2Dec(actCgpa)) : '—',
+            actGrade: actGrade || '—',
+            isGradeMode,
+            isGoalMet,
+            color: color
+        });
+    });
+
+    // Also include non-CGPA achievements that were inputted
+    achievements.forEach(ach => {
+        inputtedItems.push({
+            type: 'achievement',
+            name: ach.title || 'Achievement',
+            date: ach.date,
+            hasTgt: false,
+            tgtCgpa: '—',
+            tgtGrade: '—',
+            actCgpa: ach.value || '—',
+            actGrade: ach.grade || '—',
+            isGradeMode: false,
+            isGoalMet: false,
+            color: '#f59e0b'
+        });
+    });
+
+    // Sort by date according to the chosen/saved order
+    const sortOrder = window.outcomeDateSortOrder || (typeof localStorage !== 'undefined' ? localStorage.getItem('outcome_date_sort_order') : null) || 'desc';
+    const isAsc = sortOrder === 'asc';
+
+    inputtedItems.sort((a, b) => {
+        const timeA = Utils.parseDateSafe(a.date).getTime();
+        const timeB = Utils.parseDateSafe(b.date).getTime();
+        return isAsc ? (timeA - timeB) : (timeB - timeA);
+    });
+
+    // Calculate overall stats for badge
+    let targetSum = 0;
+    let targetCount = 0;
+    let actualSum = 0;
+    let actualCount = 0;
+
+    inputtedItems.forEach(item => {
+        if (item.hasTgt && item.tgtCgpa !== '—') {
+            const val = parseFloat(item.tgtCgpa);
+            if (!isNaN(val) && val > 0) {
+                targetSum += val;
+                targetCount++;
+            }
+        }
+        if (item.actCgpa !== '—') {
+            const val = parseFloat(item.actCgpa);
+            if (!isNaN(val) && val > 0) {
+                actualSum += val;
+                actualCount++;
+            }
+        }
+    });
+
+    const avgTargetCgpa = targetCount > 0 ? (targetSum / targetCount) : null;
+    const avgActualCgpa = actualCount > 0 ? (actualSum / actualCount) : null;
+
+    // Overall Badge Status
+    if (overallBadgeEl) {
+        if (actualCount > 0 && targetCount > 0) {
+            if (avgActualCgpa >= avgTargetCgpa) {
+                overallBadgeEl.className = 'text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50 shadow-xs';
+                overallBadgeEl.textContent = 'Goal Met';
+            } else {
+                overallBadgeEl.className = 'text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/50 shadow-xs';
+                overallBadgeEl.textContent = 'In Progress';
+            }
+        } else if (actualCount > 0) {
+            overallBadgeEl.className = 'text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50 shadow-xs';
+            overallBadgeEl.textContent = 'Logged';
+        } else {
+            overallBadgeEl.className = 'text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700';
+            overallBadgeEl.textContent = 'No Results';
+        }
+    }
+
+    // Render [ Name - Target - Actual ] List
+    if (listEl) {
+        if (inputtedItems.length === 0) {
+            listEl.innerHTML = `
+                <div class="h-full flex flex-col items-center justify-center py-4 text-center select-none">
+                    <span class="text-2xl mb-1.5 opacity-50">🏆</span>
+                    <p class="text-xs font-black text-slate-600 dark:text-slate-300">No results logged yet</p>
+                    <p class="text-[9px] text-slate-400 mt-0.5 mb-2.5">Input your BBA, CA or program scores</p>
+                    <button onclick="window.openResultModal()" class="text-[9px] font-black uppercase tracking-wider px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl transition-all active:scale-95 shadow-xs flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                        <span>Add Result</span>
+                    </button>
+                </div>`;
+        } else {
+            let html = '';
+            inputtedItems.forEach(item => {
+                if (item.type === 'program') {
+                    const tgtDisplay = item.hasTgt
+                        ? (item.isGradeMode ? `${item.tgtGrade}` : `${item.tgtCgpa}`)
+                        : '—';
+                    const tgtSub = item.hasTgt
+                        ? (item.isGradeMode ? `CGPA ${item.tgtCgpa}` : (item.tgtGrade !== '—' ? `(${item.tgtGrade})` : ''))
+                        : 'No Target';
+
+                    const actDisplay = item.isGradeMode
+                        ? `${item.actGrade !== '—' ? item.actGrade : item.actCgpa}`
+                        : `${item.actCgpa !== '—' ? item.actCgpa : item.actGrade}`;
+                    const actSub = item.isGradeMode
+                        ? `CGPA ${item.actCgpa}`
+                        : (item.actGrade !== '—' ? `(${item.actGrade})` : '');
+
+                    const statusBadge = item.hasTgt
+                        ? (item.isGoalMet
+                            ? `<span class="text-[7px] font-black px-1.5 py-0.25 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded border border-emerald-200 dark:border-emerald-800/50">MET</span>`
+                            : `<span class="text-[7px] font-black px-1.5 py-0.25 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded border border-rose-200 dark:border-rose-800/50">NOT MET</span>`)
+                        : `<span class="text-[7px] font-black px-1.5 py-0.25 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-800/50">LOGGED</span>`;
+
+                    html += `
+                        <div onclick="window.switchPage('outcome')" class="cursor-pointer p-2 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/80 rounded-2xl border border-slate-100 dark:border-slate-800 transition-all flex items-center justify-between gap-2 active:scale-98 group shadow-2xs">
+                            <!-- [ Name ] -->
+                            <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+                                <div class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${item.color}; box-shadow: 0 0 6px ${item.color}"></div>
+                                <div class="min-w-0">
+                                    <span class="font-black text-xs text-slate-800 dark:text-slate-100 truncate block leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">${item.name}</span>
+                                    <div class="flex items-center gap-1.5 mt-0.5">
+                                        <span class="text-[8px] font-extrabold uppercase text-slate-400">${item.isGradeMode ? 'Grade' : 'CGPA'}</span>
+                                        ${statusBadge}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- [ Target ] -->
+                            <div class="flex flex-col items-center px-2.5 py-1 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/50 dark:border-amber-800/40 shrink-0 min-w-[76px] text-center">
+                                <span class="text-[8px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 leading-none">Target</span>
+                                <span class="text-xs font-black text-slate-800 dark:text-slate-200 leading-tight mt-0.5">${tgtDisplay}</span>
+                                ${tgtSub ? `<span class="text-[7.5px] font-bold text-slate-400 dark:text-slate-500 leading-none mt-0.5 truncate max-w-[70px]">${tgtSub}</span>` : ''}
+                            </div>
+
+                            <!-- [ Actual ] -->
+                            <div class="flex flex-col items-center px-2.5 py-1 rounded-xl ${item.isGoalMet ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200/50 dark:border-emerald-800/40' : 'bg-slate-100/80 dark:bg-slate-800/80 border-slate-200/50 dark:border-slate-700/50'} border shrink-0 min-w-[76px] text-center">
+                                <span class="text-[8px] font-black uppercase tracking-wider ${item.isGoalMet ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'} leading-none">Actual</span>
+                                <span class="text-xs font-black ${item.isGoalMet ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'} leading-tight mt-0.5">${actDisplay}</span>
+                                ${actSub ? `<span class="text-[7.5px] font-bold text-slate-400 dark:text-slate-500 leading-none mt-0.5 truncate max-w-[70px]">${actSub}</span>` : ''}
+                            </div>
+                        </div>`;
+                } else {
+                    html += `
+                        <div onclick="window.switchPage('outcome')" class="cursor-pointer p-2 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/80 rounded-2xl border border-slate-100 dark:border-slate-800 transition-all flex items-center justify-between gap-2 active:scale-98 group shadow-2xs">
+                            <!-- [ Name ] -->
+                            <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+                                <div class="w-2.5 h-2.5 rounded-full shrink-0 bg-yellow-500 shadow-[0_0_6px_rgba(234,179,8,0.6)]"></div>
+                                <div class="min-w-0">
+                                    <span class="font-black text-xs text-slate-800 dark:text-slate-100 truncate block leading-tight">${item.name}</span>
+                                    <span class="text-[8px] font-extrabold uppercase text-slate-400">Achievement</span>
+                                </div>
+                            </div>
+
+                            <!-- [ Target ] -->
+                            <div class="flex flex-col items-center px-2.5 py-1 rounded-xl bg-slate-100/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 shrink-0 min-w-[76px] text-center">
+                                <span class="text-[8px] font-black uppercase tracking-wider text-slate-400 leading-none">Target</span>
+                                <span class="text-xs font-bold text-slate-400 leading-tight mt-0.5">—</span>
+                            </div>
+
+                            <!-- [ Actual ] -->
+                            <div class="flex flex-col items-center px-2.5 py-1 rounded-xl bg-yellow-50/70 dark:bg-yellow-950/30 border border-yellow-200/50 dark:border-yellow-800/40 shrink-0 min-w-[76px] text-center">
+                                <span class="text-[8px] font-black uppercase tracking-wider text-yellow-600 dark:text-yellow-400 leading-none">Actual</span>
+                                <span class="text-xs font-black text-yellow-600 dark:text-yellow-400 leading-tight mt-0.5">${item.actCgpa}</span>
+                            </div>
+                        </div>`;
+                }
+            });
+            listEl.innerHTML = html;
+        }
+    }
+};
+
+/**
+ * Renders the Upcoming Exam Subjects card on the Dashboard.
+ * Displays scheduled exams from AppState.examRoutine that are not yet completed,
+ * sorted chronologically by nearest exam date & time.
+ */
+window.renderDashboardUpcomingExamCard = function () {
+    const cardEl = document.getElementById('dashboard-upcoming-exams-section');
+    if (!cardEl) return;
+
+    const countBadgeEl = document.getElementById('db-upcoming-exams-count-badge');
+    const listEl = document.getElementById('db-upcoming-exams-list');
+
+    const exams = AppState.examRoutine || [];
+    const sessions = AppState.examSessions || [];
+    const now = Date.now();
+
+    const getExamTimestamp = (dateStr, timeStr) => {
+        if (!dateStr) return NaN;
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return NaN;
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        let hours = 0, minutes = 0;
+        if (timeStr) {
+            const timeParts = timeStr.split(':');
+            hours = parseInt(timeParts[0], 10) || 0;
+            minutes = parseInt(timeParts[1], 10) || 0;
+        }
+        return new Date(year, month, day, hours, minutes, 0, 0).getTime();
+    };
+
+    // Filter valid upcoming exams (not completed, valid date, and not older than 2hr past start)
+    const upcomingExams = exams
+        .filter(e => e && e.subject && e.date && e.status !== 'completed')
+        .map(e => {
+            const timeMs = getExamTimestamp(e.date, e.time);
+            return { ...e, timeMs };
+        })
+        .filter(e => !isNaN(e.timeMs) && e.timeMs > (now - 7200000))
+        .sort((a, b) => a.timeMs - b.timeMs);
+
+    // Update count badge in header
+    if (countBadgeEl) {
+        if (upcomingExams.length > 0) {
+            countBadgeEl.className = 'text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800/50 shadow-xs';
+            countBadgeEl.textContent = `${upcomingExams.length} Upcoming`;
+        } else {
+            countBadgeEl.className = 'text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700';
+            countBadgeEl.textContent = 'No Exams';
+        }
+    }
+
+    if (listEl) {
+        if (upcomingExams.length === 0) {
+            listEl.innerHTML = `
+                <div class="h-full flex flex-col items-center justify-center py-4 text-center select-none">
+                    <span class="text-2xl mb-1.5 opacity-60">🎓</span>
+                    <p class="text-xs font-black text-slate-600 dark:text-slate-300">No upcoming exams</p>
+                    <p class="text-[9px] text-slate-400 mt-0.5 mb-2.5">Schedule subjects & exam routine</p>
+                    <button onclick="window.switchPage('exam')" class="text-[9px] font-black uppercase tracking-wider px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl transition-all active:scale-95 shadow-xs flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                        <span>Schedule Exam</span>
+                    </button>
+                </div>`;
+        } else {
+            let html = '';
+            const nowDt = new Date(now);
+
+            upcomingExams.forEach(ex => {
+                const parentSession = sessions.find(s => s.id === ex.sessionId);
+                const sessionTag = parentSession
+                    ? (parentSession.name ? `${parentSession.program} - ${parentSession.name}` : parentSession.program)
+                    : (ex.program && ex.program !== 'Non-Program' ? ex.program : 'Custom');
+
+                const subjColor = typeof getSubjectColor === 'function' ? getSubjectColor(ex.subject || 'General') : '#f43f5e';
+                const dtObj = new Date(ex.timeMs);
+                const dtFormatted = dtObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+                const timeFormatted = ex.time ? dtObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+                const rem = typeof window.calculateExamTimeRemaining === 'function'
+                    ? window.calculateExamTimeRemaining(nowDt, dtObj)
+                    : null;
+
+                let countdownHtml = '';
+                if (rem && rem.isPast && rem.diffMs > -7200000) {
+                    countdownHtml = `<span class="text-[8px] font-black uppercase px-2 py-0.5 rounded-md bg-rose-500 text-white animate-pulse shrink-0">● Live Today</span>`;
+                } else if (rem && !rem.isPast) {
+                    const cdText = typeof window.formatExamCountdownString === 'function'
+                        ? window.formatExamCountdownString(rem)
+                        : `${rem.days}d ${rem.hours}h`;
+                    countdownHtml = `
+                        <span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 shrink-0 inline-flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
+                            <span data-db-exam-target-time="${ex.timeMs}">${cdText}</span>
+                        </span>`;
+                } else {
+                    countdownHtml = `<span class="text-[8px] font-black uppercase px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/60 text-slate-500 shrink-0">Ended</span>`;
+                }
+
+                const displayName = ex.title && ex.title.toLowerCase() !== ex.subject.toLowerCase()
+                    ? `${ex.subject} <span class="font-normal text-slate-400 dark:text-slate-500 text-[9px]">(${ex.title})</span>`
+                    : ex.subject;
+
+                html += `
+                    <div onclick="window.switchPage('exam')" class="cursor-pointer p-2 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/80 rounded-2xl border border-slate-100 dark:border-slate-800 transition-all flex items-center justify-between gap-2 active:scale-98 group shadow-2xs">
+                        <!-- Subject & Session Info -->
+                        <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+                            <div class="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style="background-color: ${subjColor}; box-shadow: 0 0 6px ${subjColor}"></div>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <span class="text-[10px] sm:text-[11px] font-black text-slate-800 dark:text-slate-100 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors truncate">
+                                        ${displayName}
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-1.5 text-[8px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mt-0.5 truncate">
+                                    <span class="text-rose-500/80 font-black truncate max-w-[90px] sm:max-w-[120px]">${sessionTag}</span>
+                                    <span>•</span>
+                                    <span class="truncate">${dtFormatted}${timeFormatted ? ' ' + timeFormatted : ''}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Live Countdown Badge -->
+                        ${countdownHtml}
+                    </div>`;
+            });
+
+            listEl.innerHTML = html;
+        }
+    }
+};
+
 window.toggleDashboardMonthlyTargetCompletion = function (monthKey, idx, isCompleted) {
     if (typeof isCompleted === 'undefined' && typeof monthKey === 'number') {
         isCompleted = idx;
@@ -24595,6 +25059,9 @@ window.setExamFilter = function(filter) {
 window.renderExamPage = function() {
     window.updateExamCountdown();
     window.renderExamRoutine();
+    if (typeof window.renderDashboardUpcomingExamCard === 'function') {
+        window.renderDashboardUpcomingExamCard();
+    }
 };
 
 window.onSelectCountdownTarget = function(examId) {
@@ -24908,12 +25375,12 @@ window.updateExamCountdown = function() {
         }
     }
 
-    // Live update all subject exam countdown cards inside session blocks
-    const cardCdElements = document.querySelectorAll('[data-exam-target-time]');
+    // Live update all subject exam countdown cards inside session blocks and dashboard card
+    const cardCdElements = document.querySelectorAll('[data-exam-target-time], [data-db-exam-target-time]');
     if (cardCdElements.length > 0) {
         const nowDt = new Date(now);
         cardCdElements.forEach(el => {
-            const timeMs = parseInt(el.getAttribute('data-exam-target-time'), 10);
+            const timeMs = parseInt(el.getAttribute('data-exam-target-time') || el.getAttribute('data-db-exam-target-time'), 10);
             if (!isNaN(timeMs)) {
                 const cRem = window.calculateExamTimeRemaining(nowDt, new Date(timeMs));
                 if (!cRem.isPast) {
@@ -24922,8 +25389,9 @@ window.updateExamCountdown = function() {
                         el.textContent = cStr;
                     }
                 } else if (cRem.diffMs > -7200000) {
-                    if (el.textContent !== 'Live Exam Today') {
-                        el.textContent = 'Live Exam Today';
+                    const liveText = el.hasAttribute('data-db-exam-target-time') ? '● Live Today' : 'Live Exam Today';
+                    if (el.textContent !== liveText) {
+                        el.textContent = liveText;
                     }
                 } else {
                     if (el.textContent !== 'Ended') {
@@ -25744,6 +26212,9 @@ window.checkAndRefreshDateChange = function () {
         }
         if (typeof window.updateExamCountdown === 'function') {
             window.updateExamCountdown();
+        }
+        if (typeof window.renderDashboardUpcomingExamCard === 'function') {
+            window.renderDashboardUpcomingExamCard();
         }
         const dbModal = document.getElementById('daily-actions-db-modal');
         if (dbModal && !dbModal.classList.contains('hidden') && typeof window.openDailyActionsDBModal === 'function') {
