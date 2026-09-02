@@ -22056,12 +22056,12 @@ window.renderDashboardOutcomeCard = function () {
                         : `<span class="text-[7px] font-black px-1.5 py-0.25 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-800/50">LOGGED</span>`;
 
                     html += `
-                        <div onclick="window.switchPage('outcome')" class="cursor-pointer p-2 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/80 rounded-2xl border border-slate-100 dark:border-slate-800 transition-all flex items-center justify-between gap-2 active:scale-98 group shadow-2xs">
+                        <div class="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 transition-all flex items-center justify-between gap-2 shadow-2xs select-none">
                             <!-- [ Name ] -->
                             <div class="flex items-center space-x-2.5 min-w-0 flex-1">
                                 <div class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${item.color}; box-shadow: 0 0 6px ${item.color}"></div>
                                 <div class="min-w-0">
-                                    <span class="font-black text-xs text-slate-800 dark:text-slate-100 truncate block leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">${item.name}</span>
+                                    <span class="font-black text-xs text-slate-800 dark:text-slate-100 truncate block leading-tight">${item.name}</span>
                                     <div class="flex items-center gap-1.5 mt-0.5">
                                         <span class="text-[8px] font-extrabold uppercase text-slate-400">${item.isGradeMode ? 'Grade' : 'CGPA'}</span>
                                         ${statusBadge}
@@ -22085,7 +22085,7 @@ window.renderDashboardOutcomeCard = function () {
                         </div>`;
                 } else {
                     html += `
-                        <div onclick="window.switchPage('outcome')" class="cursor-pointer p-2 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/80 rounded-2xl border border-slate-100 dark:border-slate-800 transition-all flex items-center justify-between gap-2 active:scale-98 group shadow-2xs">
+                        <div class="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 transition-all flex items-center justify-between gap-2 shadow-2xs select-none">
                             <!-- [ Name ] -->
                             <div class="flex items-center space-x-2.5 min-w-0 flex-1">
                                 <div class="w-2.5 h-2.5 rounded-full shrink-0 bg-yellow-500 shadow-[0_0_6px_rgba(234,179,8,0.6)]"></div>
@@ -22219,13 +22219,13 @@ window.renderDashboardUpcomingExamCard = function () {
                     : ex.subject;
 
                 html += `
-                    <div onclick="window.switchPage('exam')" class="cursor-pointer p-2 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/80 rounded-2xl border border-slate-100 dark:border-slate-800 transition-all flex items-center justify-between gap-2 active:scale-98 group shadow-2xs">
+                    <div class="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 select-none shadow-2xs">
                         <!-- Subject & Session Info -->
                         <div class="flex items-center space-x-2.5 min-w-0 flex-1">
                             <div class="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style="background-color: ${subjColor}; box-shadow: 0 0 6px ${subjColor}"></div>
                             <div class="min-w-0">
                                 <div class="flex items-center gap-1.5 min-w-0">
-                                    <span class="text-[10px] sm:text-[11px] font-black text-slate-800 dark:text-slate-100 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors truncate">
+                                    <span class="text-[10px] sm:text-[11px] font-black text-slate-800 dark:text-slate-100 truncate">
                                         ${displayName}
                                     </span>
                                 </div>
@@ -22285,7 +22285,7 @@ window.renderDashboardPassedSubjectsCard = function () {
     if (listEl) {
         if (passedSubjectList.length === 0) {
             listEl.innerHTML = `
-                <div class="h-full flex flex-col items-center justify-center py-4 text-center select-none">
+                <div class="col-span-2 h-full flex flex-col items-center justify-center py-4 text-center select-none">
                     <span class="text-2xl mb-1.5 opacity-60">🛡️</span>
                     <p class="text-xs font-black text-slate-600 dark:text-slate-300">No passed subjects yet</p>
                     <p class="text-[9px] text-slate-400 mt-0.5 mb-2.5">Configure pass & freeze criteria in Outcome</p>
@@ -22310,31 +22310,29 @@ window.renderDashboardPassedSubjectsCard = function () {
                 }
 
                 html += `
-                    <div class="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 select-none shadow-2xs">
+                    <div class="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1.5 select-none shadow-2xs min-w-0">
                         <!-- Subject & Program Info -->
-                        <div class="flex items-center space-x-2.5 min-w-0 flex-1">
-                            <div class="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style="background-color: ${subjColor}; box-shadow: 0 0 6px ${subjColor}"></div>
-                            <div class="min-w-0">
-                                <div class="flex items-center gap-1.5 min-w-0">
-                                    <span class="text-[10px] sm:text-[11px] font-black text-slate-800 dark:text-slate-100 truncate" title="${s.subject}">
-                                        ${displaySub}
-                                    </span>
-                                </div>
-                                <div class="flex items-center gap-1.5 text-[8px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mt-0.5 truncate">
-                                    <span class="text-emerald-600 dark:text-emerald-400 font-black truncate max-w-[90px] sm:max-w-[120px]">${s.program || 'Custom'}</span>
+                        <div class="flex items-center space-x-2 min-w-0 flex-1">
+                            <div class="w-2 h-2 rounded-full shrink-0 shadow-xs" style="background-color: ${subjColor}; box-shadow: 0 0 5px ${subjColor}"></div>
+                            <div class="min-w-0 flex-1">
+                                <span class="text-[10px] sm:text-[10.5px] font-black text-slate-800 dark:text-slate-100 truncate block leading-tight" title="${s.subject}">
+                                    ${displaySub}
+                                </span>
+                                <div class="flex items-center gap-1 text-[7.5px] sm:text-[8px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mt-0.5 truncate">
+                                    <span class="text-emerald-600 dark:text-emerald-400 font-black truncate max-w-[65px] sm:max-w-[85px]">${s.program || 'Custom'}</span>
                                     <span>•</span>
-                                    <span class="truncate">${chaptersCount} Ch.</span>
+                                    <span class="truncate">${chaptersCount} Ch</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Passed / Freeze Status Badge (Static) -->
-                        <div class="shrink-0 flex items-center gap-1">
-                            <span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 shrink-0 inline-flex items-center gap-1">
-                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="shrink-0">
+                            <span class="text-[7.5px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 inline-flex items-center gap-0.5" title="Passed & Frozen">
+                                <svg class="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
                                 </svg>
-                                <span>Passed</span>
+                                <span>Pass</span>
                             </span>
                         </div>
                     </div>`;
