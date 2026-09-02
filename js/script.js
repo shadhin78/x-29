@@ -15509,6 +15509,7 @@ window.getMonthlyTargetInstanceOccurrence = function (targetMonthKey, target, ta
 window.isMatchMonthlyTargetWithChild = function (mt, child) {
     if (!mt || !child) return false;
     if (child.monthlyTargetId && mt.id && child.monthlyTargetId === mt.id) return true;
+    if (child.monthlyTargetId && mt.id && child.monthlyTargetId !== mt.id) return false;
     if (child.track && mt.track && child.track !== mt.track) return false;
 
     const cSub = String(child.subject || '').trim().toLowerCase();
@@ -15518,12 +15519,16 @@ window.isMatchMonthlyTargetWithChild = function (mt, child) {
     const cCh = String(child.chapter || '').trim().toLowerCase();
     const mCh = String(mt.chapter || '').trim().toLowerCase();
 
-    const subOrProgMatch = (cSub === mSub) || (cProg && mProg && cProg === mProg) ||
-        (cSub === mProg) || (cProg === mSub) ||
-        (cSub.includes(mSub) && mSub.length > 2) || (mSub.includes(cSub) && cSub.length > 2) ||
+    // Program check if both are explicitly provided
+    if (cProg && mProg && cProg !== mProg) return false;
+
+    // Subject check: Subject MUST match
+    const subMatch = (cSub && mSub && cSub === mSub) ||
+        (cSub && mSub && (cSub.includes(mSub) || mSub.includes(cSub)) && (cSub.length > 2 && mSub.length > 2)) ||
+        (!cSub && cProg === mSub) || (!mSub && mProg === cSub) ||
         (cCh.includes(mSub) && mSub.length > 2) || (mCh.includes(cSub) && cSub.length > 2);
 
-    if (!subOrProgMatch) return false;
+    if (!subMatch) return false;
 
     const cIsSubject = child.targetType === 'subject' || child.chapter === 'Whole Subject' || child.chapter === 'All Chapters';
     const mIsSubject = mt.targetType === 'subject' || mt.chapter === 'Whole Subject' || mt.chapter === 'All Chapters';
@@ -15532,6 +15537,7 @@ window.isMatchMonthlyTargetWithChild = function (mt, child) {
     if (cIsSubject && mIsSubject) return true;
 
     const matchFn = window.isChapterMatch || (window.Utils && window.Utils.isChapterMatch);
+    if (cCh === mCh) return true;
     if (matchFn && matchFn(child.chapter, mt.chapter)) return true;
     if (matchFn && matchFn(child.chapter, `${mt.chapter}: ${mt.subject}`)) return true;
     if (matchFn && matchFn(child.chapter, `${mt.subject} ${mt.chapter}`)) return true;
@@ -15861,7 +15867,7 @@ window.populateMonthlyProgramsList = function (preselectedProgram = null) {
         container.innerHTML += cardHtml;
     });
 
-    window.handleMonthlyProgramToggle(preselectedProgram);
+    window.handleMonthlyProgramToggle();
 };
 
 window.toggleMonthlyProgramsDropdown = function (forceState = null) {
@@ -15928,11 +15934,13 @@ window.updateMonthlyTargetSubjectDropdown = function (preselectSubject = null, p
     if (!container) return;
 
     // Keep track of currently checked subjects before re-rendering
-    const previouslyCheckedSet = new Set(
-        Array.from(document.querySelectorAll('.mt-subject-checkbox:checked')).map(cb => 
-            cb.getAttribute('data-track') + '|||' + cb.getAttribute('data-program') + '|||' + cb.getAttribute('data-subject')
-        )
-    );
+    const previouslyCheckedSet = preselectSubject
+        ? new Set()
+        : new Set(
+            Array.from(document.querySelectorAll('.mt-subject-checkbox:checked')).map(cb => 
+                cb.getAttribute('data-track') + '|||' + cb.getAttribute('data-program') + '|||' + cb.getAttribute('data-subject')
+            )
+        );
 
     container.innerHTML = '';
 
@@ -15967,7 +15975,11 @@ window.updateMonthlyTargetSubjectDropdown = function (preselectSubject = null, p
             const chs = window.getChaptersForSubject(trackId, s.subject) || [];
             
             const subKey = trackId + '|||' + progName + '|||' + s.subject;
-            let isSelected = !isPassed && (previouslyCheckedSet.has(subKey) || (Boolean(preselectSubject) && s.subject === preselectSubject));
+            let isSelected = !isPassed && (
+                preselectSubject
+                    ? (s.subject === preselectSubject)
+                    : previouslyCheckedSet.has(subKey)
+            );
 
             const cardClasses = isPassed
                 ? "mt-subject-card flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-amber-200/50 dark:border-amber-900/40 bg-slate-50/70 dark:bg-slate-900/40 opacity-60 cursor-not-allowed min-h-[46px]"
@@ -16157,9 +16169,15 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
         const wsKeySubCh = `${subject}|||Whole Subject`;
         const savedWholeSub = rememberedState[wsKeyFull] || rememberedState[wsKeySubCh];
 
-        const isWholeSubChecked = savedWholeSub ? savedWholeSub.checked : isWholeSubPreselected;
-        const wholeSubWeekVal = savedWholeSub ? savedWholeSub.week : (isWholeSubPreselected ? preselectWeek : '');
-        const wholeSubSizeVal = savedWholeSub ? savedWholeSub.size : (isWholeSubPreselected && preselectSize ? preselectSize : '');
+        const isWholeSubChecked = preselectChapter
+            ? isWholeSubPreselected
+            : (savedWholeSub ? savedWholeSub.checked : isWholeSubPreselected);
+        const wholeSubWeekVal = preselectChapter
+            ? (isWholeSubPreselected ? (preselectWeek || '') : '')
+            : (savedWholeSub ? savedWholeSub.week : (isWholeSubPreselected ? (preselectWeek || '') : ''));
+        const wholeSubSizeVal = preselectChapter
+            ? (isWholeSubPreselected && preselectSize ? preselectSize : '')
+            : (savedWholeSub ? savedWholeSub.size : (isWholeSubPreselected && preselectSize ? preselectSize : ''));
 
         let wholeSubWeeksOptionsHtml = '';
         weeks.forEach((w, wIdx) => {
@@ -16186,10 +16204,17 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                 const chKeyFull = `${trackId}|||${progName}|||${subject}|||${ch}`;
                 const chKeySubCh = `${subject}|||${ch}`;
                 const savedCh = rememberedState[chKeyFull] || rememberedState[chKeySubCh];
+                const isChTargetPreselected = isTargetSub && preselectChapter === ch;
 
-                const isChChecked = savedCh ? savedCh.checked : (isTargetSub && preselectChapter === ch);
-                const chWeekVal = savedCh ? savedCh.week : (isTargetSub && preselectChapter === ch ? preselectWeek : '');
-                const chSizeVal = savedCh ? savedCh.size : (isTargetSub && preselectChapter === ch && preselectSize ? preselectSize : '');
+                const isChChecked = preselectChapter
+                    ? isChTargetPreselected
+                    : (savedCh ? savedCh.checked : isChTargetPreselected);
+                const chWeekVal = preselectChapter
+                    ? (isChTargetPreselected ? (preselectWeek || '') : '')
+                    : (savedCh ? savedCh.week : (isChTargetPreselected ? (preselectWeek || '') : ''));
+                const chSizeVal = preselectChapter
+                    ? (isChTargetPreselected && preselectSize ? preselectSize : '')
+                    : (savedCh ? savedCh.size : (isChTargetPreselected && preselectSize ? preselectSize : ''));
 
                 let chWeeksOptionsHtml = '';
                 weeks.forEach((w, wIdx) => {
@@ -18990,10 +19015,7 @@ window.openEditMonthlyTargetPage = function (idx, monthKey = null) {
             const wtList = (window.weeklyTargetsDatabase[w.key] || []).concat(
                 (canonicalKey && canonicalKey !== w.key && window.weeklyTargetsDatabase[canonicalKey]) ? window.weeklyTargetsDatabase[canonicalKey] : []
             );
-            const isSubject = target.targetType === 'subject';
-            const match = isSubject
-                ? wtList.some(t => t.track === target.track && t.subject === target.subject && (t.targetType === 'subject' || t.chapter === 'Whole Subject' || t.chapter === 'All Chapters'))
-                : wtList.some(t => t.track === target.track && t.subject === target.subject && t.chapter === target.chapter && t.targetType !== 'subject');
+            const match = wtList.some(t => window.isMatchMonthlyTargetWithChild(target, t));
             if (match) {
                 preselectedWeek = w.key;
                 break;
@@ -19004,16 +19026,13 @@ window.openEditMonthlyTargetPage = function (idx, monthKey = null) {
     // Load existing daily targets for this chapter across the database into daily allocations
     window.monthlyTargetDailyAllocations = {};
     if (window.dailyTargetsDatabase) {
-        const isSubject = target.targetType === 'subject';
         const key = target.subject + '|||' + target.chapter;
         const existingAllocs = [];
         Object.keys(window.dailyTargetsDatabase).forEach(dateKey => {
             const list = window.dailyTargetsDatabase[dateKey] || [];
             list.forEach(dt => {
                 if (dt.isDeleted) return;
-                const match = isSubject
-                    ? dt.track === target.track && dt.subject === target.subject && (dt.targetType === 'subject' || dt.chapter === 'Whole Subject' || dt.chapter === 'All Chapters')
-                    : dt.track === target.track && dt.subject === target.subject && dt.chapter === target.chapter && dt.targetType !== 'subject';
+                const match = window.isMatchMonthlyTargetWithChild(target, dt);
                 if (match) {
                     existingAllocs.push({
                         dayKey: dateKey,
