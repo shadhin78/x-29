@@ -142,6 +142,78 @@
         subdialNumbersContainer.innerHTML = subNumbersHTML;
     }
 
+    function recordAutoSavedSession(mode, subject, durationSeconds, sessionDateMs) {
+        const elapsed = parseInt(durationSeconds, 10) || 0;
+        if (elapsed <= 0) return null;
+
+        const nowMs = sessionDateMs || ((typeof window.getServerTime === 'function') ? window.getServerTime() : Date.now());
+        const cleanSubject = subject || (AppState.activeTimerState && AppState.activeTimerState.selectedSubject) || 'General Study';
+        const cleanMode = mode || 'timer';
+
+        const newLog = {
+            id: 'timer-log-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
+            subject: cleanSubject,
+            duration: elapsed,
+            date: new Date(nowMs).toISOString(),
+            mode: cleanMode,
+            createdAt: new Date(nowMs).toISOString(),
+            updatedAt: nowMs
+        };
+
+        if (!AppState.timerLogs) AppState.timerLogs = [];
+        AppState.timerLogs.unshift(newLog);
+        AppState.timerLogs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Reset store for the specific mode
+        if (AppState.activeTimerState && AppState.activeTimerState.timerStates && AppState.activeTimerState.timerStates[cleanMode]) {
+            const store = AppState.activeTimerState.timerStates[cleanMode];
+            store.isRunning = false;
+            store.startTime = null;
+            store.elapsedBeforeStart = 0;
+            store.updatedAt = nowMs;
+            if (cleanMode === 'alarm') {
+                store.targetDuration = 0;
+            }
+        }
+
+        // If this is currently the active mode
+        if (AppState.activeTimerState && AppState.activeTimerState.mode === cleanMode) {
+            AppState.activeTimerState.isRunning = false;
+            AppState.activeTimerState.startTime = null;
+            AppState.activeTimerState.elapsedBeforeStart = 0;
+            AppState.activeTimerState.updatedAt = nowMs;
+            if (cleanMode === 'alarm') {
+                AppState.activeTimerState.targetDuration = 0;
+            }
+        }
+
+        window.activeTimerState = AppState.activeTimerState;
+        saveActiveStateToStore();
+
+        if (window.FirebaseService) {
+            window.FirebaseService.saveToCloud(true);
+            if (typeof window.FirebaseService.saveTimerToCloud === 'function') {
+                window.FirebaseService.saveTimerToCloud();
+            }
+        }
+
+        if (typeof window.renderTimerPage === 'function') {
+            window.renderTimerPage();
+        }
+        if (typeof window.updateSubjectTargetUI === 'function') {
+            window.updateSubjectTargetUI();
+        }
+        if (typeof window.updateTimerAnalyticsControls === 'function') {
+            window.updateTimerAnalyticsControls();
+        }
+        if (typeof window.renderTimerAnalyticsChart === 'function') {
+            window.renderTimerAnalyticsChart(true);
+        }
+
+        return newLog;
+    }
+    window.recordAutoSavedSession = recordAutoSavedSession;
+
     function tickTimer() {
         if (!AppState.activeTimerState) return;
 
@@ -156,29 +228,63 @@
         let displaySeconds = 0;
         if (AppState.activeTimerState.mode === 'stopwatch') {
             displaySeconds = Math.floor(elapsedMs / 1000);
-            const saveBtn = document.getElementById('timer-btn-save');
-            if (saveBtn) {
-                saveBtn.disabled = (displaySeconds === 0);
+            const targetMs = (AppState.activeTimerState.targetDuration || 0) * 1000;
+
+            if (targetMs > 0 && elapsedMs >= targetMs && AppState.activeTimerState.isRunning) {
+                const activeMode = 'stopwatch';
+                const completedDuration = AppState.activeTimerState.targetDuration || Math.floor(targetMs / 1000);
+                const subject = AppState.activeTimerState.selectedSubject || 'General Study';
+
+                recordAutoSavedSession(activeMode, subject, completedDuration);
+                playCompletionChime();
+
+                const hrs = Math.floor(completedDuration / 3600);
+                const mins = Math.floor((completedDuration % 3600) / 60);
+                const secs = completedDuration % 60;
+                let durText = "";
+                if (hrs > 0) durText += `${hrs} hr `;
+                if (mins > 0 || hrs > 0) durText += `${mins} min `;
+                if (secs > 0 || durText === "") durText += `${secs} sec`;
+
+                showToast(`Stopwatch target reached! Automatically saved ${durText.trim()} for ${subject} to session history.`, "success");
+
+                const saveBtn = document.getElementById('timer-btn-save');
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                }
+            } else {
+                const saveBtn = document.getElementById('timer-btn-save');
+                if (saveBtn) {
+                    saveBtn.disabled = (displaySeconds === 0);
+                }
             }
         } else {
             const targetMs = (AppState.activeTimerState.targetDuration || 0) * 1000;
             const remainingMs = Math.max(0, targetMs - elapsedMs);
             displaySeconds = Math.ceil(remainingMs / 1000);
 
-            if (remainingMs <= 0 && AppState.activeTimerState.isRunning) {
-                AppState.activeTimerState.isRunning = false;
-                AppState.activeTimerState.elapsedBeforeStart = targetMs;
-                AppState.activeTimerState.startTime = null;
+            if (remainingMs <= 0 && AppState.activeTimerState.isRunning && targetMs > 0) {
+                const activeMode = AppState.activeTimerState.mode || 'timer';
+                const completedDuration = AppState.activeTimerState.targetDuration || Math.floor(targetMs / 1000);
+                const subject = AppState.activeTimerState.selectedSubject || 'General Study';
 
-                // Sync to store for current mode since it changed status
-                saveActiveStateToStore();
-
+                recordAutoSavedSession(activeMode, subject, completedDuration);
                 playCompletionChime();
-                FirebaseService.saveTimerToCloud();
+
+                const modeName = activeMode === 'alarm' ? 'Alarm Range' : 'Timer';
+                const hrs = Math.floor(completedDuration / 3600);
+                const mins = Math.floor((completedDuration % 3600) / 60);
+                const secs = completedDuration % 60;
+                let durText = "";
+                if (hrs > 0) durText += `${hrs} hr `;
+                if (mins > 0 || hrs > 0) durText += `${mins} min `;
+                if (secs > 0 || durText === "") durText += `${secs} sec`;
+
+                showToast(`${modeName} complete! Automatically saved ${durText.trim()} for ${subject} to session history.`, "success");
 
                 const saveBtn = document.getElementById('timer-btn-save');
                 if (saveBtn) {
-                    saveBtn.disabled = false;
+                    saveBtn.disabled = true;
                 }
             } else {
                 const saveBtn = document.getElementById('timer-btn-save');
@@ -222,8 +328,62 @@
             subdialHand.style.transform = `rotate(${subdialDeg}deg)`;
         }
 
-        // Edge Tick Marks & Radial Numbers Countdown Color Updating
-        if (mode !== 'stopwatch') {
+        // Edge Tick Marks & Radial Numbers Countdown / Forward Color Updating
+        if (mode === 'stopwatch') {
+            const targetMs = (AppState.activeTimerState.targetDuration || 0) * 1000;
+            if (targetMs > 0) {
+                // Targeted Stopwatch: Fill FORWARD from 0 to 60 as elapsed time progresses towards target
+                const progressRatio = Math.min(1, Math.max(0, elapsedMs / targetMs));
+                const elapsedTicksCount = Math.floor(progressRatio * 60);
+
+                for (let i = 0; i < 60; i++) {
+                    const tickElem = document.getElementById(`chrono-tick-${i}`);
+                    if (tickElem) {
+                        const isMajor = (i % 5 === 0);
+                        if (i <= elapsedTicksCount) {
+                            // Elapsed forward time: HIGHLIGHTED in Electric Blue
+                            tickElem.setAttribute('stroke', 'var(--chrono-main-hand)');
+                            tickElem.setAttribute('stroke-opacity', '1');
+                        } else {
+                            // Remaining time until target: DIMMED
+                            tickElem.setAttribute('stroke', isMajor ? 'var(--chrono-tick-major)' : 'var(--chrono-tick-minor)');
+                            tickElem.setAttribute('stroke-opacity', '0.2');
+                        }
+                    }
+
+                    if (i % 5 === 0) {
+                        const numElem = document.getElementById(`chrono-num-${i}`);
+                        if (numElem) {
+                            if (i <= elapsedTicksCount) {
+                                numElem.setAttribute('fill', 'var(--chrono-main-hand)');
+                                numElem.setAttribute('fill-opacity', '1');
+                            } else {
+                                numElem.setAttribute('fill', 'var(--chrono-text-number)');
+                                numElem.setAttribute('fill-opacity', '0.25');
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Open-ended Stopwatch: Restore standard full opacity for all ticks & numbers
+                for (let i = 0; i < 60; i++) {
+                    const tickElem = document.getElementById(`chrono-tick-${i}`);
+                    if (tickElem) {
+                        const isMajor = (i % 5 === 0);
+                        tickElem.setAttribute('stroke', isMajor ? 'var(--chrono-tick-major)' : 'var(--chrono-tick-minor)');
+                        tickElem.setAttribute('stroke-opacity', isMajor ? '1' : '0.6');
+                    }
+                    if (i % 5 === 0) {
+                        const numElem = document.getElementById(`chrono-num-${i}`);
+                        if (numElem) {
+                            numElem.setAttribute('fill', 'var(--chrono-text-number)');
+                            numElem.setAttribute('fill-opacity', '1');
+                        }
+                    }
+                }
+            }
+        } else {
+            // Timer / Alarm Mode: Countdown backwards
             const targetMs = Math.max(1000, (AppState.activeTimerState.targetDuration || 1) * 1000);
             const progressRatio = Math.min(1, Math.max(0, elapsedMs / targetMs));
             const elapsedTicksCount = Math.floor(progressRatio * 60);
@@ -255,23 +415,6 @@
                             numElem.setAttribute('fill', 'var(--chrono-text-number)');
                             numElem.setAttribute('fill-opacity', '0.25');
                         }
-                    }
-                }
-            }
-        } else {
-            // Stopwatch Mode: Restore standard full opacity for all ticks & numbers
-            for (let i = 0; i < 60; i++) {
-                const tickElem = document.getElementById(`chrono-tick-${i}`);
-                if (tickElem) {
-                    const isMajor = (i % 5 === 0);
-                    tickElem.setAttribute('stroke', isMajor ? 'var(--chrono-tick-major)' : 'var(--chrono-tick-minor)');
-                    tickElem.setAttribute('stroke-opacity', isMajor ? '1' : '0.6');
-                }
-                if (i % 5 === 0) {
-                    const numElem = document.getElementById(`chrono-num-${i}`);
-                    if (numElem) {
-                        numElem.setAttribute('fill', 'var(--chrono-text-number)');
-                        numElem.setAttribute('fill-opacity', '1');
                     }
                 }
             }
@@ -311,7 +454,12 @@
                     statusText.textContent = 'PAUSED';
                     statusText.className = 'text-[9px] sm:text-xs font-bold uppercase tracking-widest text-amber-400 mt-1.5 sm:mt-2';
                 } else {
-                    statusText.textContent = 'READY';
+                    if (mode === 'stopwatch' && AppState.activeTimerState.targetDuration > 0) {
+                        const targetMin = Math.round(AppState.activeTimerState.targetDuration / 60);
+                        statusText.textContent = `TARGET: ${targetMin} MIN (FORWARD)`;
+                    } else {
+                        statusText.textContent = 'READY';
+                    }
                     statusText.className = 'text-[9px] sm:text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-1.5 sm:mt-2';
                 }
             }
@@ -1180,23 +1328,42 @@
                 elapsedMs += (window.getServerTime() - parseStartTime(store.startTime));
             }
 
-            if (mode === 'timer' || mode === 'alarm') {
+            if (mode === 'timer' || mode === 'alarm' || (mode === 'stopwatch' && store.targetDuration > 0)) {
                 const targetMs = (store.targetDuration || 0) * 1000;
-                if (elapsedMs >= targetMs) {
+                if (elapsedMs >= targetMs && targetMs > 0) {
+                    const completedDuration = store.targetDuration || Math.floor(targetMs / 1000);
+                    const subject = store.selectedSubject || AppState.activeTimerState.selectedSubject || 'General Study';
+
                     store.isRunning = false;
-                    store.elapsedBeforeStart = targetMs;
+                    store.elapsedBeforeStart = 0;
                     store.startTime = null;
+
+                    recordAutoSavedSession(mode, subject, completedDuration);
 
                     playCompletionChime();
                     stateChanged = true;
-                    showToast(`Background ${mode === 'alarm' ? 'Alarm Range' : 'Timer'} has completed!`, "success");
+
+                    const modeName = mode === 'alarm' ? 'Alarm Range' : (mode === 'stopwatch' ? 'Stopwatch' : 'Timer');
+                    const hrs = Math.floor(completedDuration / 3600);
+                    const mins = Math.floor((completedDuration % 3600) / 60);
+                    const secs = completedDuration % 60;
+                    let durText = "";
+                    if (hrs > 0) durText += `${hrs} hr `;
+                    if (mins > 0 || hrs > 0) durText += `${mins} min `;
+                    if (secs > 0 || durText === "") durText += `${secs} sec`;
+
+                    showToast(`Background ${modeName} target reached! Automatically saved ${durText.trim()} for ${subject} to session history.`, "success");
                 }
             }
         });
 
         if (stateChanged) {
-            FirebaseService.saveTimerToCloud();
-            window.TimerService.updateDisplay();
+            if (window.FirebaseService && typeof window.FirebaseService.saveTimerToCloud === 'function') {
+                window.FirebaseService.saveTimerToCloud();
+            }
+            if (window.TimerService && typeof window.TimerService.updateDisplay === 'function') {
+                window.TimerService.updateDisplay();
+            }
         }
     }
 
@@ -1251,6 +1418,57 @@
         const presetsContainer = document.getElementById('timer-presets-container');
         const alarmContainer = document.getElementById('timer-alarm-container');
 
+        function updatePresetButtonsUI() {
+            const presetsContainer = document.getElementById('timer-presets-container');
+            if (!presetsContainer) return;
+
+            const mode = (AppState.activeTimerState && AppState.activeTimerState.mode) || 'stopwatch';
+            const targetSec = (AppState.activeTimerState && AppState.activeTimerState.targetDuration) || 0;
+            const targetMin = Math.round(targetSec / 60);
+
+            const btnFree = document.getElementById('timer-preset-btn-0');
+            if (btnFree) {
+                if (mode === 'stopwatch') {
+                    btnFree.classList.remove('hidden');
+                } else {
+                    btnFree.classList.add('hidden');
+                }
+            }
+
+            const activeClass = "flex-1 min-w-[70px] py-2.5 px-3 bg-blue-600 text-white rounded-xl text-xs font-black uppercase transition-all border border-blue-400 active:scale-95 touch-action-manipulation shadow-md";
+            const inactiveClass = "flex-1 min-w-[70px] py-2.5 px-3 bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white rounded-xl text-xs font-black uppercase transition-all border border-slate-700/60 active:scale-95 touch-action-manipulation shadow-sm";
+
+            const presetValues = [0, 15, 25, 45, 60];
+            let isStandardPreset = false;
+
+            presetValues.forEach(val => {
+                const btn = document.getElementById(`timer-preset-btn-${val}`);
+                if (btn) {
+                    if (val === 0 && mode === 'stopwatch' && targetSec === 0) {
+                        btn.className = activeClass;
+                        isStandardPreset = true;
+                    } else if (val > 0 && targetSec === val * 60) {
+                        btn.className = activeClass;
+                        isStandardPreset = true;
+                    } else {
+                        btn.className = inactiveClass;
+                    }
+                }
+            });
+
+            const btnCustom = document.getElementById('timer-preset-btn-custom');
+            if (btnCustom) {
+                if (!isStandardPreset && targetSec > 0) {
+                    btnCustom.className = activeClass;
+                    btnCustom.textContent = `${targetMin} Min`;
+                } else {
+                    btnCustom.className = inactiveClass;
+                    btnCustom.textContent = 'Custom';
+                }
+            }
+        }
+        window.updatePresetButtonsUI = updatePresetButtonsUI;
+
         if (btnStopwatch && btnTimer && btnAlarm) {
             const activeClass = "w-1/3 py-2.5 text-xs font-black rounded-xl transition-all bg-blue-600 text-white shadow";
             const inactiveClass = "w-1/3 py-2.5 text-xs font-black rounded-xl transition-all text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800/80";
@@ -1258,7 +1476,10 @@
                 btnStopwatch.className = activeClass;
                 btnTimer.className = inactiveClass;
                 btnAlarm.className = inactiveClass;
-                if (presetsContainer) presetsContainer.classList.add('hidden');
+                if (presetsContainer) {
+                    presetsContainer.classList.remove('hidden');
+                    presetsContainer.classList.add('flex');
+                }
                 if (alarmContainer) alarmContainer.classList.add('hidden');
             } else if (AppState.activeTimerState.mode === 'timer') {
                 btnStopwatch.className = inactiveClass;
@@ -1279,6 +1500,7 @@
                     alarmContainer.classList.add('flex');
                 }
             }
+            updatePresetButtonsUI();
         }
 
         if (AppState.activeTimerState.mode === 'alarm') {
@@ -1358,26 +1580,59 @@
 
     window.setTimerPreset = function (minutes) {
         if (AppState.activeTimerState.isRunning) {
-            showToast("Please pause the timer before changing presets.", "error");
+            showToast("Please pause before changing presets.", "error");
             return;
         }
-        AppState.activeTimerState.targetDuration = minutes * 60;
+        const currentMode = AppState.activeTimerState.mode || 'stopwatch';
+        if (currentMode === 'stopwatch' && (!minutes || minutes <= 0)) {
+            AppState.activeTimerState.targetDuration = 0;
+            AppState.activeTimerState.elapsedBeforeStart = 0;
+            AppState.activeTimerState.startTime = null;
+            saveActiveStateToStore();
+            if (window.FirebaseService) window.FirebaseService.saveTimerToCloud();
+            window.TimerService.restore();
+            showToast("Stopwatch set to Free (open-ended forward count).", "success");
+            return;
+        }
+        const minVal = parseInt(minutes, 10);
+        if (isNaN(minVal) || minVal <= 0) return;
+
+        AppState.activeTimerState.targetDuration = minVal * 60;
         AppState.activeTimerState.elapsedBeforeStart = 0;
         AppState.activeTimerState.startTime = null;
         saveActiveStateToStore();
-        FirebaseService.saveTimerToCloud();
+        if (window.FirebaseService) window.FirebaseService.saveTimerToCloud();
         window.TimerService.restore();
-        showToast(`Timer set to ${minutes} minutes.`, "success");
+        if (currentMode === 'stopwatch') {
+            showToast(`Stopwatch target set to ${minVal} minutes (counts forward 0 to ${minVal}m).`, "success");
+        } else {
+            showToast(`Timer set to ${minVal} minutes (${minVal}m countdown).`, "success");
+        }
     };
 
     window.promptCustomTimer = function () {
         if (AppState.activeTimerState.isRunning) {
-            showToast("Please pause the timer before changing presets.", "error");
+            showToast("Please pause before changing presets.", "error");
             return;
         }
+        const mode = (AppState.activeTimerState && AppState.activeTimerState.mode) || 'stopwatch';
+        const titleEl = document.getElementById('ctm-title');
+        const subtitleEl = document.getElementById('ctm-subtitle');
+        const btnSubmit = document.getElementById('ctm-btn-submit');
         const input = document.getElementById('custom-timer-input-minutes');
+
+        if (titleEl) {
+            titleEl.textContent = mode === 'stopwatch' ? 'Custom Stopwatch Target' : 'Custom Timer';
+        }
+        if (subtitleEl) {
+            subtitleEl.textContent = mode === 'stopwatch' ? 'Set forward count target duration' : 'Set countdown duration';
+        }
+        if (btnSubmit) {
+            btnSubmit.textContent = mode === 'stopwatch' ? 'Set Target' : 'Set Timer';
+        }
         if (input) {
-            input.value = "25";
+            const curMin = Math.round(((AppState.activeTimerState && AppState.activeTimerState.targetDuration) || (25 * 60)) / 60);
+            input.value = curMin > 0 ? String(curMin) : "25";
         }
         openModal('custom-timer-modal');
     };
@@ -1390,14 +1645,19 @@
             showToast("Please enter a valid positive number of minutes.", "error");
             return;
         }
+        const currentMode = (AppState.activeTimerState && AppState.activeTimerState.mode) || 'stopwatch';
         AppState.activeTimerState.targetDuration = minutes * 60;
         AppState.activeTimerState.elapsedBeforeStart = 0;
         AppState.activeTimerState.startTime = null;
         saveActiveStateToStore();
-        FirebaseService.saveTimerToCloud();
+        if (window.FirebaseService) window.FirebaseService.saveTimerToCloud();
         window.TimerService.restore();
         closeModal('custom-timer-modal');
-        showToast(`Timer set to ${minutes} minutes.`, "success");
+        if (currentMode === 'stopwatch') {
+            showToast(`Stopwatch target set to ${minutes} minutes (counts forward 0 to ${minutes}m).`, "success");
+        } else {
+            showToast(`Timer set to ${minutes} minutes (${minutes}m countdown).`, "success");
+        }
     };
 
     window.toggleTimerClick = function () {
@@ -1464,6 +1724,12 @@
                 if (elapsedMs >= targetMs) {
                     AppState.activeTimerState.elapsedBeforeStart = 0;
                 }
+            } else if (AppState.activeTimerState.mode === 'stopwatch') {
+                let elapsedMs = AppState.activeTimerState.elapsedBeforeStart || 0;
+                const targetMs = (AppState.activeTimerState.targetDuration || 0) * 1000;
+                if (targetMs > 0 && elapsedMs >= targetMs) {
+                    AppState.activeTimerState.elapsedBeforeStart = 0;
+                }
             }
             window.TimerService.start();
         }
@@ -1510,6 +1776,7 @@
 
         if (!AppState.timerLogs) AppState.timerLogs = [];
         AppState.timerLogs.unshift(newLog);
+        AppState.timerLogs.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         AppState.activeTimerState.isRunning = false;
         AppState.activeTimerState.startTime = null;
@@ -1523,6 +1790,9 @@
             store.startTime = null;
             store.elapsedBeforeStart = 0;
             store.updatedAt = nowMs;
+            if (currentMode === 'alarm') {
+                store.targetDuration = 0;
+            }
         }
 
         window.activeTimerState = AppState.activeTimerState;
@@ -1532,6 +1802,9 @@
         showToast(`Saved session: ${Math.floor(elapsedSeconds / 60)}m ${elapsedSeconds % 60}s for ${subject}.`, "success");
         if (window.FirebaseService) {
             window.FirebaseService.saveToCloud(true);
+            if (typeof window.FirebaseService.saveTimerToCloud === 'function') {
+                window.FirebaseService.saveTimerToCloud();
+            }
         }
     };
 
@@ -3689,9 +3962,11 @@
 
                     const modeBadge = log.mode === 'timer' ?
                         `<span class="px-2 py-0.5 bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 font-black text-[9px] uppercase tracking-wider rounded border border-blue-100 dark:border-blue-900/30">Timer</span>` :
-                        log.mode === 'addx' ?
-                            `<span class="px-2 py-0.5 bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-400 font-black text-[9px] uppercase tracking-wider rounded border border-orange-100 dark:border-orange-900/30">Added</span>` :
-                            `<span class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-black text-[9px] uppercase tracking-wider rounded border border-emerald-100 dark:border-emerald-900/30">Stopwatch</span>`;
+                        log.mode === 'alarm' ?
+                            `<span class="px-2 py-0.5 bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 font-black text-[9px] uppercase tracking-wider rounded border border-purple-100 dark:border-purple-900/30">Alarm</span>` :
+                            log.mode === 'addx' ?
+                                `<span class="px-2 py-0.5 bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-400 font-black text-[9px] uppercase tracking-wider rounded border border-orange-100 dark:border-orange-900/30">Added</span>` :
+                                `<span class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-black text-[9px] uppercase tracking-wider rounded border border-emerald-100 dark:border-emerald-900/30">Stopwatch</span>`;
 
                     historyHtml += `
                         <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
@@ -4277,6 +4552,9 @@
             tickTimer();
             if (typeof window.renderTimerPage === 'function') {
                 window.renderTimerPage();
+            }
+            if (typeof window.updatePresetButtonsUI === 'function') {
+                window.updatePresetButtonsUI();
             }
             if (typeof window.updateSubjectTargetUI === 'function') {
                 window.updateSubjectTargetUI();
