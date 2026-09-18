@@ -1,0 +1,839 @@
+================================================================================
+FIRESTORE LOCAL BACKUP, AUTOMATIC BACKUP, VERIFICATION & RESTORE SYSTEM
+ARCHITECTURE SPECIFICATION, FUNCTIONAL MECHANISM & IMPLEMENTATION MANUAL
+================================================================================
+
+Target Audience: Full-stack Engineers, DevOps & Systems Architects
+Purpose: Comprehensive blueprint to understand, replicate, and deploy this 
+         enterprise-grade Firestore Backup, Automatic Scheduled Backup, 
+         Verification, and Restoration system on any other website or service.
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+1. EXECUTIVE SUMMARY & DESIGN PHILOSOPHY
+2. COMPLETE SYSTEM ARCHITECTURE & WORKFLOW DIAGRAMS
+3. CORE MECHANISMS & STEP-BY-STEP LOGIC
+   3.1. Authentication & Cross-Project Safety Interlock
+   3.2. Firestore Type Serialization & Deserialization Engine
+   3.3. Recursive Database Traversal & Subcollection Discovery
+   3.4. Directory Hierarchy, Timestamping & Collision Handling
+   3.5. Cryptographic Verification & Local File Integrity (SHA-256)
+   3.6. Automatic Post-Backup Deep Live Verification
+   3.7. Automated Task Scheduling (Windows Task Scheduler / Linux Cron)
+   3.8. Dual-Mode Interactive Restoration (Safe Merge vs. Full Destructive)
+   3.9. Batched Operations Pipeline (Firestore 500-Op Limit Management)
+4. FUNCTION-BY-FUNCTION TECHNICAL REFERENCE
+   4.1. Backup Engine (scripts/backup.js)
+   4.2. Verification Engine (scripts/verify-backup.js)
+   4.3. Restoration Engine (scripts/restore.js)
+   4.4. Task Scheduler (scripts/setup-task.ps1)
+   4.5. Batch Launchers (backup.bat, verify.bat, restore.bat)
+5. HOW TO REPLICATE & IMPLEMENT THIS SYSTEM IN ANOTHER SITE / PROJECT
+   5.1. Prerequisites & Dependencies
+   5.2. File System Structure Blueprint
+   5.3. Configuration & Environment Setup
+   5.4. Customizing Project IDs, Timezones, and Paths
+   5.5. Setting up Automated Triggers on Windows or Linux
+6. PRODUCTION SECURITY & OPERATIONAL CHECKLIST
+
+================================================================================
+1. EXECUTIVE SUMMARY & DESIGN PHILOSOPHY
+================================================================================
+Cloud databases often rely on cloud-provider exports which can be slow, costly, 
+opaque, difficult to verify locally, and complex to selectively restore.
+This system solves those challenges by providing a local, self-contained, 
+verifiable backup, restore, and audit pipeline using Node.js and the official 
+Firebase Admin SDK.
+
+Key Architectural Principles:
+1. STRICT READ-ONLY SAFETY AUDIT:
+   The backup (`backup.js`) and verification (`verify-backup.js`) scripts are 
+   strictly READ-ONLY with respect to Firestore. They will never modify, write, 
+   overwrite, delete, or alter any cloud data.
+2. PROJECT ID GUARD / CROSS-PROJECT CONTAMINATION SHIELD:
+   Every script validates that the credentials loaded match the exact configured 
+   Firebase project ID before executing. If a developer accidentally points the 
+   script at the wrong project service account, execution halts immediately.
+3. CANONICAL FIRESTORE DATA TYPE PRESERVATION:
+   JSON natively supports only Strings, Numbers, Booleans, Arrays, Objects, 
+   and Null. Firestore supports rich types (Timestamp, GeoPoint, DocumentReference, 
+   Bytes/Blobs). This system introduces an explicit serialization protocol 
+   (`__type` tags) ensuring zero data loss or type mutation during round-trip 
+   backup and restore.
+4. CONTINUOUS INTEGRITY & DEEP AUDITING:
+   Backups are validated twice:
+   - Level 1: Immediate local file validation (JSON syntax + SHA-256 checksum).
+   - Level 2: Post-backup live verification comparing live database state against 
+              the newly created backup document-by-document, field-by-field.
+5. RESTORATION SEPARATION OF PRIVILEGE:
+   Restoration is never automated. It requires interactive terminal execution with 
+   two safety modes: Safe Merge (non-destructive) and Full Restore (destructive wipe 
+   requiring an explicit, typed uppercase "RESTORE" confirmation).
+
+================================================================================
+2. COMPLETE SYSTEM ARCHITECTURE & WORKFLOW DIAGRAMS
+================================================================================
+
+--------------------------------------------------------------------------------
+A. BACKUP & AUTOMATIC VERIFICATION PIPELINE
+--------------------------------------------------------------------------------
+ [ Trigger: Manual (.bat/CLI) OR Automatic (Task Scheduler) ]
+                          │
+                          ▼
+            [ Load & Validate Service Account ]
+            - Parse JSON file or Env variable
+            - Verify projectId === EXPECTED_PROJECT_ID
+                          │
+                          ▼
+             [ Read-Only Firestore Fetch ]
+            - List root collections
+            - Recursively fetch documents & subcollections
+            - Transform rich types via serializeFirestoreValue()
+            - Track counts: collections, docs, fields
+                          │
+                          ▼
+              [ Zero-Document Safeguard ]
+            - If totalDocuments === 0 -> Abort! (Protects against auth glitches)
+                          │
+                          ▼
+            [ Write Local Backup Artifacts ]
+            - Compute Bangladesh/Local timestamp folder (DD MM YYYY / HH MM AM/PM)
+            - Check folder collisions -> append (1), (2) if needed
+            - Write firestore-backup.json
+            - Write firestore.json (alias for compatibility)
+            - Compute SHA-256 checksum of the JSON file
+            - Write metadata.json (counts, sha256, timestamp, mode)
+                          │
+                          ▼
+            [ Level 1: Local Integrity Verification ]
+            - Read back JSON, verify schema, counts, and SHA-256 match
+            - If corrupt -> fs.rmSync(folder) & abort
+                          │
+                          ▼
+             [ Log Event to backup-log.txt ]
+                          │
+                          ▼
+            [ Level 2: Automatic Post-Backup Live Verification ]
+            (Triggered automatically when run with --automatic or --verify)
+            - Re-reads live Firestore database in read-only mode
+            - Canonicalizes and deep-diffs live data against backup data
+            - Computes canonical SHA-256 hash of entire database tree
+            - Records verdict in verification-log.txt & backup-log.txt
+                          │
+                          ▼
+                       [ DONE ]
+
+--------------------------------------------------------------------------------
+B. RESTORATION PIPELINE
+--------------------------------------------------------------------------------
+              [ Run: node scripts/restore.js ]
+                          │
+                          ▼
+            [ Load & Validate Service Account ]
+            - Validate project_id to prevent restoring to wrong DB
+                          │
+                          ▼
+            [ Scan & Display Available Backups ]
+            - Discovers all snapshots (Automatic, Manual, Legacy)
+            - Interactive prompt: User picks snapshot number
+                          │
+                          ▼
+             [ Pre-flight Backup Verification ]
+            - Validates JSON integrity & project ID in metadata
+            - Displays summary (Date, Project, Docs, Collections, Size)
+            - User prompts: "Are you sure? (YES/NO)"
+                          │
+                          ▼
+            [ Select Restore Mode: SAFE vs FULL ]
+            ┌─────────────────────┴──────────────────────┐
+            ▼                                            ▼
+   [ Mode 1: SAFE RESTORE ]                     [ Mode 2: FULL RESTORE ]
+   - Non-destructive                            - DESTRUCTIVE!
+   - Merges docs with { merge: true }           - Requires typing "RESTORE"
+   - Preserves non-conflicting docs             - Recursively wipes ALL live
+   - Missing docs are added                      collections & subcollections
+   - Conflicting docs updated                   - Restores exact snapshot with
+            │                                     { merge: false }
+            └─────────────────────┬──────────────────────┘
+                                  ▼
+                     [ BatchQueue Engine Execution ]
+                     - Deserializes __type objects (Timestamps, Refs, GeoPoints)
+                     - Groups operations into batches of <= 400
+                     - Automatically commits batches to stay under Firestore limit
+                     - Final flush() commits remaining writes
+                                  │
+                                  ▼
+                             [ FINISH ]
+
+================================================================================
+3. CORE MECHANISMS & STEP-BY-STEP LOGIC
+================================================================================
+
+--------------------------------------------------------------------------------
+3.1. Authentication & Cross-Project Safety Interlock
+--------------------------------------------------------------------------------
+Security & Safety:
+- The system checks for credentials from two sources:
+  1. Environment variable: `FIREBASE_SERVICE_ACCOUNT` (Supports raw JSON or 
+     Base64 encoded string with escaped newlines).
+  2. Local File: `firebase-service-account.json` in the code root directory.
+- Cross-Project Protection:
+  Constant `EXPECTED_PROJECT_ID` (e.g. 'x-2k29' or your project ID) is hard-pinned.
+  If the parsed service account JSON contains a different `project_id`, execution 
+  is terminated immediately with an error. This completely eliminates accidental 
+  backups or restores directed at staging vs production.
+
+--------------------------------------------------------------------------------
+3.2. Firestore Type Serialization & Deserialization Engine
+--------------------------------------------------------------------------------
+Why standard JSON.stringify fails:
+Firestore documents can store:
+- Timestamps (converted to plain object or ISO string losing nanosecond precision)
+- GeoPoints (latitude / longitude objects losing class identity)
+- DocumentReferences (complex circular internal objects)
+- Binary Buffers / Uint8Arrays (broken into byte arrays or strings)
+
+The Custom Type Protocol:
+A tagged object format is used. Each special type is encoded as a dictionary with 
+a reserved `__type` property:
+
+1. Timestamp:
+   Input:  Firestore.Timestamp(seconds=1710000000, nanoseconds=500000)
+   Output: {
+             "__type": "timestamp",
+             "seconds": 1710000000,
+             "nanoseconds": 500000,
+             "iso": "2024-03-09T18:40:00.000Z"
+           }
+   Restore: new Timestamp(val.seconds, val.nanoseconds)
+
+2. GeoPoint:
+   Input:  Firestore.GeoPoint(latitude=23.8103, longitude=90.4125)
+   Output: {
+             "__type": "geopoint",
+             "latitude": 23.8103,
+             "longitude": 90.4125
+           }
+   Restore: new GeoPoint(val.latitude, val.longitude)
+
+3. DocumentReference:
+   Input:  db.doc('users/user_123')
+   Output: {
+             "__type": "reference",
+             "path": "users/user_123"
+           }
+   Restore: db.doc(val.path)
+
+4. Bytes / Binary:
+   Input:  Buffer or Uint8Array
+   Output: {
+             "__type": "bytes",
+             "base64": "SGVsbG8gV29ybGQ="
+           }
+   Restore: Bytes.fromUint8Array(Buffer.from(val.base64, 'base64'))
+
+Recursion:
+Plain JavaScript objects and arrays are deeply traversed. When an object contains 
+nested objects or arrays of mixed types, every leaf node is inspected and 
+converted.
+
+--------------------------------------------------------------------------------
+3.3. Recursive Database Traversal & Subcollection Discovery
+--------------------------------------------------------------------------------
+Firestore has a hierarchical NoSQL model:
+Root Collection -> Document -> Subcollection -> Sub-document -> ...
+
+The Traversal Algorithm (`backupCollection`):
+1. Takes a `collectionRef`.
+2. Calls `collectionRef.get()` to retrieve all document snapshots.
+3. For each document:
+   a. Extracts data with `doc.data()`.
+   b. Passes data through `serializeFirestoreValue()`.
+   c. Queries for subcollections on the document: `doc.ref.listCollections()`.
+   d. For every subcollection found, recursively invokes `backupCollection(subColRef)`.
+   e. Assembles document object:
+      {
+        id: doc.id,
+        path: doc.ref.path,
+        data: serializedData,
+        subcollections: [ ...recursive subcollections ]
+      }
+4. Returns the collection node:
+   {
+     id: colRef.id,
+     path: colRef.path,
+     documents: [ ...documents ]
+   }
+
+This guarantees that deeply nested trees (e.g. `users/{uid}/settings/{setId}/logs/{id}`) 
+are completely captured.
+
+--------------------------------------------------------------------------------
+3.4. Directory Hierarchy, Timestamping & Collision Handling
+--------------------------------------------------------------------------------
+Directory Structure:
+Root: `X-29-backup/`
+├── Automatic/
+│   └── 18 09 2026/
+│       └── 11 00 AM/
+│           ├── firestore-backup.json
+│           ├── firestore.json
+│           └── metadata.json
+├── Manual/
+│   └── 18 09 2026/
+│       └── 02 45 PM/
+│           ├── firestore-backup.json
+│           ├── firestore.json
+│           └── metadata.json
+├── backup-log.txt
+└── verification-log.txt
+
+Timestamping:
+Configured for local 12-hour format (e.g. Bangladesh Time `Asia/Dhaka` UTC+6):
+Date Folder: `DD MM YYYY` (e.g., `18 09 2026`)
+Time Folder: `HH MM AM` or `HH MM PM` (e.g., `11 00 AM`)
+
+Collision Handling:
+If multiple backups run in the same minute:
+- Checks if target directory exists and contains files.
+- If occupied, increments collision counter: `11 00 AM (1)`, `11 00 AM (2)`, etc.
+- Prevents overwriting any prior snapshot.
+
+--------------------------------------------------------------------------------
+3.5. Cryptographic Verification & Local File Integrity (SHA-256)
+--------------------------------------------------------------------------------
+After writing `firestore-backup.json`:
+1. System reads the written file into a binary buffer.
+2. Generates SHA-256 hash: `crypto.createHash('sha256').update(buffer).digest('hex')`.
+3. Writes `metadata.json` containing:
+   - `backupDate` (ISO 8601)
+   - `backupFolderTimestamp` (DD MM YYYY\HH MM AM/PM)
+   - `backupMode` ('manual' or 'automatic')
+   - `firebaseProject` (Project ID)
+   - `documentCount`
+   - `collectionCount`
+   - `backupSizeBytes`
+   - `sha256`
+   - `status`: 'verified'
+4. Read-Back Validation (`validateBackup`):
+   - Reads back both files from disk.
+   - Verifies valid JSON syntax.
+   - Re-computes SHA-256 from disk and compares against `metadata.json`.
+   - Compares document and collection counts in metadata against in-memory traversal statistics.
+   - If any check fails, the faulty backup directory is immediately purged with 
+     `fs.rmSync(targetDir, { recursive: true, force: true })` and an exception is raised.
+
+--------------------------------------------------------------------------------
+3.6. Automatic Post-Backup Deep Live Verification
+--------------------------------------------------------------------------------
+When `backup.js` finishes successfully in automatic mode (`--automatic` or `--verify`):
+1. It immediately invokes `verifySpecificBackup(targetDir)`.
+2. Reads the Live Firestore database using read-only calls.
+3. Normalizes both Live Firestore data and the Backup data:
+   - Strips non-deterministic fields like `iso` helper dates.
+   - Conforms all numeric types.
+4. Performs a two-way deep field comparison:
+   - Live vs. Backup collections.
+   - Missing documents (in Live but not Backup, or in Backup but not Live).
+   - Value differences, type differences, array length differences.
+5. Computes a Canonical SHA-256 Hash of both trees:
+   - Sorts collection paths alphabetically.
+   - Sorts document IDs alphabetically.
+   - Recursively sorts all object keys alphabetically.
+   - Generates SHA-256 for the canonical JSON tree.
+6. Writes comprehensive report to `verification-log.txt`:
+   - Exact Match status (Collections, Docs, Fields, Arrays, Objects, Diffs=0, SHA-256=MATCH).
+   - If mismatch: Details exact differing paths, missing fields, or differing values.
+
+--------------------------------------------------------------------------------
+3.7. Automated Task Scheduling (Windows & Linux)
+--------------------------------------------------------------------------------
+Windows Task Scheduler Configuration (`setup-task.ps1`):
+- Uses PowerShell `Register-ScheduledTask`:
+  - Action: Execute `node.exe` with arguments `scripts/backup.js --automatic`
+  - Working Directory: Project folder
+  - Triggers: Daily at defined operational hours (e.g. 11:00 AM, 02:30 PM, 07:30 PM, 11:00 PM)
+  - Settings:
+    - `StartWhenAvailable`: If the computer was off or asleep during a trigger time, 
+      the task runs immediately upon waking up.
+    - `AllowStartIfOnBatteries`: Continues on laptops running on battery.
+    - `DontStopIfGoingOnBatteries`: Won't abort if unplugged midway.
+
+Linux Alternative (Cron):
+A single line in `/etc/cron.d/firestore-backup` or `crontab -e`:
+0 11,14,19,23 * * * cd /var/www/my-site && /usr/bin/node scripts/backup.js --automatic >> /var/log/backup.log 2>&1
+
+--------------------------------------------------------------------------------
+3.8. Dual-Mode Interactive Restoration (Safe Merge vs. Full Destructive)
+--------------------------------------------------------------------------------
+Restoration is strictly manual and interactive to prevent disastrous accidental 
+overwrites.
+
+Step 1: Backup Selection
+- System scans `Manual`, `Automatic`, and root backup folders.
+- Displays available snapshots sorted newest first with metadata.
+- User selects index number.
+
+Step 2: Confirmation Summary
+- Shows Project ID, backup date, document count, and backup size.
+- User must answer `YES`.
+
+Step 3: Mode Selection
+- Option 1: SAFE RESTORE
+  - Performs non-destructive update.
+  - Calls `batch.set(docRef, data, { merge: true })`.
+  - If a document exists in Firestore but NOT in the backup, it is KEPT.
+  - If a field exists in Firestore but NOT in the backup, it is PRESERVED.
+  - Missing documents from the backup are inserted.
+  - Matching documents have their fields overwritten by backup values.
+
+- Option 2: FULL RESTORE
+  - Destructive exact mirror restoration.
+  - System requires the user to type the word "RESTORE" in capital letters.
+  - Phase A (Recursive Wipe):
+    - Lists all live root collections.
+    - Recursively retrieves all documents and subcollections.
+    - Queues delete operations: `batch.delete(docRef)`.
+    - Flushes batches until Live Firestore is 100% empty.
+  - Phase B (Clean Restoration):
+    - Re-creates all collections, documents, and subcollections with `{ merge: false }`.
+    - Live database matches backup exactly.
+
+--------------------------------------------------------------------------------
+3.9. Batched Operations Pipeline (Firestore 500-Op Limit Management)
+--------------------------------------------------------------------------------
+Problem:
+Google Cloud Firestore limits a write batch to a maximum of 500 operations. 
+Exceeding 500 causes a `FAILED_PRECONDITION` or `INVALID_ARGUMENT` exception.
+
+Solution (`BatchQueue` Class):
+A queue abstraction wraps `db.batch()`:
+```javascript
+class BatchQueue {
+    constructor(db, maxBatchSize = 400) {
+        this.db = db;
+        this.batch = db.batch();
+        this.opCount = 0;
+        this.totalOps = 0;
+        this.maxBatchSize = maxBatchSize; // Safe margin below 500
+    }
+
+    async set(docRef, data, options = {}) {
+        this.batch.set(docRef, data, options);
+        this.opCount++;
+        this.totalOps++;
+        if (this.opCount >= this.maxBatchSize) {
+            await this.flush();
+        }
+    }
+
+    async delete(docRef) {
+        this.batch.delete(docRef);
+        this.opCount++;
+        this.totalOps++;
+        if (this.opCount >= this.maxBatchSize) {
+            await this.flush();
+        }
+    }
+
+    async flush() {
+        if (this.opCount > 0) {
+            await this.batch.commit();
+            this.batch = this.db.batch();
+            this.opCount = 0;
+        }
+    }
+}
+```
+Benefits:
+- Flushes automatically every 400 operations.
+- Eliminates memory exhaustion.
+- Maximizes throughput by batching network transactions.
+
+================================================================================
+4. FUNCTION-BY-FUNCTION TECHNICAL REFERENCE
+================================================================================
+
+--------------------------------------------------------------------------------
+4.1. Backup Engine (`scripts/backup.js`)
+--------------------------------------------------------------------------------
+- `getBangladeshTimestampFolders()`:
+  Uses `Intl.DateTimeFormat` with `timeZone: 'Asia/Dhaka'` (or configurable). 
+  Extracts day, month, year, hour, minute, and AM/PM into two folder strings:
+  `dateFolder` (e.g. "18 09 2026") and `timeFolder` (e.g. "11 00 AM").
+
+- `loadServiceAccount()`:
+  Loads credentials from `process.env.FIREBASE_SERVICE_ACCOUNT` (handling JSON 
+  and base64 formats) or `firebase-service-account.json`. Validates that 
+  `projectId === EXPECTED_PROJECT_ID`.
+
+- `serializeFirestoreValue(val)`:
+  Inspects `val`. Checks for Firestore class instances (`Timestamp`, `GeoPoint`, 
+  `DocumentReference`, `Bytes` / `Buffer`). Returns tagged object with `__type` 
+  or recurses through arrays and objects.
+
+- `backupCollection(collectionRef, stats)`:
+  Takes a Firestore CollectionReference. Calls `.get()`. For each document, 
+  serializes its data, calls `doc.ref.listCollections()` to find subcollections, 
+  and recurses. Increments `stats.totalCollections` and `stats.totalDocuments`.
+
+- `calculateSHA256(filePath)`:
+  Reads the written file into a buffer, updates a `crypto.createHash('sha256')` 
+  stream, and returns the hex digest.
+
+- `validateBackup(backupJsonPath, metadataJsonPath, stats)`:
+  Integrity gatekeeper. Validates file existence, non-empty content, valid JSON, 
+  `projectId` match, metadata document/collection count matches `stats`, and 
+  recalculated SHA-256 matches metadata.
+
+- `logBackupEvent(event, mode, details)`:
+  Appends timestamped event line to `backup-log.txt` (e.g. STARTED, SUCCESS, FAILED).
+
+- `runBackup()`:
+  Main orchestration function. Parses CLI flags (`--automatic`, `--verify`). 
+  Initializes Firebase Admin. Executes backup traversal. Verifies non-zero docs. 
+  Writes payload, alias, and metadata. Runs local verification. Calls live 
+  verification if automatic mode is enabled.
+
+--------------------------------------------------------------------------------
+4.2. Verification Engine (`scripts/verify-backup.js`)
+--------------------------------------------------------------------------------
+- `scanAvailableBackups()`:
+  Traverses `X-29-backup/` directory up to 5 levels deep. Locates any folder 
+  containing `firestore-backup.json` or `firestore.json`. Extracts file metadata 
+  and returns sorted list (newest first).
+
+- `selectBackupFromCli(backupsList, args)`:
+  Checks for `--latest` or `--backup <path>`. If absent, renders an interactive 
+  CLI menu displaying index numbers, backup dates, sizes, and document counts.
+
+- `loadBackupFile(backupItem)`:
+  Reads and parses the backup JSON file. Confirms valid JSON, presence of 
+  metadata envelope, matching `projectId`, and `collections` array.
+
+- `fetchLiveFirestore(db, onProgress)`:
+  Iterates over `db.listCollections()`. For each collection, calls 
+  `fetchLiveCollection()` which recursively fetches documents and subcollections 
+  in read-only mode.
+
+- `getTypeOf(val)` / `normalizeValue(val)`:
+  Normalizes Firestore SDK types and serialized backup representations into 
+  canonical comparable shapes. Strips transient timestamps properties (e.g. `iso`).
+
+- `compareValues(liveVal, backupVal, pathStr, diffs)`:
+  Deep-diff comparison algorithm. Compares value types, primitives, objects, 
+  arrays, timestamps, geopoints, references, and binary bytes. When differences 
+  occur, pushes detailed difference objects to `diffs`.
+
+- `compareCollections(liveCols, backupCols, diffs)`:
+  Two-way collection comparison. Finds collections missing from backup or extra 
+  in backup. Compares document IDs, document payloads, and nested subcollections.
+
+- `buildCanonicalTree(collectionsTree)` / `calculateCanonicalHash(collectionsTree)`:
+  Sorts collections by path, documents by ID, and object keys alphabetically. 
+  Produces a deterministic canonical string and computes its SHA-256 digest.
+
+- `verifySpecificBackup(backupPathOrItem, options)`:
+  Programmatic API callable by `backup.js` or CLI. Compares snapshot against 
+  live database. Writes formatted log entry to `verification-log.txt`.
+
+--------------------------------------------------------------------------------
+4.3. Restoration Engine (`scripts/restore.js`)
+--------------------------------------------------------------------------------
+- `scanAvailableBackupsForRestore()`:
+  Discovers all backups across Manual and Automatic folders.
+
+- `deserializeFirestoreValue(val, db)`:
+  Reverse of `serializeFirestoreValue()`. Translates tagged objects (`__type`) 
+  back into real Firebase Admin SDK objects:
+  `__type: 'timestamp'` -> `new Timestamp(seconds, nanoseconds)`
+  `__type: 'geopoint'`  -> `new GeoPoint(latitude, longitude)`
+  `__type: 'reference'` -> `db.doc(path)`
+  `__type: 'bytes'`     -> `Bytes.fromUint8Array(...)`
+
+- `BatchQueue`:
+  Queue manager buffering `.set()` and `.delete()` calls, automatically committing 
+  at 400 operations.
+
+- `restoreCollectionNode(colData, batchQueue, db, stats, isMergeMode)`:
+  Recursively restores documents in a collection. Enqueues `batchQueue.set(docRef, data, { merge: isMergeMode })`. 
+  Recurses on subcollections.
+
+- `recursiveWipeCollection(colRef, batchQueue, stats)`:
+  Used during Full Restore. Recursively visits every document and subcollection, 
+  enqueuing `batchQueue.delete(doc.ref)` to wipe the entire database before restore.
+
+- `runRestore()`:
+  Interactive CLI runner. Confirms project ID, prompts for backup selection, 
+  prompts for Mode (SAFE vs FULL), requests "RESTORE" confirmation if FULL, 
+  wipes if FULL, restores collections, flushes batch queue, and logs summary.
+
+--------------------------------------------------------------------------------
+4.4. Windows Task Scheduler Script (`scripts/setup-task.ps1`)
+--------------------------------------------------------------------------------
+- Creates a scheduled task named "X-29 Firebase Automatic Backup"
+- Action: `"C:\Program Files\nodejs\node.exe" scripts/backup.js --automatic`
+- Triggers: Daily at 11:00AM, 02:30PM, 07:30PM, 11:00PM
+- Settings: `-StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries`
+
+--------------------------------------------------------------------------------
+4.5. Batch Launchers (Root Directory)
+--------------------------------------------------------------------------------
+- `backup.bat`: Executes `node scripts\backup.js` with terminal pause.
+- `verify.bat`: Executes `node scripts\verify-backup.js %*` with argument pass-through.
+- `restore.bat`: Executes `node scripts\restore.js` with terminal pause.
+
+================================================================================
+5. HOW TO REPLICATE & IMPLEMENT THIS SYSTEM IN ANOTHER SITE / PROJECT
+================================================================================
+
+Follow these exact steps to adapt and implement this system on another site:
+
+--------------------------------------------------------------------------------
+Step 1: Install Dependencies
+--------------------------------------------------------------------------------
+In your new site's root directory:
+```bash
+npm install firebase-admin
+```
+(No external database export tools or third-party backup libraries are required; 
+Node.js standard library `fs`, `path`, `crypto`, `readline` handles the rest.)
+
+--------------------------------------------------------------------------------
+Step 2: Create Directory Layout
+--------------------------------------------------------------------------------
+Create the following structure in your repository:
+```text
+my-project/
+├── scripts/
+│   ├── backup.js
+│   ├── verify-backup.js
+│   ├── restore.js
+│   └── setup-task.ps1
+├── backup.bat
+├── verify.bat
+├── restore.bat
+├── firebase-service-account.json    (Keep gitignored!)
+└── .gitignore
+```
+
+Ensure `.gitignore` contains:
+```text
+firebase-service-account.json
+*-Backups/
+backup-log.txt
+verification-log.txt
+```
+
+--------------------------------------------------------------------------------
+Step 3: Configure Project Specific Constants
+--------------------------------------------------------------------------------
+In `scripts/backup.js`, `scripts/verify-backup.js`, and `scripts/restore.js`, update:
+
+1. `EXPECTED_PROJECT_ID`:
+   Set to your new Firebase project ID (e.g., `'my-awesome-site-prod'`).
+
+2. `BACKUP_BASE_DIR`:
+   By default in X-29, backups are saved in a dedicated sibling folder `X-29-backup` (`D:\X-29 Project\X-29-2\X-29-backup`), keeping `X-29-code` strictly for application code.
+   ```javascript
+   const BACKUP_BASE_DIR = path.resolve(__dirname, '..', '..', 'MySite-Backups');
+   // Or an absolute path / dedicated backup storage mount:
+   // const BACKUP_BASE_DIR = 'D:\\Backups\\MySite';
+   ```
+
+3. Timezone Formatting (in `getBangladeshTimestampFolders` / `getBangladeshTimestamp`):
+   Change `'Asia/Dhaka'` to your desired local timezone, for example:
+   `timeZone: 'America/New_York'` or `'Europe/London'` or `'Asia/Tokyo'`.
+
+4. Batch Size (`MAX_BATCH_SIZE` in `restore.js`):
+   Keep at 400 (safe limit for Firestore's 500-op limit).
+
+--------------------------------------------------------------------------------
+Step 4: Download Firebase Service Account Key
+--------------------------------------------------------------------------------
+1. Go to Firebase Console -> Project Settings -> Service accounts.
+2. Click "Generate new private key".
+3. Save the JSON file as `firebase-service-account.json` in the root of your project.
+4. Alternatively, export the JSON content as an environment variable:
+   `export FIREBASE_SERVICE_ACCOUNT='{"type": "service_account", ...}'`
+
+--------------------------------------------------------------------------------
+Step 5: Test Execution Manually
+--------------------------------------------------------------------------------
+1. Run a test backup:
+   ```bash
+   node scripts/backup.js
+   ```
+   Check your backup directory: verify `firestore-backup.json` and `metadata.json` 
+   were created and validated.
+
+2. Run a test verification:
+   ```bash
+   node scripts/verify-backup.js --latest
+   ```
+   Check that `verification-log.txt` logs "EXACT MATCH".
+
+3. Test safe restore on a non-production or staging project first:
+   ```bash
+   node scripts/restore.js
+   ```
+
+--------------------------------------------------------------------------------
+Step 6: Automate Scheduled Backups
+--------------------------------------------------------------------------------
+For Windows Servers / Workstations:
+1. Open `scripts/setup-task.ps1`.
+2. Update paths:
+   - `$TaskName = "MySite Firebase Automatic Backup"`
+   - `node.exe` path
+   - Working directory to your site root.
+   - Adjust trigger times as desired.
+3. Run in PowerShell as Administrator:
+   ```powershell
+   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+   .\scripts\setup-task.ps1
+   ```
+
+For Linux Servers (Ubuntu/Debian/CentOS):
+Add a cron job using `crontab -e`:
+```bash
+# Run backup 4 times daily at 11:00, 14:30, 19:30, 23:00
+0 11,23 * * * cd /var/www/mysite && /usr/bin/node scripts/backup.js --automatic >> /var/log/mysite-backup.log 2>&1
+30 14,19 * * * cd /var/www/mysite && /usr/bin/node scripts/backup.js --automatic >> /var/log/mysite-backup.log 2>&1
+```
+
+================================================================================
+6. PRODUCTION SECURITY & OPERATIONAL CHECKLIST
+================================================================================
+[ ] Service Account Permissions:
+    Ensure the service account key has "Cloud Datastore User" or "Firebase Admin SDK 
+    Administrator Service Agent" permissions.
+[ ] Git Security:
+    Confirm `firebase-service-account.json` is NEVER committed to Git.
+[ ] Storage Redundancy:
+    Sync the `Backups/` folder to cold off-site cloud storage (AWS S3 Glacier, 
+    Google Cloud Storage, or an external encrypted NAS drive).
+[ ] Zero-Document Safeguard:
+    Never remove the zero-document check. If your database is legitimately empty 
+    during initial setup, populate at least one test document before enabling 
+    automated backups.
+[ ] Restoration Drill:
+    Perform a periodic test restoration (at least once per quarter) into a sandbox 
+    Firebase project to verify operational readiness and disaster recovery SLAs.
+
+================================================================================
+END OF ARCHITECTURAL & OPERATIONAL MANUAL
+================================================================================
+
+
+
+
+A comprehensive, production-grade technical report has been generated and saved to: 📄 
+
+BACKUP_RESTORE_VERIFY_SYSTEM_REPORT.txt
+
+As requested, zero lines of code were modified in your existing codebase.
+
+System Mechanism & Architecture Overview
+This backup, verification, and restore system is designed around zero data loss, read-only safety, cryptographic verification, and separation of privileges.
+
+text
+ ┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                   FIRESTORE SYSTEM ARCHITECTURE                                 │
+ └─────────────────────────────────────────────────────────────────────────────────────────────────┘
+                ┌──────────────────────────────────────────────────────────────────┐
+                │ BACKUP & VERIFY ENGINE (Strictly READ-ONLY with Firestore)       │
+                │                                                                  │
+                │  [Manual (.bat / CLI)]  OR  [Scheduled Task (Windows / Cron)]    │
+                │                           │                                      │
+                │                           ▼                                      │
+                │              Load Service Account & Project ID Check             │
+                │                           │                                      │
+                │                           ▼                                      │
+                │         Recursive Fetch: Collections + Subcollections            │
+                │         Rich Type Serialization (__type Tagging)                 │
+                │                           │                                      │
+                │                           ▼                                      │
+                │          Zero-Doc Safeguard (Aborts if totalDocs = 0)            │
+                │                           │                                      │
+                │                           ▼                                      │
+                │  Write firestore-backup.json + metadata.json + SHA-256 Checksum  │
+                │                           │                                      │
+                │                           ▼                                      │
+                │    Level 1: Local Integrity Verification (Read-Back & Hashes)    │
+                │                           │                                      │
+                │                           ▼                                      │
+                │    Level 2: Automatic Post-Backup Verification (Live vs Backup)  │
+                │             Canonical Trees & Deep Difference Audit              │
+                └──────────────────────────────────────────────────────────────────┘
+                                                    │
+                                                    ▼
+                ┌──────────────────────────────────────────────────────────────────┐
+                │ RESTORATION ENGINE (Strictly INTERACTIVE & SEPARATE)             │
+                │                                                                  │
+                │  1. Discovers snapshots (Automatic & Manual)                     │
+                │  2. User selects snapshot & confirms (YES)                       │
+                │  3. Selects Mode:                                                │
+                │     • SAFE RESTORE: Non-destructive merge ({ merge: true })      │
+                │     • FULL RESTORE: Requires "RESTORE" prompt -> Wipes live DB   │
+                │                     then rehydrates exact snapshot               │
+                │  4. BatchQueue manages Firestore 500-op limit (batches of 400)   │
+                │  5. Deserializes __type objects back to native SDK classes       │
+                └──────────────────────────────────────────────────────────────────┘
+Key Mechanisms Breakdown
+1. Cross-Project Protection Shield
+How it works: Hard-pins EXPECTED_PROJECT_ID. Before running any operation, loadServiceAccount() validates that the JSON credential's project_id matches the expected target.
+Why it matters: Prevents running operations against the wrong environment (e.g. accidentally modifying or restoring a production database from a staging environment).
+2. Firestore Type Serialization & Deserialization Protocol
+Standard JSON.stringify breaks Firestore rich types into plain strings or empty objects. This system uses a custom tagged envelope:
+
+Timestamps: { "__type": "timestamp", "seconds": 1710000000, "nanoseconds": 500000, "iso": "..." } $\rightarrow$ Reconstituted via new Timestamp(seconds, nanoseconds).
+GeoPoints: { "__type": "geopoint", "latitude": 23.81, "longitude": 90.41 } $\rightarrow$ Reconstituted via new GeoPoint(lat, lng).
+DocumentReferences: { "__type": "reference", "path": "users/xyz" } $\rightarrow$ Reconstituted via db.doc(path).
+Bytes/Blobs: { "__type": "bytes", "base64": "..." } $\rightarrow$ Reconstituted via Bytes.fromUint8Array(...).
+3. Deep Recursive Traversal
+Collections are fetched via collectionRef.get().
+For every document, doc.ref.listCollections() is queried to recursively discover any arbitrary level of nested subcollections.
+4. Cryptographic Validation & Level 1 / Level 2 Verification
+Level 1 (Local file audit): Generates a SHA-256 hash immediately upon writing firestore-backup.json. The validator re-reads the written file, parses the JSON, recalculates the SHA-256 hash, and verifies document/collection counts. If corrupted, the folder is purged.
+Level 2 (Deep Live verification): Operates strictly read-only. Fetches live Firestore data, normalizes types, builds canonical trees (sorting keys, collections, and documents alphabetically), and computes a canonical SHA-256. It checks for missing/extra documents, type mutations, and field-level discrepancies, logging results to verification-log.txt.
+5. Windows Task Scheduler / Cron Automation
+Runs node scripts/backup.js --automatic at preset intervals (e.g., 11:00 AM, 02:30 PM, 07:30 PM, 11:00 PM).
+Utilizes -StartWhenAvailable (runs immediately upon wake-up if the computer was asleep or off during the scheduled time) and battery persistence flags.
+6. Dual-Mode Restoration with Batch Queueing
+BatchQueue Engine: Firestore has a hard limit of 500 operations per write batch. BatchQueue buffers write and delete operations, automatically committing batches at 400 operations.
+Safe Mode: Non-destructive merge ({ merge: true }). Existing documents not in the backup are preserved.
+Full Mode: Destructive exact mirror. Recursively deletes all documents and subcollections across the live database before restoring the snapshot. Requires explicit uppercase "RESTORE" confirmation.
+How to Implement This in Another Project (Quick Summary)
+Install Firebase Admin:
+bash
+npm install firebase-admin
+Copy Core Scripts:
+
+
+scripts/backup.js
+
+
+scripts/verify-backup.js
+
+
+scripts/restore.js
+
+
+scripts/setup-task.ps1
+Configure Project Constants:
+Change EXPECTED_PROJECT_ID to match the target Firebase project.
+Adjust BACKUP_BASE_DIR to the desired storage location.
+Adjust timeZone in the timestamp formatter to your local timezone.
+Place Service Account Key:
+Put firebase-service-account.json in the root folder and ensure it is listed in .gitignore.
+Set Schedule:
+Run setup-task.ps1 for Windows Task Scheduler, or add a standard cron entry on Linux.
+For the complete implementation details, code blueprints, and checklists, refer to the generated 
+
+BACKUP_RESTORE_VERIFY_SYSTEM_REPORT.txt
+
+
+D:\X-29 Project\X-29-2\X-29-backup  --- this is for backup files where backups will be  saved 
+D:\X-29 Project\X-29-2\X-29-code    --- this is  for code only 

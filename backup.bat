@@ -1,0 +1,15 @@
+@echo off
+title X-29 Firestore Backup (x-2k29)
+cd /d "%~dp0"
+echo ==================================================
+echo Starting X-29 Firestore Backup...
+echo Target: ..\X-29-backup (D:\X-29 Project\X-29-2\X-29-backup)
+echo ==================================================
+echo.
+node scripts\backup.js %*
+echo.
+echo ==================================================
+echo Process finished.
+echo ==================================================
+pause
+
