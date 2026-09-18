@@ -37,7 +37,7 @@ All modules will be designed with reentrancy protection against the known circul
 
 ### Component 1: Tasks Feature Area (`js/features/tasks/`)
 
-#### [NEW] [taskEngine.js](file:///d:/X-29%20Project/X-29-2/X-29-code/js/features/tasks/taskEngine.js)
+#### [NEW] [taskEngine.js](file:///d:/X-29%20Project/X-29/X-29-code/js/features/tasks/taskEngine.js)
 Extract core task scheduling, execution, toggling, editing, and list rendering:
 - **Study Plan & Slot Execution Engine**:
   - `generateStudyPlan()`: Generates initial task array with holidays and study slots across tracks.
@@ -76,7 +76,7 @@ Extract core task scheduling, execution, toggling, editing, and list rendering:
   - `setFilter(val)`: Updates active filter and refreshes navigation and tasks.
   - `openRevisionModal()`, `renderRevisionModalContent()`, `toggleRevisionMode(sub)`, `toggleRevisionChapter(sub, chNum, isChecked)`.
 
-#### [NEW] [subjectGoals.js](file:///d:/X-29%20Project/X-29-2/X-29-code/js/features/tasks/subjectGoals.js)
+#### [NEW] [subjectGoals.js](file:///d:/X-29%20Project/X-29/X-29-code/js/features/tasks/subjectGoals.js)
 Extract Subject Daily Time Goals, Subject Editing, and Subject Progress Visualizations:
 - **Subject Daily Time Goals**:
   - `openSubjectTimeModal(subjectName)`: Populates pace goals and custom date inputs.
@@ -98,7 +98,7 @@ Extract Subject Daily Time Goals, Subject Editing, and Subject Progress Visualiz
 
 ### Component 2: Core Metrics (`js/core/`)
 
-#### [NEW] [metrics.js](file:///d:/X-29%20Project/X-29-2/X-29-code/js/core/metrics.js)
+#### [NEW] [metrics.js](file:///d:/X-29%20Project/X-29/X-29-code/js/core/metrics.js)
 Extract KPI Metrics Calculation Engine:
 - **Calculation Engine (`updateMetrics`)**:
   - Reentrancy protection guard.
@@ -119,7 +119,7 @@ Extract KPI Metrics Calculation Engine:
 
 ### Component 3: Dashboard Core (`js/features/dashboard/` & `pages/Dashboard/`)
 
-#### [NEW] [dashboard.js](file:///d:/X-29%20Project/X-29-2/X-29-code/js/features/dashboard/dashboard.js)
+#### [NEW] [dashboard.js](file:///d:/X-29%20Project/X-29/X-29-code/js/features/dashboard/dashboard.js)
 Extract Dashboard Overview, KPI Cards, Summaries, and Master UI Orchestrator:
 - **Dashboard Overview & Header**:
   - Sets top tags, main titles, sub titles, and document titles.
@@ -145,14 +145,14 @@ Extract Dashboard Overview, KPI Cards, Summaries, and Master UI Orchestrator:
     - Synchronizes forms, manage UI, priority config, and timer services.
   - `DashboardPage` lifecycle (`init()`, `mount()`, `render()`, `destroy()`).
 
-#### [MODIFY] [pages/Dashboard/Dashboard.js](file:///d:/X-29%20Project/X-29-2/X-29-code/pages/Dashboard/Dashboard.js)
+#### [MODIFY] [pages/Dashboard/Dashboard.js](file:///d:/X-29%20Project/X-29/X-29-code/pages/Dashboard/Dashboard.js)
 Refactor `pages/Dashboard/Dashboard.js` to become a slim coordinator delegating to `js/features/dashboard/dashboard.js`.
 
 ---
 
 ### Component 4: Integration & Script Cleanup
 
-#### [MODIFY] [index.html](file:///d:/X-29%20Project/X-29-2/X-29-code/index.html)
+#### [MODIFY] [index.html](file:///d:/X-29%20Project/X-29/X-29-code/index.html)
 Add script tags in `<head>` in proper dependency order:
 ```html
 <script src="js/features/tasks/taskEngine.js?v=1.0.22"></script>
@@ -161,12 +161,12 @@ Add script tags in `<head>` in proper dependency order:
 <script src="js/features/dashboard/dashboard.js?v=1.0.22"></script>
 ```
 
-#### [MODIFY] [js/script.js](file:///d:/X-29%20Project/X-29-2/X-29-code/js/script.js)
+#### [MODIFY] [js/script.js](file:///d:/X-29%20Project/X-29/X-29-code/js/script.js)
 - Maintain backward-compatible delegation stubs for all extracted functions.
 - Remove monolithic implementations of task execution, task toggling, task modals, subject goals, metrics, and dashboard rendering.
 - Keep application utilities, core state definition, login auth, account settings, modal helpers, and service worker / PWA handlers intact.
 
-#### [NEW] [tests/tasks-metrics-dashboard.test.js](file:///d:/X-29%20Project/X-29-2/X-29-code/tests/tasks-metrics-dashboard.test.js)
+#### [NEW] [tests/tasks-metrics-dashboard.test.js](file:///d:/X-29%20Project/X-29/X-29-code/tests/tasks-metrics-dashboard.test.js)
 Comprehensive Node.js test suite covering:
 1. **Task Execution**: `generateStudyPlan`, `ensureAvailableSlots`, `reorderSubjectChapters`, `rebuildTaskDates`, `findTaskChapter`, `syncTaskChapterCompletion`, `getChaptersForSubject`, `getChapterStatus`, `getSubjectSkippedCount`.
 2. **Task Toggle Engine**: `handleTaskToggle` optimistic card update, cross-task sync, targets database sync (`monthlyTargetsDatabase`, `weeklyTargetsDatabase`, `dailyTargetsDatabase`).
@@ -177,7 +177,7 @@ Comprehensive Node.js test suite covering:
 7. **Dashboard Summaries & Checklists**: `renderDashboardDailyChecklist`, `renderDashboardWeeklyChecklist`, `renderDashboardMonthlyChecklist`, `renderDashboardOutcomeCard`, `renderDashboardUpcomingExamCard`, `renderDashboardPassedSubjectsCard`.
 8. **Dashboard Orchestrator**: `renderUI` and `DashboardPage` lifecycle.
 
-#### [MODIFY] [package.json](file:///d:/X-29%20Project/X-29-2/X-29-code/package.json)
+#### [MODIFY] [package.json](file:///d:/X-29%20Project/X-29/X-29-code/package.json)
 Add `"test:tasks-metrics-dashboard": "node tests/tasks-metrics-dashboard.test.js"`.
 
 ---

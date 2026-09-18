@@ -4,7 +4,7 @@
  * 
  * Performs local manual and automatic backup of X-29 Firebase Cloud Firestore database.
  * Strictly READ-ONLY with respect to Firestore.
- * Saves backups to: D:\X-29 Project\X-29-2\X-29-backup\
+ * Saves backups to: D:\X-29 Project\X-29\X-29-backup\
  */
 
 const fs = require('fs');

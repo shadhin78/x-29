@@ -37,10 +37,10 @@ Finish (Exit code 0)
 ### Location
 All local backups are stored under:
 
-`D:\X-29 Project\X-29-2\X-29-backup\`
-- Automatic Backups: `D:\X-29 Project\X-29-2\X-29-backup\Automatic\DD MM YYYY\HH MM AM/PM\`
-- Manual Backups: `D:\X-29 Project\X-29-2\X-29-backup\Manual\DD MM YYYY\HH MM AM/PM\`
-- Centralized Logs: `D:\X-29 Project\X-29-2\X-29-backup\logs\`
+`D:\X-29 Project\X-29\X-29-backup\`
+- Automatic Backups: `D:\X-29 Project\X-29\X-29-backup\Automatic\DD MM YYYY\HH MM AM/PM\`
+- Manual Backups: `D:\X-29 Project\X-29\X-29-backup\Manual\DD MM YYYY\HH MM AM/PM\`
+- Centralized Logs: `D:\X-29 Project\X-29\X-29-backup\logs\`
 
 ### Timestamp Naming Format
 Folder names use 12-hour Bangladesh local time (`Asia/Dhaka` / UTC+6):
@@ -85,7 +85,7 @@ Every automatic backup immediately verifies the exact folder created against liv
 #### Exact Match Format Example
 ```text
 [04 09 2026 11 00 PM] AUTOMATIC BACKUP VERIFICATION
-Backup: D:\X-29 Project\X-29-2\X-29-backup\Automatic\04 09 2026\11 00 PM
+Backup: D:\X-29 Project\X-29\X-29-backup\Automatic\04 09 2026\11 00 PM
 Status: EXACT MATCH
 Collections: 1
 Documents: 1
@@ -141,7 +141,7 @@ cmd.exe /c backup-auto.bat
 ```
 Working directory:
 ```cmd
-D:\X-29 Project\X-29-2\X-29-code
+D:\X-29 Project\X-29\X-29-code
 ```
 
 To register/update the task in Task Scheduler, run PowerShell as Administrator:
@@ -170,7 +170,7 @@ verify.bat
 
 Restoration is strictly manual, interactive, and safe:
 
-1. Open terminal in `D:\X-29 Project\X-29-2\X-29-code`.
+1. Open terminal in `D:\X-29 Project\X-29\X-29-code`.
 2. Run:
    ```cmd
    restore.bat
@@ -189,12 +189,12 @@ Restoration is strictly manual, interactive, and safe:
 ## 🛠 File Reference Overview
 | File | Description |
 | :--- | :--- |
-| [`scripts/backup.js`](file:///D:/X-29%20Project/X-29-2/X-29-code/scripts/backup.js) | Core Firestore backup script with automatic post-backup verification. |
-| [`scripts/verify-backup.js`](file:///D:/X-29%20Project/X-29-2/X-29-code/scripts/verify-backup.js) | Read-only deep verification system & verification logging engine. |
-| [`scripts/restore.js`](file:///D:/X-29%20Project/X-29-2/X-29-code/scripts/restore.js) | Core safe/full Firestore restore script. |
-| [`scripts/setup-task.ps1`](file:///D:/X-29%20Project/X-29-2/X-29-code/scripts/setup-task.ps1) | PowerShell script configuring Windows Task Scheduler for X-29. |
-| [`backup.bat`](file:///D:/X-29%20Project/X-29-2/X-29-code/backup.bat) | 1-click Windows batch launcher for interactive manual backups. |
-| [`backup-auto.bat`](file:///D:/X-29%20Project/X-29-2/X-29-code/backup-auto.bat) | Headless Windows batch launcher for Task Scheduler with exit codes. |
-| [`verify.bat`](file:///D:/X-29%20Project/X-29-2/X-29-code/verify.bat) | 1-click Windows batch launcher for backup verification. |
-| [`restore.bat`](file:///D:/X-29%20Project/X-29-2/X-29-code/restore.bat) | 1-click Windows batch launcher for restoration. |
-| [`.gitignore`](file:///D:/X-29%20Project/X-29-2/X-29-code/.gitignore) | Excludes service account credentials and backups from Git. |
+| [`scripts/backup.js`](file:///D:/X-29%20Project/X-29/X-29-code/scripts/backup.js) | Core Firestore backup script with automatic post-backup verification. |
+| [`scripts/verify-backup.js`](file:///D:/X-29%20Project/X-29/X-29-code/scripts/verify-backup.js) | Read-only deep verification system & verification logging engine. |
+| [`scripts/restore.js`](file:///D:/X-29%20Project/X-29/X-29-code/scripts/restore.js) | Core safe/full Firestore restore script. |
+| [`scripts/setup-task.ps1`](file:///D:/X-29%20Project/X-29/X-29-code/scripts/setup-task.ps1) | PowerShell script configuring Windows Task Scheduler for X-29. |
+| [`backup.bat`](file:///D:/X-29%20Project/X-29/X-29-code/backup.bat) | 1-click Windows batch launcher for interactive manual backups. |
+| [`backup-auto.bat`](file:///D:/X-29%20Project/X-29/X-29-code/backup-auto.bat) | Headless Windows batch launcher for Task Scheduler with exit codes. |
+| [`verify.bat`](file:///D:/X-29%20Project/X-29/X-29-code/verify.bat) | 1-click Windows batch launcher for backup verification. |
+| [`restore.bat`](file:///D:/X-29%20Project/X-29/X-29-code/restore.bat) | 1-click Windows batch launcher for restoration. |
+| [`.gitignore`](file:///D:/X-29%20Project/X-29/X-29-code/.gitignore) | Excludes service account credentials and backups from Git. |

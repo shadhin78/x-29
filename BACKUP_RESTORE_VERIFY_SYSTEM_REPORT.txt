@@ -635,7 +635,7 @@ In `scripts/backup.js`, `scripts/verify-backup.js`, and `scripts/restore.js`, up
    Set to your new Firebase project ID (e.g., `'my-awesome-site-prod'`).
 
 2. `BACKUP_BASE_DIR`:
-   By default in X-29, backups are saved in a dedicated sibling folder `X-29-backup` (`D:\X-29 Project\X-29-2\X-29-backup`), keeping `X-29-code` strictly for application code.
+   By default in X-29, backups are saved in a dedicated sibling folder `X-29-backup` (`D:\X-29 Project\X-29\X-29-backup`), keeping `X-29-code` strictly for application code.
    ```javascript
    const BACKUP_BASE_DIR = path.resolve(__dirname, '..', '..', 'MySite-Backups');
    // Or an absolute path / dedicated backup storage mount:
@@ -835,5 +835,5 @@ For the complete implementation details, code blueprints, and checklists, refer 
 BACKUP_RESTORE_VERIFY_SYSTEM_REPORT.txt
 
 
-D:\X-29 Project\X-29-2\X-29-backup  --- this is for backup files where backups will be  saved 
-D:\X-29 Project\X-29-2\X-29-code    --- this is  for code only 
+D:\X-29 Project\X-29\X-29-backup  --- this is for backup files where backups will be  saved 
+D:\X-29 Project\X-29\X-29-code    --- this is  for code only 
