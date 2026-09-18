@@ -801,14 +801,29 @@
     };
 
     window.setTimerMode = function (mode) {
+        if (!AppState.activeTimerState) return;
         if (AppState.activeTimerState.mode === mode) return;
 
         // Save the current active mode state (do NOT pause it automatically)
-        saveActiveStateToStore();
+        if (window.TimerService && typeof window.TimerService.saveActiveStateToStore === 'function') {
+            window.TimerService.saveActiveStateToStore();
+        } else if (typeof window.saveActiveStateToStore === 'function') {
+            window.saveActiveStateToStore();
+        }
 
-        loadActiveStateFromStore(mode);
-        FirebaseService.saveTimerToCloud();
-        window.TimerService.restore();
+        if (window.TimerService && typeof window.TimerService.loadActiveStateFromStore === 'function') {
+            window.TimerService.loadActiveStateFromStore(mode);
+        } else if (typeof window.loadActiveStateFromStore === 'function') {
+            window.loadActiveStateFromStore(mode);
+        }
+
+        if (window.FirebaseService && typeof window.FirebaseService.saveTimerToCloud === 'function') {
+            window.FirebaseService.saveTimerToCloud();
+        }
+
+        if (window.TimerService && typeof window.TimerService.restore === 'function') {
+            window.TimerService.restore();
+        }
     };
 
     window.setTimerPreset = function (minutes) {
@@ -821,9 +836,17 @@
             AppState.activeTimerState.targetDuration = 0;
             AppState.activeTimerState.elapsedBeforeStart = 0;
             AppState.activeTimerState.startTime = null;
-            saveActiveStateToStore();
-            if (window.FirebaseService) window.FirebaseService.saveTimerToCloud();
-            window.TimerService.restore();
+            if (window.TimerService && typeof window.TimerService.saveActiveStateToStore === 'function') {
+                window.TimerService.saveActiveStateToStore();
+            } else if (typeof window.saveActiveStateToStore === 'function') {
+                window.saveActiveStateToStore();
+            }
+            if (window.FirebaseService && typeof window.FirebaseService.saveTimerToCloud === 'function') {
+                window.FirebaseService.saveTimerToCloud();
+            }
+            if (window.TimerService && typeof window.TimerService.restore === 'function') {
+                window.TimerService.restore();
+            }
             showToast("Stopwatch set to Free (open-ended forward count).", "success");
             return;
         }
@@ -833,9 +856,17 @@
         AppState.activeTimerState.targetDuration = minVal * 60;
         AppState.activeTimerState.elapsedBeforeStart = 0;
         AppState.activeTimerState.startTime = null;
-        saveActiveStateToStore();
-        if (window.FirebaseService) window.FirebaseService.saveTimerToCloud();
-        window.TimerService.restore();
+        if (window.TimerService && typeof window.TimerService.saveActiveStateToStore === 'function') {
+            window.TimerService.saveActiveStateToStore();
+        } else if (typeof window.saveActiveStateToStore === 'function') {
+            window.saveActiveStateToStore();
+        }
+        if (window.FirebaseService && typeof window.FirebaseService.saveTimerToCloud === 'function') {
+            window.FirebaseService.saveTimerToCloud();
+        }
+        if (window.TimerService && typeof window.TimerService.restore === 'function') {
+            window.TimerService.restore();
+        }
         if (currentMode === 'stopwatch') {
             showToast(`Stopwatch target set to ${minVal} minutes (counts forward 0 to ${minVal}m).`, "success");
         } else {
@@ -882,9 +913,17 @@
         AppState.activeTimerState.targetDuration = minutes * 60;
         AppState.activeTimerState.elapsedBeforeStart = 0;
         AppState.activeTimerState.startTime = null;
-        saveActiveStateToStore();
-        if (window.FirebaseService) window.FirebaseService.saveTimerToCloud();
-        window.TimerService.restore();
+        if (window.TimerService && typeof window.TimerService.saveActiveStateToStore === 'function') {
+            window.TimerService.saveActiveStateToStore();
+        } else if (typeof window.saveActiveStateToStore === 'function') {
+            window.saveActiveStateToStore();
+        }
+        if (window.FirebaseService && typeof window.FirebaseService.saveTimerToCloud === 'function') {
+            window.FirebaseService.saveTimerToCloud();
+        }
+        if (window.TimerService && typeof window.TimerService.restore === 'function') {
+            window.TimerService.restore();
+        }
         closeModal('custom-timer-modal');
         if (currentMode === 'stopwatch') {
             showToast(`Stopwatch target set to ${minutes} minutes (counts forward 0 to ${minutes}m).`, "success");
@@ -1542,7 +1581,9 @@
             if (typeof window.setSessionHistoryFilterUI === "function") {
                 window.setSessionHistoryFilterUI(window.sessionHistoryFilter || "all");
             }
-            if (window.TimerService && typeof window.TimerService.updateDisplay === "function") {
+            if (window.TimerService && typeof window.TimerService.restore === "function") {
+                window.TimerService.restore();
+            } else if (window.TimerService && typeof window.TimerService.updateDisplay === "function") {
                 window.TimerService.updateDisplay();
             }
         },
