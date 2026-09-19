@@ -20,6 +20,7 @@
             'add-sub-track',
             'add-prog-track',
             'manage-track',
+            'topic-track',
             'esm-track',
             'add-act-track',
             'edam-action-track',

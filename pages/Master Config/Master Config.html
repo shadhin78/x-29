@@ -40,6 +40,9 @@
         <button id="sys-tab-manage"
             class="px-5 py-2.5 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 active:scale-95">Manage
             Data</button>
+        <button id="sys-tab-topic"
+            class="px-5 py-2.5 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 active:scale-95">Topic
+            Name</button>
         <button id="sys-tab-priority"
             class="px-5 py-2.5 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 active:scale-95">Set
             Priority</button>
@@ -279,6 +282,43 @@
 
     </div>
 
+
+    <div id="sys-content-topic" class="hidden transition-all">
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 font-bold">Bulk set or update topic names for all chapters of a subject. Select a subject below, then fill in the topic names.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end mb-4">
+            <div class="flex flex-col gap-1.5">
+                <label
+                    class="text-[10px] font-black uppercase tracking-widest text-slate-400">Track</label>
+                <select id="topic-track"
+                    class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 font-bold w-full">
+                </select>
+            </div>
+            <div class="flex flex-col gap-1.5">
+                <label
+                    class="text-[10px] font-black uppercase tracking-widest text-slate-400">Program</label>
+                <select id="topic-program"
+                    class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 font-bold w-full"></select>
+            </div>
+            <div class="flex flex-col gap-1.5">
+                <label
+                    class="text-[10px] font-black uppercase tracking-widest text-slate-400">Subject</label>
+                <select id="topic-subject"
+                    class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 font-bold w-full"></select>
+            </div>
+        </div>
+        <div id="topic-chapter-list">
+            <p class="text-xs text-slate-400 dark:text-slate-500 font-bold py-6 text-center">Select a subject to view its chapters.</p>
+        </div>
+        <div class="mt-4 flex justify-end">
+            <button id="btn-save-all-topics"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] md:text-[11px] uppercase tracking-widest py-3 px-6 rounded-xl transition-all active:scale-95 shadow-md flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Save All Topics
+            </button>
+        </div>
+    </div>
 
     <div id="sys-content-priority" class="hidden transition-all"></div>
     <div id="sys-content-track" class="hidden transition-all"></div>

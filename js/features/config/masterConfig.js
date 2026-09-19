@@ -22,7 +22,7 @@
             window.MasterConfigPage.activeTab = tab;
         }
 
-        const tabKeys = ['chapter', 'subject', 'program', 'manage', 'priority', 'track'];
+        const tabKeys = ['chapter', 'subject', 'program', 'manage', 'topic', 'priority', 'track'];
         tabKeys.forEach(t => {
             const btn = document.getElementById(`sys-tab-${t}`);
             const content = document.getElementById(`sys-content-${t}`);
@@ -42,6 +42,7 @@
         if (tab === 'chapter' && typeof window.updateChProgDropdown === 'function') window.updateChProgDropdown();
         if (tab === 'subject' && typeof window.updateSubProgDropdown === 'function') window.updateSubProgDropdown();
         if (tab === 'manage' && typeof window.updateManageDropdown === 'function') window.updateManageDropdown();
+        if (tab === 'topic' && typeof window.updateTopicTrackDropdown === 'function') window.updateTopicTrackDropdown();
         if (tab === 'priority' && typeof window.renderPriorityConfig === 'function') window.renderPriorityConfig();
         if (tab === 'track' && typeof window.renderTrackList === 'function') window.renderTrackList();
     }

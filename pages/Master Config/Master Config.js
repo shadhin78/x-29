@@ -102,6 +102,10 @@
                 if (typeof window.resetToCleanSlate === 'function') window.resetToCleanSlate();
                 return;
             }
+            if (e.target.closest('#btn-save-all-topics')) {
+                if (typeof window.saveAllTopicNames === 'function') window.saveAllTopicNames();
+                return;
+            }
         });
 
         document.addEventListener('change', (e) => {
@@ -128,6 +132,18 @@
             }
             if (e.target.closest('#manage-program')) {
                 if (typeof window.updateManageSubjects === 'function') window.updateManageSubjects();
+                return;
+            }
+            if (e.target.closest('#topic-track')) {
+                if (typeof window.updateTopicProgDropdown === 'function') window.updateTopicProgDropdown();
+                return;
+            }
+            if (e.target.closest('#topic-program')) {
+                if (typeof window.updateTopicSubjDropdown === 'function') window.updateTopicSubjDropdown();
+                return;
+            }
+            if (e.target.closest('#topic-subject')) {
+                if (typeof window.renderTopicChapterList === 'function') window.renderTopicChapterList();
                 return;
             }
         });
