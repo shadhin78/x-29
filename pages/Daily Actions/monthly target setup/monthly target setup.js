@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Monthly Target Page Module (pages/Daily Actions/monthly target setup/monthly target setup.js)
  * Single Source of Truth for Add & Edit Monthly Target Studio page logic and lifecycle.
  */
@@ -135,7 +135,7 @@ window.populateMonthlyProgramsList = function (preselectedProgram = null) {
                         ${isSelected ? 'checked' : ''}>
                     <div class="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-wrap">
                         <span class="text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider ${trackBadgeColor} shrink-0">${prog.trackName}</span>
-                        <span class="text-xs font-black text-slate-800 dark:text-slate-100 truncate">${isProgPassed ? `ðŸ† ${prog.progName} (Passed)` : prog.progName}</span>
+                        <span class="text-xs font-black text-slate-800 dark:text-slate-100 truncate">${isProgPassed ? `🏆 ${prog.progName} (Passed)` : prog.progName}</span>
                     </div>
                 </label>
                 <div class="flex items-center gap-1.5 shrink-0 ml-1.5">
@@ -256,7 +256,7 @@ window.updateMonthlyTargetSubjectDropdown = function (preselectSubject = null, p
                 (Array.isArray(passedItems.subjects) && passedItems.subjects.includes(s.subject)) ||
                 (Array.isArray(passedItems.programs) && passedItems.programs.includes(s.program || progName))
             );
-            const label = isPassed ? `ðŸ† ${s.subject} (Passed)` : s.subject;
+            const label = isPassed ? `🏆 ${s.subject} (Passed)` : s.subject;
             const color = window.getSubjectColor ? window.getSubjectColor(s.subject) : '#6366f1';
             const chs = window.getChaptersForSubject(trackId, s.subject) || [];
             
@@ -449,7 +449,7 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
         const color = window.getSubjectColor ? window.getSubjectColor(subject) : '#6366f1';
         const chapters = window.getChaptersForSubject(trackId, subject) || [];
         const isTargetSub = !targetSubject || targetSubject === subject;
-        const isWholeSubPreselected = isTargetSub && (preselectChapter === 'Whole Subject' || preselectChapter === '-- ðŸ“š Whole Subject (All Chapters) --');
+        const isWholeSubPreselected = isTargetSub && (preselectChapter === 'Whole Subject' || preselectChapter === '-- 📚 Whole Subject (All Chapters) --');
 
         const wsKeyFull = `${trackId}|||${progName}|||${subject}|||Whole Subject`;
         const wsKeySubCh = `${subject}|||Whole Subject`;
@@ -477,7 +477,7 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
         if (chapters.length > 0) {
             chapters.forEach(ch => {
                 const count = window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(trackId, subject, ch, 'chapter') : 0;
-                const starsHtml = count > 0 ? `<span class="inline-flex text-amber-500 dark:text-amber-400 text-xs ml-1 font-bold select-none" title="Targeted ${count} time(s) before. Setting now will be Target #${count + 1}">${'â˜…'.repeat(count)}</span>` : '';
+                const starsHtml = count > 0 ? `<span class="inline-flex text-amber-500 dark:text-amber-400 text-xs ml-1 font-bold select-none" title="Targeted ${count} time(s) before. Setting now will be Target #${count + 1}">${'★'.repeat(count)}</span>` : '';
 
                 const isCompleted = window.isChapterCompleted ? window.isChapterCompleted(trackId, subject, ch) : false;
                 const completedTickHtml = isCompleted ? `
@@ -553,7 +553,7 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
         }
 
         const wholeSubCount = window.getMonthlyTargetOccurrenceCount ? window.getMonthlyTargetOccurrenceCount(trackId, subject, 'Whole Subject', 'subject') : 0;
-        const wholeSubStarsHtml = wholeSubCount > 0 ? `<span class="inline-flex text-amber-500 dark:text-amber-400 text-xs ml-1 font-bold select-none" title="Targeted ${wholeSubCount} time(s) before. Setting now will be Target #${wholeSubCount + 1}">${'â˜…'.repeat(wholeSubCount)}</span>` : '';
+        const wholeSubStarsHtml = wholeSubCount > 0 ? `<span class="inline-flex text-amber-500 dark:text-amber-400 text-xs ml-1 font-bold select-none" title="Targeted ${wholeSubCount} time(s) before. Setting now will be Target #${wholeSubCount + 1}">${'★'.repeat(wholeSubCount)}</span>` : '';
 
         const groupHtml = `
             <div class="mt-subject-chapter-group rounded-2xl border border-slate-200/90 dark:border-slate-700/80 bg-white dark:bg-slate-800/95 p-3 sm:p-4 shadow-sm space-y-3" data-track="${trackId}" data-program="${progName}" data-subject="${subject}">
@@ -585,7 +585,7 @@ window.updateMonthlyTargetChapterDropdown = function (preselectChapter = null, p
                             onchange="window.handleMonthlyWholeSubjectToggle('${CSS.escape(subject)}', this.checked, '${CSS.escape(trackId)}', '${CSS.escape(progName)}')"
                             ${isWholeSubChecked ? 'checked' : ''}>
                         <div class="min-w-0 flex-1">
-                            <span class="text-xs font-black text-purple-900 dark:text-purple-200 truncate block">ðŸ“š Whole Subject (All Chapters)${wholeSubStarsHtml}</span>
+                            <span class="text-xs font-black text-purple-900 dark:text-purple-200 truncate block">📚 Whole Subject (All Chapters)${wholeSubStarsHtml}</span>
                             <span class="text-[8.5px] text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider block">Target entirety of ${subject} (${progName})</span>
                         </div>
                     </label>
@@ -939,7 +939,7 @@ window.distributeChaptersAcrossWeeks = function () {
 
     window.renderMonthlyTargetDailyAllocations();
     window.updateMonthlyTargetPageSummary();
-    showToast(`âš¡ ${selectedTargets.length} target(s) distributed across ${weeks.length} weeks!`, "success");
+    showToast(`⚡ ${selectedTargets.length} target(s) distributed across ${weeks.length} weeks!`, "success");
 };
 
 /* --- Daily Target Allocator & Multi-Day Fraction Management --- */
@@ -1071,7 +1071,7 @@ window.renderMonthlyTargetDailyAllocations = function () {
             program: prog,
             subject: sub,
             chapter: 'Whole Subject',
-            displayTitle: `ðŸ“š ${sub} (${prog || 'Whole Subject'})`,
+            displayTitle: `📚 ${sub} (${prog || 'Whole Subject'})`,
             isSubjectTarget: true,
             totalSize: totalSize
         });
@@ -1146,18 +1146,18 @@ window.renderMonthlyTargetDailyAllocations = function () {
         // Week badge: Multi-week or specific week
         let weekBadgeHtml = '';
         if (weeksSpanned.size > 1) {
-            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1" title="Spanning multiple weeks: ${Array.from(weeksSpanned).join(', ')}">ðŸ“… Multi-Week (${weeksSpanned.size}W)</span>`;
+            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1" title="Spanning multiple weeks: ${Array.from(weeksSpanned).join(', ')}">📅 Multi-Week (${weeksSpanned.size}W)</span>`;
         } else if (weeksSpanned.size === 1) {
             const singleWk = Array.from(weeksSpanned)[0];
             const weekRangeDates = singleWk.split(' - ');
             const weekShort = weekRangeDates.length === 2 ? `${weekRangeDates[0]} - ${weekRangeDates[1]}` : singleWk;
-            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1" title="Bound to week ${singleWk}">ðŸ“… ${weekShort}</span>`;
+            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1" title="Bound to week ${singleWk}">📅 ${weekShort}</span>`;
         } else if (targetWeekKey) {
             const weekRangeDates = targetWeekKey.split(' - ');
             const weekShort = weekRangeDates.length === 2 ? `${weekRangeDates[0]} - ${weekRangeDates[1]}` : targetWeekKey;
-            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1" title="Bound to week ${targetWeekKey}">ðŸ“… ${weekShort}</span>`;
+            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1" title="Bound to week ${targetWeekKey}">📅 ${weekShort}</span>`;
         } else {
-            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50 flex items-center gap-1" title="No week bound (Monthly only target)">ðŸ“… No Week (Month)</span>`;
+            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50 flex items-center gap-1" title="No week bound (Monthly only target)">📅 No Week (Month)</span>`;
         }
 
         // Allocation status badge
@@ -1166,13 +1166,13 @@ window.renderMonthlyTargetDailyAllocations = function () {
             if (allocations.length === 0) {
                 allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300">Size: ${target.totalSize}</span>`;
             } else if (sumAllocated === target.totalSize) {
-                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">âœ“ ${sumAllocated}/${target.totalSize} (100%)</span>`;
+                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">✓ ${sumAllocated}/${target.totalSize} (100%)</span>`;
             } else if (sumAllocated < target.totalSize) {
                 const left = target.totalSize - sumAllocated;
-                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">â³ ${sumAllocated}/${target.totalSize} (${left} left)</span>`;
+                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">⏳ ${sumAllocated}/${target.totalSize} (${left} left)</span>`;
             } else {
                 const over = sumAllocated - target.totalSize;
-                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 flex items-center gap-0.5" title="100% completed + Extra/Repeat target">â­ ${sumAllocated}/${target.totalSize} (+${over} Extra)</span>`;
+                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 flex items-center gap-0.5" title="100% completed + Extra/Repeat target">⭐ ${sumAllocated}/${target.totalSize} (+${over} Extra)</span>`;
             }
         } else {
             allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">${allocations.length} Day(s)</span>`;
@@ -1183,7 +1183,7 @@ window.renderMonthlyTargetDailyAllocations = function () {
         if (allocations.length === 0) {
             rowsHtml = `
                 <div class="py-2.5 text-center text-[10px] text-slate-400 italic bg-slate-50/70 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
-                    No days assigned yet. Click "âš¡ Split" or "+ Add Day" below.
+                    No days assigned yet. Click "⚡ Split" or "+ Add Day" below.
                 </div>
             `;
         } else {
@@ -1205,7 +1205,7 @@ window.renderMonthlyTargetDailyAllocations = function () {
                     const weekRangeDates = targetWeekKey.split(' - ');
                     const weekShort = weekRangeDates.length === 2 ? `${weekRangeDates[0]} - ${weekRangeDates[1]}` : targetWeekKey;
 
-                    dayOptions += `<optgroup label="ðŸ“… Bound Week (${weekShort})">`;
+                    dayOptions += `<optgroup label="📅 Bound Week (${weekShort})">`;
                     weekDays.forEach(d => {
                         const isSel = alloc.dayKey === d.key;
                         dayOptions += `<option value="${d.key}" ${isSel ? 'selected' : ''}>${d.label}</option>`;
@@ -1213,7 +1213,7 @@ window.renderMonthlyTargetDailyAllocations = function () {
                     dayOptions += `</optgroup>`;
 
                     if (otherDays.length > 0) {
-                        dayOptions += `<optgroup label="ðŸ“… Other Month Days (Multi-Week)">`;
+                        dayOptions += `<optgroup label="📅 Other Month Days (Multi-Week)">`;
                         otherDays.forEach(d => {
                             const isSel = alloc.dayKey === d.key;
                             dayOptions += `<option value="${d.key}" ${isSel ? 'selected' : ''}>${d.label}</option>`;
@@ -1232,7 +1232,7 @@ window.renderMonthlyTargetDailyAllocations = function () {
                     : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-700/60 shadow-xs';
 
                 const dayBadge = isStar
-                    ? `<span class="text-[9.5px] sm:text-[10px] font-black text-amber-500 shrink-0 w-6 sm:w-7 text-center" title="Extra/Repeat Target (Already done 100%)">â­D${rowIdx + 1}</span>`
+                    ? `<span class="text-[9.5px] sm:text-[10px] font-black text-amber-500 shrink-0 w-6 sm:w-7 text-center" title="Extra/Repeat Target (Already done 100%)">⭐D${rowIdx + 1}</span>`
                     : `<span class="text-[9.5px] sm:text-[10px] font-black text-slate-400 dark:text-slate-500 shrink-0 w-6 sm:w-7 text-center">D${rowIdx + 1}</span>`;
 
                 rowsHtml += `
@@ -1304,23 +1304,23 @@ window.renderMonthlyTargetDailyAllocations = function () {
                     <div class="grid grid-cols-5 sm:flex items-center gap-1 w-full sm:w-auto flex-1 sm:flex-none">
                         <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 2, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
                             class="px-1.5 sm:px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center justify-center text-center">
-                            âš¡ 2<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
+                            ⚡ 2<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
                         </button>
                         <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 3, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
                             class="px-1.5 sm:px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center justify-center text-center">
-                            âš¡ 3<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
+                            ⚡ 3<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
                         </button>
                         <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 4, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
                             class="px-1.5 sm:px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center justify-center text-center">
-                            âš¡ 4<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
+                            ⚡ 4<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
                         </button>
                         <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 5, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
                             class="px-1.5 sm:px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center justify-center text-center">
-                            âš¡ 5<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
+                            ⚡ 5<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
                         </button>
                         <button type="button" onclick="window.splitChapterAcrossDays('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', 7, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
                             class="px-1.5 sm:px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50 text-[9px] font-black transition-all active:scale-95 min-h-[30px] flex items-center justify-center text-center">
-                            âš¡ 7<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
+                            ⚡ 7<span class="hidden sm:inline"> Days</span><span class="sm:hidden">D</span>
                         </button>
                     </div>
                     <button type="button" onclick="window.addDailyAllocationRow('${CSS.escape(target.subject)}', '${CSS.escape(target.chapter)}', '', null, '${CSS.escape(target.track || '')}', '${CSS.escape(target.program || '')}')"
@@ -1390,18 +1390,18 @@ window.updateDailyAllocationBadgesInPlace = function (subject, chapter) {
 
         let weekBadgeHtml = '';
         if (weeksSpanned.size > 1) {
-            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1" title="Spanning multiple weeks: ${Array.from(weeksSpanned).join(', ')}">ðŸ“… Multi-Week (${weeksSpanned.size}W)</span>`;
+            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1" title="Spanning multiple weeks: ${Array.from(weeksSpanned).join(', ')}">📅 Multi-Week (${weeksSpanned.size}W)</span>`;
         } else if (weeksSpanned.size === 1) {
             const singleWk = Array.from(weeksSpanned)[0];
             const weekRangeDates = singleWk.split(' - ');
             const weekShort = weekRangeDates.length === 2 ? `${weekRangeDates[0]} - ${weekRangeDates[1]}` : singleWk;
-            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1" title="Bound to week ${singleWk}">ðŸ“… ${weekShort}</span>`;
+            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1" title="Bound to week ${singleWk}">📅 ${weekShort}</span>`;
         } else if (targetWeekKey) {
             const weekRangeDates = targetWeekKey.split(' - ');
             const weekShort = weekRangeDates.length === 2 ? `${weekRangeDates[0]} - ${weekRangeDates[1]}` : targetWeekKey;
-            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1" title="Bound to week ${targetWeekKey}">ðŸ“… ${weekShort}</span>`;
+            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1" title="Bound to week ${targetWeekKey}">📅 ${weekShort}</span>`;
         } else {
-            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50 flex items-center gap-1" title="No week bound (Monthly only target)">ðŸ“… No Week (Month)</span>`;
+            weekBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50 flex items-center gap-1" title="No week bound (Monthly only target)">📅 No Week (Month)</span>`;
         }
 
         let allocationBadgeHtml = '';
@@ -1409,13 +1409,13 @@ window.updateDailyAllocationBadgesInPlace = function (subject, chapter) {
             if (allocations.length === 0) {
                 allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300">Size: ${totalSize}</span>`;
             } else if (sumAllocated === totalSize) {
-                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">âœ“ ${sumAllocated}/${totalSize} (100%)</span>`;
+                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">✓ ${sumAllocated}/${totalSize} (100%)</span>`;
             } else if (sumAllocated < totalSize) {
                 const left = totalSize - sumAllocated;
-                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">â³ ${sumAllocated}/${totalSize} (${left} left)</span>`;
+                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">⏳ ${sumAllocated}/${totalSize} (${left} left)</span>`;
             } else {
                 const over = sumAllocated - totalSize;
-                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 flex items-center gap-0.5" title="100% completed + Extra/Repeat target">â­ ${sumAllocated}/${totalSize} (+${over} Extra)</span>`;
+                allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 flex items-center gap-0.5" title="100% completed + Extra/Repeat target">⭐ ${sumAllocated}/${totalSize} (+${over} Extra)</span>`;
             }
         } else {
             allocationBadgeHtml = `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">${allocations.length} Day(s)</span>`;
@@ -1664,7 +1664,7 @@ window.splitChapterAcrossDays = function (subject, chapter, numDays, track = nul
         window.monthlyTargetDailyAllocations[key] = newAllocations;
         window.renderMonthlyTargetDailyAllocations();
         window.updateMonthlyTargetPageSummary();
-        showToast(`âš¡ Split across ${effectiveDays} days in bound week successfully!`, "success");
+        showToast(`⚡ Split across ${effectiveDays} days in bound week successfully!`, "success");
         return;
     }
 
@@ -1734,7 +1734,7 @@ window.splitChapterAcrossDays = function (subject, chapter, numDays, track = nul
     window.monthlyTargetDailyAllocations[key] = newAllocations;
     window.renderMonthlyTargetDailyAllocations();
     window.updateMonthlyTargetPageSummary();
-    showToast(`âš¡ Split across ${effectiveDays} days successfully!`, "success");
+    showToast(`⚡ Split across ${effectiveDays} days successfully!`, "success");
 };
 
 window.splitAllChaptersAcrossDays = function (numDays) {
@@ -1843,7 +1843,7 @@ window.splitAllChaptersAcrossDays = function (numDays) {
 
     window.renderMonthlyTargetDailyAllocations();
     window.updateMonthlyTargetPageSummary();
-    showToast(`âš¡ Distributed ${checkedTargets.length} target(s) across ${totalAllocationsCount} total days!`, "success");
+    showToast(`⚡ Distributed ${checkedTargets.length} target(s) across ${totalAllocationsCount} total days!`, "success");
 };
 
 window.updateDailyAllocationDay = function (subject, chapter, rowIdx, dayKey, track = null, program = null) {
@@ -1996,7 +1996,7 @@ window.autoSpreadAllChaptersAcrossDays = function (mode = 'month') {
 
     window.renderMonthlyTargetDailyAllocations();
     window.updateMonthlyTargetPageSummary();
-    showToast(`âš¡ Auto-spread ${totalAllocationsSpread} allocation(s) across days!`, "success");
+    showToast(`⚡ Auto-spread ${totalAllocationsSpread} allocation(s) across days!`, "success");
 };
 
 window.spreadAllChaptersFromStartDate = function () {
@@ -2083,7 +2083,7 @@ window.spreadAllChaptersFromStartDate = function () {
 
     const startDayObj = allDays[startIdx];
     const startLabel = startDayObj ? startDayObj.label : selectedDay;
-    showToast(`âš¡ Spread ${totalAllocationsSpread} allocation(s) across days starting from ${startLabel}!`, "success");
+    showToast(`⚡ Spread ${totalAllocationsSpread} allocation(s) across days starting from ${startLabel}!`, "success");
 };
 
 // Backward compatibility alias
@@ -2198,7 +2198,7 @@ window.updateMonthlyTargetPageSummary = function () {
 
     if (summaryTargetCount) {
         const weekInfo = weekBreakdown.length > 0 ? ` (${weekBreakdown.join(', ')})` : '';
-        const dayInfo = scheduledTargetsCount > 0 ? ` â€¢ ${scheduledTargetsCount} Day Target(s)` : '';
+        const dayInfo = scheduledTargetsCount > 0 ? ` • ${scheduledTargetsCount} Day Target(s)` : '';
         summaryTargetCount.textContent = checkedCount === 1 ? `1 Target Selected${weekInfo}${dayInfo}` : `${checkedCount} Targets Selected${weekInfo}${dayInfo}`;
     }
     if (summaryTotalSize) {
@@ -2209,9 +2209,9 @@ window.updateMonthlyTargetPageSummary = function () {
             bottomSummary.textContent = 'Select at least 1 chapter or whole subject across your chosen subjects to create targets.';
         } else {
             const subLabel = checkedSubjects.length === 1 ? '1 subject' : `${checkedSubjects.length} subjects`;
-            const weekStr = weekBreakdown.length > 0 ? ` â€¢ Weekly: ${weekBreakdown.join(', ')}` : '';
-            const dayStr = scheduledDaysCount > 0 ? ` â€¢ ${scheduledTargetsCount} Daily Target(s) across ${scheduledDaysCount} day(s)` : '';
-            bottomSummary.innerHTML = `<strong>${checkedCount} target(s) selected</strong> across ${subLabel} â€¢ ${totalSizeSum > 0 ? totalSizeSum + ' total pages/units' : 'Custom scope'}${weekStr}${dayStr}`;
+            const weekStr = weekBreakdown.length > 0 ? ` • Weekly: ${weekBreakdown.join(', ')}` : '';
+            const dayStr = scheduledDaysCount > 0 ? ` • ${scheduledTargetsCount} Daily Target(s) across ${scheduledDaysCount} day(s)` : '';
+            bottomSummary.innerHTML = `<strong>${checkedCount} target(s) selected</strong> across ${subLabel} • ${totalSizeSum > 0 ? totalSizeSum + ' total pages/units' : 'Custom scope'}${weekStr}${dayStr}`;
         }
     }
 };
@@ -2653,7 +2653,7 @@ window.addMonthlyTarget = function () {
                     runningSum += (parseInt(portionSize, 10) || 0);
 
                     const isStar = Boolean(item.totalChapterSize && item.totalChapterSize > 0 && prevSum >= item.totalChapterSize);
-                    const portionLabel = alloc.portionLabel || (isStar ? 'â­ Extra Setup' : (alloc.fraction ? `Fraction ${alloc.fraction}` : ''));
+                    const portionLabel = alloc.portionLabel || (isStar ? '⭐ Extra Setup' : (alloc.fraction ? `Fraction ${alloc.fraction}` : ''));
 
                     const dtList = window.dailyTargetsDatabase[alloc.dayKey];
                     const dtExists = isSubjectTarget
@@ -3366,7 +3366,7 @@ window.saveMonthlyTarget = function (idx, originalMonthKey = null) {
                 runningSum += (parseInt(portionSize, 10) || 0);
 
                 const isStar = Boolean(selectedSize && selectedSize > 0 && prevSum >= selectedSize);
-                const portionLabel = alloc.portionLabel || (isStar ? 'â­ Extra Setup' : (alloc.fraction ? `Fraction ${alloc.fraction}` : ''));
+                const portionLabel = alloc.portionLabel || (isStar ? '⭐ Extra Setup' : (alloc.fraction ? `Fraction ${alloc.fraction}` : ''));
 
                 const dtList = window.dailyTargetsDatabase[alloc.dayKey];
                 const dtExists = isSubjectTarget

@@ -410,17 +410,32 @@
 
     function getChaptersForSubject(track, subject) {
         const chapters = [];
-        if (!AppState.tasks || !Array.isArray(AppState.tasks)) return chapters;
-        const key = track + 'Tasks';
-        AppState.tasks.forEach(t => {
-            if (t.type === 'study' && Array.isArray(t[key])) {
-                t[key].forEach(b => {
-                    if (b.subject === subject && b.chapter !== 'Rev' && !chapters.includes(b.chapter)) {
-                        chapters.push(b.chapter);
-                    }
-                });
+        if (AppState.tasks && Array.isArray(AppState.tasks)) {
+            const key = track + 'Tasks';
+            AppState.tasks.forEach(t => {
+                if (t.type === 'study' && Array.isArray(t[key])) {
+                    t[key].forEach(b => {
+                        if (b.subject === subject && b.chapter !== 'Rev' && !chapters.includes(b.chapter)) {
+                            chapters.push(b.chapter);
+                        }
+                    });
+                }
+            });
+        }
+
+        // Fallback: if no chapters found in tasks, generate from syllabusStructure chapter count
+        if (chapters.length === 0) {
+            const sObj = (window.syllabusStructure && window.syllabusStructure[track])
+                ? window.syllabusStructure[track].find(s => s.subject === subject)
+                : (typeof window.getAllSubjects === 'function' ? window.getAllSubjects().find(s => s.subject === subject) : null);
+
+            if (sObj && sObj.chapters > 0) {
+                for (let i = 1; i <= sObj.chapters; i++) {
+                    chapters.push(`Ch. ${i}`);
+                }
+                return chapters;
             }
-        });
+        }
 
         chapters.sort((a, b) => {
             const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
