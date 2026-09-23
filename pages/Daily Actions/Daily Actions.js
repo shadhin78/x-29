@@ -38,6 +38,12 @@
         mount: function () {
             this.isMounted = true;
 
+            // Fast revisit: Keep existing rendered cards & heatmaps intact
+            if (this._hasRendered) {
+                return;
+            }
+            this._hasRendered = true;
+
             // 1. Populate track dropdown on create form
             populateDailyActionTrackDropdown();
             if (typeof window.populateTrackDropdowns === 'function') {

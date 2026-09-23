@@ -19,6 +19,8 @@
 
         mount: function () {
             this.isMounted = true;
+            if (this._hasRendered) return;
+            this._hasRendered = true;
 
             if (typeof window.updateMetrics === 'function') {
                 window.updateMetrics();

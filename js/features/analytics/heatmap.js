@@ -113,10 +113,15 @@
         if (AppStateRef.timerLogs && Array.isArray(AppStateRef.timerLogs)) {
             AppStateRef.timerLogs.forEach(log => {
                 if (!log.date) return;
-                const d = new Date(log.date);
-                if (isNaN(d.getTime())) return;
-                const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                const dur = parseInt(log.duration || 0, 10);
+                let key = '';
+                if (typeof log.date === 'string' && log.date.length >= 10) {
+                    key = log.date.substring(0, 10);
+                } else {
+                    const d = new Date(log.date);
+                    if (isNaN(d.getTime())) return;
+                    key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                }
+                const dur = parseInt(log.duration || log.durationSeconds || 0, 10);
                 dailySecondsMap[key] = (dailySecondsMap[key] || 0) + dur;
             });
         }
@@ -149,8 +154,9 @@
             }
         }
 
-        // 2. Render main page heatmap if present
-        if (gridEl) {
+        // 2. Render main page heatmap if present and not on a hidden page
+        const shouldRenderSpectra = gridEl && (!gridEl.children || gridEl.children.length === 0 || !gridEl.closest('#page-spectra-analytics.hidden'));
+        if (shouldRenderSpectra) {
             const rangeDays = global.spectraHeatmapRange || 365;
             const endDate = new Date(today);
             const startDate = new Date(today);
@@ -337,8 +343,9 @@
             gridEl.innerHTML = monthLabelsHtml + gridRowsHtml;
         }
 
-        // 3. Render compact 2-month dashboard card heatmap if present
-        if (dashGridEl) {
+        // 3. Render compact 2-month dashboard card heatmap if present and not on a hidden page
+        const shouldRenderDashboard = dashGridEl && (!dashGridEl.children || dashGridEl.children.length === 0 || !dashGridEl.closest('#page-dashboard.hidden'));
+        if (shouldRenderDashboard) {
             const dashRangeDays = 60; // 2 months fixed
             const dashEndDate = new Date(today);
             const dashStartDate = new Date(today);

@@ -13,31 +13,59 @@
     'use strict';
 
     // Delegate lifecycle to AnalyticsPage module if available, or initialize local coordinator
-    const AnalyticsPage = window.AnalyticsPage || {
-        isMounted: false,
+    const AnalyticsPage = window.AnalyticsPage || {};
+    AnalyticsPage.isMounted = AnalyticsPage.isMounted || false;
+    AnalyticsPage._hasRendered = AnalyticsPage._hasRendered || false;
 
-        init: function () {
-            this.mount();
-        },
+    AnalyticsPage.init = function () {
+        this.mount();
+    };
 
-        mount: function () {
-            this.isMounted = true;
+    AnalyticsPage.mount = function (forceRefresh = false) {
+        this.isMounted = true;
+        const pageEl = document.getElementById('page-spectra-analytics');
+        if (!pageEl) return;
 
-            // Initialize filters
-            if (typeof window.populateSpectraFilterDropdown === 'function') {
-                window.populateSpectraFilterDropdown();
+        // Fast revisit: If already rendered and not forced, instantly resize charts on RAF without rebuilding!
+        if (this._hasRendered && !forceRefresh) {
+            this.resizeCharts();
+            return;
+        }
+        this._hasRendered = true;
+
+        this.render();
+    };
+
+    AnalyticsPage.render = function () {
+        if (typeof document === 'undefined') return;
+        const pageEl = document.getElementById('page-spectra-analytics');
+        if (!pageEl) return;
+
+        // 0. Initialize filters (instant, synchronous)
+        if (typeof window.populateSpectraFilterDropdown === 'function') {
+            window.populateSpectraFilterDropdown();
+        }
+
+        // 1. Chapters Breakdown circle chart (instant, synchronous)
+        if (typeof window.renderSpectraCircleChart === 'function') {
+            window.renderSpectraCircleChart();
+        }
+
+        // 2. Commitments Habit Radar chart (instant, synchronous)
+        if (typeof window.renderSpectraCommitmentsChart === 'function') {
+            window.renderSpectraCommitmentsChart();
+        }
+
+        // 3. Progressive render for heavy Chart.js & Heatmap to prevent blocking main thread
+        const scheduleRender = (fn) => {
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(fn);
+            } else {
+                fn();
             }
+        };
 
-            // 1. Chapters Breakdown circle chart
-            if (typeof window.renderSpectraCircleChart === 'function') {
-                window.renderSpectraCircleChart();
-            }
-
-            // 2. Commitments Habit Radar chart
-            if (typeof window.renderSpectraCommitmentsChart === 'function') {
-                window.renderSpectraCommitmentsChart();
-            }
-
+        scheduleRender(() => {
             // 3. Program Completion & Daily Actions Trend charts and Stat cards
             if (typeof window.renderTrendCharts === 'function') {
                 window.renderTrendCharts();
@@ -65,64 +93,69 @@
 
             // 7. Resize charts to match container dimensions
             this.resizeCharts();
-        },
+        });
+    };
 
-        resizeCharts: function () {
-            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-                window.requestAnimationFrame(() => {
-                    const charts = [
-                        window.mainChartPrograms,
-                        window.monthlyChartActions,
-                        window.spectraPaceTrendChartInstance,
-                        window.globalPaceTrendChartInstance,
-                        window.spectraFocusAnalyticsChartInstance
-                    ];
-                    charts.forEach(chart => {
-                        if (chart && typeof chart.resize === 'function') {
-                            chart.resize();
-                            if (typeof chart.update === 'function') {
-                                chart.update('none');
-                            }
-                        }
-                    });
-                });
-            }
-        },
-
-        destroy: function () {
-            this.isMounted = false;
-
-            // Close filter dropdown if open
-            const menu = document.getElementById('spectra-filter-dropdown-menu');
-            const btn = document.getElementById('spectra-filter-dropdown-btn');
-            if (menu && !menu.classList.contains('hidden')) {
-                menu.classList.add('hidden');
-                if (btn && btn.querySelector('svg')) {
-                    btn.querySelector('svg').style.transform = '';
-                }
-            }
-
-            // Hide tooltips
-            if (typeof window.hideSpectraChapterTooltip === 'function') window.hideSpectraChapterTooltip();
-            if (typeof window.hideCommitmentTooltip === 'function') window.hideCommitmentTooltip();
-
-            // Destroy Chart.js instances to prevent canvas reuse error
-            const chartKeys = [
-                'mainChartPrograms',
-                'monthlyChartActions',
-                'yearlyChartActions',
-                'spectraPaceTrendChartInstance',
-                'globalPaceTrendChartInstance'
+    AnalyticsPage.resizeCharts = function () {
+        const resizeFn = () => {
+            const charts = [
+                window.mainChartPrograms,
+                window.monthlyChartActions,
+                window.spectraPaceTrendChartInstance,
+                window.globalPaceTrendChartInstance,
+                window.spectraFocusAnalyticsChartInstance
             ];
-            chartKeys.forEach(k => {
-                if (window[k] && typeof window[k].destroy === 'function') {
-                    try {
-                        window[k].destroy();
-                    } catch (e) {}
-                    window[k] = null;
+            charts.forEach(chart => {
+                if (chart && typeof chart.resize === 'function') {
+                    chart.resize();
+                    if (typeof chart.update === 'function') {
+                        chart.update('none');
+                    }
                 }
             });
+        };
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(resizeFn);
+        } else {
+            setTimeout(resizeFn, 10);
         }
+    };
+
+    AnalyticsPage.destroy = function () {
+        this.isMounted = false;
+        this._hasRendered = false;
+
+        // Close filter dropdown if open
+        const menu = document.getElementById('spectra-filter-dropdown-menu');
+        const btn = document.getElementById('spectra-filter-dropdown-btn');
+        if (menu && !menu.classList.contains('hidden')) {
+            menu.classList.add('hidden');
+            if (btn && btn.querySelector('svg')) {
+                btn.querySelector('svg').style.transform = '';
+            }
+        }
+
+        // Hide tooltips
+        if (typeof window.hideSpectraChapterTooltip === 'function') window.hideSpectraChapterTooltip();
+        if (typeof window.hideCommitmentTooltip === 'function') window.hideCommitmentTooltip();
+
+        // Destroy Chart.js instances to prevent canvas reuse error
+        const chartKeys = [
+            'mainChartPrograms',
+            'monthlyChartActions',
+            'yearlyChartActions',
+            'spectraPaceTrendChartInstance',
+            'globalPaceTrendChartInstance',
+            'spectraFocusAnalyticsChartInstance'
+        ];
+        chartKeys.forEach(k => {
+            if (window[k] && typeof window[k].destroy === 'function') {
+                try {
+                    window[k].destroy();
+                } catch (e) {}
+                window[k] = null;
+            }
+        });
     };
 
     window.AnalyticsPage = AnalyticsPage;

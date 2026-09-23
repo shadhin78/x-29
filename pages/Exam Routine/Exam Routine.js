@@ -7,12 +7,25 @@
 (function () {
     'use strict';
 
-    if (window.ExamRoutinePage && typeof window.ExamRoutinePage.mount === 'function') {
+    window.ExamRoutinePage = window.ExamRoutinePage || {
+        isMounted: false,
+        mount: function () {
+            this.isMounted = true;
+            if (this._hasRendered) return;
+            this._hasRendered = true;
+            if (typeof window.renderExamPage === 'function') {
+                window.renderExamPage();
+            }
+        },
+        destroy: function () {
+            this.isMounted = false;
+        }
+    };
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
         const pageEl = document.getElementById('page-exam');
         if (pageEl && !pageEl.classList.contains('hidden')) {
             window.ExamRoutinePage.mount();
         }
-    } else if (typeof window.renderExamPage === 'function') {
-        window.renderExamPage();
     }
 })();

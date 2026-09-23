@@ -459,12 +459,22 @@
             ? [...customActionsRef].sort((a, b) => (a.priority ?? 3) - (b.priority ?? 3) || (a.order ?? 999) - (b.order ?? 999))
             : [];
 
+        const monthPrefix = `${y}-${String(m + 1).padStart(2, '0')}-`;
+        const taskMap = {};
+        const AppStateRef = global.AppState || (typeof window !== 'undefined' ? window.AppState : null);
+        if (AppStateRef && Array.isArray(AppStateRef.tasks)) {
+            AppStateRef.tasks.forEach(t => {
+                if (t && t.date && t.date.startsWith(monthPrefix)) {
+                    taskMap[t.date] = t;
+                }
+            });
+        }
         const getTaskFn = global.getTaskForDate || (typeof window !== 'undefined' ? window.getTaskForDate : null);
 
         for (let d = 1; d <= daysInMonth; d++) {
             const dayKey = String(d);
-            const cellDate = new Date(y, m, d);
-            const task = getTaskFn ? getTaskFn(cellDate) : null;
+            const dateStr = `${monthPrefix}${String(d).padStart(2, '0')}`;
+            const task = taskMap[dateStr] || (getTaskFn ? getTaskFn(new Date(y, m, d)) : null);
 
             if (task) {
                 if (!result[dayKey]) result[dayKey] = {};
@@ -1919,13 +1929,24 @@
 
     const AnalyticsPage = {
         isMounted: false,
+        _hasRendered: false,
 
         init: function () {
             this.mount();
         },
 
-        mount: function () {
+        mount: function (forceRefresh = false) {
             this.isMounted = true;
+            const pageEl = document.getElementById('page-spectra-analytics');
+            if (!pageEl) return;
+
+            // Fast Revisit: If already rendered and not forced, instantly resize charts on RAF without rebuilding!
+            if (this._hasRendered && !forceRefresh) {
+                this.resizeCharts();
+                return;
+            }
+            this._hasRendered = true;
+
             this.render();
         },
 
@@ -1934,37 +1955,51 @@
             const pageEl = document.getElementById('page-spectra-analytics');
             if (!pageEl) return;
 
-            // 1. Chapters Breakdown circle chart
+            // 0. Filter Dropdown (instant, synchronous)
+            populateSpectraFilterDropdown();
+
+            // 1. Chapters Breakdown circle chart (instant, synchronous)
             renderSpectraCircleChart();
 
-            // 2. Commitments Habit Radar chart
+            // 2. Commitments Habit Radar chart (instant, synchronous)
             renderSpectraCommitmentsChart();
 
-            // 3. Program Completion & Daily Actions Trend charts and Stat cards
-            renderTrendCharts();
+            // 3. Progressive render for heavy Chart.js & Heatmap to prevent blocking main thread
+            const scheduleRender = (fn) => {
+                if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                    window.requestAnimationFrame(fn);
+                } else {
+                    fn();
+                }
+            };
 
-            // 4. Pacing Trend charts (X Bar and Global Scope burn-up)
-            renderPaceCharts();
+            scheduleRender(() => {
+                // 3. Program Completion & Daily Actions Trend charts and Stat cards
+                renderTrendCharts();
 
-            // 5. Focus Analytics line/bar/combo chart
-            if (typeof global.updateTimerAnalyticsControls === 'function') {
-                global.updateTimerAnalyticsControls();
-            }
-            if (typeof global.renderTimerAnalyticsChart === 'function') {
-                global.renderTimerAnalyticsChart(true);
-            }
+                // 4. Pacing Trend charts (X Bar and Global Scope burn-up)
+                renderPaceCharts();
 
-            // 6. Focus Matrix GitHub Box Heatmap
-            const setHmRangeUiFn = global.setSpectraHeatmapRangeUI || (typeof window !== 'undefined' ? window.setSpectraHeatmapRangeUI : null);
-            const renderHmFn = global.renderSpectraFocusHeatmap || (typeof window !== 'undefined' ? window.renderSpectraFocusHeatmap : null);
-            if (typeof setHmRangeUiFn === 'function') {
-                setHmRangeUiFn(global.spectraHeatmapRange || 365);
-            } else if (typeof renderHmFn === 'function') {
-                renderHmFn();
-            }
+                // 5. Focus Analytics line/bar/combo chart
+                if (typeof global.updateTimerAnalyticsControls === 'function') {
+                    global.updateTimerAnalyticsControls();
+                }
+                if (typeof global.renderTimerAnalyticsChart === 'function') {
+                    global.renderTimerAnalyticsChart(true);
+                }
 
-            // 7. Ensure charts are resized properly
-            this.resizeCharts();
+                // 6. Focus Matrix GitHub Box Heatmap
+                const setHmRangeUiFn = global.setSpectraHeatmapRangeUI || (typeof window !== 'undefined' ? window.setSpectraHeatmapRangeUI : null);
+                const renderHmFn = global.renderSpectraFocusHeatmap || (typeof window !== 'undefined' ? window.renderSpectraFocusHeatmap : null);
+                if (typeof setHmRangeUiFn === 'function') {
+                    setHmRangeUiFn(global.spectraHeatmapRange || 365);
+                } else if (typeof renderHmFn === 'function') {
+                    renderHmFn();
+                }
+
+                // 7. Ensure charts are resized properly
+                this.resizeCharts();
+            });
         },
 
         resizeCharts: function () {
@@ -1985,12 +2020,16 @@
                     }
                 });
             };
-            setTimeout(resizeFn, 50);
-            setTimeout(resizeFn, 420);
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(resizeFn);
+            } else {
+                setTimeout(resizeFn, 10);
+            }
         },
 
         destroy: function () {
             this.isMounted = false;
+            this._hasRendered = false;
             if (typeof document === 'undefined') return;
 
             // Close filter dropdown if open
@@ -2014,7 +2053,8 @@
                 'monthlyChartActions',
                 'yearlyChartActions',
                 'spectraPaceTrendChartInstance',
-                'globalPaceTrendChartInstance'
+                'globalPaceTrendChartInstance',
+                'spectraFocusAnalyticsChartInstance'
             ];
             charts.forEach(cName => {
                 if (global[cName] && typeof global[cName].destroy === 'function') {

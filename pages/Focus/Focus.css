@@ -17,7 +17,7 @@
 
 #page-timer.animate-page-enter,
 .focus-slide-up {
-    animation: focusSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: focusSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     will-change: transform, opacity;
 }
 

@@ -1222,6 +1222,13 @@
         mount: function () {
             this.isMounted = true;
 
+            // Fast revisit: Keep existing task list and cards intact, only refresh chart
+            if (this._hasRendered) {
+                this.refreshProgressChart();
+                return;
+            }
+            this._hasRendered = true;
+
             // Ensure task container is visible
             const dashContent = document.getElementById('dashboard-content');
             if (dashContent) dashContent.classList.remove('hidden');

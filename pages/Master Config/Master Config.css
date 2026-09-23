@@ -17,7 +17,7 @@
 
 #page-master-config.animate-page-enter,
 .master-config-slide-up {
-    animation: masterConfigSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: masterConfigSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     will-change: transform, opacity;
 }
 

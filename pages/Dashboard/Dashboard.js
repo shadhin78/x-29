@@ -28,6 +28,13 @@
         },
         mount: function () {
             this.isMounted = true;
+            if (this._hasRendered) {
+                if (window.dbProgressChartInstance && typeof window.dbProgressChartInstance.resize === 'function') {
+                    window.dbProgressChartInstance.resize();
+                }
+                return;
+            }
+            this._hasRendered = true;
             this.render();
         },
         render: function () {

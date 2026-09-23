@@ -769,13 +769,27 @@
                 safeSetHtml('prog-comment', `<div class="flex items-start space-x-3 p-3.5 rounded-xl border ${progComment.bg} ${progComment.border} shadow-sm transition-all duration-300 hover:shadow-md"><span class="text-lg md:text-xl drop-shadow-sm">${progComment.icon}</span><p class="text-[10px] md:text-xs font-bold leading-relaxed mt-0.5 ${progComment.color}">${progComment.text}</p></div>`);
             }
 
-            // Downstream progress rendering calls
-            if (typeof window.renderSubjectProgress === 'function') window.renderSubjectProgress(subjectStats);
-            if (typeof window.renderSubjectNavigation === 'function') window.renderSubjectNavigation();
-            if (typeof window.renderCategoryProgress === 'function') window.renderCategoryProgress(subjectStats);
-            if (typeof window.renderTrackProgress === 'function') window.renderTrackProgress(subjectStats);
-            if (typeof window.renderPaceGoals === 'function') window.renderPaceGoals(subjectStats);
-            if (typeof window.renderGlobalPaceTrendChart === 'function') window.renderGlobalPaceTrendChart();
+            // Downstream progress rendering calls (scoped to active or visible page to prevent cross-page layout thrashing)
+            const activePage = (typeof window !== 'undefined' && window.Router) ? window.Router.activePageId : 'dashboard';
+            const pageSubjEl = safeGetEl('page-subjects');
+            const pageDashEl = safeGetEl('page-dashboard');
+            const pagePaceEl = safeGetEl('page-paces-management');
+            const pageAnalyticsEl = safeGetEl('page-spectra-analytics');
+
+            if (!pageSubjEl || !pageSubjEl.classList.contains('hidden') || activePage === 'subjects') {
+                if (typeof window.renderSubjectProgress === 'function') window.renderSubjectProgress(subjectStats);
+                if (typeof window.renderSubjectNavigation === 'function') window.renderSubjectNavigation();
+            }
+            if (!pageDashEl || !pageDashEl.classList.contains('hidden') || activePage === 'dashboard') {
+                if (typeof window.renderCategoryProgress === 'function') window.renderCategoryProgress(subjectStats);
+                if (typeof window.renderTrackProgress === 'function') window.renderTrackProgress(subjectStats);
+            }
+            if (!pagePaceEl || !pagePaceEl.classList.contains('hidden') || activePage === 'paces-management') {
+                if (typeof window.renderPaceGoals === 'function') window.renderPaceGoals(subjectStats);
+            }
+            if (!pageAnalyticsEl || !pageAnalyticsEl.classList.contains('hidden') || activePage === 'spectra-analytics') {
+                if (typeof window.renderGlobalPaceTrendChart === 'function') window.renderGlobalPaceTrendChart();
+            }
 
             // Progress doughnut charts lifecycle
             const pChartCanvas = safeGetEl('progressChart');

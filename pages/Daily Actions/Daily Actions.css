@@ -16,7 +16,7 @@
 }
 
 #page-daily-actions.animate-page-enter {
-    animation: dailyActionsSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: dailyActionsSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* ==========================================================================

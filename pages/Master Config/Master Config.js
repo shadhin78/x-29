@@ -24,6 +24,8 @@
 
         mount: function () {
             this.isMounted = true;
+            if (this._hasRendered) return;
+            this._hasRendered = true;
 
             // 1. Populate dashboard header input fields
             const tagInput = document.getElementById('edit-header-tag');

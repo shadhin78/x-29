@@ -1576,12 +1576,23 @@
 
     const DashboardPage = {
         isMounted: false,
+        _hasRendered: false,
         init: function () {
             this.isMounted = true;
             this.mount();
         },
-        mount: function () {
+        mount: function (forceRefresh = false) {
             this.isMounted = true;
+            if (this._hasRendered && !forceRefresh) {
+                if (window.dbProgressChartInstance && typeof window.dbProgressChartInstance.resize === 'function') {
+                    window.dbProgressChartInstance.resize();
+                    if (typeof window.dbProgressChartInstance.update === 'function') {
+                        window.dbProgressChartInstance.update('none');
+                    }
+                }
+                return;
+            }
+            this._hasRendered = true;
             this.render();
         },
         render: function () {
@@ -1613,6 +1624,7 @@
         },
         destroy: function () {
             this.isMounted = false;
+            this._hasRendered = false;
         }
     };
 

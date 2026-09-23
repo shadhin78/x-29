@@ -18,7 +18,8 @@
 }
 
 .animate-page-enter {
-    animation: pageEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: pageEnter 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: opacity, transform;
 }
 
 @keyframes auraPulse {

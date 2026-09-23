@@ -1567,6 +1567,16 @@
         },
         mount: function () {
             this.isMounted = true;
+
+            // Fast revisit: Keep chronograph dial and controls intact
+            if (this._hasRendered) {
+                if (window.TimerService && typeof window.TimerService.updateDisplay === "function") {
+                    window.TimerService.updateDisplay();
+                }
+                return;
+            }
+            this._hasRendered = true;
+
             populateTimerSubjects();
             initChronographDial();
             if (typeof window.renderTimerPage === "function") {

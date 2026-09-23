@@ -54,9 +54,12 @@
                     }
                 },
                 onDestroy: function () {
-                    if (window.AnalyticsPage && typeof window.AnalyticsPage.destroy === 'function') {
-                        window.AnalyticsPage.destroy();
-                    }
+                    // Fast tab switching: keep Chart.js instances and SVG elements in memory!
+                    // Only dismiss open tooltips / popups when navigating away
+                    if (typeof window.hideSpectraChapterTooltip === 'function') window.hideSpectraChapterTooltip();
+                    if (typeof window.hideCommitmentTooltip === 'function') window.hideCommitmentTooltip();
+                    const menu = document.getElementById('spectra-filter-dropdown-menu');
+                    if (menu && !menu.classList.contains('hidden')) menu.classList.add('hidden');
                 }
             },
             'timer': {
@@ -502,6 +505,10 @@
             }
             this.isNavigating = true;
 
+            // Increment navigation sequence for superseding rapid clicks
+            this._navSeq = (this._navSeq || 0) + 1;
+            const currentSeq = this._navSeq;
+
             // 1. INSTANT NAVIGATION FEEDBACK: Update active nav state immediately (0ms)
             this.updateNavButtons(pageId);
 
@@ -533,13 +540,14 @@
                     }
                 }
 
-                // 5. INSTANT VISIBILITY SWITCH: Show target container immediately
+                // 5. INSTANT VISIBILITY SWITCH: Show target container immediately (0ms)
                 this.allPages.forEach(p => {
                     const el = document.getElementById(`page-${p}`);
                     if (el) {
                         if (p === pageId) {
                             el.classList.remove('hidden');
                             if (!isSamePage) {
+                                el.classList.remove('animate-page-enter');
                                 el.classList.add('animate-page-enter');
                             }
                         } else {
@@ -550,7 +558,7 @@
                 });
                 this.activePageId = pageId;
 
-                // 6. Check if container is empty or needs HTML/CSS/JS injection
+                // 6. Check if container is empty or needs HTML/CSS/JS injection (fallback for mock/dynamic environments)
                 const needsHtml = container && (!container.hasChildNodes() || container.children.length === 0 || container.innerHTML.trim() === '');
                 if (needsHtml && route) {
                     const [, htmlContent] = await Promise.all([
@@ -558,17 +566,20 @@
                         this.loadHtml(route.htmlUrl)
                     ]);
 
+                    if (currentSeq !== this._navSeq) return; // Superseded by newer click
+
                     if (htmlContent && container && container.innerHTML.trim() === '') {
                         container.innerHTML = htmlContent;
                     }
 
                     await this.loadJs(route.jsUrl, route.jsId);
+                    if (currentSeq !== this._navSeq) return;
                 } else if (route) {
                     this.loadCss(route.cssUrl, route.cssId);
                     this.loadJs(route.jsUrl, route.jsId);
                 }
 
-                // 7. Call mount / render on active route (ONCE!)
+                // 7. Call mount / render on active route
                 if (route && typeof route.onMount === 'function') {
                     try {
                         route.onMount();
@@ -580,7 +591,9 @@
                 // 8. Scoped secondary chart & canvas refresh deferred to next animation frame
                 if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
                     window.requestAnimationFrame(() => {
-                        this.refreshActivePageCharts(pageId);
+                        if (this.activePageId === pageId) {
+                            this.refreshActivePageCharts(pageId);
+                        }
                     });
                 } else {
                     this.refreshActivePageCharts(pageId);
@@ -603,7 +616,9 @@
                     }
                 }
             } finally {
-                this.isNavigating = false;
+                if (this._navSeq === currentSeq) {
+                    this.isNavigating = false;
+                }
             }
         },
 
@@ -713,6 +728,14 @@
 
                         // Load script module
                         await this.loadJs(route.jsUrl, route.jsId);
+
+                        // Background idle warmup: mount route once so first user click has 0ms initialization
+                        if (route && typeof route.onMount === 'function' && !route._hasMounted) {
+                            try {
+                                route.onMount();
+                                route._hasMounted = true;
+                            } catch (e) {}
+                        }
                     } catch (err) {
                         console.warn(`[Router] Preload warning for ${key}:`, err);
                     }

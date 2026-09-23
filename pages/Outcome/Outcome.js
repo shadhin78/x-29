@@ -21,6 +21,13 @@
 
         mount: function () {
             this.isMounted = true;
+            if (this._hasRendered) {
+                if (window.resultsTrendChartInstance && typeof window.resultsTrendChartInstance.resize === 'function') {
+                    window.resultsTrendChartInstance.resize();
+                }
+                return;
+            }
+            this._hasRendered = true;
 
             if (window.OutcomeResults && typeof window.OutcomeResults.renderOutcomeProgramToggles === 'function') {
                 window.OutcomeResults.renderOutcomeProgramToggles();
