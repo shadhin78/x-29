@@ -233,7 +233,9 @@
 
             if (heroVenue) heroVenue.style.display = 'none';
 
-            const dateFormatted = targetDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + targetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dateFormatted = (typeof Utils !== 'undefined' && typeof Utils.formatExamDateTime === 'function')
+                ? Utils.formatExamDateTime(targetDate, targetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+                : targetDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + targetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             if (heroDateTime) heroDateTime.textContent = `Date: ${dateFormatted}`;
 
             if (rem.isPast) {
@@ -359,6 +361,9 @@
 
     function formatSessionDate(dateStr) {
         if (!dateStr) return '';
+        if (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function') {
+            return Utils.formatDate(dateStr);
+        }
         const parts = dateStr.split('-');
         if (parts.length !== 3) return dateStr;
         const [yr, mo, dy] = parts.map(Number);
@@ -651,7 +656,9 @@
 
                     const subjColor = typeof getSubjectColor === 'function' ? getSubjectColor(ex.subject || 'General') : '#ef4444';
                     const dtObj = !isNaN(exTimeMs) ? new Date(exTimeMs) : new Date();
-                    const dtFormatted = dtObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                    const dtFormatted = (typeof Utils !== 'undefined' && typeof Utils.formatExamDateTime === 'function')
+                        ? Utils.formatExamDateTime(dtObj, ex.time || '')
+                        : dtObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + (ex.time ? ` at ${ex.time}` : '');
 
                     examsGridHtml += `
                         <div class="exam-item-row bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-4 sm:p-5 hover:shadow-lg transition-all duration-300 flex flex-col justify-between group ${isCompleted ? 'opacity-70' : ''}">
@@ -668,7 +675,7 @@
                                 <div class="mt-2.5 sm:mt-3 space-y-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
                                     <div class="flex items-center gap-2">
                                         <svg class="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                        <span>${dtFormatted} at ${ex.time || '00:00'}</span>
+                                        <span>${dtFormatted}</span>
                                     </div>
                                 </div>
                             </div>

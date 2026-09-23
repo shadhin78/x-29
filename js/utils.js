@@ -326,41 +326,61 @@
         if (!dateObj) return '';
         const d = (dateObj instanceof Date) ? dateObj : parseDateSafe(dateObj);
         if (!d || isNaN(d.getTime())) return '';
-        return `${d.toLocaleString('en-US', { month: 'short' })} ${d.getDate()}`;
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = months[d.getMonth()];
+        const year = d.getFullYear();
+        return `${day} ${month} ${year}`;
     }
 
     function formatDateMobile(d) {
-        if (!d) return '';
-        const dateObj = parseDateSafe(d);
-        if (isNaN(dateObj.getTime())) return '';
-        const day = String(dateObj.getDate()).padStart(2, '0');
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const year = String(dateObj.getFullYear()).slice(-2);
-        return `${day}-${month}-${year}`;
+        return formatDate(d);
     }
 
     function formatDatePC(d) {
-        if (!d) return '';
-        const dateObj = parseDateSafe(d);
-        if (isNaN(dateObj.getTime())) return '';
-        return dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+        return formatDate(d);
     }
 
     function formatDateResponsive(d) {
         if (!d) return '';
-        const mobile = formatDateMobile(d);
-        const pc = formatDatePC(d);
-        if (!mobile && !pc) return '';
-        return `<span class="inline md:hidden">${mobile}</span><span class="hidden md:inline">${pc}</span>`;
+        const formatted = formatDate(d);
+        if (!formatted) return '';
+        return `<span class="inline">${formatted}</span>`;
     }
 
     function formatDateRangeResponsive(start, end, sep = ' &rarr; ') {
         if (!start || !end) return '';
-        const mobileStart = formatDateMobile(start);
-        const mobileEnd = formatDateMobile(end);
-        const pcStart = formatDatePC(start);
-        const pcEnd = formatDatePC(end);
-        return `<span class="inline md:hidden">${mobileStart}${sep}${mobileEnd}</span><span class="hidden md:inline">${pcStart}${sep}${pcEnd}</span>`;
+        const startStr = formatDate(start);
+        const endStr = formatDate(end);
+        if (!startStr && !endStr) return '';
+        return `<span class="inline">${startStr}${sep}${endStr}</span>`;
+    }
+
+    function formatExamDateTime(dateObj, timeStr = '') {
+        if (!dateObj) return '';
+        const d = (dateObj instanceof Date) ? dateObj : parseDateSafe(dateObj);
+        if (!d || isNaN(d.getTime())) return '';
+        const dateFormatted = d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+        let timeFormatted = timeStr;
+        if (!timeFormatted && (d.getHours() !== 0 || d.getMinutes() !== 0)) {
+            timeFormatted = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        return timeFormatted ? `${dateFormatted} at ${timeFormatted}` : dateFormatted;
+    }
+
+    function formatPace(paceVal, unit = 'Ch/Day') {
+        const num = parseFloat(paceVal);
+        if (isNaN(num)) return unit ? `-- ${unit}`.trim() : '--';
+        return unit ? `${num.toFixed(2)} ${unit}`.trim() : num.toFixed(2);
+    }
+
+    function formatCgpa(val) {
+        return formatCgpaMin2Dec(val);
+    }
+
+    function formatSubjectDisplay(subject, program = '') {
+        if (!subject) return '';
+        return String(subject).trim();
     }
 
     function mapGradeToNumeric(grade, evalType = 'cgpa') {
@@ -536,6 +556,10 @@
         formatDatePC,
         formatDateResponsive,
         formatDateRangeResponsive,
+        formatExamDateTime,
+        formatPace,
+        formatCgpa,
+        formatSubjectDisplay,
         parseDateSafe,
         parseDailyTargetDateKey,
         mapGradeToNumeric,
@@ -556,7 +580,11 @@
         getSubjectColor,
         hexToRgba,
         getDynamicChartLabel,
-        getDynamicCleanLabel
+        getDynamicCleanLabel,
+        generateSubjectId: (sub, track) => (typeof Taxonomy !== 'undefined' && Taxonomy.generateSubjectId ? Taxonomy.generateSubjectId(sub, track) : (typeof global.generateSubjectId === 'function' ? global.generateSubjectId(sub, track) : String(sub || '').toLowerCase().replace(/[^a-z0-9]+/g, '-'))),
+        getSubject: (id, track) => (typeof Taxonomy !== 'undefined' && Taxonomy.getSubject ? Taxonomy.getSubject(id, track) : (typeof global.getSubject === 'function' ? global.getSubject(id, track) : null)),
+        getChaptersForSubject: (track, sub) => (typeof Taxonomy !== 'undefined' && Taxonomy.getChaptersForSubject ? Taxonomy.getChaptersForSubject(track, sub) : (typeof global.getChaptersForSubject === 'function' ? global.getChaptersForSubject(track, sub) : [])),
+        getChapterRecordsForSubject: (track, sub) => (typeof Taxonomy !== 'undefined' && Taxonomy.getChapterRecordsForSubject ? Taxonomy.getChapterRecordsForSubject(track, sub) : (typeof global.getChapterRecordsForSubject === 'function' ? global.getChapterRecordsForSubject(track, sub) : []))
     };
 
     function getDynamicChartLabel(subjName) {
@@ -635,6 +663,10 @@
     global.formatDatePC = formatDatePC;
     global.formatDateResponsive = formatDateResponsive;
     global.formatDateRangeResponsive = formatDateRangeResponsive;
+    global.formatExamDateTime = formatExamDateTime;
+    global.formatPace = formatPace;
+    global.formatCgpa = formatCgpa;
+    global.formatSubjectDisplay = formatSubjectDisplay;
     global.mapGradeToNumeric = mapGradeToNumeric;
     global.mapCgpaToGrade = mapCgpaToGrade;
     global.formatCgpaMin2Dec = formatCgpaMin2Dec;
@@ -646,6 +678,18 @@
     global.hexToRgba = hexToRgba;
     global.getDynamicChartLabel = getDynamicChartLabel;
     global.getDynamicCleanLabel = getDynamicCleanLabel;
+    if (typeof global.generateSubjectId === 'undefined') {
+        global.generateSubjectId = Utils.generateSubjectId;
+    }
+    if (typeof global.getSubject === 'undefined') {
+        global.getSubject = Utils.getSubject;
+    }
+    if (typeof global.getChaptersForSubject === 'undefined') {
+        global.getChaptersForSubject = Utils.getChaptersForSubject;
+    }
+    if (typeof global.getChapterRecordsForSubject === 'undefined') {
+        global.getChapterRecordsForSubject = Utils.getChapterRecordsForSubject;
+    }
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = Utils;

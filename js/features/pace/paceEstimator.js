@@ -328,8 +328,13 @@
 
         const daysNeeded = Math.ceil(totalRemaining / totalPace);
         const projectedDate = new Date(today.getTime() + daysNeeded * msPerDay);
-        const finishDateStr = projectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-        return `${finishDateStr} (${daysNeeded} Days @ ${totalPace.toFixed(2)} Ch/Day)`;
+        const finishDateStr = (typeof global.Utils !== 'undefined' && typeof global.Utils.formatDate === 'function')
+            ? global.Utils.formatDate(projectedDate)
+            : projectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        const paceStr = (typeof global.Utils !== 'undefined' && typeof global.Utils.formatPace === 'function')
+            ? global.Utils.formatPace(totalPace)
+            : `${totalPace.toFixed(2)} Ch/Day`;
+        return `${finishDateStr} (${daysNeeded} Days @ ${paceStr})`;
     }
 
     // Attach to global scope

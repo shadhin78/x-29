@@ -163,59 +163,67 @@ export function formatDaysPassed(daysPassed) {
 }
 
 /**
- * Formats Date object into MMM DD format.
+ * Formats Date object into consistent DD MMM YYYY format across all devices and views.
  */
 export function formatDate(dateObj) {
     if (!dateObj) return '';
     const d = (dateObj instanceof Date) ? dateObj : parseDateSafe(dateObj);
     if (!d || isNaN(d.getTime())) return '';
-    return `${d.toLocaleString('en-US', { month: 'short' })} ${d.getDate()}`;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = months[d.getMonth()];
+    const year = d.getFullYear();
+    return `${day} ${month} ${year}`;
 }
 
 /**
- * Formats Date into DD-MM-YY format for Mobile.
+ * Formats Date into DD MMM YYYY format for Mobile (identical to PC for consistent representation).
  */
 export function formatDateMobile(d) {
-    if (!d) return '';
-    const dateObj = parseDateSafe(d);
-    if (isNaN(dateObj.getTime())) return '';
-    const day = String(dateObj.getDate()).padStart(2, '0');
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const year = String(dateObj.getFullYear()).slice(-2);
-    return `${day}-${month}-${year}`;
+    return formatDate(d);
 }
 
 /**
- * Formats Date into DD month YYYY format for PC.
+ * Formats Date into DD MMM YYYY format for PC.
  */
 export function formatDatePC(d) {
-    if (!d) return '';
-    const dateObj = parseDateSafe(d);
-    if (isNaN(dateObj.getTime())) return '';
-    return dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+    return formatDate(d);
 }
 
 /**
- * Returns responsive HTML span string for mobile (DD-MM-YY) and PC (DD month YYYY).
+ * Returns consistent HTML span string for dates across mobile and PC.
  */
 export function formatDateResponsive(d) {
     if (!d) return '';
-    const mobile = formatDateMobile(d);
-    const pc = formatDatePC(d);
-    if (!mobile && !pc) return '';
-    return `<span class="inline md:hidden">${mobile}</span><span class="hidden md:inline">${pc}</span>`;
+    const formatted = formatDate(d);
+    if (!formatted) return '';
+    return `<span class="inline">${formatted}</span>`;
 }
 
 /**
- * Returns responsive HTML span string for date ranges (start -> end) for mobile and PC.
+ * Returns consistent HTML span string for date ranges (start -> end) across mobile and PC.
  */
 export function formatDateRangeResponsive(start, end, sep = ' &rarr; ') {
     if (!start || !end) return '';
-    const mobileStart = formatDateMobile(start);
-    const mobileEnd = formatDateMobile(end);
-    const pcStart = formatDatePC(start);
-    const pcEnd = formatDatePC(end);
-    return `<span class="inline md:hidden">${mobileStart}${sep}${mobileEnd}</span><span class="hidden md:inline">${pcStart}${sep}${pcEnd}</span>`;
+    const startStr = formatDate(start);
+    const endStr = formatDate(end);
+    if (!startStr && !endStr) return '';
+    return `<span class="inline">${startStr}${sep}${endStr}</span>`;
+}
+
+/**
+ * Formats exam date and time into a standardized string across dashboard and exam routine.
+ */
+export function formatExamDateTime(dateObj, timeStr = '') {
+    if (!dateObj) return '';
+    const d = (dateObj instanceof Date) ? dateObj : parseDateSafe(dateObj);
+    if (!d || isNaN(d.getTime())) return '';
+    const dateFormatted = d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+    let timeFormatted = timeStr;
+    if (!timeFormatted && (d.getHours() !== 0 || d.getMinutes() !== 0)) {
+        timeFormatted = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    return timeFormatted ? `${dateFormatted} at ${timeFormatted}` : dateFormatted;
 }
 
 // Global window compatibility bridge
@@ -234,4 +242,5 @@ if (typeof window !== 'undefined') {
     window.formatDatePC = formatDatePC;
     window.formatDateResponsive = formatDateResponsive;
     window.formatDateRangeResponsive = formatDateRangeResponsive;
+    window.formatExamDateTime = formatExamDateTime;
 }

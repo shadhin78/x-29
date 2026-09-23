@@ -190,12 +190,18 @@
         window.syllabusStructure[track] = window.syllabusStructure[track] || [];
 
         const nextSubOrder = window.syllabusStructure[track].filter(s => s.program === prog).length;
+        const subId = (typeof window.generateSubjectId === 'function')
+            ? window.generateSubjectId(name, track)
+            : name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
         window.syllabusStructure[track].push({
+            id: subId,
             program: prog,
             subject: name,
             chapters: chaptersToAssign,
             priority: 3,
-            order: nextSubOrder
+            order: nextSubOrder,
+            topicNames: {}
         });
 
         if (typeof window.sortAllCustomData === 'function') {
@@ -317,7 +323,15 @@
 
         const syllabusStructure = window.syllabusStructure || {};
         const targetSub = (syllabusStructure[track] || []).find(s => s.subject === subj);
-        if (targetSub) targetSub.chapters = (targetSub.chapters || 0) + 1;
+        if (targetSub) {
+            targetSub.chapters = (targetSub.chapters || 0) + 1;
+            if (title) {
+                if (!targetSub.topicNames || typeof targetSub.topicNames !== 'object') {
+                    targetSub.topicNames = {};
+                }
+                targetSub.topicNames[formattedCh] = title;
+            }
+        }
 
         if (typeof recalculateTotals === 'function') recalculateTotals();
 

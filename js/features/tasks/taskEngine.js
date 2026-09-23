@@ -409,37 +409,59 @@
     }
 
     function getChaptersForSubject(track, subject) {
-        const chapters = [];
-        if (AppState.tasks && Array.isArray(AppState.tasks)) {
-            const key = track + 'Tasks';
-            AppState.tasks.forEach(t => {
+        if (typeof Taxonomy !== 'undefined' && typeof Taxonomy.getChaptersForSubject === 'function') {
+            return Taxonomy.getChaptersForSubject(track, subject);
+        }
+        if (typeof window !== 'undefined' && window.Taxonomy && typeof window.Taxonomy.getChaptersForSubject === 'function') {
+            return window.Taxonomy.getChaptersForSubject(track, subject);
+        }
+
+        const chaptersSet = new Set();
+        const syllabusStructure = (typeof window !== 'undefined' && window.syllabusStructure)
+            || (typeof global !== 'undefined' && global.syllabusStructure) || {};
+
+        let sObj = null;
+        if (track && syllabusStructure[track]) {
+            sObj = syllabusStructure[track].find(s => s.subject === subject || s.id === subject);
+        }
+        if (!sObj && typeof window !== 'undefined' && typeof window.getAllSubjects === 'function') {
+            sObj = window.getAllSubjects().find(s => s.subject === subject || s.id === subject);
+        } else if (!sObj && typeof global !== 'undefined' && typeof global.getAllSubjects === 'function') {
+            sObj = global.getAllSubjects().find(s => s.subject === subject || s.id === subject);
+        }
+
+        if (sObj) {
+            if (Array.isArray(sObj.chapters)) {
+                sObj.chapters.forEach(ch => { if (ch) chaptersSet.add(typeof ch === 'string' ? ch : `Ch. ${ch}`); });
+            } else if (typeof sObj.chapters === 'number' && sObj.chapters > 0) {
+                for (let i = 1; i <= sObj.chapters; i++) {
+                    chaptersSet.add(`Ch. ${i}`);
+                }
+            }
+        }
+
+        const appTasks = (typeof AppState !== 'undefined' && Array.isArray(AppState.tasks))
+            ? AppState.tasks
+            : ((typeof global !== 'undefined' && global.AppState && Array.isArray(global.AppState.tasks)) ? global.AppState.tasks : []);
+
+        const resolvedTrack = track || (sObj ? (sObj.track || sObj.trackId) : null);
+        if (appTasks.length > 0 && resolvedTrack) {
+            const key = resolvedTrack + 'Tasks';
+            appTasks.forEach(t => {
                 if (t.type === 'study' && Array.isArray(t[key])) {
                     t[key].forEach(b => {
-                        if (b.subject === subject && b.chapter !== 'Rev' && !chapters.includes(b.chapter)) {
-                            chapters.push(b.chapter);
+                        if (b.subject === (sObj ? sObj.subject : subject) && b.chapter && b.chapter !== 'Rev') {
+                            chaptersSet.add(b.chapter);
                         }
                     });
                 }
             });
         }
 
-        // Fallback: if no chapters found in tasks, generate from syllabusStructure chapter count
-        if (chapters.length === 0) {
-            const sObj = (window.syllabusStructure && window.syllabusStructure[track])
-                ? window.syllabusStructure[track].find(s => s.subject === subject)
-                : (typeof window.getAllSubjects === 'function' ? window.getAllSubjects().find(s => s.subject === subject) : null);
-
-            if (sObj && sObj.chapters > 0) {
-                for (let i = 1; i <= sObj.chapters; i++) {
-                    chapters.push(`Ch. ${i}`);
-                }
-                return chapters;
-            }
-        }
-
+        const chapters = Array.from(chaptersSet);
         chapters.sort((a, b) => {
-            const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
-            const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+            const numA = parseInt(String(a).replace(/\D/g, ''), 10) || 0;
+            const numB = parseInt(String(b).replace(/\D/g, ''), 10) || 0;
             return numA - numB;
         });
 

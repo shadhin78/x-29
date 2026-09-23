@@ -122,6 +122,31 @@ export function isChapterMatch(ch1, ch2) {
     return false;
 }
 
+/**
+ * Standardizes pace display to 2 decimal places with consistent unit suffix.
+ */
+export function formatPace(paceVal, unit = 'Ch/Day') {
+    const num = parseFloat(paceVal);
+    if (isNaN(num)) return unit ? `-- ${unit}`.trim() : '--';
+    return unit ? `${num.toFixed(2)} ${unit}`.trim() : num.toFixed(2);
+}
+
+/**
+ * Standardizes CGPA formatting ensuring exactly 2 decimal places.
+ */
+export function formatCgpa(val) {
+    return formatCgpaMin2Dec(val);
+}
+
+/**
+ * Canonical single source of truth for displaying subject names.
+ * Preserves the full configured subject name without arbitrary mutilation or loss of context.
+ */
+export function formatSubjectDisplay(subject, program = '') {
+    if (!subject) return '';
+    return String(subject).trim();
+}
+
 // Global window compatibility bridge
 if (typeof window !== 'undefined') {
     window.extractNum = extractNum;
@@ -129,5 +154,8 @@ if (typeof window !== 'undefined') {
     window.mapCgpaToGrade = mapCgpaToGrade;
     window.formatCgpaMin2Dec = formatCgpaMin2Dec;
     window.validateAndFormatCgpa = validateAndFormatCgpa;
+    window.formatCgpa = formatCgpa;
+    window.formatPace = formatPace;
+    window.formatSubjectDisplay = formatSubjectDisplay;
     window.isChapterMatch = isChapterMatch;
 }

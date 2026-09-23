@@ -1300,7 +1300,9 @@
                 bgStyle += `background: linear-gradient(to right, ${fillRgba} ${progress.percent}%, transparent ${progress.percent}%);`;
             }
 
-            let displaySub = target.subject ? target.subject.replace(target.program + ' - ', '').replace(target.program + ' ', '') : '';
+            let displaySub = (typeof Utils !== 'undefined' && typeof Utils.formatSubjectDisplay === 'function')
+                ? Utils.formatSubjectDisplay(target.subject, target.program)
+                : (target.subject || '');
 
             const occurrenceCount = getWeeklyTargetOccurrenceCount(target.track, target.subject, target.chapter);
             let starsHtml = '';
@@ -1406,8 +1408,8 @@
             const reqPace = daysLeft > 0 ? (remainingTargets / daysLeft) : 0;
             const actPace = completedTargets / (daysSinceSat + 1);
 
-            if (reqPaceEl) reqPaceEl.textContent = `${reqPace.toFixed(2)} Ch/Day`;
-            if (actPaceEl) actPaceEl.textContent = `${actPace.toFixed(2)} Ch/Day`;
+            if (reqPaceEl) reqPaceEl.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function') ? Utils.formatPace(reqPace) : `${reqPace.toFixed(2)} Ch/Day`;
+            if (actPaceEl) actPaceEl.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function') ? Utils.formatPace(actPace) : `${actPace.toFixed(2)} Ch/Day`;
 
             if (estFinishEl) {
                 if (remainingTargets === 0) {
@@ -1421,15 +1423,14 @@
                     const estDate = new Date();
                     estDate.setDate(estDate.getDate() + Math.ceil(daysNeeded));
 
-                    const opt = { day: 'numeric', month: 'short', year: 'numeric' };
-                    estFinishEl.textContent = estDate.toLocaleDateString('en-GB', opt);
+                    estFinishEl.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function') ? Utils.formatDate(estDate) : estDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
                     estFinishEl.className = 'text-xs font-black text-purple-600 dark:text-purple-400';
                 }
             }
         } else {
-            if (reqPaceEl) reqPaceEl.textContent = `0.00 Ch/Day`;
+            if (reqPaceEl) reqPaceEl.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function') ? Utils.formatPace(0) : `0.00 Ch/Day`;
             const actPace = completedTargets / 7;
-            if (actPaceEl) actPaceEl.textContent = `${actPace.toFixed(2)} Ch/Day`;
+            if (actPaceEl) actPaceEl.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function') ? Utils.formatPace(actPace) : `${actPace.toFixed(2)} Ch/Day`;
 
             if (estFinishEl) {
                 if (remainingTargets === 0) {
@@ -1773,7 +1774,9 @@
 
                 matchedCount++;
 
-                let displaySub = target.subject ? target.subject.replace(target.program + ' - ', '').replace(target.program + ' ', '') : '';
+                let displaySub = (typeof Utils !== 'undefined' && typeof Utils.formatSubjectDisplay === 'function')
+                    ? Utils.formatSubjectDisplay(target.subject, target.program)
+                    : (target.subject || '');
 
                 const occurrenceCount = getWeeklyTargetOccurrenceCount(target.track, target.subject, target.chapter);
                 let starsHtml = '';
@@ -1788,7 +1791,7 @@
                             </td>
                             <td class="py-3 px-4 font-bold text-slate-500 dark:text-slate-400 text-[10px]">${weekKey}</td>
                             <td class="py-3 px-4 uppercase text-[10px] text-slate-400">${target.program}</td>
-                            <td class="py-3 px-4 truncate max-w-[120px]" title="${target.subject}">${displaySub}</td>
+                            <td class="py-3 px-4 whitespace-normal" title="${target.subject}">${displaySub}</td>
                             <td class="py-3 px-4 text-blue-600 dark:text-blue-400 font-bold">${target.chapter}${starsHtml}</td>
                             <td class="py-3 px-4 text-center">
                                 <div class="flex items-center justify-center space-x-1">

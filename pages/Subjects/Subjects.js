@@ -85,9 +85,9 @@
                             const stats = subjectStats[sub.subject] || { totalChapters: sub.chapters || 0, effectiveChapters: 0 };
                             const perc = stats.totalChapters > 0 ? Math.min(100, (stats.effectiveChapters / stats.totalChapters) * 100) : 0;
 
-                            let cleanSubName = sub.subject;
-                            if (cleanSubName.startsWith(progName + ' - ')) cleanSubName = cleanSubName.replace(progName + ' - ', '');
-                            else if (cleanSubName.startsWith(progName + ' ')) cleanSubName = cleanSubName.replace(progName + ' ', '');
+                            let cleanSubName = (typeof Utils !== 'undefined' && typeof Utils.formatSubjectDisplay === 'function')
+                                ? Utils.formatSubjectDisplay(sub.subject, progName)
+                                : sub.subject;
 
                             html += `
                                 <div class="group flex flex-col justify-center">
@@ -154,9 +154,9 @@
                                     <div class="flex flex-wrap gap-2 md:gap-3">
                                         <button class="${btnClass(progName)}" onclick="window.setFilter('${progName.replace(/'/g, "\\'")}');">[ ENTIRE ${progName} ]</button>
                                         ${subs.map(s => {
-                                let displaySub = s.subject;
-                                if (displaySub.startsWith(s.program + ' - ')) displaySub = displaySub.replace(s.program + ' - ', '');
-                                else if (displaySub.startsWith(s.program + ' ')) displaySub = displaySub.replace(s.program + ' ', '');
+                                let displaySub = (typeof Utils !== 'undefined' && typeof Utils.formatSubjectDisplay === 'function')
+                                    ? Utils.formatSubjectDisplay(s.subject, s.program)
+                                    : s.subject;
                                 return `<button class="${btnClass(s.subject)}" onclick="window.setFilter('${s.subject.replace(/'/g, "\\'")}');">${displaySub}</button>`;
                             }).join('')}
                                     </div>
@@ -440,9 +440,9 @@
         const trackObj = window.tracks.find(t => t.id === group.type);
         const trackName = trackObj ? trackObj.name : group.type.toUpperCase();
 
-        let displaySubName = sub;
-        if (displaySubName.startsWith(group.program + ' - ')) displaySubName = displaySubName.replace(group.program + ' - ', '');
-        else if (displaySubName.startsWith(group.program + ' ')) displaySubName = displaySubName.replace(group.program + ' ', '');
+        let displaySubName = (typeof Utils !== 'undefined' && typeof Utils.formatSubjectDisplay === 'function')
+            ? Utils.formatSubjectDisplay(sub, group.program)
+            : sub;
         const finalTitle = `<span class="text-base md:text-lg lg:text-xl font-black text-slate-900 dark:text-white mr-2">${displaySubName}</span><span class="text-xs md:text-sm font-bold text-slate-500 dark:text-slate-300 uppercase tracking-wider mr-1.5">- ${group.program}</span><span class="text-[10px] md:text-xs font-medium text-slate-400 dark:text-slate-400 uppercase tracking-widest whitespace-nowrap">- ${trackName}</span>`;
 
         const shadowClass = shadowMap[colorClass];
@@ -461,7 +461,7 @@
                     </button>
                 `;
 
-        const formatDateStr = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        const formatDateStr = (d) => (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function') ? Utils.formatDate(d) : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
         let targetDate = null;
         let startDate = null;

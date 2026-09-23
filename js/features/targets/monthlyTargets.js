@@ -155,6 +155,20 @@
     }
     if (typeof global.getChaptersForSubject === 'undefined') {
         global.getChaptersForSubject = function (track, subject) {
+            if (typeof window !== 'undefined' && window.Taxonomy && typeof window.Taxonomy.getChaptersForSubject === 'function') {
+                return window.Taxonomy.getChaptersForSubject(track, subject);
+            }
+            if (typeof Taxonomy !== 'undefined' && typeof Taxonomy.getChaptersForSubject === 'function') {
+                return Taxonomy.getChaptersForSubject(track, subject);
+            }
+            const syllabusStructure = (typeof window !== 'undefined' && window.syllabusStructure)
+                || (typeof global !== 'undefined' && global.syllabusStructure) || {};
+            const sObj = (syllabusStructure[track] || []).find(s => s.subject === subject || s.id === subject);
+            if (sObj && typeof sObj.chapters === 'number' && sObj.chapters > 0) {
+                const list = [];
+                for (let i = 1; i <= sObj.chapters; i++) list.push(`Ch. ${i}`);
+                return list;
+            }
             return [];
         };
     }
@@ -172,10 +186,28 @@
 // --- Monthly Targets System Logic ---
 
 function isSubjectCompleted(track, subject) {
-    if (!AppState.tasks || !Array.isArray(AppState.tasks)) return false;
+    if (typeof window !== 'undefined' && typeof window.isSubjectCompleted === 'function' && window.isSubjectCompleted !== isSubjectCompleted) {
+        return window.isSubjectCompleted(track, subject);
+    }
     const passedItems = window.passedItems || (AppState && AppState.passedItems) || { programs: [], subjects: [] };
     if (Array.isArray(passedItems.subjects) && passedItems.subjects.includes(subject)) return true;
 
+    const syllabusStructure = (typeof window !== 'undefined' && window.syllabusStructure)
+        || (typeof global !== 'undefined' && global.syllabusStructure) || {};
+    const sObj = (syllabusStructure[track] || []).find(s => s.subject === subject || s.id === subject)
+        || (typeof window.getAllSubjects === 'function' ? window.getAllSubjects().find(s => s.subject === subject) : null);
+
+    if (sObj && sObj.chapters > 0) {
+        if (typeof window.getChapterStatus === 'function') {
+            for (let chNum = 1; chNum <= sObj.chapters; chNum++) {
+                const status = window.getChapterStatus(subject, chNum, track);
+                if (status !== 'complete' && status !== 'skip') return false;
+            }
+            return true;
+        }
+    }
+
+    if (!AppState.tasks || !Array.isArray(AppState.tasks)) return false;
     const key = track + 'Tasks';
     let totalChapters = 0;
     let completedChapters = 0;
@@ -192,7 +224,7 @@ function isSubjectCompleted(track, subject) {
     });
 
     return totalChapters > 0 && completedChapters === totalChapters;
-};
+}
 
 function getMonthlyTargetRange(date = new Date()) {
     const d = new Date(date);
@@ -3610,7 +3642,9 @@ function renderMonthlyTargets() {
             bgStyle += `background: linear-gradient(to right, ${fillRgba} ${progress.percent}%, transparent ${progress.percent}%);`;
         }
 
-        let displaySub = target.subject.replace(target.program + ' - ', '').replace(target.program + ' ', '');
+        let displaySub = (typeof Utils !== 'undefined' && typeof Utils.formatSubjectDisplay === 'function')
+            ? Utils.formatSubjectDisplay(target.subject, target.program)
+            : target.subject;
 
         const instanceIndex = (window.getMonthlyTargetInstanceOccurrence)
             ? window.getMonthlyTargetInstanceOccurrence(activeMonthKey, target, idx)
@@ -3687,8 +3721,8 @@ function renderMonthlyTargets() {
         const reqPace = daysLeft > 0 ? (remainingTargets / daysLeft) : 0;
         const actPace = completedTargets / currentDay;
 
-        if (reqPaceEl) reqPaceEl.textContent = `${reqPace.toFixed(2)} /Day`;
-        if (actPaceEl) actPaceEl.textContent = `${actPace.toFixed(2)} /Day`;
+        if (reqPaceEl) reqPaceEl.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function') ? Utils.formatPace(reqPace) : `${reqPace.toFixed(2)} Ch/Day`;
+        if (actPaceEl) actPaceEl.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function') ? Utils.formatPace(actPace) : `${actPace.toFixed(2)} Ch/Day`;
 
         if (estFinishEl) {
             if (remainingTargets === 0) {
@@ -3702,8 +3736,7 @@ function renderMonthlyTargets() {
                 const estDate = new Date();
                 estDate.setDate(estDate.getDate() + Math.ceil(daysNeeded));
 
-                const opt = { day: 'numeric', month: 'short', year: 'numeric' };
-                estFinishEl.textContent = estDate.toLocaleDateString('en-GB', opt);
+                estFinishEl.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function') ? Utils.formatDate(estDate) : estDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
                 estFinishEl.className = 'text-xs font-black text-purple-600 dark:text-purple-400';
             }
         }
@@ -3712,9 +3745,9 @@ function renderMonthlyTargets() {
         const startDiff = activeRange.start.getTime() - currentRange.start.getTime();
 
         if (startDiff < 0) {
-            if (reqPaceEl) reqPaceEl.textContent = `0.00 /Day`;
+            if (reqPaceEl) reqPaceEl.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function') ? Utils.formatPace(0) : `0.00 Ch/Day`;
             const actPace = completedTargets / daysInMonth;
-            if (actPaceEl) actPaceEl.textContent = `${actPace.toFixed(2)} /Day`;
+            if (actPaceEl) actPaceEl.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function') ? Utils.formatPace(actPace) : `${actPace.toFixed(2)} Ch/Day`;
 
             if (estFinishEl) {
                 if (remainingTargets === 0) {
@@ -3727,8 +3760,8 @@ function renderMonthlyTargets() {
             }
         } else {
             const reqPace = remainingTargets / daysInMonth;
-            if (reqPaceEl) reqPaceEl.textContent = `${reqPace.toFixed(2)} /Day`;
-            if (actPaceEl) actPaceEl.textContent = `0.00 /Day`;
+            if (reqPaceEl) reqPaceEl.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function') ? Utils.formatPace(reqPace) : `${reqPace.toFixed(2)} Ch/Day`;
+            if (actPaceEl) actPaceEl.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function') ? Utils.formatPace(0) : `0.00 Ch/Day`;
 
             if (estFinishEl) {
                 estFinishEl.textContent = 'Upcoming';
@@ -4565,7 +4598,9 @@ function renderMtdbList() {
 
             matchedCount++;
 
-            let displaySub = target.subject.replace(target.program + ' - ', '').replace(target.program + ' ', '');
+            let displaySub = (typeof Utils !== 'undefined' && typeof Utils.formatSubjectDisplay === 'function')
+                ? Utils.formatSubjectDisplay(target.subject, target.program)
+                : target.subject;
 
             const instanceIndex = (window.getMonthlyTargetInstanceOccurrence)
                 ? window.getMonthlyTargetInstanceOccurrence(monthKey, target, idx)
@@ -4587,7 +4622,7 @@ function renderMtdbList() {
                         </td>
                         <td class="py-3 px-4 font-bold text-slate-500 dark:text-slate-400 text-[10px]">${monthKey}</td>
                         <td class="py-3 px-4 uppercase text-[10px] text-slate-400">${target.program}</td>
-                        <td class="py-3 px-4 truncate max-w-[120px]" title="${target.subject}">${displaySub}</td>
+                        <td class="py-3 px-4 whitespace-normal" title="${target.subject}">${displaySub}</td>
                         <td class="py-3 px-4">${chapterCell}</td>
                         <td class="py-3 px-4 text-center">
                             <div class="flex items-center justify-center space-x-1">

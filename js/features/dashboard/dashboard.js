@@ -186,7 +186,9 @@
                 if (!stats) return;
 
                 // 1. Start Date
-                barStartVal.textContent = stats.startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                barStartVal.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function')
+                    ? Utils.formatDate(stats.startDate)
+                    : stats.startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
                 // 2. Days Passed
                 barPassedVal.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatDaysPassed === 'function')
@@ -200,11 +202,15 @@
                 // 4. Req & Actual Pace
                 const barReqPaceVal = safeGetEl('trends-bar-req-pace');
                 if (barReqPaceVal) {
-                    barReqPaceVal.textContent = `${stats.reqPace} Ch/Day`;
+                    barReqPaceVal.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function')
+                        ? Utils.formatPace(stats.reqPace)
+                        : `${stats.reqPace} Ch/Day`;
                 }
                 const barActualPaceVal = safeGetEl('trends-bar-actual-pace');
                 if (barActualPaceVal) {
-                    barActualPaceVal.textContent = `${stats.curPace} Ch/Day`;
+                    barActualPaceVal.textContent = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function')
+                        ? Utils.formatPace(stats.curPace)
+                        : `${stats.curPace} Ch/Day`;
                 }
 
                 // 5. Est Finish
@@ -220,8 +226,13 @@
                             else if (today > stats.targetDate) barEstFinishVal.textContent = 'Overdue';
                             else barEstFinishVal.textContent = 'No Data';
                         } else {
-                            const finishDateStr = stats.projectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                            barEstFinishVal.textContent = `${finishDateStr} (${Math.ceil(stats.remaining / stats.curPaceVal)} Days @ ${stats.curPace} Ch/Day)`;
+                            const finishDateStr = (typeof Utils !== 'undefined' && typeof Utils.formatDate === 'function')
+                                ? Utils.formatDate(stats.projectedDate)
+                                : stats.projectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                            const paceStr = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function')
+                                ? Utils.formatPace(stats.curPace)
+                                : `${stats.curPace} Ch/Day`;
+                            barEstFinishVal.textContent = `${finishDateStr} (${Math.ceil(stats.remaining / stats.curPaceVal)} Days @ ${paceStr})`;
                         }
                     }
                 }
@@ -388,7 +399,9 @@
                 displaySubtitle = trackName ? `Task | ${trackName}` : 'Task';
                 subjectColor = '#8b5cf6';
             } else {
-                let displaySub = target.subject.replace(target.program + ' - ', '').replace(target.program + ' ', '');
+                let displaySub = (typeof Utils !== 'undefined' && typeof Utils.formatSubjectDisplay === 'function')
+                    ? Utils.formatSubjectDisplay(target.subject, target.program)
+                    : target.subject;
                 displayTitle = `${target.chapter}: ${displaySub}`;
                 displaySubtitle = target.program;
                 subjectColor = typeof window.getSubjectColor === 'function' ? window.getSubjectColor(target.subject) : '#3b82f6';
@@ -576,7 +589,9 @@
 
         dashboardItems.forEach(item => {
             const target = item.target;
-            let displaySub = target.subject.replace(target.program + ' - ', '').replace(target.program + ' ', '');
+            let displaySub = (typeof Utils !== 'undefined' && typeof Utils.formatSubjectDisplay === 'function')
+                ? Utils.formatSubjectDisplay(target.subject, target.program)
+                : target.subject;
             const subjectColor = typeof window.getSubjectColor === 'function' ? window.getSubjectColor(target.subject) : '#10b981';
 
             const activeStyle = `background-color: ${subjectColor}cc; border-color: ${subjectColor}; color: white; box-shadow: 0 4px 12px ${subjectColor}33;`;
@@ -724,7 +739,9 @@
                 : { completed: 0, total: 0, percent: 0 };
             const isCompleted = target.completed || (target.totalChapterSize && progress.percent >= 100);
 
-            let displaySub = target.subject.replace(target.program + ' - ', '').replace(target.program + ' ', '');
+            let displaySub = (typeof Utils !== 'undefined' && typeof Utils.formatSubjectDisplay === 'function')
+                ? Utils.formatSubjectDisplay(target.subject, target.program)
+                : target.subject;
             const subjectColor = typeof window.getSubjectColor === 'function' ? window.getSubjectColor(target.subject) : '#3b82f6';
 
             const activeStyle = `background-color: ${subjectColor}cc; border-color: ${subjectColor}; color: white; box-shadow: 0 4px 12px ${subjectColor}33;`;
@@ -1192,8 +1209,10 @@
                     const subjName = ex.subject || ex.title || 'General';
                     const subjColor = typeof window.getSubjectColor === 'function' ? window.getSubjectColor(subjName) : '#f43f5e';
                     const dtObj = new Date(ex.timeMs);
-                    const dtFormatted = dtObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
                     const timeFormatted = (ex.time || ex.startTime) ? dtObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                    const dtFormatted = (typeof Utils !== 'undefined' && typeof Utils.formatExamDateTime === 'function')
+                        ? Utils.formatExamDateTime(dtObj, timeFormatted)
+                        : dtObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + (timeFormatted ? ' ' + timeFormatted : '');
 
                     const rem = typeof window.calculateExamTimeRemaining === 'function'
                         ? window.calculateExamTimeRemaining(nowDt, dtObj)
@@ -1232,7 +1251,7 @@
                                     <div class="flex items-center gap-1.5 text-[8px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mt-0.5 truncate">
                                         <span class="text-rose-500/80 font-black truncate max-w-[90px] sm:max-w-[120px]">${sessionTag}</span>
                                         <span>•</span>
-                                        <span class="truncate">${dtFormatted}${timeFormatted ? ' ' + timeFormatted : ''}</span>
+                                        <span class="truncate">${dtFormatted}</span>
                                     </div>
                                 </div>
                             </div>
@@ -1332,12 +1351,9 @@
                     const subjColor = typeof window.getSubjectColor === 'function' ? window.getSubjectColor(s.subject || 'General') : '#10b981';
                     const chaptersCount = s.chapters || 0;
 
-                    let displaySub = s.subject;
-                    if (s.program && displaySub.startsWith(s.program + ' - ')) {
-                        displaySub = displaySub.replace(s.program + ' - ', '');
-                    } else if (s.program && displaySub.startsWith(s.program + ' ')) {
-                        displaySub = displaySub.replace(s.program + ' ', '');
-                    }
+                    let displaySub = (typeof Utils !== 'undefined' && typeof Utils.formatSubjectDisplay === 'function')
+                        ? Utils.formatSubjectDisplay(s.subject, s.program)
+                        : s.subject;
 
                     html += `
                         <div class="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 select-none shadow-2xs">

@@ -209,9 +209,9 @@
         const processedSubjects = [];
 
         const allSubs = typeof global.getAllSubjects === 'function' ? global.getAllSubjects() : [];
-        const formatCgpa = (typeof global.Utils !== 'undefined' && typeof global.formatCgpa === 'function')
-            ? global.formatCgpa
-            : (val => Number(val).toFixed(2));
+        const formatCgpa = (typeof global.Utils !== 'undefined' && typeof global.Utils.formatCgpa === 'function')
+            ? global.Utils.formatCgpa
+            : (typeof global.formatCgpa === 'function' ? global.formatCgpa : (val => Number(val).toFixed(2)));
         const mapCgpaToGrade = (typeof global.Utils !== 'undefined' && typeof global.Utils.mapCgpaToGrade === 'function')
             ? global.Utils.mapCgpaToGrade
             : (() => 'A');
@@ -357,9 +357,9 @@
         const mapGradeToNum = (typeof global.Utils !== 'undefined' && typeof global.Utils.mapGradeToNumeric === 'function')
             ? global.Utils.mapGradeToNumeric
             : (() => 0);
-        const formatCgpa = (typeof global.Utils !== 'undefined' && typeof global.formatCgpa === 'function')
-            ? global.formatCgpa
-            : (v => Number(v).toFixed(2));
+        const formatCgpa = (typeof global.Utils !== 'undefined' && typeof global.Utils.formatCgpa === 'function')
+            ? global.Utils.formatCgpa
+            : (typeof global.formatCgpa === 'function' ? global.formatCgpa : (v => Number(v).toFixed(2)));
 
         const c = mapGradeToNum(gradeVal, evalType);
         badge.textContent = gradeVal ? formatCgpa(c) : '—';
@@ -384,9 +384,9 @@
         let targetCgpa = '';
         let targetGrade = '';
 
-        const formatCgpa = (typeof global.Utils !== 'undefined' && typeof global.formatCgpa === 'function')
-            ? global.formatCgpa
-            : (v => Number(v).toFixed(2));
+        const formatCgpa = (typeof global.Utils !== 'undefined' && typeof global.Utils.formatCgpa === 'function')
+            ? global.Utils.formatCgpa
+            : (typeof global.formatCgpa === 'function' ? global.formatCgpa : (v => Number(v).toFixed(2)));
         const mapCgpaToGrade = (typeof global.Utils !== 'undefined' && typeof global.Utils.mapCgpaToGrade === 'function')
             ? global.Utils.mapCgpaToGrade
             : (() => '');
@@ -438,9 +438,9 @@
         const estCgpaEl = document.getElementById('res-overall-est-cgpa');
         const estGradeEl = document.getElementById('res-overall-est-grade');
 
-        const formatCgpa = (typeof global.Utils !== 'undefined' && typeof global.formatCgpa === 'function')
-            ? global.formatCgpa
-            : (v => Number(v).toFixed(2));
+        const formatCgpa = (typeof global.Utils !== 'undefined' && typeof global.Utils.formatCgpa === 'function')
+            ? global.Utils.formatCgpa
+            : (typeof global.formatCgpa === 'function' ? global.formatCgpa : (v => Number(v).toFixed(2)));
         const mapCgpaToGrade = (typeof global.Utils !== 'undefined' && typeof global.Utils.mapCgpaToGrade === 'function')
             ? global.Utils.mapCgpaToGrade
             : (() => '');

@@ -451,13 +451,15 @@
                     subjects: allSubs
                 };
 
-                const currentPaceDisplay = globalCurPace.toFixed(2);
+                const currentPaceDisplay = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function')
+                    ? Utils.formatPace(globalCurPace)
+                    : `${globalCurPace.toFixed(2)} Ch/Day`;
                 safeSetText('target-req-pace', `--`);
-                safeSetText('current-pace-stat', `${currentPaceDisplay} Ch/Day`);
+                safeSetText('current-pace-stat', currentPaceDisplay);
                 safeSetText('global-pace-req', `--`);
-                safeSetText('global-pace-act', `${currentPaceDisplay} Ch/Day`);
+                safeSetText('global-pace-act', currentPaceDisplay);
                 safeSetText('db-target-req-pace', `--`);
-                safeSetText('db-current-pace-stat', `${currentPaceDisplay} Ch/Day`);
+                safeSetText('db-current-pace-stat', currentPaceDisplay);
 
                 let finishDisplay = '';
                 let globalDaysLeftStr = '<span class="opacity-50">--</span>';
@@ -629,8 +631,12 @@
                     subjects: Array.from(targetedSubjects)
                 };
 
-                const currentPaceDisplay = globalCurPace.toFixed(2);
-                const reqPaceDisplay = globalReqPace.toFixed(2);
+                const currentPaceDisplay = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function')
+                    ? Utils.formatPace(globalCurPace)
+                    : `${globalCurPace.toFixed(2)} Ch/Day`;
+                const reqPaceDisplay = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function')
+                    ? Utils.formatPace(globalReqPace)
+                    : `${globalReqPace.toFixed(2)} Ch/Day`;
 
                 let maxProjectedDate = window.latestPaceData.projectedDate;
                 let finishDisplay = '';
@@ -674,16 +680,16 @@
                     }
                 }
 
-                safeSetText('target-req-pace', `${reqPaceDisplay} Ch/Day`);
-                safeSetText('current-pace-stat', `${currentPaceDisplay} Ch/Day`);
+                safeSetText('target-req-pace', reqPaceDisplay);
+                safeSetText('current-pace-stat', currentPaceDisplay);
                 safeSetHtml('projected-finish', finishDisplay);
 
-                safeSetText('global-pace-req', `${reqPaceDisplay} Ch/Day`);
-                safeSetText('global-pace-act', `${currentPaceDisplay} Ch/Day`);
+                safeSetText('global-pace-req', reqPaceDisplay);
+                safeSetText('global-pace-act', currentPaceDisplay);
                 safeSetHtml('global-pace-finish', finishDisplay);
 
-                safeSetText('db-target-req-pace', `${reqPaceDisplay} Ch/Day`);
-                safeSetText('db-current-pace-stat', `${currentPaceDisplay} Ch/Day`);
+                safeSetText('db-target-req-pace', reqPaceDisplay);
+                safeSetText('db-current-pace-stat', currentPaceDisplay);
                 safeSetHtml('db-projected-finish', finishDisplay);
 
                 safeSetHtml('global-days-left', globalDaysLeftStr);
@@ -723,19 +729,19 @@
                 const dbStatusLabel = safeGetEl('db-target-status-label');
                 if (dbStatusLabel) {
                     if (paceTotalChapters === 0) {
-                        dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5 truncate";
+                        dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5 break-words";
                         dbStatusLabel.textContent = "NO TARGETS";
                     } else if (today < start) {
-                        dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider mt-0.5 truncate";
+                        dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider mt-0.5 break-words";
                         dbStatusLabel.textContent = "FUTURE";
                     } else if (today > end && remaining > 0) {
-                        dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-red-500 dark:text-red-400 uppercase tracking-wider mt-0.5 truncate";
+                        dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-red-500 dark:text-red-400 uppercase tracking-wider mt-0.5 break-words";
                         dbStatusLabel.textContent = "OVERDUE";
                     } else if (remaining <= 0) {
-                        dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider mt-0.5 truncate";
+                        dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider mt-0.5 break-words";
                         dbStatusLabel.textContent = "DONE";
                     } else {
-                        dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-blue-400 dark:text-blue-400 uppercase tracking-wider mt-0.5 truncate";
+                        dbStatusLabel.className = "text-[9px] md:text-[10px] font-bold text-blue-400 dark:text-blue-400 uppercase tracking-wider mt-0.5 break-words";
                         const endStr = (typeof Utils !== 'undefined' && typeof Utils.formatDateResponsive === 'function') ? Utils.formatDateResponsive(end) : end.toLocaleDateString();
                         dbStatusLabel.innerHTML = `Target: ${endStr}`;
                     }

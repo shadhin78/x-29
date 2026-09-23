@@ -80,8 +80,8 @@
     // ==========================================
 
     /**
-     * Scans AppState.tasks for all chapters of the selected subject,
-     * then renders an editable row for each chapter with its current topic name.
+     * Retrieves all chapters from the authoritative syllabusStructure
+     * and renders an editable row for each chapter with its topic name.
      */
     function renderTopicChapterList() {
         const container = document.getElementById('topic-chapter-list');
@@ -99,51 +99,33 @@
             return;
         }
 
-        // Collect all unique chapters for this subject and their current titles
-        const key = track + 'Tasks';
-        const chapterMap = new Map(); // chapter string → { title, chNum }
-
-        if (typeof AppState !== 'undefined' && Array.isArray(AppState.tasks)) {
-            AppState.tasks.forEach(t => {
-                if (t.type !== 'study') return;
-                if (!Array.isArray(t[key])) return;
-                t[key].forEach(b => {
-                    if (b.subject === subject && b.chapter && b.chapter !== 'Rev') {
-                        if (!chapterMap.has(b.chapter)) {
-                            chapterMap.set(b.chapter, {
-                                title: b.title || '',
-                                chNum: parseInt(b.chapter.replace(/\D/g, ''), 10) || 0
-                            });
-                        }
-                    }
-                });
-            });
+        // Retrieve authoritative chapter records
+        let chapterRecords = [];
+        if (typeof window.getChapterRecordsForSubject === 'function') {
+            chapterRecords = window.getChapterRecordsForSubject(track, subject);
+        } else if (typeof Taxonomy !== 'undefined' && typeof Taxonomy.getChapterRecordsForSubject === 'function') {
+            chapterRecords = Taxonomy.getChapterRecordsForSubject(track, subject);
+        } else {
+            const chs = (typeof window.getChaptersForSubject === 'function')
+                ? window.getChaptersForSubject(track, subject)
+                : [];
+            chapterRecords = chs.map((ch, idx) => ({
+                id: `${subject}-${idx + 1}`,
+                chapter: ch,
+                chNum: parseInt(String(ch).replace(/\D/g, ''), 10) || (idx + 1),
+                title: ''
+            }));
         }
 
-        // Fallback: if no chapters found in tasks, generate from syllabusStructure
-        if (chapterMap.size === 0) {
-            const syllabusStructure = window.syllabusStructure || {};
-            const sObj = (syllabusStructure[track] || []).find(s => s.subject === subject);
-            if (sObj && sObj.chapters > 0) {
-                for (let i = 1; i <= sObj.chapters; i++) {
-                    chapterMap.set(`Ch. ${i}`, { title: '', chNum: i });
-                }
-            }
-        }
-
-        if (chapterMap.size === 0) {
+        if (!chapterRecords || chapterRecords.length === 0) {
             container.innerHTML = '<p class="text-xs text-slate-400 dark:text-slate-500 font-bold py-6 text-center">No chapters found for this subject.</p>';
             return;
         }
 
-        // Sort by chapter number
-        const sortedChapters = Array.from(chapterMap.entries())
-            .sort((a, b) => a[1].chNum - b[1].chNum);
-
         let html = `
             <div class="flex items-center justify-between mb-3 mt-2">
                 <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    ${sortedChapters.length} Chapter${sortedChapters.length !== 1 ? 's' : ''} Found
+                    ${chapterRecords.length} Chapter${chapterRecords.length !== 1 ? 's' : ''} Found
                 </p>
                 <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500">
                     ${subject}
@@ -152,9 +134,9 @@
             <div class="max-h-[400px] overflow-y-auto custom-scrollbar rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30">
         `;
 
-        sortedChapters.forEach(([chKey, data], idx) => {
-            const chNumPadded = String(data.chNum).padStart(2, '0');
-            const escapedTitle = (data.title || '').replace(/"/g, '&quot;');
+        chapterRecords.forEach((record, idx) => {
+            const chNumPadded = String(record.chNum).padStart(2, '0');
+            const escapedTitle = (record.title || '').replace(/"/g, '&quot;');
             const rowBg = idx % 2 === 0
                 ? 'bg-white dark:bg-slate-800/50'
                 : 'bg-slate-50/80 dark:bg-slate-800/30';
@@ -165,7 +147,7 @@
                         Ch. ${chNumPadded}
                     </span>
                     <input type="text"
-                        data-topic-ch="${chKey}"
+                        data-topic-ch="${record.chapter}"
                         value="${escapedTitle}"
                         placeholder="Enter topic name..."
                         class="topic-name-input flex-1 bg-transparent border-0 border-b-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 text-xs text-slate-800 dark:text-slate-200 font-semibold py-1.5 px-1 outline-none transition-colors placeholder:text-slate-300 dark:placeholder:text-slate-600">
@@ -174,7 +156,6 @@
         });
 
         html += `</div>`;
-
         container.innerHTML = html;
     }
 
@@ -183,8 +164,8 @@
     // ==========================================
 
     /**
-     * Reads all topic name inputs and updates the `title` field
-     * in every matching chapter entry across all task days.
+     * Reads all topic name inputs and updates both the authoritative
+     * subject definition in syllabusStructure and matching task entries.
      */
     function saveAllTopicNames() {
         const trackSelect = document.getElementById('topic-track');
@@ -215,7 +196,22 @@
             }
         });
 
-        // Apply updates across all task days
+        // 1. Persist directly onto the authoritative subject in syllabusStructure
+        const syllabus = (window.syllabusStructure || (typeof global !== 'undefined' && global.syllabusStructure) || {});
+        let targetSub = (syllabus[track] || []).find(s => s.subject === subject || s.id === subject);
+        if (!targetSub && typeof window.getSubject === 'function') {
+            targetSub = window.getSubject(subject, track);
+        }
+        if (targetSub) {
+            if (!targetSub.topicNames || typeof targetSub.topicNames !== 'object') {
+                targetSub.topicNames = {};
+            }
+            titleUpdates.forEach((val, chKey) => {
+                targetSub.topicNames[chKey] = val;
+            });
+        }
+
+        // 2. Apply updates across all task days
         const key = track + 'Tasks';
         let updateCount = 0;
 
@@ -244,10 +240,8 @@
 
         if (typeof showToast === 'function') {
             showToast(
-                updateCount > 0
-                    ? `${updateCount} topic name${updateCount !== 1 ? 's' : ''} updated successfully!`
-                    : "No changes detected.",
-                updateCount > 0 ? "success" : "info"
+                `${titleUpdates.size} topic name${titleUpdates.size !== 1 ? 's' : ''} saved to syllabus!`,
+                "success"
             );
         }
     }
