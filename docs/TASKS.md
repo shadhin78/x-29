@@ -190,7 +190,7 @@
   - [ ] Port array reconciliation logic (`reconcileArrays`) and tombstone tracking (`_tombstones`).
   - [ ] Verify cloud writes match `firestore.rules` schema byte-for-byte.
 * **Risks:** Breaking Firestore snapshot merge logic during real-time updates.
-* **Validation:** Run full regression cloud sync tests; verify live document in `x-2k29`.
+* **Validation:** Run full regression cloud sync tests; verify live document in `x-2k-29`.
 * **Expected result:** Modernized modular Firebase service with 100% data integrity.
 * **Status:** PENDING.
 

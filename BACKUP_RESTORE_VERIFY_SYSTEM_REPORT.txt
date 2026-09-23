@@ -179,7 +179,7 @@ Security & Safety:
      Base64 encoded string with escaped newlines).
   2. Local File: `firebase-service-account.json` in the code root directory.
 - Cross-Project Protection:
-  Constant `EXPECTED_PROJECT_ID` (e.g. 'x-2k29' or your project ID) is hard-pinned.
+  Constant `EXPECTED_PROJECT_ID` (e.g. 'x-2k-29' or your project ID) is hard-pinned.
   If the parsed service account JSON contains a different `project_id`, execution 
   is terminated immediately with an error. This completely eliminates accidental 
   backups or restores directed at staging vs production.

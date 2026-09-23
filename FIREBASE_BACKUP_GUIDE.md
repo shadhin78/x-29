@@ -1,4 +1,4 @@
-# X-29 (`x-2k29`) Firestore Backup, Restore & Verification Guide
+# X-29 (`x-2k-29`) Firestore Backup, Restore & Verification Guide
 
 This guide describes the local backup, automatic post-backup verification, restore, and deep verification system configured specifically for **X-29**.
 
@@ -11,7 +11,7 @@ The X-29 backup system runs locally on your PC via Node.js scripts:
 ```text
 START
   ↓
-Create Firebase backup (READ-ONLY fetch from x-2k29)
+Create Firebase backup (READ-ONLY fetch from x-2k-29)
   ↓
 Backup successfully written (Automatic\DD MM YYYY\HH MM AM/PM)
   ↓

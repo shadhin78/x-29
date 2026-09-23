@@ -1,5 +1,5 @@
 /**
- * X-29 (x-2k29) Local Firestore Restore System
+ * X-29 (x-2k-29) Local Firestore Restore System
  * scripts/restore.js
  */
 
@@ -16,7 +16,7 @@ const BACKUP_BASE_DIR = path.join(X29_ROOT_DIR, 'X-29-backup');
 const MANUAL_BACKUPS_DIR = path.join(BACKUP_BASE_DIR, 'Manual');
 const LOGS_DIR = path.join(BACKUP_BASE_DIR, 'logs');
 const RESTORE_LOG_PATH = path.join(LOGS_DIR, 'restore-log.txt');
-const EXPECTED_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'x-2k29';
+const EXPECTED_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'x-2k-29';
 const MAX_BATCH_SIZE = 400;
 
 // Helper to handle CLI user input

@@ -4,7 +4,7 @@
 > **Status:** Active / Permanent Baseline Reference  
 > **Project Identity:** X-29 Advance (Dynamic Multi-Track Execution & Tracking Dashboard)  
 > **Repository:** `d:\X-29 Project\X-29\X-29-code`  
-> **Live Project ID:** `x-2k29`
+> **Live Project ID:** `x-2k-29`
 
 ---
 
@@ -15,7 +15,7 @@
 2. **Tri-Tier Targets System:** A strict hierarchical cascade linking Monthly Targets $\rightarrow$ Weekly Targets $\rightarrow$ Daily Targets $\rightarrow$ Study Plan Tasks with bi-directional synchronization.
 3. **High-Precision Focus Chronograph & Timer:** Hardware-accelerated stopwatch and countdown timer tracking subject-level focus sessions, recording historical logs, and measuring daily target hours.
 4. **Spectra Analytics & Heatmaps:** GitHub-style chronological heatmaps, program progression curves, burn-up pace estimations, and habit compliance matrices.
-5. **Private Administrative Access:** Single-user private authentication boundary bound strictly to `ris2k29@gmail.com` with real-time cloud persistence on Google Cloud Firestore (`x-2k29`).
+5. **Private Administrative Access:** Single-user private authentication boundary bound strictly to `ris2k29@gmail.com` with real-time cloud persistence on Google Cloud Firestore (`x-2k-29`).
 
 ---
 
@@ -103,7 +103,7 @@ The application shell operates 11 primary feature pages dynamically managed by `
 
 ## 6. Data Synchronization & Persistence
 
-### 6.1 Firestore Architecture (`x-2k29`)
+### 6.1 Firestore Architecture (`x-2k-29`)
 * **Single Monolithic Document:** All user state is consolidated under path `/users/{userId}` where `userId == request.auth.uid`.
 * **State Keys:** Exactly 48 authorized top-level keys managed in `firestore.rules` (including `tasks`, `tracks`, `monthlyTargetsDatabase`, `timerLogs`, `examSessions`, `_tombstones`, `_lastWriteId`).
 * **Conflict Resolution Engine:**

@@ -3,7 +3,7 @@
 > **Document Version:** 1.0.0  
 > **Status:** Active / Permanent Architectural Baseline Reference  
 > **Project Identity:** X-29 Advance  
-> **Database:** Google Cloud Firestore (`x-2k29`)
+> **Database:** Google Cloud Firestore (`x-2k-29`)
 
 ---
 
@@ -178,13 +178,13 @@ flowchart TD
 ## 4. Current Dependencies & External Assets
 
 * **Core Runtime:**
-  * `firebase` (v12.17.1 / v10.12.2 Compat CDN): Client Auth and Firestore.
+  * `firebase` (v12.17.1 / v12.19.0 Compat CDN): Client Auth and Firestore.
   * `firebase-admin` (v14.2.0): Used exclusively in Node.js backup/restore CLI scripts.
 * **External CDNs (Render-Blocking):**
   * `https://cdn.tailwindcss.com`: In-browser JIT Tailwind compiler (executes in `<head>`, blocking FCP).
   * `https://cdn.jsdelivr.net/npm/chart.js`: Monolithic charting library loaded globally.
   * `https://fonts.googleapis.com`: Inter, Outfit, Plus Jakarta Sans, JetBrains Mono, Rajdhani, Chakra Petch.
-  * `https://www.gstatic.com/firebasejs/10.12.2/*`: Firebase Compat runtime libraries.
+  * `https://www.gstatic.com/firebasejs/12.19.0/*`: Firebase Compat runtime libraries.
 
 ---
 

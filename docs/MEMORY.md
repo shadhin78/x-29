@@ -29,7 +29,7 @@
 ## 2. Latest Architectural Discoveries & Decisions
 
 1. **Monolithic Firestore Document (`/users/{userId}`):**
-   * The live database (`x-2k29`) stores the entire user workspace inside a single document.
+   * The live database (`x-2k-29`) stores the entire user workspace inside a single document.
    * `firestore.rules` enforces a strict whitelist of 48 top-level keys.
    * *Architectural Decision:* Any modernization must preserve the schema of this monolithic document byte-for-byte to maintain 100% compatibility with existing backups and the Node.js backup/restore tools (`scripts/backup.js`, `scripts/restore.js`).
 2. **Conflict Resolution & Array Reconciliation:**

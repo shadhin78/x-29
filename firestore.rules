@@ -2,7 +2,7 @@ rules_version = '2';
 
 /**
  * X-29 Study Dashboard & PWA - Production-Grade Firestore Security Rules
- * Project ID: x-2k29
+ * Project ID: x-2k-29
  *
  * Architecture Principles:
  * 1. Default-Deny: Any path or operation not explicitly permitted is rejected.

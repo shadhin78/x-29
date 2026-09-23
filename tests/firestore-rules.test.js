@@ -16,7 +16,7 @@ const {
     assertSucceeds
 } = require('@firebase/rules-unit-testing');
 
-const PROJECT_ID = 'x-2k29';
+const PROJECT_ID = 'x-2k-29';
 const RULES_PATH = path.resolve(__dirname, '..', 'firestore.rules');
 
 describe('X-29 Firestore Security Rules', () => {

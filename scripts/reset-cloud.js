@@ -2,8 +2,8 @@
  * X-29 Cloud Reset Script
  * scripts/reset-cloud.js
  * 
- * Securely resets or deletes user documents in the x-2k29 Firebase Firestore.
- * Contains strict safety assertions ensuring it will REFUSE to run on any project other than x-2k29.
+ * Securely resets or deletes user documents in the x-2k-29 Firebase Firestore.
+ * Contains strict safety assertions ensuring it will REFUSE to run on any project other than x-2k-29.
  */
 
 const fs = require('fs');
@@ -11,7 +11,7 @@ const path = require('path');
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
-const EXPECTED_PROJECT_ID = 'x-2k29';
+const EXPECTED_PROJECT_ID = 'x-2k-29';
 const SERVICE_ACCOUNT_PATH = path.join(__dirname, '..', 'firebase-service-account.json');
 
 if (!fs.existsSync(SERVICE_ACCOUNT_PATH)) {
@@ -41,7 +41,7 @@ async function resetWorkspace() {
             const taskCount = Array.isArray(data.tasks) ? data.tasks.length : 0;
             console.log(`[RESET] Document has ${taskCount} task(s). Deleting document to ensure a clean empty workspace...`);
             await db.collection('users').doc(doc.id).delete();
-            console.log(`[RESET] Document users/${doc.id} successfully DELETED from x-2k29.`);
+            console.log(`[RESET] Document users/${doc.id} successfully DELETED from x-2k-29.`);
         }
 
         console.log(`[RESET] Cloud Firestore in '${EXPECTED_PROJECT_ID}' is now 100% EMPTY and ready for fresh use.`);

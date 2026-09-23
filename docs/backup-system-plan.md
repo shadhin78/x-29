@@ -78,7 +78,7 @@ This plan configures the Firestore Backup, Automatic Scheduled Backup, Deep Live
      - `D:\X-29 Project\X-29\X-29-backup\Manual\<date>\<time>\firestore-backup.json` is created.
      - `metadata.json` is written with correct document count, collection count, and SHA-256 hash.
      - Level 1 local file verification succeeds.
-     - Level 2 automatic live verification connects to Firestore (`x-2k29`), compares the canonical tree, and logs `EXACT MATCH`.
+     - Level 2 automatic live verification connects to Firestore (`x-2k-29`), compares the canonical tree, and logs `EXACT MATCH`.
      - Logs are written exclusively to `D:\X-29 Project\X-29\X-29-backup\logs\backup-log.txt` and `verification-log.txt`.
      - Zero backup files or logs exist in `D:\X-29 Project\X-29\X-29-code`.
 

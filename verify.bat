@@ -1,5 +1,5 @@
 @echo off
-title X-29 Firestore Backup Verification (x-2k29)
+title X-29 Firestore Backup Verification (x-2k-29)
 cd /d "%~dp0"
 echo ==================================================
 echo Starting X-29 Firestore Backup Verification...
