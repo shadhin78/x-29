@@ -1,51 +1,30 @@
 rules_version = '2';
 
 /**
- * X-29 Study Dashboard & PWA - Production-Grade Firestore Security Rules
+ * X-29 Personal Finance & Study Operating System - Production Firestore Security Rules
  * Project ID: x-2k-29
  *
- * Architecture Principles:
- * 1. Default-Deny: Any path or operation not explicitly permitted is rejected.
- * 2. Least Privilege: Authenticated users can only read, write, and delete their own user document.
- * 3. UID Spoofing & Ownership Protection: Path parameter userId is strictly bound to request.auth.uid.
- *    Any internal userId/uid fields cannot be spoofed or mutated during updates.
- * 4. Privilege Escalation Prevention: Forbidden keys (isAdmin, role, permissions, etc.) are blocked.
- * 5. Enumeration Guard: Listing or querying the entire /users collection is restricted to admins only.
- * 6. Admin SDK Independence: Backup/restore systems running via Firebase Admin SDK bypass these
- *    rules server-side; zero public backdoors or wildcards are created.
+ * Architecture Principles (Unauthenticated Single-User Operation):
+ * 1. Default-Deny: Any collection or path not explicitly whitelisted is rejected.
+ * 2. Unauthenticated Workspace Sync: Enables cross-device sync (PC, mobile, tablet)
+ *    without requiring Firebase Authentication tokens or user logins.
+ * 3. Strict Schema Validation: Enforces key whitelisting (max 48 keys) and exact data types
+ *    on all incoming payloads, preventing database pollution or malformed writes.
+ * 4. Privilege Escalation Prevention: Forbids injection of system, admin, or role claims.
+ * 5. Enumeration Guard: Listing or querying the /users collection is disallowed, preventing
+ *    unauthorized discovery of stored document IDs.
+ * 6. Admin SDK Independence: Server-side backup/restore and CLI scripts utilize Firebase
+ *    Admin SDK which bypasses security rules; no public backdoors are created.
  */
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // =========================================================================
-    // HELPER FUNCTIONS
+    // HELPER FUNCTIONS & DATA VALIDATION
     // =========================================================================
 
-    // 1. Check if the incoming request is authenticated with Firebase Authentication
-    function isAuthenticated() {
-      return request.auth != null && request.auth.uid != null;
-    }
-
-    // 2. Check if the authenticated user is the designated owner of the path
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // 3. Check if the caller has verified administrative privileges
-    // Supports Firebase Custom Claims (request.auth.token.admin == true)
-    // with secure fallback to verified primary admin email identity
-    function isAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.get('admin', false) == true ||
-        (request.auth.token.email != null &&
-         request.auth.token.email.lower() == 'ris2k29@gmail.com' &&
-         request.auth.token.email_verified == true)
-      );
-    }
-
-    // 4. Prevent privilege escalation or unauthorized security/role fields
-    // Normal users cannot inject or alter administrative and system fields
+    // 1. Prevent privilege escalation or unauthorized security/role fields
     function hasNoPrivilegeEscalation() {
       let forbiddenKeys = [
         'admin', 'isAdmin', 'role', 'roles', 'permissions',
@@ -54,35 +33,26 @@ service cloud.firestore {
       return !request.resource.data.keys().hasAny(forbiddenKeys);
     }
 
-    // 5. Enforce ownership consistency on document CREATE:
-    // If 'userId' or 'uid' fields are included in the document body,
-    // they MUST match the path userId parameter and the caller's auth UID.
-    function isValidOwnerCreate(userId) {
+    // 2. Enforce document ID consistency:
+    // If 'userId' or 'uid' fields are included in the payload, they must match the document path ID.
+    function isValidDocumentIdentity(userId) {
       return (!('userId' in request.resource.data) || request.resource.data.userId == userId) &&
              (!('uid' in request.resource.data) || request.resource.data.uid == userId);
     }
 
-    // 6. Enforce ownership immutability on document UPDATE:
-    // Prevent ownership transfer, UID alteration, or spoofing another user's identity.
-    function isValidOwnerUpdate(userId) {
-      let data = request.resource.data;
+    // 3. Prevent tampering with existing document identity on update
+    function isImmutableIdentity() {
       let prevData = resource.data;
+      let data = request.resource.data;
       let affected = data.diff(prevData).affectedKeys();
 
-      // If userId exists in the original document, it cannot be modified
-      let noUserIdTampering = (!('userId' in prevData) || !affected.hasAny(['userId']) || data.userId == prevData.userId);
+      let noUserIdChange = !('userId' in prevData) || !affected.hasAny(['userId']) || data.userId == prevData.userId;
+      let noUidChange = !('uid' in prevData) || !affected.hasAny(['uid']) || data.uid == prevData.uid;
 
-      // If uid exists in the original document, it cannot be modified
-      let noUidTampering = (!('uid' in prevData) || !affected.hasAny(['uid']) || data.uid == prevData.uid);
-
-      // Any written userId or uid must match the path userId and request.auth.uid
-      let matchesOwner = (!('userId' in data) || data.userId == userId) &&
-                         (!('uid' in data) || data.uid == userId);
-
-      return noUserIdTampering && noUidTampering && matchesOwner;
+      return noUserIdChange && noUidChange;
     }
 
-    // 7. Whitelist allowed top-level keys for the user workspace document
+    // 4. Whitelist allowed top-level keys for the single workspace document
     // Rejects unexpected keys and arbitrary document structure injection
     function hasOnlyAllowedUserKeys() {
       let allowedKeys = [
@@ -102,7 +72,7 @@ service cloud.firestore {
              request.resource.data.keys().size() <= 48;
     }
 
-    // 8. Field-level data type verification: Ensure valid data integrity
+    // 5. Field-level data type verification: Ensure valid data integrity
     function isValidUserDataTypes() {
       let data = request.resource.data;
       return (!('tasks' in data) || data.tasks is list) &&
@@ -158,48 +128,46 @@ service cloud.firestore {
 
     // 1. User Workspaces Collection (/users/{userId})
     match /users/{userId} {
-      // Individual document read: strictly owner or admin
-      // Direct onSnapshot or getDoc on /users/{userId}
-      allow get: if isOwner(userId) || isAdmin();
+      // Individual document read: accessible by direct ID query or onSnapshot
+      allow get: if true;
 
       // Collection enumeration protection:
-      // Prevent normal users from listing or querying all users in the collection
-      allow list: if isAdmin();
+      // Disallows listing or querying the whole /users collection (prevents ID scanning)
+      allow list: if false;
 
-      // Document creation: Owner can only create their own document with valid schema
+      // Document creation: Validates schema, field types, and identity
       allow create: if (
-        isOwner(userId) &&
-        isValidOwnerCreate(userId) &&
+        isValidDocumentIdentity(userId) &&
         hasNoPrivilegeEscalation() &&
         hasOnlyAllowedUserKeys() &&
         isValidUserDataTypes()
-      ) || isAdmin();
+      );
 
-      // Document update: Owner can only update their own document, no ownership transfer
+      // Document update: Enforces identity immutability and schema compliance
       allow update: if (
-        isOwner(userId) &&
-        isValidOwnerUpdate(userId) &&
+        isValidDocumentIdentity(userId) &&
+        isImmutableIdentity() &&
         hasNoPrivilegeEscalation() &&
         hasOnlyAllowedUserKeys() &&
         isValidUserDataTypes()
-      ) || isAdmin();
+      );
 
-      // Document deletion: Only owner or admin can delete the user document
-      allow delete: if isOwner(userId) || isAdmin();
+      // Document deletion: Allowed for workspace reset / clean-slate operations
+      allow delete: if true;
 
       // 2. User Subcollections (/users/{userId}/{subcollection}/{subDocId})
-      // Sandboxes all nested user subcollections under the same owner
       match /{subcollection}/{subDocId} {
-        allow get, list: if isOwner(userId) || isAdmin();
-        allow create, update: if (isOwner(userId) && hasNoPrivilegeEscalation()) || isAdmin();
-        allow delete: if isOwner(userId) || isAdmin();
+        allow get: if true;
+        allow list: if false;
+        allow create, update: if hasNoPrivilegeEscalation();
+        allow delete: if true;
       }
     }
 
     // =========================================================================
     // DEFAULT-DENY FALLBACK
     // =========================================================================
-    // Deny all unauthenticated or unmatched access across any other collection path
+    // Rejects access to any collection or path outside /users/{userId}
     match /{document=**} {
       allow read, write: if false;
     }
