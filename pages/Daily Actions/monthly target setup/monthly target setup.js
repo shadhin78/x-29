@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Monthly Target Page Module (pages/Daily Actions/monthly target setup/monthly target setup.js)
  * Single Source of Truth for Add & Edit Monthly Target Studio page logic and lifecycle.
  */
@@ -2788,7 +2788,7 @@ window.openAddMonthlyTargetPage = function (targetDate = null) {
     }
 
     const container = document.getElementById('page-monthly-target-setup');
-    if (!container || container.classList.contains('hidden')) {
+    if ((!container || container.classList.contains('hidden')) && !(window.Router && (window.Router.activePageId === 'monthly-target-setup' || window.Router.isNavigating))) {
         if (typeof window.switchPage === 'function') {
             window.switchPage('monthly-target-setup');
         }
@@ -3003,7 +3003,7 @@ window.openEditMonthlyTargetPage = function (idx, monthKey = null) {
     window.editingMonthlyTargetMonthKey = monthKey;
 
     const container = document.getElementById('page-monthly-target-setup');
-    if (!container || container.classList.contains('hidden')) {
+    if ((!container || container.classList.contains('hidden')) && !(window.Router && (window.Router.activePageId === 'monthly-target-setup' || window.Router.isNavigating))) {
         if (typeof window.switchPage === 'function') {
             window.switchPage('monthly-target-setup');
         }

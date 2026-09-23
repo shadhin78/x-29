@@ -1253,21 +1253,17 @@
         },
 
         refreshProgressChart: function () {
-            const refresh = () => {
-                const canvas = document.getElementById('progressChart');
-                if (canvas && typeof AppState !== 'undefined' && AppState.progressChart && typeof AppState.progressChart.resize === 'function') {
-                    AppState.progressChart.resize();
-                    if (typeof AppState.progressChart.update === 'function') {
-                        AppState.progressChart.update('none');
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(() => {
+                    const canvas = document.getElementById('progressChart');
+                    if (canvas && typeof AppState !== 'undefined' && AppState.progressChart && typeof AppState.progressChart.resize === 'function') {
+                        AppState.progressChart.resize();
+                        if (typeof AppState.progressChart.update === 'function') {
+                            AppState.progressChart.update('none');
+                        }
                     }
-                } else if (typeof window.updateMetrics === 'function') {
-                    window.updateMetrics();
-                } else if (typeof updateMetrics === 'function') {
-                    updateMetrics();
-                }
-            };
-            setTimeout(refresh, 50);
-            setTimeout(refresh, 420);
+                });
+            }
         },
 
         destroy: function () {

@@ -3788,7 +3788,9 @@ function openAddMonthlyTargetPage(targetDate = null) {
         window.currentMonthlyTargetsDate = new Date();
     }
 
-    window.switchPage('monthly-target-setup');
+    if (typeof window.switchPage === 'function' && !(window.Router && (window.Router.activePageId === 'monthly-target-setup' || window.Router.isNavigating))) {
+        window.switchPage('monthly-target-setup');
+    }
 
     const pageTitle = document.getElementById('mt-page-title');
     if (pageTitle) pageTitle.textContent = "Add Monthly Target";
@@ -3998,7 +4000,9 @@ function openEditMonthlyTargetPage(idx, monthKey = null) {
     window.editingMonthlyTargetIndex = idx;
     window.editingMonthlyTargetMonthKey = monthKey;
 
-    window.switchPage('monthly-target-setup');
+    if (typeof window.switchPage === 'function' && !(window.Router && (window.Router.activePageId === 'monthly-target-setup' || window.Router.isNavigating))) {
+        window.switchPage('monthly-target-setup');
+    }
 
     const pageTitle = document.getElementById('mt-page-title');
     if (pageTitle) pageTitle.textContent = "Edit Monthly Target";

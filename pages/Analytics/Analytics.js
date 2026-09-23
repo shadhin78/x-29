@@ -68,25 +68,25 @@
         },
 
         resizeCharts: function () {
-            const resizeFn = () => {
-                const charts = [
-                    window.mainChartPrograms,
-                    window.monthlyChartActions,
-                    window.spectraPaceTrendChartInstance,
-                    window.globalPaceTrendChartInstance,
-                    window.spectraFocusAnalyticsChartInstance
-                ];
-                charts.forEach(chart => {
-                    if (chart && typeof chart.resize === 'function') {
-                        chart.resize();
-                        if (typeof chart.update === 'function') {
-                            chart.update('none');
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(() => {
+                    const charts = [
+                        window.mainChartPrograms,
+                        window.monthlyChartActions,
+                        window.spectraPaceTrendChartInstance,
+                        window.globalPaceTrendChartInstance,
+                        window.spectraFocusAnalyticsChartInstance
+                    ];
+                    charts.forEach(chart => {
+                        if (chart && typeof chart.resize === 'function') {
+                            chart.resize();
+                            if (typeof chart.update === 'function') {
+                                chart.update('none');
+                            }
                         }
-                    }
+                    });
                 });
-            };
-            setTimeout(resizeFn, 50);
-            setTimeout(resizeFn, 420);
+            }
         },
 
         destroy: function () {

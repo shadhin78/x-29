@@ -136,6 +136,9 @@
                     } else if (typeof window.renderSchedulePage === 'function') {
                         window.renderSchedulePage();
                     }
+                    if (typeof window.updateActiveScheduleSlot === 'function') {
+                        window.updateActiveScheduleSlot();
+                    }
                 },
                 onDestroy: function () {
                     if (window.DailySchedulePage && typeof window.DailySchedulePage.destroy === 'function') {
@@ -155,6 +158,9 @@
                         window.DailySchedulePage.mount();
                     } else if (typeof window.renderSchedulePage === 'function') {
                         window.renderSchedulePage();
+                    }
+                    if (typeof window.updateActiveScheduleSlot === 'function') {
+                        window.updateActiveScheduleSlot();
                     }
                 },
                 onDestroy: function () {
@@ -496,8 +502,16 @@
             }
             this.isNavigating = true;
 
+            // 1. INSTANT NAVIGATION FEEDBACK: Update active nav state immediately (0ms)
+            this.updateNavButtons(pageId);
+
+            // 2. Mobile drawer immediate slide-out without blocking UI
+            if (typeof window !== 'undefined' && window.innerWidth < 768 && typeof window.closeMobileSidebar === 'function') {
+                window.closeMobileSidebar();
+            }
+
             try {
-                // 1. Cleanup previous page if navigating away
+                // 3. Cleanup previous page if navigating away
                 if (!isSamePage && this.routes[previousPageId] && typeof this.routes[previousPageId].onDestroy === 'function') {
                     try {
                         this.routes[previousPageId].onDestroy();
@@ -506,44 +520,20 @@
                     }
                 }
 
-                // 2. Load modular page (HTML, CSS, JS)
-                if (this.routes[pageId]) {
-                    const route = this.routes[pageId];
-                    let container = document.getElementById(route.containerId);
-
-                    if (!container) {
-                        const mainPanel = document.getElementById('main-content-panel');
-                        if (mainPanel) {
-                            container = document.createElement('div');
-                            container.id = route.containerId;
-                            container.className = 'space-y-6 md:space-y-8';
-                            mainPanel.prepend(container);
-                        }
-                    }
-
-                    // Check if container is empty or needs HTML injection
-                    const needsHtml = container && (!container.hasChildNodes() || container.children.length === 0 || container.innerHTML.trim() === '');
-                    if (needsHtml) {
-                        // Concurrently load CSS and HTML
-                        const [, htmlContent] = await Promise.all([
-                            this.loadCss(route.cssUrl, route.cssId),
-                            this.loadHtml(route.htmlUrl)
-                        ]);
-
-                        if (htmlContent && container) {
-                            container.innerHTML = htmlContent;
-                        }
-
-                        // Load JS module
-                        await this.loadJs(route.jsUrl, route.jsId);
-                    } else {
-                        // Ensure CSS is loaded even if container was pre-populated
-                        this.loadCss(route.cssUrl, route.cssId);
-                        this.loadJs(route.jsUrl, route.jsId);
+                // 4. Ensure target container exists
+                const route = this.routes[pageId];
+                let container = route ? document.getElementById(route.containerId) : null;
+                if (!container && route) {
+                    const mainPanel = document.getElementById('main-content-panel');
+                    if (mainPanel) {
+                        container = document.createElement('div');
+                        container.id = route.containerId;
+                        container.className = 'space-y-6 md:space-y-8';
+                        mainPanel.prepend(container);
                     }
                 }
 
-                // 3. Toggle page visibility & slide-up animation FIRST so elements are visible
+                // 5. INSTANT VISIBILITY SWITCH: Show target container immediately
                 this.allPages.forEach(p => {
                     const el = document.getElementById(`page-${p}`);
                     if (el) {
@@ -558,85 +548,87 @@
                         }
                     }
                 });
-
-                // 4. Update Navigation Buttons
-                this.updateNavButtons(pageId);
                 this.activePageId = pageId;
 
-                // 5. Call mount / render on active route
-                if (this.routes[pageId] && typeof this.routes[pageId].onMount === 'function') {
+                // 6. Check if container is empty or needs HTML/CSS/JS injection
+                const needsHtml = container && (!container.hasChildNodes() || container.children.length === 0 || container.innerHTML.trim() === '');
+                if (needsHtml && route) {
+                    const [, htmlContent] = await Promise.all([
+                        this.loadCss(route.cssUrl, route.cssId),
+                        this.loadHtml(route.htmlUrl)
+                    ]);
+
+                    if (htmlContent && container && container.innerHTML.trim() === '') {
+                        container.innerHTML = htmlContent;
+                    }
+
+                    await this.loadJs(route.jsUrl, route.jsId);
+                } else if (route) {
+                    this.loadCss(route.cssUrl, route.cssId);
+                    this.loadJs(route.jsUrl, route.jsId);
+                }
+
+                // 7. Call mount / render on active route (ONCE!)
+                if (route && typeof route.onMount === 'function') {
                     try {
-                        this.routes[pageId].onMount();
+                        route.onMount();
                     } catch (e) {
                         console.warn(`[Router] Error mounting ${pageId}:`, e);
                     }
                 }
 
-            // 5. Special logic for other monolithic pages
-            if (pageId === 'subjects') {
-                if (window.SubjectsPage && typeof window.SubjectsPage.mount === 'function') {
-                    window.SubjectsPage.mount();
+                // 8. Scoped secondary chart & canvas refresh deferred to next animation frame
+                if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                    window.requestAnimationFrame(() => {
+                        this.refreshActivePageCharts(pageId);
+                    });
                 } else {
-                    if (typeof renderSubjectNavigation === 'function') renderSubjectNavigation();
-                    if (typeof renderSubjectProgress === 'function') renderSubjectProgress(window.lastSubjectStats || {});
-                    if (typeof renderTaskList === 'function') renderTaskList();
-                    if (typeof updateMetrics === 'function') updateMetrics();
-                    const refreshSubjectProgressChart = () => {
-                        const canvas = document.getElementById('progressChart');
-                        if (canvas && AppState.progressChart && typeof AppState.progressChart.resize === 'function') {
-                            AppState.progressChart.resize();
-                            if (typeof AppState.progressChart.update === 'function') {
-                                AppState.progressChart.update('none');
-                            }
-                        } else if (typeof renderChart === 'function') {
-                            renderChart();
-                        }
-                    };
-                    setTimeout(refreshSubjectProgressChart, 50);
-                    setTimeout(refreshSubjectProgressChart, 420);
+                    this.refreshActivePageCharts(pageId);
                 }
-            } else if (pageId === 'daily-actions') {
-                if (typeof window.renderDailyTracker === 'function') window.renderDailyTracker();
-                if (typeof window.renderDailyLogs === 'function') window.renderDailyLogs();
-                if (typeof window.renderMonthlyTargets === 'function') window.renderMonthlyTargets();
-                if (typeof window.renderWeeklyTargets === 'function') window.renderWeeklyTargets();
-                if (typeof window.renderDailyTargets === 'function') window.renderDailyTargets();
-            } else if (pageId === 'paces-management') {
-                if (window.PaceManagementPage && typeof window.PaceManagementPage.mount === 'function') {
-                    window.PaceManagementPage.mount();
-                } else if (typeof window.renderPaceGoals === 'function') {
-                    window.renderPaceGoals(window.lastSubjectStats || (typeof updateMetrics === 'function' ? (updateMetrics(), window.lastSubjectStats) : {}));
-                }
-            } else if (pageId === 'outcome') {
-                if (window.OutcomePage && typeof window.OutcomePage.mount === 'function') {
-                    window.OutcomePage.mount();
-                } else {
-                    if (typeof window.renderResults === 'function') window.renderResults();
-                    if (typeof window.renderPassConfig === 'function') window.renderPassConfig();
-                    if (typeof window.renderCelebrationConfig === 'function') window.renderCelebrationConfig();
-                }
-                setTimeout(() => {
-                    if (window.resultsTrendChartInstance) window.resultsTrendChartInstance.resize();
-                }, 50);
-            } else if (pageId === 'schedule') {
-                if (typeof window.renderSchedulePage === 'function') window.renderSchedulePage();
-                if (typeof window.updateActiveScheduleSlot === 'function') window.updateActiveScheduleSlot();
-            }
 
-            // 6. Handle chart resizing for dashboard, spectra-analytics, timer
-            if (pageId === 'dashboard' || pageId === 'spectra-analytics' || pageId === 'timer') {
-                const resizeAndUpdateAll = () => {
-                    const charts = [
+                // 9. Handle scroll position
+                if (sectionId) {
+                    setTimeout(() => {
+                        const target = document.getElementById(sectionId);
+                        if (target) {
+                            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 50);
+                } else if (!isSamePage) {
+                    const contentPanel = document.getElementById('main-content-panel');
+                    if (contentPanel) {
+                        contentPanel.scrollTop = 0;
+                    } else if (typeof window !== 'undefined') {
+                        window.scrollTo(0, 0);
+                    }
+                }
+            } finally {
+                this.isNavigating = false;
+            }
+        },
+
+        /**
+         * Scoped chart refresh for active page only.
+         * Prevents chart resize thrashing on inactive hidden pages.
+         */
+        refreshActivePageCharts: function (pageId) {
+            try {
+                if (pageId === 'dashboard') {
+                    if (window.dbProgressChartInstance && typeof window.dbProgressChartInstance.resize === 'function') {
+                        window.dbProgressChartInstance.resize();
+                        if (typeof window.dbProgressChartInstance.update === 'function') {
+                            window.dbProgressChartInstance.update('none');
+                        }
+                    }
+                } else if (pageId === 'spectra-analytics') {
+                    const analyticsCharts = [
                         window.mainChartPrograms,
                         window.monthlyChartActions,
-                        window.yearlyChartActions,
                         window.spectraPaceTrendChartInstance,
                         window.globalPaceTrendChartInstance,
-                        window.dbProgressChartInstance,
-                        window.spectraFocusAnalyticsChartInstance,
-                        window.timerAnalyticsChartInstance
+                        window.spectraFocusAnalyticsChartInstance
                     ];
-                    charts.forEach(chart => {
+                    analyticsCharts.forEach(chart => {
                         if (chart && typeof chart.resize === 'function') {
                             chart.resize();
                             if (typeof chart.update === 'function') {
@@ -644,46 +636,93 @@
                             }
                         }
                     });
-                };
-                setTimeout(resizeAndUpdateAll, 50);
-                setTimeout(resizeAndUpdateAll, 420);
-
-                if (window.setSpectraHeatmapRangeUI) setTimeout(() => window.setSpectraHeatmapRangeUI(window.spectraHeatmapRange), 50);
-                else if (window.renderSpectraFocusHeatmap) setTimeout(window.renderSpectraFocusHeatmap, 50);
-
-                if (pageId === 'spectra-analytics' || pageId === 'timer') {
-                    if (window.updateTimerAnalyticsControls) setTimeout(window.updateTimerAnalyticsControls, 50);
-                    if (window.renderTimerAnalyticsChart) setTimeout(window.renderTimerAnalyticsChart, 50);
-                    if (window.setSessionHistoryFilterUI) setTimeout(() => window.setSessionHistoryFilterUI(window.sessionHistoryFilter || 'all'), 50);
-                    if (pageId === 'timer') {
-                        if (window.renderTimerPage) setTimeout(window.renderTimerPage, 50);
-                        if (window.updateSubjectTargetUI) setTimeout(window.updateSubjectTargetUI, 50);
+                } else if (pageId === 'timer') {
+                    if (window.timerAnalyticsChartInstance && typeof window.timerAnalyticsChartInstance.resize === 'function') {
+                        window.timerAnalyticsChartInstance.resize();
+                        if (typeof window.timerAnalyticsChartInstance.update === 'function') {
+                            window.timerAnalyticsChartInstance.update('none');
+                        }
                     }
-                    if (pageId === 'spectra-analytics') {
-                        if (window.renderSpectraCircleChart) setTimeout(window.renderSpectraCircleChart, 50);
-                        if (window.renderSpectraCommitmentsChart) setTimeout(window.renderSpectraCommitmentsChart, 50);
+                } else if (pageId === 'subjects') {
+                    const canvas = document.getElementById('progressChart');
+                    if (canvas && window.AppState && window.AppState.progressChart && typeof window.AppState.progressChart.resize === 'function') {
+                        window.AppState.progressChart.resize();
+                        if (typeof window.AppState.progressChart.update === 'function') {
+                            window.AppState.progressChart.update('none');
+                        }
+                    }
+                } else if (pageId === 'outcome') {
+                    if (window.resultsTrendChartInstance && typeof window.resultsTrendChartInstance.resize === 'function') {
+                        window.resultsTrendChartInstance.resize();
                     }
                 }
+            } catch (err) {
+                console.warn(`[Router] Error refreshing charts for ${pageId}:`, err);
             }
+        },
 
-            // 7. Handle smooth scroll
-            if (sectionId) {
-                setTimeout(() => {
-                    const target = document.getElementById(sectionId);
-                    if (target) {
-                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        /**
+         * Preload all other registered route HTML, CSS, and JS during browser idle time.
+         * Injects HTML into the pre-existing container divs so that future page switches
+         * require 0 network requests and execute near-instantly.
+         */
+        preloadAllRoutes: function () {
+            if (this._hasPreloadedRoutes || typeof document === 'undefined') return;
+            this._hasPreloadedRoutes = true;
+
+            const executePreload = async () => {
+                const uniqueKeys = [
+                    'spectra-analytics',
+                    'timer',
+                    'daily-actions',
+                    'schedule',
+                    'monthly-target-setup',
+                    'subjects',
+                    'paces-management',
+                    'master-config',
+                    'outcome',
+                    'exam'
+                ];
+
+                for (const key of uniqueKeys) {
+                    const route = this.routes[key];
+                    if (!route) continue;
+
+                    try {
+                        let container = document.getElementById(route.containerId);
+                        if (!container) {
+                            const mainPanel = document.getElementById('main-content-panel');
+                            if (mainPanel) {
+                                container = document.createElement('div');
+                                container.id = route.containerId;
+                                container.className = 'hidden space-y-6 md:space-y-8 animate-page-enter';
+                                mainPanel.appendChild(container);
+                            }
+                        }
+
+                        // Load CSS in background
+                        this.loadCss(route.cssUrl, route.cssId);
+
+                        // Load HTML and populate if container is empty
+                        if (container && (!container.hasChildNodes() || container.children.length === 0 || container.innerHTML.trim() === '')) {
+                            const html = await this.loadHtml(route.htmlUrl);
+                            if (html && container && (!container.hasChildNodes() || container.children.length === 0 || container.innerHTML.trim() === '')) {
+                                container.innerHTML = html;
+                            }
+                        }
+
+                        // Load script module
+                        await this.loadJs(route.jsUrl, route.jsId);
+                    } catch (err) {
+                        console.warn(`[Router] Preload warning for ${key}:`, err);
                     }
-                }, 120);
-            } else if (!isSamePage) {
-                const contentPanel = document.getElementById('main-content-panel');
-                if (contentPanel) {
-                    contentPanel.scrollTo({ top: 0, behavior: 'smooth' });
-                } else {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
-            }
-            } finally {
-                this.isNavigating = false;
+            };
+
+            if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+                window.requestIdleCallback(() => { executePreload(); }, { timeout: 2000 });
+            } else {
+                setTimeout(executePreload, 250);
             }
         },
 
@@ -711,6 +750,12 @@
                         const sectionId = navEl.getAttribute('data-nav-section') || null;
                         if (pageId) {
                             e.preventDefault();
+                            // INSTANT visual feedback: immediately update nav button styles
+                            this.updateNavButtons(pageId);
+                            // On mobile, immediately close drawer
+                            if (typeof window !== 'undefined' && window.innerWidth < 768 && typeof window.closeMobileSidebar === 'function') {
+                                window.closeMobileSidebar();
+                            }
                             this.loadPage(pageId, sectionId);
                         }
                     }
@@ -719,7 +764,11 @@
 
             // Pre-load and mount Dashboard module if page-dashboard is in DOM
             if (document.getElementById('page-dashboard')) {
-                this.loadPage('dashboard');
+                this.loadPage('dashboard').then(() => {
+                    this.preloadAllRoutes();
+                });
+            } else {
+                this.preloadAllRoutes();
             }
         }
     };
