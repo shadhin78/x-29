@@ -20,6 +20,10 @@
         },
 
         mount: function () {
+            // Guard: Never execute or redirect if Monthly Target Setup is not the active router page
+            if (window.Router && window.Router.activePageId !== 'monthly-target-setup') {
+                return;
+            }
             this.isMounted = true;
 
             // Check if there was a deferred action requested from outside

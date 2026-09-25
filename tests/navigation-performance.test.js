@@ -254,6 +254,64 @@ runTest('preloadAllRoutes runs safely without crashing or duplicating containers
     assert.strictEqual(Router._hasPreloadedRoutes, true, 'preloadAllRoutes is idempotent');
 });
 
+// Test 8: Root Route Resolution to Dashboard
+runTest('Router.init() always explicitly defaults root route to dashboard', () => {
+    Router.activePageId = 'some-other-page';
+    Router.init();
+    assert.strictEqual(Router.activePageId, 'dashboard', 'activePageId must resolve to dashboard on init');
+    const dashBtn = elements.get('btn-nav-dashboard');
+    assert(dashBtn.className.includes('bg-slate-900'), 'Dashboard nav button must have active styling');
+});
+
+// Test 9: Preload does NOT invoke onMount or hijack Dashboard active state
+runTest('preloadAllRoutes does not invoke onMount on inactive routes and preserves Dashboard as active', async () => {
+    Router.activePageId = 'dashboard';
+    Router._hasPreloadedRoutes = false; // Reset to test execution
+
+    let mtMounted = false;
+    let daMounted = false;
+    Router.routes['monthly-target-setup'].onMount = () => { mtMounted = true; };
+    Router.routes['daily-actions'].onMount = () => { daMounted = true; };
+
+    Router.preloadAllRoutes();
+
+    assert.strictEqual(mtMounted, false, 'monthly-target-setup onMount must NOT be called during preload');
+    assert.strictEqual(daMounted, false, 'daily-actions onMount must NOT be called during preload');
+    assert.strictEqual(Router.activePageId, 'dashboard', 'activePageId must remain dashboard during and after preload');
+});
+
+// Test 10: MonthlyTargetPage guard prevents background execution/redirect
+runTest('MonthlyTargetPage.mount() does not run or redirect when activePageId is dashboard', () => {
+    Router.activePageId = 'dashboard';
+    let redirected = false;
+    window.openAddMonthlyTargetPage = () => { redirected = true; };
+
+    const mtCode = fs.readFileSync(path.join(__dirname, '../pages/Daily Actions/monthly target setup/monthly target setup.js'), 'utf8');
+    eval(mtCode);
+
+    assert(window.MonthlyTargetPage !== undefined, 'MonthlyTargetPage should be defined');
+    window.MonthlyTargetPage.mount();
+
+    assert.strictEqual(redirected, false, 'openAddMonthlyTargetPage must NOT be called when activePageId is dashboard');
+    assert.strictEqual(Router.activePageId, 'dashboard', 'activePageId must remain dashboard');
+});
+
+// Test 11: Manual Navigation to Daily Actions and Monthly Target Setup still works
+runTest('Direct manual navigation to daily-actions and monthly-target-setup functions cleanly', async () => {
+    await Router.loadPage('daily-actions');
+    assert.strictEqual(Router.activePageId, 'daily-actions', 'activePageId must be daily-actions');
+    assert.strictEqual(elements.get('page-daily-actions').classList.contains('hidden'), false, 'page-daily-actions must be visible');
+
+    await Router.loadPage('monthly-target-setup');
+    assert.strictEqual(Router.activePageId, 'monthly-target-setup', 'activePageId must be monthly-target-setup');
+    assert.strictEqual(elements.get('page-monthly-target-setup').classList.contains('hidden'), false, 'page-monthly-target-setup must be visible');
+
+    // Return to dashboard
+    await Router.loadPage('dashboard');
+    assert.strictEqual(Router.activePageId, 'dashboard', 'activePageId must return to dashboard');
+    assert.strictEqual(elements.get('page-dashboard').classList.contains('hidden'), false, 'page-dashboard must be visible');
+});
+
 console.log(`\n==================================================`);
 console.log(`Navigation Performance Suite: ALL ${passedTests} TESTS PASSED!`);
 console.log(`==================================================\n`);

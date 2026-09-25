@@ -729,13 +729,8 @@
                         // Load script module
                         await this.loadJs(route.jsUrl, route.jsId);
 
-                        // Background idle warmup: mount route once so first user click has 0ms initialization
-                        if (route && typeof route.onMount === 'function' && !route._hasMounted) {
-                            try {
-                                route.onMount();
-                                route._hasMounted = true;
-                            } catch (e) {}
-                        }
+                        // NOTE: Do not invoke route.onMount() during background preloading.
+                        // Page lifecycle mounting must only execute when the page is actively navigated to via loadPage().
                     } catch (err) {
                         console.warn(`[Router] Preload warning for ${key}:`, err);
                     }
@@ -784,6 +779,10 @@
                     }
                 });
             }
+
+            // Explicitly default initial active page to Dashboard
+            this.activePageId = 'dashboard';
+            this.updateNavButtons('dashboard');
 
             // Pre-load and mount Dashboard module if page-dashboard is in DOM
             if (document.getElementById('page-dashboard')) {
