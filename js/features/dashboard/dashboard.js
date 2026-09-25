@@ -1577,12 +1577,30 @@
     const DashboardPage = {
         isMounted: false,
         _hasRendered: false,
+        _listenersInitialized: false,
         init: function () {
             this.isMounted = true;
+            this.initEventListeners();
             this.mount();
+        },
+        initEventListeners: function () {
+            if (this._listenersInitialized || typeof document === 'undefined' || typeof document.addEventListener !== 'function') return;
+            this._listenersInitialized = true;
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('#btn-open-trends-settings, [data-modal-open="edit-trends-pace-modal"]')) {
+                    e.preventDefault();
+                    if (typeof e.stopImmediatePropagation === 'function') {
+                        e.stopImmediatePropagation();
+                    }
+                    if (typeof window.openTrendsSettingsModal === 'function') {
+                        window.openTrendsSettingsModal();
+                    }
+                }
+            });
         },
         mount: function (forceRefresh = false) {
             this.isMounted = true;
+            this.initEventListeners();
             if (this._hasRendered && !forceRefresh) {
                 if (window.dbProgressChartInstance && typeof window.dbProgressChartInstance.resize === 'function') {
                     window.dbProgressChartInstance.resize();

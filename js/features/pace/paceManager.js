@@ -1832,7 +1832,13 @@
         global._paceListenersInitialized = true;
 
         document.addEventListener('click', (e) => {
-            if (e.target.closest('#btn-save-trends-settings, [data-trends-save]')) {
+            if (e.target.closest('#btn-open-trends-settings, [data-modal-open="edit-trends-pace-modal"]')) {
+                e.preventDefault();
+                if (typeof e.stopImmediatePropagation === 'function') {
+                    e.stopImmediatePropagation();
+                }
+                openTrendsSettingsModal();
+            } else if (e.target.closest('#btn-save-trends-settings, [data-trends-save]')) {
                 e.preventDefault();
                 saveTrendsSettings();
             } else if (e.target.closest('#btn-save-pace-edit, [data-pace-save]')) {

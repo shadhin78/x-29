@@ -63,6 +63,16 @@ class MockElement {
         return true;
     }
 
+    closest(sel) {
+        if (!sel) return null;
+        if (this.id && sel.includes(this.id)) return this;
+        if (this.dataset && this.dataset.modalOpen && sel.includes(this.dataset.modalOpen)) return this;
+        if (this.parentElement && typeof this.parentElement.closest === 'function') {
+            return this.parentElement.closest(sel);
+        }
+        return null;
+    }
+
     appendChild(child) {
         if (child instanceof MockElement) {
             child.parentElement = this;
@@ -111,6 +121,7 @@ function getOrCreateElement(id, tagName = 'div') {
     return elements.get(id);
 }
 
+const docListeners = {};
 global.document = {
     getElementById: (id) => getOrCreateElement(id),
     querySelector: (sel) => {
@@ -134,7 +145,24 @@ global.document = {
         return results;
     },
     createElement: (tag) => new MockElement('', tag),
-    title: ''
+    title: '',
+    addEventListener: (event, cb) => {
+        if (!docListeners[event]) docListeners[event] = [];
+        docListeners[event].push(cb);
+    },
+    dispatchEvent: (e) => {
+        if (!e) return true;
+        let stopped = false;
+        if (!e.stopImmediatePropagation) {
+            e.stopImmediatePropagation = () => { stopped = true; };
+        }
+        const listeners = docListeners[e.type] || [];
+        for (const cb of listeners) {
+            if (stopped) break;
+            cb(e);
+        }
+        return true;
+    }
 };
 
 global.window = global;
@@ -566,6 +594,25 @@ runTest('DashboardPage mounts and destroys cleanly', () => {
     assert.strictEqual(DashboardPage.isMounted, true, 'DashboardPage is mounted');
     DashboardPage.destroy();
     assert.strictEqual(DashboardPage.isMounted, false, 'DashboardPage is unmounted');
+});
+
+runTest('Dashboard Trends X-bar Edit Settings button triggers openTrendsSettingsModal', () => {
+    let settingsModalOpened = 0;
+    window.openTrendsSettingsModal = () => { settingsModalOpened++; };
+
+    DashboardPage.initEventListeners();
+
+    const btn = new MockElement('btn-open-trends-settings', 'button');
+    btn.dataset.modalOpen = 'edit-trends-pace-modal';
+    elements.set('btn-open-trends-settings', btn);
+
+    document.dispatchEvent({
+        type: 'click',
+        target: btn,
+        preventDefault: () => {}
+    });
+
+    assert.strictEqual(settingsModalOpened, 1, 'Clicking #btn-open-trends-settings must trigger openTrendsSettingsModal');
 });
 
 // ----------------------------------------------------

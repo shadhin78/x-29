@@ -77,6 +77,10 @@
             this._listenersInitialized = true;
             document.addEventListener('click', (e) => {
                 if (e.target.closest('#btn-open-trends-settings, [data-modal-open="edit-trends-pace-modal"]')) {
+                    e.preventDefault();
+                    if (typeof e.stopImmediatePropagation === 'function') {
+                        e.stopImmediatePropagation();
+                    }
                     if (typeof window.openTrendsSettingsModal === 'function') {
                         window.openTrendsSettingsModal();
                     }
@@ -90,10 +94,21 @@
 
     window.DashboardPage = DashboardPage;
 
-    // Self-initialize if page is active on DOM load
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        if (document.getElementById('page-dashboard') && !document.getElementById('page-dashboard').classList.contains('hidden')) {
-            window.DashboardPage.init();
+    // Ensure event listeners are initialized and self-init if page is active on DOM load
+    if (typeof document !== 'undefined') {
+        const initDashboardListeners = () => {
+            if (DashboardPage && typeof DashboardPage.initEventListeners === 'function') {
+                DashboardPage.initEventListeners();
+            }
+            if (document.getElementById('page-dashboard') && !document.getElementById('page-dashboard').classList.contains('hidden')) {
+                DashboardPage.init();
+            }
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initDashboardListeners);
+        } else {
+            initDashboardListeners();
         }
     }
 
