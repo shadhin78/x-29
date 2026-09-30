@@ -1,0 +1,26 @@
+const fs = require('fs');
+
+const html = fs.readFileSync('index.html', 'utf8');
+
+const updated = html.replace(/<script\b([^>]*)src=["']([^"']+)["']([^>]*)>/gi, (match, before, src, after) => {
+    // Leave type="module" as is (modules are deferred by spec)
+    if (before.includes('type="module"') || after.includes('type="module"')) {
+        return match;
+    }
+    // Leave Tailwind CDN runtime compiler synchronous for now (Step 004 handles replacing Tailwind CDN)
+    if (src.includes('tailwindcss.com')) {
+        return match;
+    }
+    // If already has defer or async, return
+    if (before.includes('defer') || after.includes('defer') || before.includes('async') || after.includes('async')) {
+        return match;
+    }
+    // Append defer
+    return `<script${before}src="${src}"${after} defer>`;
+});
+
+console.log('Original length:', html.length);
+console.log('Updated length:', updated.length);
+
+const deferMatches = [...updated.matchAll(/<script\b[^>]*defer[^>]*>/gi)];
+console.log('Scripts with defer attribute:', deferMatches.length);

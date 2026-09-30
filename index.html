@@ -14,65 +14,73 @@
     <meta name="apple-mobile-web-app-title" content="X-29">
     <link rel="apple-touch-icon" href="icons/x-29.jpeg">
     <link rel="icon" type="image/jpeg" href="icons/x-29.jpeg">
-    <!-- Google Fonts -->
+    <!-- Google Fonts Optimization (Non-Render-Blocking Asynchronous Load) -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
+    <link rel="preload" as="style"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700;800&family=Rajdhani:wght@600;700;800&family=Chakra+Petch:wght@600;700&display=swap">
+    <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700;800&family=Rajdhani:wght@600;700;800&family=Chakra+Petch:wght@600;700&display=swap"
-        rel="stylesheet">
+        media="print" onload="this.media='all'">
+    <noscript>
+        <link rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700;800&family=Rajdhani:wght@600;700;800&family=Chakra+Petch:wght@600;700&display=swap">
+    </noscript>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/tailwind.css?v=1.0.0">
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <!-- Firebase Libraries -->
-    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js" defer></script>
     <link rel="stylesheet" href="css/style.css?v=1.0.11">
-    <script src="js/utils.js?v=1.0.17"></script>
-    <script src="js/utils/colors.js?v=1.0.2"></script>
-    <script src="js/shared/toast.js?v=1.0.16"></script>
-    <script src="js/shared/confetti.js?v=1.0.16"></script>
-    <script src="js/shared/audio.js?v=1.0.16"></script>
-    <script src="js/shared/deletion.js?v=1.0.16"></script>
-    <script src="js/shared/modals.js?v=1.0.1"></script>
-    <script src="js/shared/sidebar.js?v=1.0.1"></script>
-    <script src="js/services/backup.js?v=1.0.16"></script>
-    <script src="js/services/auth.js?v=1.0.1"></script>
-    <script src="js/state.js?v=1.0.17"></script>
-    <script src="js/firebase.js?v=1.0.16"></script>
-    <script src="shared/services/timerService.js?v=1.0.16"></script>
-    <script src="router/router.js?v=1.0.16"></script>
-    <script src="js/features/config/tracksConfig.js?v=1.0.17"></script>
-    <script src="js/features/config/priorityConfig.js?v=1.0.17"></script>
-    <script src="js/features/config/masterConfig.js?v=1.0.17"></script>
-    <script src="js/features/config/topicNameConfig.js?v=1.0.1"></script>
-    <script src="js/services/taxonomy.js?v=1.0.1"></script>
-    <script src="js/features/pace/paceEstimator.js?v=1.0.23"></script>
-    <script src="js/features/pace/paceManager.js?v=1.0.24"></script>
-    <script src="js/features/outcome/outcomeResults.js?v=1.0.23"></script>
-    <script src="js/features/outcome/outcomeAnalytics.js?v=1.0.18"></script>
-    <script src="js/features/outcome/outcomePassConfig.js?v=1.0.18"></script>
-    <script src="js/features/outcome/outcomeCelebration.js?v=1.0.18"></script>
-    <script src="js/features/analytics/chapterMap.js?v=1.0.19"></script>
-    <script src="js/features/analytics/heatmap.js?v=1.0.19"></script>
-    <script src="js/features/analytics/history.js?v=1.0.19"></script>
-    <script src="js/features/analytics/spectra.js?v=1.0.19"></script>
-    <script src="js/features/tasks/taskEngine.js?v=1.0.22"></script>
-    <script src="js/features/tasks/subjectGoals.js?v=1.0.22"></script>
-    <script src="js/core/metrics.js?v=1.0.22"></script>
-    <script src="js/core/rollover.js?v=1.0.1"></script>
-    <script src="js/features/dashboard/dashboard.js?v=1.0.24"></script>
-    <script src="js/features/targets/monthlyTargets.js?v=1.0.21"></script>
-    <script src="js/features/targets/weeklyTargets.js?v=1.0.21"></script>
-    <script src="js/features/targets/dailyTargets.js?v=1.0.21"></script>
+    <script src="js/utils.js?v=1.0.17" defer></script>
+    <script src="js/utils/colors.js?v=1.0.2" defer></script>
+    <script src="js/shared/toast.js?v=1.0.16" defer></script>
+    <script src="js/shared/confetti.js?v=1.0.16" defer></script>
+    <script src="js/shared/audio.js?v=1.0.16" defer></script>
+    <script src="js/shared/deletion.js?v=1.0.16" defer></script>
+    <script src="js/shared/modals.js?v=1.0.1" defer></script>
+    <script src="js/shared/sidebar.js?v=1.0.1" defer></script>
+    <script src="js/services/backup.js?v=1.0.16" defer></script>
+    <script src="js/services/auth.js?v=1.0.1" defer></script>
+    <script src="js/state.js?v=1.0.17" defer></script>
+    <script src="js/firebase.js?v=1.0.16" defer></script>
+    <script src="shared/services/timerService.js?v=1.0.16" defer></script>
+    <script src="router/router.js?v=1.0.16" defer></script>
+    <script src="js/features/config/tracksConfig.js?v=1.0.17" defer></script>
+    <script src="js/features/config/priorityConfig.js?v=1.0.17" defer></script>
+    <script src="js/features/config/masterConfig.js?v=1.0.17" defer></script>
+    <script src="js/features/config/topicNameConfig.js?v=1.0.1" defer></script>
+    <script src="js/services/taxonomy.js?v=1.0.1" defer></script>
+    <script src="js/features/pace/paceEstimator.js?v=1.0.23" defer></script>
+    <script src="js/features/pace/paceManager.js?v=1.0.24" defer></script>
+    <script src="js/features/outcome/outcomeResults.js?v=1.0.23" defer></script>
+    <script src="js/features/outcome/outcomeAnalytics.js?v=1.0.18" defer></script>
+    <script src="js/features/outcome/outcomePassConfig.js?v=1.0.18" defer></script>
+    <script src="js/features/outcome/outcomeCelebration.js?v=1.0.18" defer></script>
+    <script src="js/features/analytics/chapterMap.js?v=1.0.19" defer></script>
+    <script src="js/features/analytics/heatmap.js?v=1.0.19" defer></script>
+    <script src="js/features/analytics/history.js?v=1.0.19" defer></script>
+    <script src="js/features/analytics/spectra.js?v=1.0.19" defer></script>
+    <script src="js/features/tasks/taskEngine.js?v=1.0.22" defer></script>
+    <script src="js/features/tasks/subjectGoals.js?v=1.0.22" defer></script>
+    <script src="js/core/metrics.js?v=1.0.22" defer></script>
+    <script src="js/core/rollover.js?v=1.0.1" defer></script>
+    <script src="js/features/dashboard/dashboard.js?v=1.0.24" defer></script>
+    <script src="js/features/targets/monthlyTargets.js?v=1.0.21" defer></script>
+    <script src="js/features/targets/weeklyTargets.js?v=1.0.21" defer></script>
+    <script src="js/features/targets/dailyTargets.js?v=1.0.21" defer></script>
     <script type="module" src="/js/core/app.js"></script>
-    <script src="js/features/schedule/scheduleSlot.js?v=1.0.16"></script>
-    <script src="js/features/schedule/scheduleRoutine.js?v=1.0.16"></script>
-    <script src="js/features/exam/countdown.js?v=1.0.16"></script>
-    <script src="js/features/exam/examRoutine.js?v=1.0.16"></script>
-    <script src="js/features/habits/dailyTracker.js?v=1.0.17"></script>
-    <script src="js/features/habits/dadbModal.js?v=1.0.16"></script>
+    <script src="js/features/schedule/scheduleSlot.js?v=1.0.16" defer></script>
+    <script src="js/features/schedule/scheduleRoutine.js?v=1.0.16" defer></script>
+    <script src="js/features/exam/countdown.js?v=1.0.16" defer></script>
+    <script src="js/features/exam/examRoutine.js?v=1.0.16" defer></script>
+    <script src="js/features/habits/dailyTracker.js?v=1.0.17" defer></script>
+    <script src="js/features/habits/dadbModal.js?v=1.0.16" defer></script>
 
     <!-- Modular Page Stylesheets (Upfront Cached) -->
     <link id="route-dashboard-css" rel="stylesheet" href="pages/Dashboard/Dashboard.css">
@@ -89,17 +97,17 @@
 
 
     <!-- Modular Page Scripts (Upfront Cached) -->
-    <script id="route-dashboard-js" src="pages/Dashboard/Dashboard.js"></script>
-    <script id="route-analytics-js" src="pages/Analytics/Analytics.js"></script>
-    <script id="route-focus-js" src="pages/Focus/Focus.js"></script>
-    <script id="route-daily-actions-js" src="pages/Daily Actions/Daily Actions.js"></script>
-    <script id="route-schedule-js" src="pages/Daily Schedule/Daily Schedule.js"></script>
-    <script id="route-monthly-target-js" src="pages/Daily Actions/monthly target setup/monthly target setup.js"></script>
-    <script id="route-subjects-js" src="pages/Subjects/Subjects.js"></script>
-    <script id="route-pace-management-js" src="pages/Pace Management/Pace Management.js"></script>
-    <script id="route-master-config-js" src="pages/Master Config/Master Config.js"></script>
-    <script id="route-outcome-js" src="pages/Outcome/Outcome.js"></script>
-    <script id="route-exam-routine-js" src="pages/Exam Routine/Exam Routine.js"></script>
+    <script id="route-dashboard-js" src="pages/Dashboard/Dashboard.js" defer></script>
+    <script id="route-analytics-js" src="pages/Analytics/Analytics.js" defer></script>
+    <script id="route-focus-js" src="pages/Focus/Focus.js" defer></script>
+    <script id="route-daily-actions-js" src="pages/Daily Actions/Daily Actions.js" defer></script>
+    <script id="route-schedule-js" src="pages/Daily Schedule/Daily Schedule.js" defer></script>
+    <script id="route-monthly-target-js" src="pages/Daily Actions/monthly target setup/monthly target setup.js" defer></script>
+    <script id="route-subjects-js" src="pages/Subjects/Subjects.js" defer></script>
+    <script id="route-pace-management-js" src="pages/Pace Management/Pace Management.js" defer></script>
+    <script id="route-master-config-js" src="pages/Master Config/Master Config.js" defer></script>
+    <script id="route-outcome-js" src="pages/Outcome/Outcome.js" defer></script>
+    <script id="route-exam-routine-js" src="pages/Exam Routine/Exam Routine.js" defer></script>
 
 </head>
 

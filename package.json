@@ -17,10 +17,14 @@
     "test:weekly": "node tests/weekly-targets.test.js",
     "test:monthly": "node tests/monthly-targets.test.js",
     "test:tasks-metrics-dashboard": "node tests/tasks-metrics-dashboard.test.js",
-    "test:navigation": "node tests/navigation-performance.test.js"
+    "test:navigation": "node tests/navigation-performance.test.js",
+    "build:css": "tailwindcss -i ./css/tailwind-input.css -o ./css/tailwind.css --minify"
   },
   "dependencies": {
     "firebase": "^12.17.1",
     "firebase-admin": "^14.2.0"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
   }
 }
