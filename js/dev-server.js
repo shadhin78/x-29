@@ -62,9 +62,12 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Normalize trailing slash for clean URLs (e.g. /timer/ -> /timer)
+  // Enforce trailingSlash: false (match Vercel production: /timer/ -> /timer)
   if (url.length > 1 && url.endsWith('/')) {
-    url = url.replace(/\/+$/, '');
+    const cleanUrl = url.replace(/\/+$/, '');
+    res.writeHead(301, { 'Location': cleanUrl });
+    res.end();
+    return;
   }
 
   // Handle clean URLs (e.g. /login -> login.html)

@@ -209,39 +209,29 @@
                     }
                 }
             },
-            'monthly target': {
-                containerId: 'page-monthly-target-setup',
-                htmlUrl: 'pages/Daily Actions/monthly target setup/monthly target setup.html',
-                cssUrl: 'pages/Daily Actions/monthly target setup/monthly target setup.css',
-                jsUrl: 'pages/Daily Actions/monthly target setup/monthly target setup.js',
-                cssId: 'route-monthly-target-css',
-                jsId: 'route-monthly-target-js',
+            'subject': {
+                containerId: 'page-subjects',
+                htmlUrl: 'pages/Subjects/Subjects.html',
+                cssUrl: 'pages/Subjects/Subjects.css',
+                jsUrl: 'pages/Subjects/Subjects.js',
+                cssId: 'route-subjects-css',
+                jsId: 'route-subjects-js',
                 onMount: function () {
-                    if (window.MonthlyTargetPage && typeof window.MonthlyTargetPage.mount === 'function') {
-                        window.MonthlyTargetPage.mount();
+                    if (window.SubjectsPage && typeof window.SubjectsPage.mount === 'function') {
+                        window.SubjectsPage.mount();
+                    } else {
+                        if (typeof window.renderSubjectNavigation === 'function') window.renderSubjectNavigation();
+                        if (typeof window.renderSubjectProgress === 'function') window.renderSubjectProgress(window.lastSubjectStats || {});
+                        Router.scheduleTransitionTask(() => {
+                            if (Router.activePageId !== 'subjects' && Router.activePageId !== 'subject') return;
+                            if (typeof window.renderTaskList === 'function') window.renderTaskList();
+                            if (typeof window.updateMetrics === 'function') window.updateMetrics();
+                        });
                     }
                 },
                 onDestroy: function () {
-                    if (window.MonthlyTargetPage && typeof window.MonthlyTargetPage.destroy === 'function') {
-                        window.MonthlyTargetPage.destroy();
-                    }
-                }
-            },
-            'monthly target setup': {
-                containerId: 'page-monthly-target-setup',
-                htmlUrl: 'pages/Daily Actions/monthly target setup/monthly target setup.html',
-                cssUrl: 'pages/Daily Actions/monthly target setup/monthly target setup.css',
-                jsUrl: 'pages/Daily Actions/monthly target setup/monthly target setup.js',
-                cssId: 'route-monthly-target-css',
-                jsId: 'route-monthly-target-js',
-                onMount: function () {
-                    if (window.MonthlyTargetPage && typeof window.MonthlyTargetPage.mount === 'function') {
-                        window.MonthlyTargetPage.mount();
-                    }
-                },
-                onDestroy: function () {
-                    if (window.MonthlyTargetPage && typeof window.MonthlyTargetPage.destroy === 'function') {
-                        window.MonthlyTargetPage.destroy();
+                    if (window.SubjectsPage && typeof window.SubjectsPage.destroy === 'function') {
+                        window.SubjectsPage.destroy();
                     }
                 }
             },
@@ -558,52 +548,94 @@
         },
 
         /**
-         * Normalize route ID and aliases.
+         * Standard canonical route slug dictionary.
+         * Enforces 100% path parity across Local Preview and Vercel Production.
+         */
+        canonicalRoutes: {
+            'dashboard': '/dashboard',
+            'timer': '/timer',
+            'focus': '/timer',
+            'subjects': '/subjects',
+            'subject': '/subjects',
+            'schedule': '/schedule',
+            'daily-schedule': '/schedule',
+            'analytics': '/analytics',
+            'spectra-analytics': '/analytics',
+            'exam': '/exam',
+            'exam-routine': '/exam',
+            'pace': '/pace',
+            'paces-management': '/pace',
+            'master-config': '/master-config',
+            'outcome': '/outcome',
+            'daily-actions': '/daily-actions',
+            'monthly-target-setup': '/monthly-target-setup',
+            'login': '/login'
+        },
+
+        /**
+         * Normalize route ID and aliases to canonical internal identifiers.
+         * Strips any trailing/leading slashes, decodes URI components, and removes spaces.
          */
         normalizePageId: function (pageId) {
             if (!pageId) return 'dashboard';
-            if (pageId === 'dashboard-page') return 'dashboard';
-            if (pageId === 'analytics') return 'spectra-analytics';
-            if (pageId === 'focus') return 'timer';
-            if (pageId === 'daily actions' || pageId === 'Daily Actions') return 'daily-actions';
-            if (pageId === 'daily-schedule' || pageId === 'Daily Schedule' || pageId === 'daily schedule') return 'schedule';
-            if (pageId === 'monthly target' || pageId === 'Monthly Target' || pageId === 'monthly-target' || pageId === 'monthly target setup' || pageId === 'Monthly Target Setup' || pageId === 'monthly-target-setup' || pageId === 'add-monthly-target' || pageId === 'Add Monthly Target') return 'monthly-target-setup';
-            if (pageId === 'subjects' || pageId === 'Subjects' || pageId === 'subject' || pageId === 'Subject') return 'subjects';
-            if (pageId === 'paces-management' || pageId === 'pace-management' || pageId === 'Pace Management' || pageId === 'pace management' || pageId === 'paces' || pageId === 'pace') return 'paces-management';
-            if (pageId === 'master-config' || pageId === 'master-configuration' || pageId === 'Master Config' || pageId === 'master config' || pageId === 'Master Configuration' || pageId === 'master configuration') return 'master-config';
-            if (pageId === 'outcome' || pageId === 'Outcome' || pageId === 'results' || pageId === 'Results') return 'outcome';
-            if (pageId === 'exam' || pageId === 'exam-routine' || pageId === 'Exam Routine' || pageId === 'exam routine') return 'exam';
-            return pageId;
+            let id = String(pageId).trim().toLowerCase();
+            try {
+                id = decodeURIComponent(id);
+            } catch (e) {}
+            id = id.replace(/^\/+|\/+$/g, '').trim();
+
+            if (id === 'dashboard' || id === 'dashboard-page' || id === 'home') return 'dashboard';
+            if (id === 'timer' || id === 'focus') return 'timer';
+            if (id === 'subjects' || id === 'subject') return 'subjects';
+            if (id === 'schedule' || id === 'daily-schedule' || id === 'daily schedule') return 'schedule';
+            if (id === 'analytics' || id === 'spectra-analytics' || id === 'spectra') return 'spectra-analytics';
+            if (id === 'exam' || id === 'exam-routine' || id === 'exam routine') return 'exam';
+            if (id === 'pace' || id === 'paces' || id === 'paces-management' || id === 'pace-management' || id === 'pace management') return 'paces-management';
+            if (id === 'master-config' || id === 'master config' || id === 'master-configuration' || id === 'master configuration') return 'master-config';
+            if (id === 'outcome' || id === 'results') return 'outcome';
+            if (id === 'daily-actions' || id === 'daily actions' || id === 'daily-action' || id === 'daily action') return 'daily-actions';
+            if (id === 'monthly-target-setup' || id === 'monthly target setup' || id === 'monthly-target' || id === 'monthly target' || id === 'add-monthly-target') return 'monthly-target-setup';
+            if (id === 'login') return 'login';
+
+            // Prefix matchers to sanitize any malformed write-ins (e.g. "timer or page" -> "timer")
+            if (id.startsWith('timer')) return 'timer';
+            if (id.startsWith('dashboard')) return 'dashboard';
+            if (id.startsWith('subject')) return 'subjects';
+            if (id.startsWith('schedule')) return 'schedule';
+            if (id.startsWith('analytic')) return 'spectra-analytics';
+            if (id.startsWith('exam')) return 'exam';
+            if (id.startsWith('pace')) return 'paces-management';
+
+            return id.replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '') || 'dashboard';
         },
 
         /**
          * Map canonical route ID to URL path.
-         * Preserves existing route URLs (e.g. /dashboard, /timer, /subjects, /schedule, /analytics, /exam, /pace)
-         * while keeping root '/' when visited at root.
+         * Guarantees 100% identical clean URL slugs in local development and production.
+         * Clean URLs: /timer, /dashboard, /subjects, /schedule, /analytics, /exam, /pace,
+         * /master-config, /outcome, /daily-actions, /monthly-target-setup, /login
+         * Never introduces %20, spaces, trailing slashes, query parameters, or hash routes.
          */
         getPathForPageId: function (pageId) {
             const canonical = this.normalizePageId(pageId);
-            if (typeof window !== 'undefined' && window.location) {
-                const current = (window.location.pathname || '').split('?')[0].replace(/^\/+|\/+$/g, '');
-                // If user's current URL is an accepted path or alias for this route, preserve their exact route
-                if (current && this.normalizePageId(current) === canonical) {
-                    return '/' + current;
-                }
+            if (this.canonicalRoutes[canonical]) {
+                return this.canonicalRoutes[canonical];
             }
-            if (canonical === 'dashboard') {
-                return '/dashboard';
+            if (this.canonicalRoutes[pageId]) {
+                return this.canonicalRoutes[pageId];
             }
-            if (canonical === 'spectra-analytics') {
-                return '/analytics';
-            }
-            if (canonical === 'paces-management') {
-                return '/pace';
-            }
-            return '/' + canonical;
+            const cleaned = String(pageId || 'dashboard')
+                .toLowerCase()
+                .trim()
+                .replace(/[\s_]+/g, '-')
+                .replace(/[^a-z0-9-]/g, '')
+                .replace(/-+/g, '-');
+            return '/' + (cleaned || 'dashboard');
         },
 
         /**
          * Resolve canonical route ID from URL pathname or hash.
+         * Handles direct URLs, refreshes, deep-links, aliases, trailing slashes, and encoded URIs.
          */
         getPageIdFromPath: function (pathname) {
             if (!pathname) return 'dashboard';
@@ -611,7 +643,11 @@
             if (path.includes('#')) {
                 path = path.split('#')[1] || '';
             }
-            path = path.split('?')[0].replace(/^\/+|\/+$/g, '');
+            path = path.split('?')[0];
+            try {
+                path = decodeURIComponent(path);
+            } catch (e) {}
+            path = path.replace(/^\/+|\/+$/g, '').trim();
             if (!path || path === 'index.html' || path === 'index') return 'dashboard';
             return this.normalizePageId(path);
         },
@@ -1018,10 +1054,11 @@
             this.updateNavButtons(initialPageId);
 
             // Replace initial history state so Back button knows the starting entry
+            // AND immediately normalizes the browser address bar (strips trailing slashes, %20, aliases)
             if (typeof window !== 'undefined' && window.history && typeof window.history.replaceState === 'function' && window.location && window.location.protocol !== 'file:') {
                 try {
-                    const initialPath = this.getPathForPageId(initialPageId);
-                    window.history.replaceState({ pageId: initialPageId }, '', initialPath);
+                    const canonicalPath = this.getPathForPageId(initialPageId);
+                    window.history.replaceState({ pageId: initialPageId }, '', canonicalPath);
                 } catch (e) {
                     // Ignore in sandboxed environments
                 }

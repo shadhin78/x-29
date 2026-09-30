@@ -140,30 +140,41 @@ async function testAll() {
     const routeMappings = [
         { urlPath: '/', expectedPageId: 'dashboard', expectedPath: '/dashboard' },
         { urlPath: '/dashboard', expectedPageId: 'dashboard', expectedPath: '/dashboard' },
+        { urlPath: '/dashboard/', expectedPageId: 'dashboard', expectedPath: '/dashboard' },
         { urlPath: '/timer', expectedPageId: 'timer', expectedPath: '/timer' },
-        { urlPath: '/focus', expectedPageId: 'timer', expectedPath: '/focus' },
+        { urlPath: '/timer/', expectedPageId: 'timer', expectedPath: '/timer' },
+        { urlPath: '/timer%20or%20page', expectedPageId: 'timer', expectedPath: '/timer' },
+        { urlPath: '/focus', expectedPageId: 'timer', expectedPath: '/timer' },
         { urlPath: '/subjects', expectedPageId: 'subjects', expectedPath: '/subjects' },
+        { urlPath: '/subjects/', expectedPageId: 'subjects', expectedPath: '/subjects' },
+        { urlPath: '/subject', expectedPageId: 'subjects', expectedPath: '/subjects' },
         { urlPath: '/schedule', expectedPageId: 'schedule', expectedPath: '/schedule' },
-        { urlPath: '/daily-schedule', expectedPageId: 'schedule', expectedPath: '/daily-schedule' },
+        { urlPath: '/schedule/', expectedPageId: 'schedule', expectedPath: '/schedule' },
+        { urlPath: '/daily-schedule', expectedPageId: 'schedule', expectedPath: '/schedule' },
         { urlPath: '/analytics', expectedPageId: 'spectra-analytics', expectedPath: '/analytics' },
-        { urlPath: '/spectra-analytics', expectedPageId: 'spectra-analytics', expectedPath: '/spectra-analytics' },
+        { urlPath: '/analytics/', expectedPageId: 'spectra-analytics', expectedPath: '/analytics' },
+        { urlPath: '/spectra-analytics', expectedPageId: 'spectra-analytics', expectedPath: '/analytics' },
         { urlPath: '/exam', expectedPageId: 'exam', expectedPath: '/exam' },
-        { urlPath: '/exam-routine', expectedPageId: 'exam', expectedPath: '/exam-routine' },
+        { urlPath: '/exam/', expectedPageId: 'exam', expectedPath: '/exam' },
+        { urlPath: '/exam-routine', expectedPageId: 'exam', expectedPath: '/exam-routine', canonicalExpectedPath: '/exam' },
         { urlPath: '/pace', expectedPageId: 'paces-management', expectedPath: '/pace' },
-        { urlPath: '/paces-management', expectedPageId: 'paces-management', expectedPath: '/paces-management' },
+        { urlPath: '/pace/', expectedPageId: 'paces-management', expectedPath: '/pace' },
+        { urlPath: '/paces-management', expectedPageId: 'paces-management', expectedPath: '/pace' },
         { urlPath: '/master-config', expectedPageId: 'master-config', expectedPath: '/master-config' },
         { urlPath: '/outcome', expectedPageId: 'outcome', expectedPath: '/outcome' },
         { urlPath: '/daily-actions', expectedPageId: 'daily-actions', expectedPath: '/daily-actions' },
+        { urlPath: '/daily%20actions', expectedPageId: 'daily-actions', expectedPath: '/daily-actions' },
         { urlPath: '/monthly-target-setup', expectedPageId: 'monthly-target-setup', expectedPath: '/monthly-target-setup' }
     ];
 
     for (const r of routeMappings) {
-        await runTest(`URL path "${r.urlPath}" resolves to page "${r.expectedPageId}" and preserves path "${r.expectedPath}"`, () => {
+        await runTest(`URL path "${r.urlPath}" resolves to page "${r.expectedPageId}" and canonical path "${r.canonicalExpectedPath || r.expectedPath}"`, () => {
             window.location.pathname = r.urlPath;
             const resolvedPage = Router.getPageIdFromPath(r.urlPath);
             assert.strictEqual(resolvedPage, r.expectedPageId, `Expected ${r.expectedPageId} for ${r.urlPath}`);
             const generatedPath = Router.getPathForPageId(resolvedPage);
-            assert.strictEqual(generatedPath, r.expectedPath, `Expected path ${r.expectedPath} for ${r.urlPath}`);
+            const expectedPath = r.canonicalExpectedPath || r.expectedPath;
+            assert.strictEqual(generatedPath, expectedPath, `Expected path ${expectedPath} for ${r.urlPath}`);
         });
     }
 
