@@ -45,6 +45,29 @@
     box-sizing: border-box;
 }
 
+/* Mobile Navigation Responsiveness & Touch Latency Optimization */
+button,
+a,
+[data-switch-page],
+[data-sidebar-toggle],
+[data-sidebar-close],
+#mobile-sidebar-toggle,
+#sidebar-backdrop,
+.nav-item,
+input[type="button"],
+input[type="submit"] {
+    touch-action: manipulation;
+}
+
+#sidebar-container {
+    will-change: transform;
+    -webkit-overflow-scrolling: touch;
+}
+
+#sidebar-backdrop {
+    will-change: opacity;
+}
+
 /* [Moved to pages/Analytics/Analytics.css] #page-spectra-analytics canvas and container styles */
 
 /* Render layer stabilization to fix Chromium and Safari backdrop-filter scroll glitches */

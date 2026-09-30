@@ -51,6 +51,14 @@
         if (global._sidebarListenersInitialized) return;
         global._sidebarListenersInitialized = true;
 
+        // Instant passive touch dismissal on mobile backdrop (avoids 300ms tap delay and never blocks scroll)
+        const backdrop = document.getElementById('sidebar-backdrop');
+        if (backdrop && typeof backdrop.addEventListener === 'function') {
+            backdrop.addEventListener('touchstart', () => {
+                closeMobileSidebar();
+            }, { passive: true });
+        }
+
         document.addEventListener('click', (e) => {
             if (e.target.closest('#mobile-sidebar-toggle, [data-sidebar-toggle]')) {
                 toggleMobileSidebar();
