@@ -90,24 +90,82 @@
     <!-- Initial Route Script (Dashboard) — Inactive routes dynamically code-split via Router (Step 001) -->
     <script id="route-dashboard-js" src="pages/Dashboard/Dashboard.js" defer></script>
 
+    <!-- Immediate Display Safeguard: Prevents screen blackout on boot & route transitions -->
+    <script>
+      (function() {
+        function revealAppShell() {
+          try {
+            var loader = document.getElementById('auth-loading');
+            var wrapper = document.getElementById('app-wrapper');
+            if (wrapper) {
+              wrapper.classList.remove('hidden');
+              wrapper.style.display = 'flex';
+            }
+            if (loader) {
+              loader.classList.add('transition-all', 'duration-300', 'opacity-0', 'pointer-events-none');
+              setTimeout(function() { try { loader.remove(); } catch(e){} }, 350);
+            }
+          } catch(e){}
+        }
+
+        // Fast-path unblock for returning users with active cache (0-150ms)
+        try {
+          var hasUser = localStorage.getItem('local_auth_user');
+          var hasState = localStorage.getItem('local_app_state') || localStorage.getItem('appState');
+          if (hasUser || hasState) {
+            setTimeout(revealAppShell, 150);
+          }
+        } catch(e){}
+
+        // Fail-safe timeout: ensure screen never stays dark under slow networks or deferred scripts (max 800ms)
+        setTimeout(revealAppShell, 800);
+
+        // Window load safeguard
+        window.addEventListener('load', function() {
+          setTimeout(revealAppShell, 100);
+        });
+      })();
+    </script>
 </head>
 
 <body style="background-color: #0f172a; color-scheme: dark;"
     class="bg-[#0f172a] text-slate-100 font-sans overflow-hidden h-screen w-screen flex flex-col md:flex-row touch-action-manipulation">
   <!-- Shared Reusable SVG Icons Sprite (Step 009) -->
-  <svg class="hidden" style="display:none;position:absolute;width:0;height:0;" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <svg class="hidden" style="display:none;position:absolute;width:0;height:0;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
     <defs>
-     <g id="x29-icon-close-thick"><use href="#x29-icon-close-thick"/></g>
-     <g id="x29-icon-close"><use href="#x29-icon-close"/></g>
-     <g id="x29-icon-close-thin"><use href="#x29-icon-close-thin"/></g>
-     <g id="x29-icon-plus"><use href="#x29-icon-plus"/></g>
-     <g id="x29-icon-external"><use href="#x29-icon-external"/></g>
-     <g id="x29-icon-calendar"><use href="#x29-icon-calendar"/></g>
-     <g id="x29-icon-clock"><use href="#x29-icon-clock"/></g>
-     <g id="x29-icon-chevron-down"><use href="#x29-icon-chevron-down"/></g>
-     <g id="x29-icon-bolt"><use href="#x29-icon-bolt"/></g>
-     <g id="x29-icon-sparkles"><use href="#x29-icon-sparkles"/></g>
-     <g id="x29-icon-pencil"><use href="#x29-icon-pencil"/></g>
+      <g id="x29-icon-close-thick">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
+      </g>
+      <g id="x29-icon-close">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+      </g>
+      <g id="x29-icon-close-thin">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </g>
+      <g id="x29-icon-plus">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+      </g>
+      <g id="x29-icon-external">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+      </g>
+      <g id="x29-icon-calendar">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </g>
+      <g id="x29-icon-clock">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </g>
+      <g id="x29-icon-chevron-down">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+      </g>
+      <g id="x29-icon-bolt">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+      </g>
+      <g id="x29-icon-sparkles">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+      </g>
+      <g id="x29-icon-pencil">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+      </g>
     </defs>
   </svg>
 
@@ -212,7 +270,7 @@
               <button id="sidebar-close-btn" data-sidebar-close
                 class="md:hidden p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-xl transition-all active:scale-95 shrink-0">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <use href="#x29-icon-close"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
               </button>
             </div>
@@ -253,7 +311,7 @@
               <button id="btn-nav-timer" data-switch-page="timer"
                 class="w-full text-left border-2 px-4 py-3 rounded-2xl font-black text-xs transition-all duration-300 hover:translate-x-1.5 hover:shadow-md active:scale-98 flex items-center gap-3">
                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <use href="#x29-icon-clock"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
                 Focus
               </button>
@@ -261,7 +319,7 @@
                 data-switch-page="daily-actions"
                 class="w-full text-left border-2 px-4 py-3 rounded-2xl font-black text-xs transition-all duration-300 hover:translate-x-1.5 hover:shadow-md active:scale-98 flex items-center gap-3">
                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <use href="#x29-icon-clock"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
                 Daily Actions
               </button>
@@ -290,7 +348,7 @@
                 data-switch-page="paces-management"
                 class="w-full text-left border-2 px-4 py-3 rounded-2xl font-black text-xs transition-all duration-300 hover:translate-x-1.5 hover:shadow-md active:scale-98 flex items-center gap-3">
                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <use href="#x29-icon-bolt"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                 </svg>
                 Pace Management
               </button>
@@ -387,7 +445,7 @@
                 class="p-2 md:p-2.5 bg-gradient-to-br from-rose-50 to-rose-100/60 dark:from-rose-950/50 dark:to-rose-900/30 rounded-xl md:rounded-2xl border border-rose-200/70 dark:border-rose-800/50 shadow-[0_0_15px_rgba(244,63,94,0.15)] text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
                 <svg class="w-5 h-5 md:w-5.5 md:h-5.5 text-rose-600 dark:text-rose-400 animate-pulse"
                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <use href="#x29-icon-clock"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
               </div>
               <div class="flex items-center gap-2 md:gap-2.5 leading-none">
@@ -440,7 +498,7 @@
                   <div
                     class="p-1.5 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0 border border-indigo-100 dark:border-indigo-800/40 shadow-xs">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-bolt"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                     </svg>
                   </div>
                   <div class="min-w-0">
@@ -456,7 +514,7 @@
                     class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
                     title="Go to Pace Management" aria-label="Go to Pace Management">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-external"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                     </svg>
                   </button>
                 </div>
@@ -557,7 +615,7 @@
                     class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
                     title="Go to Analytics Heatmap" aria-label="Go to Analytics Heatmap">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-external"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                     </svg>
                   </button>
                 </div>
@@ -602,7 +660,7 @@
                     class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
                     title="Go to Monthly Targets" aria-label="Go to Monthly Targets">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-external"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                     </svg>
                   </button>
                 </div>
@@ -651,7 +709,7 @@
                     class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
                     title="Go to Subjects" aria-label="Go to Subjects">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-external"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                     </svg>
                   </button>
                 </div>
@@ -722,7 +780,7 @@
                     class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0"
                     title="Go to Outcome Page">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-external"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                     </svg>
                   </button>
                 </div>
@@ -776,7 +834,7 @@
                     class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
                     title="Go to Daily Targets" aria-label="Go to Daily Targets">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-external"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                     </svg>
                   </button>
                 </div>
@@ -829,7 +887,7 @@
                     class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
                     title="Go to Weekly Targets" aria-label="Go to Weekly Targets">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-external"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                     </svg>
                   </button>
                 </div>
@@ -876,7 +934,7 @@
                     class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
                     title="Go to Daily Actions" aria-label="Go to Daily Actions">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-external"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                     </svg>
                   </button>
                 </div>
@@ -920,7 +978,7 @@
                     class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
                     title="Go to Exam Routine Page" aria-label="Go to Exam Routine Page">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-external"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                     </svg>
                   </button>
                 </div>
@@ -970,7 +1028,7 @@
                     class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
                     title="Manage in Outcome Page" aria-label="Manage in Outcome Page">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-external"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                     </svg>
                   </button>
                 </div>
@@ -1053,7 +1111,7 @@
                 <div
                   class="p-2.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-2xl border border-rose-500/20 backdrop-blur-md">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <use href="#x29-icon-clock"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                 </div>
                 <div>
@@ -1087,7 +1145,7 @@
                 <div
                   class="p-2.5 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 rounded-2xl border border-cyan-500/20 backdrop-blur-md">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <use href="#x29-icon-bolt"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                   </svg>
                 </div>
                 <div>
@@ -1270,7 +1328,7 @@
                     <span id="spectra-filter-dropdown-label">🌍 Global View</span>
                     <svg class="w-4 h-4 ml-2 transition-transform duration-200 text-slate-400"
                       fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-chevron-down"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
                     </svg>
                   </button>
 
@@ -2053,7 +2111,7 @@
                   <div
                     class="p-3 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-2xl border border-blue-100 dark:border-blue-900/30 shadow-inner">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-clock"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                   </div>
                 </div>
@@ -2147,7 +2205,7 @@
                   class="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-md active:scale-95 transition-all"
                   title="Add Subject Target">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <use href="#x29-icon-plus"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
                   </svg>
                   <span class="hidden sm:inline">Add Target</span>
                 </button>
@@ -2173,7 +2231,7 @@
                   <span id="timer-history-count-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">0 Sessions</span>
                   <span id="timer-history-total-time-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 flex items-center gap-1.5 shadow-xs">
                     <svg class="w-3 h-3 inline-block shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-clock"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     <span id="timer-history-total-time-text">Total: 0 min</span>
                   </span>
@@ -2209,7 +2267,7 @@
                 <button id="timer-btn-open-add-session"
                   class="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-md active:scale-95 transition-all">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <use href="#x29-icon-plus"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
                   </svg>
                   <span class="hidden sm:inline">Add Session</span>
                 </button>
@@ -2335,7 +2393,7 @@
                       class="flex items-center justify-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest px-3 py-2.5 rounded-lg transition-colors shadow-md shadow-emerald-500/10 active:scale-95 shrink-0"
                       title="Monthly Target Setup">
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <use href="#x29-icon-plus"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
                       </svg>
                       <span>Add</span>
                     </button>
@@ -2591,7 +2649,7 @@
                 <div
                   class="p-2 rounded-xl bg-slate-100 dark:bg-slate-700/50 text-slate-400 group-open:rotate-180 transition-all duration-300 shrink-0 border border-slate-200/50 dark:border-slate-600/30">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <use href="#x29-icon-chevron-down"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
                   </svg>
                 </div>
               </summary>
@@ -2775,7 +2833,7 @@
           <button data-open-add-schedule id="btn-open-add-schedule"
             class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all active:scale-95 shadow-md flex items-center justify-center gap-1.5 shrink-0">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <use href="#x29-icon-plus"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
             </svg>
             Add
           </button>
@@ -3057,7 +3115,7 @@
                 <div class="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
                   <div class="p-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-calendar"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
                   </div>
                   <div class="min-w-0">
@@ -3120,7 +3178,7 @@
                     class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[9.5px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm shrink-0 h-9 flex items-center justify-center gap-1.5"
                     title="Spread all chapter allocations sequentially starting from chosen date">
                     <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <use href="#x29-icon-bolt"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                     </svg>
                     <span>Spread from Date</span>
                   </button>
@@ -3232,7 +3290,7 @@
       <div
         class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-700/50 text-slate-400 group-open:rotate-180 transition-all duration-300 shrink-0 border border-slate-200/50 dark:border-slate-600/30">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <use href="#x29-icon-chevron-down"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
         </svg>
       </div>
     </summary>
@@ -3886,7 +3944,7 @@
         <div
           class="p-2 rounded-xl bg-slate-100 dark:bg-slate-700/50 text-slate-400 group-open:rotate-180 transition-all duration-300 shrink-0 border border-slate-200/50 dark:border-slate-600/30">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <use href="#x29-icon-chevron-down"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
           </svg>
         </div>
       </summary>
@@ -3926,7 +3984,7 @@
         <div
           class="p-2 rounded-xl bg-slate-100 dark:bg-slate-700/50 text-slate-400 group-open:rotate-180 transition-all duration-300 shrink-0 border border-slate-200/50 dark:border-slate-600/30">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <use href="#x29-icon-chevron-down"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
           </svg>
         </div>
       </summary>
@@ -4099,7 +4157,7 @@
         <button data-open-session-modal
           class="w-full sm:w-auto justify-center bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-widest px-4 py-2.5 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-2 min-h-[42px]">
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <use href="#x29-icon-plus"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
           </svg>
           <span>Add Session</span>
         </button>
@@ -4167,7 +4225,7 @@
         <button data-close-session-modal
           class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all min-w-[36px] min-h-[36px] flex items-center justify-center shrink-0">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <use href="#x29-icon-close-thin"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
         </button>
       </div>
@@ -4252,7 +4310,7 @@
         <button data-close-exam-modal
           class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all min-w-[36px] min-h-[36px] flex items-center justify-center shrink-0">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <use href="#x29-icon-close-thin"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
         </button>
       </div>
@@ -4654,7 +4712,7 @@
               <button id="esm-btn-delete"
                 class="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 font-black text-[10px] uppercase tracking-widest py-2 px-3 rounded-lg transition-colors active:scale-95 flex items-center gap-1.5"><svg
                   class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <use href="#x29-icon-close"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
                 </svg> <span>Delete</span></button>
               <div class="flex gap-2">
                 <button data-modal-close="edit-subject-modal"
@@ -5665,7 +5723,7 @@
             <button data-modal-close="edit-timeline-entry-modal"
               class="p-2 bg-slate-100 dark:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl transition-all active:scale-95">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#x29-icon-close"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
@@ -6428,7 +6486,7 @@
             <div class="flex items-center space-x-3">
               <div class="p-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <use href="#x29-icon-clock"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
               </div>
               <div>
@@ -6442,7 +6500,7 @@
             <button data-modal-close="custom-timer-modal"
               class="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl hover:rotate-90 transition-transform active:scale-95">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#x29-icon-close-thick"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
@@ -6498,7 +6556,7 @@
             <button data-close-subject-target-modal data-modal-close="subject-target-modal"
               class="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl hover:rotate-90 transition-transform active:scale-95">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#x29-icon-close-thick"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
@@ -6570,7 +6628,7 @@
               <div
                 class="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <use href="#x29-icon-plus"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
                 </svg>
               </div>
               <div>
@@ -6582,7 +6640,7 @@
             <button data-modal-close="add-timer-session-modal"
               class="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl hover:rotate-90 transition-transform active:scale-95">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#x29-icon-close-thick"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
@@ -6705,7 +6763,7 @@
             <button data-modal-close="edit-timer-session-modal"
               class="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl hover:rotate-90 transition-transform active:scale-95">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#x29-icon-close-thick"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
@@ -6806,7 +6864,7 @@
             <button data-modal-close="global-chapters-modal"
               class="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl hover:rotate-90 transition-transform active:scale-95">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#x29-icon-close-thick"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
@@ -6846,7 +6904,7 @@
             <button data-modal-close="timer-analytics-modal"
               class="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl hover:rotate-90 transition-transform active:scale-95">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#x29-icon-close-thick"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
@@ -7075,7 +7133,7 @@
             <button data-modal-close="account-settings-modal"
               class="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl hover:rotate-90 transition-transform active:scale-95">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#x29-icon-close-thick"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
@@ -7135,7 +7193,7 @@
             <div class="flex items-center space-x-3">
               <div class="p-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <use href="#x29-icon-plus"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
                 </svg>
               </div>
               <div>
@@ -7148,7 +7206,7 @@
             <button data-modal-close="add-schedule-modal"
               class="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl hover:rotate-90 transition-transform active:scale-95">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#x29-icon-close-thick"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
@@ -7294,7 +7352,7 @@
             <button data-modal-close="create-schedule-group-modal"
               class="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl hover:rotate-90 transition-transform active:scale-95">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#x29-icon-close-thick"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
@@ -7344,7 +7402,7 @@
             <div class="flex items-center space-x-3">
               <div class="p-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <use href="#x29-icon-plus"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
                 </svg>
               </div>
               <div>
@@ -7356,7 +7414,7 @@
             <button data-modal-close="add-daily-target-modal"
               class="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl hover:rotate-90 transition-transform active:scale-95">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#x29-icon-close-thick"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
@@ -7466,7 +7524,7 @@
             <div class="flex items-center space-x-3">
               <div class="p-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <use href="#x29-icon-plus"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
                 </svg>
               </div>
               <div>
@@ -7478,7 +7536,7 @@
             <button data-modal-close="add-weekly-target-modal"
               class="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl hover:rotate-90 transition-transform active:scale-95">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#x29-icon-close-thick"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
@@ -7575,7 +7633,7 @@
             <button data-modal-close="celebration-setup-modal"
               class="p-2 bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-slate-700 dark:hover:text-white rounded-xl hover:rotate-90 transition-transform active:scale-95">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#x29-icon-close-thick"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
@@ -7747,7 +7805,7 @@
             <button id="spectra-hm-modal-close-btn" data-modal-close="spectra-heatmap-day-modal"
               class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <use href="#x29-icon-close-thin"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>

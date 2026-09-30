@@ -1261,17 +1261,24 @@ window.FirebaseService = {
 };
 
 window.dismissLoadingScreen = function() {
-    if (window.setLoadingProgress) window.setLoadingProgress(100, 'Workspace ready!');
+    try {
+        if (typeof window.setLoadingProgress === 'function') window.setLoadingProgress(100, 'Workspace ready!');
+    } catch(e) {}
     const loadingEl = document.getElementById('auth-loading');
     const wrapperEl = document.getElementById('app-wrapper');
     if (loadingEl) {
-        loadingEl.classList.add('transition-all', 'duration-500', 'opacity-0', 'pointer-events-none');
+        loadingEl.classList.add('transition-all', 'duration-300', 'opacity-0', 'pointer-events-none');
         setTimeout(() => {
             try { loadingEl.remove(); } catch(e){}
-        }, 600);
+        }, 350);
     }
-    if (wrapperEl) wrapperEl.classList.remove('hidden');
-    AppState.isInitialLoad = false;
+    if (wrapperEl) {
+        wrapperEl.classList.remove('hidden');
+        wrapperEl.style.display = 'flex';
+    }
+    if (typeof AppState !== 'undefined' && AppState) {
+        AppState.isInitialLoad = false;
+    }
 
     if (typeof performance !== 'undefined' && performance.mark) {
         performance.mark('x29-ui-ready');

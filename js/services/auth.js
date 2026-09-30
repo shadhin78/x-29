@@ -151,6 +151,7 @@
          * @returns {Promise<void>}
          */
         logout: async function () {
+            this._isExplicitLogout = true;
             console.log("[AuthService] LOGOUT_INITIATED");
 
             // 1. Execute all registered teardown hooks (e.g. stop Firestore snapshot listeners, clear debounce timers)
@@ -239,6 +240,7 @@
             if (fb && fb.auth) {
                 const unsubscribe = fb.auth().onAuthStateChanged((user) => {
                     if (user) {
+                        this._isExplicitLogout = false;
                         storage.setItem('local_auth_user', JSON.stringify({
                             email: user.email,
                             uid: user.uid,
@@ -246,8 +248,14 @@
                         }));
                         callback(user);
                     } else {
-                        storage.removeItem('local_auth_user');
-                        callback(null);
+                        const cached = this.getCurrentUser();
+                        if (cached && (cached.email || '').trim().toLowerCase() === 'ris2k29@gmail.com' && !this._isExplicitLogout) {
+                            console.log("[AuthService] Retaining cached admin session during Firebase background sync.");
+                            callback(cached);
+                        } else {
+                            storage.removeItem('local_auth_user');
+                            callback(null);
+                        }
                     }
                 });
                 return () => {

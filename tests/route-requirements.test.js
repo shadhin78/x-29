@@ -294,9 +294,157 @@ async function testAll() {
         });
     });
 
+    // ---------------------------------------------------------
+    // 7. SVG SPRITE VECTOR INTEGRITY & ICONS PRESERVATION
+    // ---------------------------------------------------------
+    console.log('\n7. SVG Sprite Vector Integrity & Icons Preservation:');
+
+    await runTest('index.html contains valid vector path geometry for all 11 SVG sprite symbols with zero circular references', () => {
+        const indexHtml = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+        const requiredIcons = [
+            'x29-icon-close-thick',
+            'x29-icon-close',
+            'x29-icon-close-thin',
+            'x29-icon-plus',
+            'x29-icon-external',
+            'x29-icon-calendar',
+            'x29-icon-clock',
+            'x29-icon-chevron-down',
+            'x29-icon-bolt',
+            'x29-icon-sparkles',
+            'x29-icon-pencil'
+        ];
+
+        requiredIcons.forEach(id => {
+            const circularPattern = new RegExp(`<g\\s+id="${id}">\\s*<use\\s+href="#${id}"\\/>\\s*<\\/g>`);
+            assert(!circularPattern.test(indexHtml), `index.html must not contain circular <use> for ${id}`);
+
+            const validPathPattern = new RegExp(`<g\\s+id="${id}">[\\s\\S]*?<path\\s+[^>]*?d="[^"]+"[\\s\\S]*?<\\/g>`);
+            assert(validPathPattern.test(indexHtml), `index.html must contain valid <path> for ${id}`);
+        });
+    });
+
+    await runTest('All 17 SPA route index.html files contain matching valid SVG sprite definitions', () => {
+        const routesToCheck = [
+            'dashboard', 'timer', 'focus', 'subjects', 'subject', 'schedule', 'daily-schedule',
+            'analytics', 'spectra-analytics', 'exam', 'exam-routine', 'pace', 'paces-management',
+            'master-config', 'outcome', 'daily-actions', 'monthly-target-setup'
+        ];
+        const requiredIcons = [
+            'x29-icon-close-thick', 'x29-icon-close', 'x29-icon-close-thin', 'x29-icon-plus',
+            'x29-icon-external', 'x29-icon-calendar', 'x29-icon-clock', 'x29-icon-chevron-down',
+            'x29-icon-bolt', 'x29-icon-sparkles', 'x29-icon-pencil'
+        ];
+
+        routesToCheck.forEach(r => {
+            const entryPath = path.join(__dirname, '..', r, 'index.html');
+            const content = fs.readFileSync(entryPath, 'utf8');
+            requiredIcons.forEach(id => {
+                const validPathPattern = new RegExp(`<g\\s+id="${id}">[\\s\\S]*?<path\\s+[^>]*?d="[^"]+"[\\s\\S]*?<\\/g>`);
+                assert(validPathPattern.test(content), `Route ${r}/index.html must contain valid <path> for ${id}`);
+            });
+        });
+    });
+
+    await runTest('Application Shell, Navigation & Header controls contain authentic inline vector graphics (Step 003)', () => {
+        const indexHtml = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+        assert(indexHtml.includes('id="sidebar-close-btn"'), 'sidebar-close-btn exists');
+        assert(/id="sidebar-close-btn"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'sidebar-close-btn has close path');
+        assert(/id="btn-nav-timer"[\s\S]*?<path[^>]*?d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/.test(indexHtml), 'btn-nav-timer has clock path');
+        assert(/id="btn-nav-daily-actions"[\s\S]*?<path[^>]*?d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/.test(indexHtml), 'btn-nav-daily-actions has clock path');
+        assert(/id="btn-nav-paces-management"[\s\S]*?<path[^>]*?d="M13 10V3L4 14h7v7l9-11h-7z"/.test(indexHtml), 'btn-nav-paces-management has bolt path');
+        assert(/id="header-exam-countdown-compact"[\s\S]*?<path[^>]*?d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/.test(indexHtml), 'header-exam-countdown-compact has clock path');
+    });
+
+    await runTest('Dashboard Action Cards & Navigation Jump Buttons contain authentic inline vector graphics (Step 004)', () => {
+        const indexHtml = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+        assert(/id="dashboard-pace-section"[\s\S]*?<path[^>]*?d="M13 10V3L4 14h7v7l9-11h-7z"/.test(indexHtml), 'Pace section bolt path');
+        assert(/data-switch-page="paces-management"[\s\S]*?<path[^>]*?d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/.test(indexHtml), 'Pace jump external link path');
+        assert(/data-switch-page="spectra-analytics"[\s\S]*?<path[^>]*?d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/.test(indexHtml), 'Heatmap detail jump external path');
+        assert(/id="db-monthly-checklist-pct"[\s\S]*?<path[^>]*?d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/.test(indexHtml), 'Monthly checklist pct external path');
+        assert(/data-switch-page="daily-actions"[\s\S]*?<path[^>]*?d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/.test(indexHtml), 'Daily actions tracker external path');
+        assert(/id="db-outcome-overall-badge"[\s\S]*?<path[^>]*?d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/.test(indexHtml), 'Outcome overall badge external path');
+        assert(/id="db-daily-checklist-pct"[\s\S]*?<path[^>]*?d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/.test(indexHtml), 'Daily checklist pct external path');
+        assert(/id="db-weekly-checklist-pct"[\s\S]*?<path[^>]*?d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/.test(indexHtml), 'Weekly checklist pct external path');
+        assert(/id="dashboard-daily-actions-progress"[\s\S]*?<path[^>]*?d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/.test(indexHtml), 'Daily actions progress external path');
+        assert(/id="db-upcoming-exams-count-badge"[\s\S]*?<path[^>]*?d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/.test(indexHtml), 'Upcoming exams external path');
+        assert(/id="db-passed-subjects-count-badge"[\s\S]*?<path[^>]*?d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/.test(indexHtml), 'Passed subjects external path');
+        assert(/id="trends-bar-days-remain-container"[\s\S]*?<path[^>]*?d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/.test(indexHtml), 'Trends days remain clock path');
+        assert(/id="trends-bar-actual-pace-container"[\s\S]*?<path[^>]*?d="M13 10V3L4 14h7v7l9-11h-7z"/.test(indexHtml), 'Trends actual pace bolt path');
+    });
+
+    await runTest('Focus / Timer & Chronograph Visual Assets contain authentic inline vector graphics (Step 005)', () => {
+        const indexHtml = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+        assert(/id="timer-stat-today"[\s\S]*?<path[^>]*?d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/.test(indexHtml), 'Timer stat today clock path');
+        assert(/id="timer-btn-add-subject-target"[\s\S]*?<path[^>]*?d="M12 4v16m8-8H4"/.test(indexHtml), 'Timer add target plus path');
+        assert(/id="timer-history-total-time-badge"[\s\S]*?<path[^>]*?d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/.test(indexHtml), 'Timer history total clock path');
+        assert(/id="timer-btn-open-add-session"[\s\S]*?<path[^>]*?d="M12 4v16m8-8H4"/.test(indexHtml), 'Timer add session plus path');
+        assert(/data-open-monthly-target-setup[\s\S]*?<path[^>]*?d="M12 4v16m8-8H4"/.test(indexHtml), 'Target setup plus path');
+    });
+
+    await runTest('Daily Schedule, Analytics & Monthly Target Setup contain authentic inline vector graphics (Step 006)', () => {
+        const indexHtml = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+        assert(/id="spectra-filter-dropdown-btn"[\s\S]*?<path[^>]*?d="M19 9l-7 7-7-7"/.test(indexHtml), 'Spectra filter dropdown chevron path');
+        assert(/Create[\s\S]*?Daily[\s\S]*?Action Tracker[\s\S]*?<path[^>]*?d="M19 9l-7 7-7-7"/.test(indexHtml), 'Daily action tracker chevron path');
+        assert(/id="btn-open-add-schedule"[\s\S]*?<path[^>]*?d="M12 4v16m8-8H4"/.test(indexHtml), 'Open add schedule plus path');
+        assert(/id="mt-daily-allocation-card"[\s\S]*?<path[^>]*?d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/.test(indexHtml), 'Monthly target calendar path');
+        assert(/data-spread-from-start-date[\s\S]*?<path[^>]*?d="M13 10V3L4 14h7v7l9-11h-7z"/.test(indexHtml), 'Monthly target bulk assign bolt path');
+        assert(/id="sidebar-progress-section"[\s\S]*?<path[^>]*?d="M19 9l-7 7-7-7"/.test(indexHtml), 'Subject progress chevron path');
+        assert(/Pass \/[\s\S]*?Freeze[\s\S]*?Configuration[\s\S]*?<path[^>]*?d="M19 9l-7 7-7-7"/.test(indexHtml), 'Outcome pass freeze chevron path');
+        assert(/Milestone Celebration Criteria[\s\S]*?<path[^>]*?d="M19 9l-7 7-7-7"/.test(indexHtml), 'Outcome milestone chevron path');
+        assert(/data-open-session-modal[\s\S]*?<path[^>]*?d="M12 4v16m8-8H4"/.test(indexHtml), 'Add result session plus path');
+    });
+
+    await runTest('Universal Modal Dialogs & Confirmation Close Icons contain authentic inline vector graphics (Step 007)', () => {
+        const indexHtml = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+        assert(/data-close-session-modal[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Session modal thin close path');
+        assert(/data-close-exam-modal[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Exam modal thin close path');
+        assert(/id="esm-btn-delete"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Delete subject close path');
+        assert(/data-modal-close="edit-timeline-entry-modal"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Timeline entry close path');
+        assert(/id="custom-timer-modal"[\s\S]*?<path[^>]*?d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/.test(indexHtml), 'Custom timer duration clock path');
+        assert(/data-modal-close="custom-timer-modal"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Custom timer close thick path');
+        assert(/data-modal-close="subject-target-modal"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Subject target close thick path');
+        assert(/id="add-timer-session-modal"[\s\S]*?<path[^>]*?d="M12 4v16m8-8H4"/.test(indexHtml), 'Add timer session plus badge path');
+        assert(/data-modal-close="add-timer-session-modal"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Add timer session close thick path');
+        assert(/data-modal-close="edit-timer-session-modal"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Edit timer session close thick path');
+        assert(/data-modal-close="global-chapters-modal"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Global chapters close thick path');
+        assert(/data-modal-close="timer-analytics-modal"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Timer analytics close thick path');
+        assert(/data-modal-close="account-settings-modal"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Account settings close thick path');
+        assert(/id="add-schedule-modal"[\s\S]*?<path[^>]*?d="M12 4v16m8-8H4"/.test(indexHtml), 'Add schedule plus badge path');
+        assert(/data-modal-close="add-schedule-modal"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Add schedule close thick path');
+        assert(/data-modal-close="create-schedule-group-modal"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Create schedule group close thick path');
+        assert(/id="add-daily-target-modal"[\s\S]*?<path[^>]*?d="M12 4v16m8-8H4"/.test(indexHtml), 'Add daily target plus badge path');
+        assert(/data-modal-close="add-daily-target-modal"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Add daily target close thick path');
+        assert(/id="add-weekly-target-modal"[\s\S]*?<path[^>]*?d="M12 4v16m8-8H4"/.test(indexHtml), 'Add weekly target plus badge path');
+        assert(/data-modal-close="add-weekly-target-modal"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Add weekly target close thick path');
+        assert(/data-modal-close="celebration-setup-modal"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Celebration setup close thick path');
+        assert(/id="spectra-hm-modal-close-btn"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Spectra heatmap modal close thin path');
+    });
+
+    await runTest('Site-wide SVG vector integrity & total parity across all 18 route files (Step 008)', () => {
+        const indexHtml = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+        const countPaths = (indexHtml.match(/<path\b/g) || []).length;
+        assert(countPaths > 180, `index.html must contain comprehensive inline paths (found ${countPaths})`);
+
+        const routesToCheck = [
+            'dashboard', 'timer', 'focus', 'subjects', 'subject', 'schedule', 'daily-schedule',
+            'analytics', 'spectra-analytics', 'exam', 'exam-routine', 'pace', 'paces-management',
+            'master-config', 'outcome', 'daily-actions', 'monthly-target-setup'
+        ];
+
+        routesToCheck.forEach(r => {
+            const entryPath = path.join(__dirname, '..', r, 'index.html');
+            const content = fs.readFileSync(entryPath, 'utf8');
+            const routePaths = (content.match(/<path\b/g) || []).length;
+            assert.strictEqual(routePaths, countPaths, `Route ${r}/index.html must have identical path count (${countPaths})`);
+        });
+    });
+
     console.log('\n==================================================');
     console.log('ALL GLOBAL ROUTE REQUIREMENTS VERIFIED! (100% PASS)');
     console.log('==================================================\n');
 }
 
 testAll();
+
+

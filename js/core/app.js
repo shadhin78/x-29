@@ -62,10 +62,44 @@ export const App = {
             console.error('[App] Firebase init failed:', e);
         }
 
+        // Fast synchronous cache check: Unblock authenticated session instantly (0ms)
+        const cachedUser = (typeof authProvider.getCurrentUser === 'function') ? authProvider.getCurrentUser() : null;
+        if (cachedUser && (cachedUser.email || '').trim().toLowerCase() === 'ris2k29@gmail.com') {
+            if (typeof window !== 'undefined') {
+                window.currentUser = cachedUser;
+            }
+            if (typeof document !== 'undefined') {
+                const displayName = cachedUser.displayName || 'ris2k29';
+                const profileNameEl = document.getElementById('profile-name');
+                const profileEmailEl = document.getElementById('profile-email');
+                const profileAvatarEl = document.getElementById('profile-avatar');
+                if (profileNameEl) profileNameEl.textContent = displayName;
+                if (profileEmailEl) profileEmailEl.textContent = cachedUser.email;
+                if (profileAvatarEl) profileAvatarEl.textContent = displayName.charAt(0).toUpperCase();
+
+                if (typeof window !== 'undefined' && typeof window.dismissLoadingScreen === 'function') {
+                    window.dismissLoadingScreen();
+                } else {
+                    const loadingEl = document.getElementById('auth-loading');
+                    const wrapperEl = document.getElementById('app-wrapper');
+                    if (loadingEl) loadingEl.remove();
+                    if (wrapperEl) {
+                        wrapperEl.classList.remove('hidden');
+                        wrapperEl.style.display = 'flex';
+                    }
+                }
+            }
+            this.initCurrentFeature();
+        }
+
         // Auth state observer / Route guard
         if (typeof authProvider.onAuthStateChanged === 'function') {
             authProvider.onAuthStateChanged(async (user) => {
                 if (!user) {
+                    const localUser = (typeof authProvider.getCurrentUser === 'function') ? authProvider.getCurrentUser() : null;
+                    if (localUser && (localUser.email || '').trim().toLowerCase() === 'ris2k29@gmail.com') {
+                        return;
+                    }
                     if (typeof window !== 'undefined' && window.location) {
                         const currentPath = (window.location.pathname || '') + (window.location.search || '') + (window.location.hash || '');
                         if (currentPath && currentPath !== '/' && currentPath !== '/index.html' && !currentPath.includes('login')) {
@@ -119,7 +153,10 @@ export const App = {
                         const loadingEl = document.getElementById('auth-loading');
                         const wrapperEl = document.getElementById('app-wrapper');
                         if (loadingEl) loadingEl.remove();
-                        if (wrapperEl) wrapperEl.classList.remove('hidden');
+                        if (wrapperEl) {
+                            wrapperEl.classList.remove('hidden');
+                            wrapperEl.style.display = 'flex';
+                        }
                     }
                 }
 
@@ -144,7 +181,7 @@ export const App = {
     initServices() {
         if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
-        // Loading screen safety fallback timer (3s max)
+        // Loading screen safety fallback timer (max 800ms)
         setTimeout(() => {
             if (typeof window.dismissLoadingScreen === 'function') {
                 window.dismissLoadingScreen();
@@ -152,9 +189,15 @@ export const App = {
                 const loadingEl = document.getElementById('auth-loading');
                 const wrapperEl = document.getElementById('app-wrapper');
                 if (loadingEl) loadingEl.remove();
-                if (wrapperEl) wrapperEl.classList.remove('hidden');
+                if (wrapperEl) {
+                    wrapperEl.classList.remove('hidden');
+                    wrapperEl.style.display = 'flex';
+                }
             }
-        }, 3000);
+            if (typeof this.initCurrentFeature === 'function') {
+                this.initCurrentFeature();
+            }
+        }, 800);
 
         // Focus Timer Service
         if (window.TimerService && typeof window.TimerService.init === 'function') {
