@@ -1,5 +1,12 @@
 /* ===== Consolidated Stylesheet ===== */
 
+/* Permanent Dark Mode: Force dark color-scheme and dark background on html
+   before any body/layout styles load, preventing any white flash. */
+html {
+    color-scheme: dark;
+    background-color: #0f172a;
+}
+
 /* ==========================================
    From css/styles.css
    ========================================== */
