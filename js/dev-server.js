@@ -101,8 +101,10 @@ const server = http.createServer((req, res) => {
   // Direct clean route SPA fallback (e.g. /dashboard, /timer, /subjects, /schedule, /analytics, /exam, /pace, /master-config, /outcome, /daily-actions, /monthly-target-setup)
   const requestedExt = path.extname(url);
   if (!requestedExt && !url.startsWith('/api/')) {
-    const indexPath = path.join(ROOT_DIR, 'index.html');
-    fs.readFile(indexPath, (indexErr, indexData) => {
+    const routeSlug = url.replace(/^\/+|\/+$/g, '');
+    const routeIndexPath = path.join(ROOT_DIR, routeSlug, 'index.html');
+    const targetHtmlPath = (routeSlug && fs.existsSync(routeIndexPath)) ? routeIndexPath : path.join(ROOT_DIR, 'index.html');
+    fs.readFile(targetHtmlPath, (indexErr, indexData) => {
       if (indexErr) {
         res.writeHead(500, { 'Content-Type': 'text/plain' });
         res.end('500 Internal Server Error');

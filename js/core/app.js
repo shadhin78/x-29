@@ -287,13 +287,19 @@ export const App = {
      */
     initCurrentFeature() {
         if (typeof window !== 'undefined') {
-            const initialPage = (window.Router && typeof window.Router.getPageIdFromPath === 'function' && window.location)
-                ? window.Router.getPageIdFromPath(window.location.pathname || window.location.hash)
+            const currentPath = window.location ? (window.location.pathname || '') : '';
+            const isRoot = !currentPath || currentPath === '/' || currentPath === '/index.html' || currentPath === '/index';
+            const initialPage = (window.Router && typeof window.Router.getPageIdFromPath === 'function')
+                ? window.Router.getPageIdFromPath(currentPath || (window.location && window.location.hash))
                 : 'dashboard';
-            if (typeof window.switchPage === 'function') {
+
+            if (window.Router && typeof window.Router.loadPage === 'function') {
+                window.Router.loadPage(initialPage, null, {
+                    updateHistory: !isRoot,
+                    replace: true
+                });
+            } else if (typeof window.switchPage === 'function') {
                 window.switchPage(initialPage);
-            } else if (window.Router && typeof window.Router.loadPage === 'function') {
-                window.Router.loadPage(initialPage);
             }
         }
     },

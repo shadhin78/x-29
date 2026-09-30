@@ -1,13 +1,13 @@
 /**
  * Router Module (router/router.js)
- * Lightweight Vanilla JavaScript Router for X-29.
+ * High-performance Vanilla JavaScript SPA Router for X-29.
  *
  * Responsibilities:
- * 1. Internal application state switching (NO URL routing, NO pushState, NO page reload).
- * 2. Dynamic loading of modular pages (HTML, CSS, JS) with caching.
- * 3. Lifecycle management (mount, render, destroy).
- * 4. Slide-up page transitions.
- * 5. Complete preservation of persistent application shell.
+ * 1. Genuine URL route synchronization with History API (pushState, replaceState, popstate).
+ * 2. Real canonical paths: /dashboard, /timer, /subjects, /schedule, /analytics, /exam, /pace, /master-config, /outcome, /daily-actions, /monthly-target-setup.
+ * 3. Deep-link resolution, direct URL loading, and F5 refresh persistence.
+ * 4. Modular page lifecycle management (mount, render, destroy) with 0ms transition.
+ * 5. Complete preservation of persistent application shell and permanent dark mode.
  */
 
 (function () {
@@ -700,8 +700,28 @@
             this._navSeq = (this._navSeq || 0) + 1;
             const currentSeq = this._navSeq;
 
-            // 1. INSTANT NAVIGATION FEEDBACK: Update active nav state immediately (0ms)
+            // 1. INSTANT NAVIGATION FEEDBACK: Update active nav state & title immediately (0ms)
             this.updateNavButtons(pageId);
+            if (typeof document !== 'undefined') {
+                const titleMap = {
+                    'dashboard': 'Dashboard - X-29',
+                    'timer': 'Focus - X-29',
+                    'subjects': 'Subjects - X-29',
+                    'schedule': 'Daily Schedule - X-29',
+                    'spectra-analytics': 'Analytics - X-29',
+                    'analytics': 'Analytics - X-29',
+                    'exam': 'Exam Routine - X-29',
+                    'paces-management': 'Pace Management - X-29',
+                    'pace': 'Pace Management - X-29',
+                    'master-config': 'Master Config - X-29',
+                    'outcome': 'Outcome - X-29',
+                    'daily-actions': 'Daily Actions - X-29',
+                    'monthly-target-setup': 'Monthly Target Setup - X-29'
+                };
+                if (titleMap[pageId]) {
+                    document.title = titleMap[pageId];
+                }
+            }
 
             // 2. Mobile drawer immediate slide-out without blocking UI
             if (typeof window !== 'undefined' && window.innerWidth < 768 && typeof window.closeMobileSidebar === 'function') {
@@ -1046,6 +1066,8 @@
             }
 
             // Resolve initial route from URL path (deep-linking support)
+            const currentPath = (typeof window !== 'undefined' && window.location) ? (window.location.pathname || '') : '';
+            const isRoot = !currentPath || currentPath === '/' || currentPath === '/index.html' || currentPath === '/index';
             const initialPageId = (typeof window !== 'undefined' && window.location && (window.location.pathname || window.location.hash))
                 ? this.getPageIdFromPath(window.location.pathname || window.location.hash)
                 : 'dashboard';
@@ -1055,9 +1077,10 @@
 
             // Replace initial history state so Back button knows the starting entry
             // AND immediately normalizes the browser address bar (strips trailing slashes, %20, aliases)
+            // Preserves '/' cleanly when visited at root, while deep links preserve their dedicated route
             if (typeof window !== 'undefined' && window.history && typeof window.history.replaceState === 'function' && window.location && window.location.protocol !== 'file:') {
                 try {
-                    const canonicalPath = this.getPathForPageId(initialPageId);
+                    const canonicalPath = isRoot ? '/' : this.getPathForPageId(initialPageId);
                     window.history.replaceState({ pageId: initialPageId }, '', canonicalPath);
                 } catch (e) {
                     // Ignore in sandboxed environments

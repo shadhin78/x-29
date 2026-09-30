@@ -3,7 +3,15 @@
  *
  * Ensures all clean route directories (dashboard, timer, subjects, schedule,
  * analytics, exam, pace, master-config, outcome, daily-actions,
- * monthly-target-setup, login) have a synchronized entry point.
+ * monthly-target-setup, login) have a synchronized, pre-rendered entry point.
+ *
+ * Each route entry point is tailored so that:
+ * 1. The target page container is immediately active and visible on parse (no white or wrong-page flash).
+ * 2. Inactive page containers are set to hidden.
+ * 3. Sidebar navigation buttons reflect the active route.
+ * 4. The document <title> accurately reflects the page.
+ * 5. <base href="/"> is enforced for clean asset loading from root.
+ * 6. Permanent dark mode is strictly preserved.
  *
  * This guarantees 100% parity across:
  * 1. Live Production (Vercel): https://x-29.vercel.app/<page>
@@ -38,6 +46,165 @@ const SPA_ROUTES = [
     'monthly-target-setup'
 ];
 
+const ROUTE_CONFIGS = {
+    'dashboard': {
+        containerId: 'page-dashboard',
+        title: 'Dashboard - X-29',
+        navKey: 'dashboard'
+    },
+    'timer': {
+        containerId: 'page-timer',
+        title: 'Focus - X-29',
+        navKey: 'timer'
+    },
+    'focus': {
+        containerId: 'page-timer',
+        title: 'Focus - X-29',
+        navKey: 'timer'
+    },
+    'subjects': {
+        containerId: 'page-subjects',
+        title: 'Subjects - X-29',
+        navKey: 'subjects'
+    },
+    'subject': {
+        containerId: 'page-subjects',
+        title: 'Subjects - X-29',
+        navKey: 'subjects'
+    },
+    'schedule': {
+        containerId: 'page-schedule',
+        title: 'Daily Schedule - X-29',
+        navKey: 'schedule'
+    },
+    'daily-schedule': {
+        containerId: 'page-schedule',
+        title: 'Daily Schedule - X-29',
+        navKey: 'schedule'
+    },
+    'analytics': {
+        containerId: 'page-spectra-analytics',
+        title: 'Analytics - X-29',
+        navKey: 'spectra-analytics'
+    },
+    'spectra-analytics': {
+        containerId: 'page-spectra-analytics',
+        title: 'Analytics - X-29',
+        navKey: 'spectra-analytics'
+    },
+    'exam': {
+        containerId: 'page-exam',
+        title: 'Exam Routine - X-29',
+        navKey: 'exam'
+    },
+    'exam-routine': {
+        containerId: 'page-exam',
+        title: 'Exam Routine - X-29',
+        navKey: 'exam'
+    },
+    'pace': {
+        containerId: 'page-paces-management',
+        title: 'Pace Management - X-29',
+        navKey: 'paces-management'
+    },
+    'paces-management': {
+        containerId: 'page-paces-management',
+        title: 'Pace Management - X-29',
+        navKey: 'paces-management'
+    },
+    'master-config': {
+        containerId: 'page-master-config',
+        title: 'Master Config - X-29',
+        navKey: 'master-config'
+    },
+    'outcome': {
+        containerId: 'page-outcome',
+        title: 'Outcome - X-29',
+        navKey: 'outcome'
+    },
+    'daily-actions': {
+        containerId: 'page-daily-actions',
+        title: 'Daily Actions - X-29',
+        navKey: 'daily-actions'
+    },
+    'monthly-target-setup': {
+        containerId: 'page-monthly-target-setup',
+        title: 'Monthly Target Setup - X-29',
+        navKey: 'daily-actions'
+    }
+};
+
+const PAGE_CONTAINERS = [
+    'page-dashboard',
+    'page-spectra-analytics',
+    'page-timer',
+    'page-daily-actions',
+    'page-schedule',
+    'page-monthly-target-setup',
+    'page-subjects',
+    'page-master-config',
+    'page-paces-management',
+    'page-outcome',
+    'page-exam'
+];
+
+const NAV_BUTTONS = {
+    'dashboard': { id: 'btn-nav-dashboard', active: 'bg-slate-900 dark:bg-blue-600 text-white border-slate-900 dark:border-blue-600 shadow-lg', hover: 'hover:border-blue-400' },
+    'spectra-analytics': { id: 'btn-nav-spectra-analytics', active: 'bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white border-transparent shadow-lg shadow-fuchsia-500/20', hover: 'hover:border-fuchsia-400' },
+    'timer': { id: 'btn-nav-timer', active: 'bg-emerald-600 text-white border-emerald-600 shadow-lg', hover: 'hover:border-emerald-400' },
+    'daily-actions': { id: 'btn-nav-daily-actions', active: 'bg-orange-500 text-white border-orange-500 shadow-lg', hover: 'hover:border-orange-400' },
+    'schedule': { id: 'btn-nav-schedule', active: 'bg-cyan-600 text-white border-cyan-600 shadow-lg', hover: 'hover:border-cyan-400' },
+    'subjects': { id: 'btn-nav-subjects', active: 'bg-violet-600 text-white border-violet-600 shadow-lg', hover: 'hover:border-violet-400' },
+    'paces-management': { id: 'btn-nav-paces-management', active: 'bg-red-600 text-white border-red-600 shadow-lg', hover: 'hover:border-red-400' },
+    'master-config': { id: 'btn-nav-master-config', active: 'bg-indigo-600 text-white border-indigo-600 shadow-lg', hover: 'hover:border-indigo-400' },
+    'outcome': { id: 'btn-nav-outcome', active: 'bg-yellow-500 text-white border-yellow-500 shadow-lg', hover: 'hover:border-yellow-400' },
+    'exam': { id: 'btn-nav-exam', active: 'bg-rose-600 text-white border-rose-600 shadow-lg', hover: 'hover:border-rose-400' }
+};
+
+const BASE_BTN_CLASS = "w-full text-left border-2 px-4 py-3 rounded-2xl font-black text-xs transition-all duration-300 hover:translate-x-1.5 hover:shadow-md active:scale-98 flex items-center gap-3";
+const INACTIVE_BTN_BASE = "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300";
+
+function tailorHtmlForRoute(baseHtml, targetContainerId, pageTitle, activeNavKey) {
+    let html = baseHtml;
+
+    // 1. Update Title
+    if (pageTitle) {
+        html = html.replace(/<title>.*?<\/title>/, `<title>${pageTitle}</title>`);
+    }
+
+    // 2. Adjust page container visibility
+    PAGE_CONTAINERS.forEach(cid => {
+        const regex = new RegExp(`(<div\\s+id="${cid}"[^>]*?class=")([^"]*)(")`);
+        html = html.replace(regex, (match, prefix, cls, suffix) => {
+            let classes = cls.split(/\s+/).filter(Boolean);
+            if (cid === targetContainerId) {
+                classes = classes.filter(c => c !== 'hidden');
+            } else {
+                if (!classes.includes('hidden')) {
+                    classes.push('hidden');
+                }
+            }
+            return prefix + classes.join(' ') + suffix;
+        });
+    });
+
+    // 3. Adjust sidebar navigation button active/inactive styling
+    Object.keys(NAV_BUTTONS).forEach(key => {
+        const btn = NAV_BUTTONS[key];
+        const isActive = (key === activeNavKey);
+        const desiredClass = isActive
+            ? `${BASE_BTN_CLASS} ${btn.active}`
+            : `${BASE_BTN_CLASS} ${INACTIVE_BTN_BASE} ${btn.hover}`;
+
+        const btnRegex = new RegExp(`(<button\\s+id="${btn.id}"[\\s\\S]*?class=")([^"]*)(")`);
+        html = html.replace(btnRegex, (match, prefix, cls, suffix) => {
+            return prefix + desiredClass + suffix;
+        });
+    });
+
+    return html;
+}
+
 function syncRoutes() {
     if (!fs.existsSync(INDEX_HTML_PATH) || !fs.existsSync(LOGIN_HTML_PATH)) {
         console.error('index.html or login.html not found in root.');
@@ -49,14 +216,25 @@ function syncRoutes() {
 
     let count = 0;
 
-    // Sync SPA App Routes
+    // Sync SPA App Routes with tailored pre-rendered HTML
     SPA_ROUTES.forEach(route => {
         const routeDir = path.join(ROOT_DIR, route);
         if (!fs.existsSync(routeDir)) {
             fs.mkdirSync(routeDir, { recursive: true });
         }
         const targetFile = path.join(routeDir, 'index.html');
-        fs.writeFileSync(targetFile, indexContent, 'utf8');
+        const config = ROUTE_CONFIGS[route] || {
+            containerId: 'page-dashboard',
+            title: 'X-29',
+            navKey: 'dashboard'
+        };
+        const tailoredContent = tailorHtmlForRoute(
+            indexContent,
+            config.containerId,
+            config.title,
+            config.navKey
+        );
+        fs.writeFileSync(targetFile, tailoredContent, 'utf8');
         count++;
     });
 
@@ -75,4 +253,4 @@ if (require.main === module) {
     syncRoutes();
 }
 
-module.exports = { syncRoutes, SPA_ROUTES };
+module.exports = { syncRoutes, SPA_ROUTES, ROUTE_CONFIGS, tailorHtmlForRoute };
