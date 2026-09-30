@@ -41,6 +41,16 @@
             if (params.get('error') === 'denied') {
                 showError("Access denied. X-29 is private.");
             }
+            // Clean URL address bar synchronization: ensure /login is displayed
+            if (window.history && typeof window.history.replaceState === 'function' && window.location.protocol !== 'file:') {
+                try {
+                    const currentPath = window.location.pathname || '';
+                    if (currentPath.endsWith('login.html') || currentPath === '/login/') {
+                        const cleanPath = '/login' + (window.location.search || '') + (window.location.hash || '');
+                        window.history.replaceState({}, '', cleanPath);
+                    }
+                } catch (e) {}
+            }
         }
 
         // Load configurations & Initialize Firebase

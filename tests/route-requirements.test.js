@@ -138,7 +138,7 @@ async function testAll() {
     console.log('1. Dedicated Route Mapping & Canonical Resolution:');
 
     const routeMappings = [
-        { urlPath: '/', expectedPageId: 'dashboard', expectedPath: '/' },
+        { urlPath: '/', expectedPageId: 'dashboard', expectedPath: '/dashboard' },
         { urlPath: '/dashboard', expectedPageId: 'dashboard', expectedPath: '/dashboard' },
         { urlPath: '/timer', expectedPageId: 'timer', expectedPath: '/timer' },
         { urlPath: '/focus', expectedPageId: 'timer', expectedPath: '/focus' },
@@ -266,6 +266,32 @@ async function testAll() {
         assert(devServerCode.includes('requestedExt = path.extname(url)'), 'dev-server must check requestedExt');
         assert(devServerCode.includes('index.html'), 'dev-server must serve index.html for clean routes');
         assert(devServerCode.includes("url === '/login'"), 'dev-server must handle clean /login URL');
+    });
+
+    // ---------------------------------------------------------
+    // 6. BASE TAG & STATIC ROUTE ENTRY SYNCHRONIZATION
+    // ---------------------------------------------------------
+    console.log('\n6. Base Tag & Static Route Entry Synchronization:');
+
+    await runTest('index.html and login.html include <base href="/"> for clean relative asset loading', () => {
+        const indexHtml = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+        const loginHtml = fs.readFileSync(path.join(__dirname, '../login.html'), 'utf8');
+        assert(indexHtml.includes('<base href="/">'), 'index.html must include <base href="/">');
+        assert(loginHtml.includes('<base href="/">'), 'login.html must include <base href="/">');
+    });
+
+    await runTest('All 18 route directories contain valid, non-empty index.html entry points', () => {
+        const routesToCheck = [
+            'dashboard', 'timer', 'focus', 'subjects', 'subject', 'schedule', 'daily-schedule',
+            'analytics', 'spectra-analytics', 'exam', 'exam-routine', 'pace', 'paces-management',
+            'master-config', 'outcome', 'daily-actions', 'monthly-target-setup', 'login'
+        ];
+        routesToCheck.forEach(r => {
+            const entryPath = path.join(__dirname, '..', r, 'index.html');
+            assert(fs.existsSync(entryPath), `Route directory "${r}" must contain index.html`);
+            const stat = fs.statSync(entryPath);
+            assert(stat.size > 1000, `Route entry "${r}/index.html" must not be empty (was ${stat.size} bytes)`);
+        });
     });
 
     console.log('\n==================================================');

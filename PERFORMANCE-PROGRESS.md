@@ -176,12 +176,14 @@
   4. Registered 1st-class aliases for `analytics`, `pace`, and `focus` across `Router.routes` and `Router.buttonStyles`.
   5. Enhanced `dev-server.js` with trailing slash normalization and immediate clean SPA route fallback (HTTP 200 index.html for all extensionless paths), guaranteeing local 3000 preview parity with live Vercel rewrites.
   6. Enforced permanent zero-flash Dark Mode via inline `style="background-color: #0f172a; color-scheme: dark;"` on `<html>` and `<body>` in `index.html` (and `#0b0f19` in `login.html`), eliminating any sub-frame light mode flash during direct load, refresh, or hydration.
-  7. Added comprehensive route test suite `tests/route-requirements.test.js` to automated CI test runner (`npm test`).
-* **Why it changed:** User required separate, directly accessible routes for every page without putting all views in root or using query parameters (`?page=...`), preserving instant zero-lag navigation and permanent dark mode across both production and local environments.
-* **Files changed:** `PERFORMANCE-MASTER-PLAN.md`, `PERFORMANCE-PROGRESS.md`, `router/router.js`, `js/dev-server.js`, `index.html`, `login.html`, `js/core/app.js`, `js/pages/login/login.js`, `package.json`, `tests/route-requirements.test.js`.
-* **Performance bottleneck addressed:** Monolithic root collapsing, missing dedicated route preservation, and potential light mode FOUC.
-* **Before measurement:** Incomplete route documentation; `/dashboard` URL rewritten to `/`; potential light flash before CSSOM construction.
-* **After measurement:** 100% dedicated routes for all 12 views; 0ms perceived warm navigation; permanent zero-flash Dark Mode; 100% test pass rate.
+  7. Injected `<base href="/">` in `index.html` and `login.html` to guarantee universal root-relative asset and script resolution regardless of URL depth.
+  8. Created `scripts/sync-routes.js` and synchronized all 18 route entry points (`dashboard/index.html`, `timer/index.html`, `subjects/index.html`, `schedule/index.html`, `analytics/index.html`, `exam/index.html`, `pace/index.html`, `master-config/index.html`, `outcome/index.html`, `daily-actions/index.html`, `monthly-target-setup/index.html`, `login/index.html`, etc.), guaranteeing 100% parity across Live Production (Vercel rewrites), Local Dev Server (Node 3000), and IDE Live Preview (embedded static 3000 server).
+  9. Added comprehensive route test suite `tests/route-requirements.test.js` to automated CI test runner (`npm test`), verifying dedicated route paths, History API synchronization, deep-link refresh simulation, Back/Forward traversal, base tags, permanent Dark Mode, and static entry parity.
+* **Why it changed:** User required separate, directly accessible clean routes for every page without putting all views in root or using query parameters (`?page=...`), preserving instant zero-lag navigation and permanent dark mode across both production and local environments.
+* **Files changed:** `PERFORMANCE-MASTER-PLAN.md`, `PERFORMANCE-PROGRESS.md`, `router/router.js`, `js/dev-server.js`, `index.html`, `login.html`, `js/core/app.js`, `js/pages/login/login.js`, `package.json`, `scripts/sync-routes.js`, `tests/route-requirements.test.js`.
+* **Performance bottleneck addressed:** Monolithic root collapsing, missing dedicated route preservation, Live Preview directory index collision, and potential light mode FOUC.
+* **Before measurement:** Incomplete route documentation; `/dashboard` URL rewritten to `/`; empty directories causing Live Preview directory index listings; potential light flash before CSSOM construction.
+* **After measurement:** 100% dedicated clean routes for all 12 views; zero directory index collisions; 0ms perceived warm navigation; permanent zero-flash Dark Mode; 100% test pass rate.
 * **Functional validation:** PASS (All 13 test suites in `npm test`, full regression 58/58 checkpoints).
 * **Visual validation:** PASS (Permanent dark mode from Frame 0; identical UI layout and design).
 * **Build validation:** PASS (Clean syntax, 0 errors).

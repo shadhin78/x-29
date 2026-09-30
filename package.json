@@ -4,8 +4,9 @@
   "description": "Dynamic Multi-Track Execution & Tracking Dashboard",
   "main": "js/dev-server.js",
   "scripts": {
-    "dev": "node js/dev-server.js",
-    "test": "node tests/auth-service.test.js && node tests/config-tracks.test.js && node tests/pace-outcome.test.js && node tests/analytics-visualization.test.js && node tests/daily-targets.test.js && node tests/weekly-targets.test.js && node tests/monthly-targets.test.js && node tests/tasks-metrics-dashboard.test.js && node tests/app-core.test.js && node tests/modals.test.js && node tests/data-consistency.test.js && node tests/navigation-performance.test.js && node tests/route-requirements.test.js",
+    "sync:routes": "node scripts/sync-routes.js",
+    "dev": "node scripts/sync-routes.js && node js/dev-server.js",
+    "test": "node scripts/sync-routes.js && node tests/auth-service.test.js && node tests/config-tracks.test.js && node tests/pace-outcome.test.js && node tests/analytics-visualization.test.js && node tests/daily-targets.test.js && node tests/weekly-targets.test.js && node tests/monthly-targets.test.js && node tests/tasks-metrics-dashboard.test.js && node tests/app-core.test.js && node tests/modals.test.js && node tests/data-consistency.test.js && node tests/navigation-performance.test.js && node tests/route-requirements.test.js",
     "test:consistency": "node tests/data-consistency.test.js",
     "test:app": "node tests/app-core.test.js",
     "test:auth": "node tests/auth-service.test.js",

@@ -585,10 +585,6 @@
             const canonical = this.normalizePageId(pageId);
             if (typeof window !== 'undefined' && window.location) {
                 const current = (window.location.pathname || '').split('?')[0].replace(/^\/+|\/+$/g, '');
-                // If user is currently at root '/' and canonical is dashboard, preserve root '/'
-                if (!current && canonical === 'dashboard') {
-                    return '/';
-                }
                 // If user's current URL is an accepted path or alias for this route, preserve their exact route
                 if (current && this.normalizePageId(current) === canonical) {
                     return '/' + current;
