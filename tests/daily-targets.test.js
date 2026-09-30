@@ -538,8 +538,10 @@ runTest('navigateDay changes currentDailyTargetsDate and updates navigation acti
     const initialDate = new Date();
     global.currentDailyTargetsDate = new Date(initialDate);
 
+    const expectedPast = new Date(initialDate);
+    expectedPast.setDate(expectedPast.getDate() - 1);
     DailyTargets.navigateDay('past');
-    assert.strictEqual(global.currentDailyTargetsDate.getDate(), initialDate.getDate() - 1);
+    assert.strictEqual(global.currentDailyTargetsDate.getDate(), expectedPast.getDate());
 
     DailyTargets.navigateDay('future');
     assert.strictEqual(global.currentDailyTargetsDate.getDate(), initialDate.getDate());

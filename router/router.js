@@ -62,6 +62,25 @@
                     if (menu && !menu.classList.contains('hidden')) menu.classList.add('hidden');
                 }
             },
+            'analytics': {
+                containerId: 'page-spectra-analytics',
+                htmlUrl: 'pages/Analytics/Analytics.html',
+                cssUrl: 'pages/Analytics/Analytics.css',
+                jsUrl: 'pages/Analytics/Analytics.js',
+                cssId: 'route-analytics-css',
+                jsId: 'route-analytics-js',
+                onMount: function () {
+                    if (window.AnalyticsPage && typeof window.AnalyticsPage.mount === 'function') {
+                        window.AnalyticsPage.mount();
+                    }
+                },
+                onDestroy: function () {
+                    if (typeof window.hideSpectraChapterTooltip === 'function') window.hideSpectraChapterTooltip();
+                    if (typeof window.hideCommitmentTooltip === 'function') window.hideCommitmentTooltip();
+                    const menu = document.getElementById('spectra-filter-dropdown-menu');
+                    if (menu && !menu.classList.contains('hidden')) menu.classList.add('hidden');
+                }
+            },
             'timer': {
                 containerId: 'page-timer',
                 htmlUrl: 'pages/Focus/Focus.html',
@@ -275,6 +294,26 @@
                     }
                 }
             },
+            'pace': {
+                containerId: 'page-paces-management',
+                htmlUrl: 'pages/Pace Management/Pace Management.html',
+                cssUrl: 'pages/Pace Management/Pace Management.css',
+                jsUrl: 'pages/Pace Management/Pace Management.js',
+                cssId: 'route-pace-management-css',
+                jsId: 'route-pace-management-js',
+                onMount: function () {
+                    if (window.PaceManagementPage && typeof window.PaceManagementPage.mount === 'function') {
+                        window.PaceManagementPage.mount();
+                    } else if (typeof window.renderPaceGoals === 'function') {
+                        window.renderPaceGoals(window.lastSubjectStats || (typeof updateMetrics === 'function' ? (updateMetrics(), window.lastSubjectStats) : {}));
+                    }
+                },
+                onDestroy: function () {
+                    if (window.PaceManagementPage && typeof window.PaceManagementPage.destroy === 'function') {
+                        window.PaceManagementPage.destroy();
+                    }
+                }
+            },
             'master-config': {
                 containerId: 'page-master-config',
                 htmlUrl: 'pages/Master Config/Master Config.html',
@@ -384,12 +423,15 @@
         buttonStyles: {
             'dashboard': { active: 'bg-slate-900 dark:bg-blue-600 text-white border-slate-900 dark:border-blue-600 shadow-lg', hover: 'hover:border-blue-400' },
             'spectra-analytics': { active: 'bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white border-transparent shadow-lg shadow-fuchsia-500/20', hover: 'hover:border-fuchsia-400' },
+            'analytics': { active: 'bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white border-transparent shadow-lg shadow-fuchsia-500/20', hover: 'hover:border-fuchsia-400' },
             'daily-actions': { active: 'bg-orange-500 text-white border-orange-500 shadow-lg', hover: 'hover:border-orange-400' },
             'subjects': { active: 'bg-violet-600 text-white border-violet-600 shadow-lg', hover: 'hover:border-violet-400' },
             'paces-management': { active: 'bg-red-600 text-white border-red-600 shadow-lg', hover: 'hover:border-red-400' },
+            'pace': { active: 'bg-red-600 text-white border-red-600 shadow-lg', hover: 'hover:border-red-400' },
             'master-config': { active: 'bg-indigo-600 text-white border-indigo-600 shadow-lg', hover: 'hover:border-indigo-400' },
             'outcome': { active: 'bg-yellow-500 text-white border-yellow-500 shadow-lg', hover: 'hover:border-yellow-400' },
             'timer': { active: 'bg-emerald-600 text-white border-emerald-600 shadow-lg', hover: 'hover:border-emerald-400' },
+            'focus': { active: 'bg-emerald-600 text-white border-emerald-600 shadow-lg', hover: 'hover:border-emerald-400' },
             'schedule': { active: 'bg-cyan-600 text-white border-cyan-600 shadow-lg', hover: 'hover:border-cyan-400' },
             'exam': { active: 'bg-rose-600 text-white border-rose-600 shadow-lg', hover: 'hover:border-rose-400' }
         },
@@ -500,11 +542,12 @@
          * Update sidebar navigation active states.
          */
         updateNavButtons: function (targetPageId) {
+            const canonicalTarget = this.normalizePageId(targetPageId);
             this.allPages.forEach(p => {
                 const btn = document.getElementById(`btn-nav-${p}`);
                 if (btn && this.buttonStyles[p]) {
                     const baseClass = "w-full border-2 px-4 py-3 rounded-2xl font-black text-xs transition-all duration-300 hover:translate-x-1.5 hover:shadow-md active:scale-98 flex items-center gap-3";
-                    const isActive = (p === targetPageId) || (targetPageId === 'monthly-target-setup' && p === 'daily-actions');
+                    const isActive = (p === targetPageId) || (p === canonicalTarget) || (canonicalTarget === 'monthly-target-setup' && p === 'daily-actions');
                     if (isActive) {
                         btn.className = `${baseClass} ${this.buttonStyles[p].active}`;
                     } else {
@@ -535,10 +578,31 @@
 
         /**
          * Map canonical route ID to URL path.
+         * Preserves existing route URLs (e.g. /dashboard, /timer, /subjects, /schedule, /analytics, /exam, /pace)
+         * while keeping root '/' when visited at root.
          */
         getPathForPageId: function (pageId) {
             const canonical = this.normalizePageId(pageId);
-            if (canonical === 'dashboard') return '/';
+            if (typeof window !== 'undefined' && window.location) {
+                const current = (window.location.pathname || '').split('?')[0].replace(/^\/+|\/+$/g, '');
+                // If user is currently at root '/' and canonical is dashboard, preserve root '/'
+                if (!current && canonical === 'dashboard') {
+                    return '/';
+                }
+                // If user's current URL is an accepted path or alias for this route, preserve their exact route
+                if (current && this.normalizePageId(current) === canonical) {
+                    return '/' + current;
+                }
+            }
+            if (canonical === 'dashboard') {
+                return '/dashboard';
+            }
+            if (canonical === 'spectra-analytics') {
+                return '/analytics';
+            }
+            if (canonical === 'paces-management') {
+                return '/pace';
+            }
             return '/' + canonical;
         },
 

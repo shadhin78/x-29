@@ -62,6 +62,24 @@
             }
         }
 
+        function getRedirectTarget() {
+            if (typeof window !== 'undefined' && window.location) {
+                const params = new URLSearchParams(window.location.search);
+                const redirectParam = params.get('redirect');
+                if (redirectParam && redirectParam.startsWith('/')) {
+                    return redirectParam;
+                }
+                try {
+                    const stored = sessionStorage.getItem('x29_auth_redirect');
+                    if (stored && stored.startsWith('/')) {
+                        sessionStorage.removeItem('x29_auth_redirect');
+                        return stored;
+                    }
+                } catch (e) {}
+            }
+            return '/';
+        }
+
         // Route guard checking if user is already logged in as admin
         const authProvider = (typeof window !== 'undefined' && window.AuthService)
             ? window.AuthService
@@ -71,7 +89,7 @@
             authProvider.onAuthStateChanged((user) => {
                 if (user && (user.email || '').trim().toLowerCase() === 'ris2k29@gmail.com') {
                     if (typeof window.location !== 'undefined') {
-                        window.location.href = 'index.html';
+                        window.location.href = getRedirectTarget();
                     }
                 }
             });
@@ -105,7 +123,7 @@
                     if (spinner) spinner.classList.add('hidden');
                 } else {
                     if (typeof window.location !== 'undefined') {
-                        window.location.href = 'index.html';
+                        window.location.href = getRedirectTarget();
                     }
                 }
             } catch (error) {

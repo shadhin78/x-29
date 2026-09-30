@@ -67,7 +67,13 @@ export const App = {
             authProvider.onAuthStateChanged(async (user) => {
                 if (!user) {
                     if (typeof window !== 'undefined' && window.location) {
-                        window.location.href = 'login.html';
+                        const currentPath = (window.location.pathname || '') + (window.location.search || '') + (window.location.hash || '');
+                        if (currentPath && currentPath !== '/' && currentPath !== '/index.html' && !currentPath.includes('login')) {
+                            try { sessionStorage.setItem('x29_auth_redirect', currentPath); } catch (e) {}
+                            window.location.href = 'login.html?redirect=' + encodeURIComponent(currentPath);
+                        } else {
+                            window.location.href = 'login.html';
+                        }
                     }
                     return;
                 }
