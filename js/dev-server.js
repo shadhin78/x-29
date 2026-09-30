@@ -93,6 +93,25 @@ const server = http.createServer((req, res) => {
 
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
+      // SPA route fallback for clean paths (e.g. /subjects, /schedule, /exam)
+      const requestedExt = path.extname(url);
+      if (!requestedExt && !url.startsWith('/api/')) {
+        const indexPath = path.join(ROOT_DIR, 'index.html');
+        fs.readFile(indexPath, (indexErr, indexData) => {
+          if (indexErr) {
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('500 Internal Server Error');
+            return;
+          }
+          res.writeHead(200, {
+            'Content-Type': 'text/html',
+            'Cache-Control': 'no-cache'
+          });
+          res.end(indexData);
+        });
+        return;
+      }
+
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       res.end('404 Not Found');
       return;

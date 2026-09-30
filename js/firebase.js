@@ -122,8 +122,15 @@ window.FirebaseService = {
 
     notifyLocalMutation: function(reason = "") {
         this._lastLocalEditTime = Date.now() + (window.serverTimeOffset || 0);
-        AppState.isLocalDirty = true;
-        AppState.saveStatus = 'local';
+        if (typeof AppState !== 'undefined' && AppState) {
+            AppState.isLocalDirty = true;
+            AppState.saveStatus = 'local';
+            if (typeof AppState.incrementDataVersion === 'function') {
+                AppState.incrementDataVersion();
+            } else if (typeof AppState.localRevision === 'number') {
+                AppState.localRevision++;
+            }
+        }
         this._fastPersistLocalStorage();
     },
 
@@ -792,9 +799,15 @@ window.FirebaseService = {
 
     // 8. Save AppState to Cloud & Local Storage (Centralized SaveQueue & Coalescing Engine)
     saveToCloud: async function(immediate = false, isExplicitInitialization = false, isUserInitiated = false) {
-        if (!AppState.localRevision) AppState.localRevision = 0;
-        AppState.localRevision++;
-        AppState.isLocalDirty = true;
+        if (typeof AppState !== 'undefined' && AppState) {
+            if (typeof AppState.incrementDataVersion === 'function') {
+                AppState.incrementDataVersion();
+            } else {
+                if (!AppState.localRevision) AppState.localRevision = 0;
+                AppState.localRevision++;
+            }
+            AppState.isLocalDirty = true;
+        }
         this._lastLocalEditTime = Date.now() + (window.serverTimeOffset || 0);
 
         const user = this.getCurrentUser();

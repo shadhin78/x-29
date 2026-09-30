@@ -132,9 +132,9 @@ const Router = window.Router;
 console.log('=== X-29 — Navigation Performance & Instant Switching Test Suite ===\n');
 
 let passedTests = 0;
-function runTest(name, fn) {
+async function runTest(name, fn) {
     try {
-        fn();
+        await fn();
         console.log(`  ✓ ${name}`);
         passedTests++;
     } catch (e) {
@@ -144,8 +144,9 @@ function runTest(name, fn) {
     }
 }
 
+async function runAll() {
 // Test 1: Router Definition & Registration
-runTest('Router object is exported and initialized with all routes', () => {
+await runTest('Router object is exported and initialized with all routes', () => {
     assert(Router !== undefined, 'Router should exist on window');
     assert.strictEqual(typeof Router.loadPage, 'function', 'loadPage must be a function');
     assert.strictEqual(typeof Router.updateNavButtons, 'function', 'updateNavButtons must be a function');
@@ -155,7 +156,7 @@ runTest('Router object is exported and initialized with all routes', () => {
 });
 
 // Test 2: Synchronous Nav Button Highlight (0ms latency)
-runTest('updateNavButtons updates active styling synchronously without delay', () => {
+await runTest('updateNavButtons updates active styling synchronously without delay', () => {
     Router.updateNavButtons('subjects');
     const subjectsBtn = elements.get('btn-nav-subjects');
     const dashBtn = elements.get('btn-nav-dashboard');
@@ -165,7 +166,7 @@ runTest('updateNavButtons updates active styling synchronously without delay', (
 });
 
 // Test 3: Instant Visibility Switching
-runTest('loadPage immediately toggles page container visibility and hides other pages', async () => {
+await runTest('loadPage immediately toggles page container visibility and hides other pages', async () => {
     // Pre-populate subjects container so needsHtml is false
     const subjEl = elements.get('page-subjects');
     subjEl.innerHTML = '<div id="subjects-test-content">Loaded</div>';
@@ -184,7 +185,7 @@ runTest('loadPage immediately toggles page container visibility and hides other 
 });
 
 // Test 4: Complete Required Navigation Chain
-runTest('All required transition chains execute cleanly without error or double mounting', async () => {
+await runTest('All required transition chains execute cleanly without error or double mounting', async () => {
     const transitions = [
         { from: 'subjects', to: 'dashboard', btnId: 'btn-nav-dashboard', pageId: 'page-dashboard' },
         { from: 'dashboard', to: 'daily-actions', btnId: 'btn-nav-daily-actions', pageId: 'page-daily-actions' },
@@ -216,7 +217,7 @@ runTest('All required transition chains execute cleanly without error or double 
 });
 
 // Test 5: Scoped Chart Refresh
-runTest('refreshActivePageCharts only triggers chart updates for the active page', () => {
+await runTest('refreshActivePageCharts only triggers chart updates for the active page', () => {
     let dbUpdated = 0;
     let analyticsUpdated = 0;
     let timerUpdated = 0;
@@ -236,7 +237,7 @@ runTest('refreshActivePageCharts only triggers chart updates for the active page
 });
 
 // Test 6: Mobile Drawer Auto-Close on Navigation
-runTest('Mobile drawer closes immediately on navigation when viewport is mobile (< 768px)', async () => {
+await runTest('Mobile drawer closes immediately on navigation when viewport is mobile (< 768px)', async () => {
     window.innerWidth = 375;
     let drawerClosed = false;
     window.closeMobileSidebar = () => { drawerClosed = true; };
@@ -247,7 +248,7 @@ runTest('Mobile drawer closes immediately on navigation when viewport is mobile 
 });
 
 // Test 7: Idle Preloader Idempotency
-runTest('preloadAllRoutes runs safely without crashing or duplicating containers', () => {
+await runTest('preloadAllRoutes runs safely without crashing or duplicating containers', () => {
     Router.preloadAllRoutes();
     assert.strictEqual(Router._hasPreloadedRoutes, true, 'preloadAllRoutes should set flag');
     Router.preloadAllRoutes(); // Second call should be a no-op
@@ -255,7 +256,7 @@ runTest('preloadAllRoutes runs safely without crashing or duplicating containers
 });
 
 // Test 8: Root Route Resolution to Dashboard
-runTest('Router.init() always explicitly defaults root route to dashboard', () => {
+await runTest('Router.init() always explicitly defaults root route to dashboard', () => {
     Router.activePageId = 'some-other-page';
     Router.init();
     assert.strictEqual(Router.activePageId, 'dashboard', 'activePageId must resolve to dashboard on init');
@@ -264,7 +265,7 @@ runTest('Router.init() always explicitly defaults root route to dashboard', () =
 });
 
 // Test 9: Preload does NOT invoke onMount or hijack Dashboard active state
-runTest('preloadAllRoutes does not invoke onMount on inactive routes and preserves Dashboard as active', async () => {
+await runTest('preloadAllRoutes does not invoke onMount on inactive routes and preserves Dashboard as active', async () => {
     Router.activePageId = 'dashboard';
     Router._hasPreloadedRoutes = false; // Reset to test execution
 
@@ -281,7 +282,7 @@ runTest('preloadAllRoutes does not invoke onMount on inactive routes and preserv
 });
 
 // Test 10: MonthlyTargetPage guard prevents background execution/redirect
-runTest('MonthlyTargetPage.mount() does not run or redirect when activePageId is dashboard', () => {
+await runTest('MonthlyTargetPage.mount() does not run or redirect when activePageId is dashboard', () => {
     Router.activePageId = 'dashboard';
     let redirected = false;
     window.openAddMonthlyTargetPage = () => { redirected = true; };
@@ -297,7 +298,7 @@ runTest('MonthlyTargetPage.mount() does not run or redirect when activePageId is
 });
 
 // Test 11: Manual Navigation to Daily Actions and Monthly Target Setup still works
-runTest('Direct manual navigation to daily-actions and monthly-target-setup functions cleanly', async () => {
+await runTest('Direct manual navigation to daily-actions and monthly-target-setup functions cleanly', async () => {
     await Router.loadPage('daily-actions');
     assert.strictEqual(Router.activePageId, 'daily-actions', 'activePageId must be daily-actions');
     assert.strictEqual(elements.get('page-daily-actions').classList.contains('hidden'), false, 'page-daily-actions must be visible');
@@ -315,3 +316,6 @@ runTest('Direct manual navigation to daily-actions and monthly-target-setup func
 console.log(`\n==================================================`);
 console.log(`Navigation Performance Suite: ALL ${passedTests} TESTS PASSED!`);
 console.log(`==================================================\n`);
+}
+
+runAll();

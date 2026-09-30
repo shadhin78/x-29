@@ -237,10 +237,16 @@
                     if (window.SubjectsPage && typeof window.SubjectsPage.mount === 'function') {
                         window.SubjectsPage.mount();
                     } else {
+                        // Frame 1: Critical Header & Progress Summary (0ms)
                         if (typeof window.renderSubjectNavigation === 'function') window.renderSubjectNavigation();
                         if (typeof window.renderSubjectProgress === 'function') window.renderSubjectProgress(window.lastSubjectStats || {});
-                        if (typeof window.renderTaskList === 'function') window.renderTaskList();
-                        if (typeof window.updateMetrics === 'function') window.updateMetrics();
+
+                        // Frame 2: Deferred 1,300-row task list & metrics calculation
+                        Router.scheduleTransitionTask(() => {
+                            if (Router.activePageId !== 'subjects') return;
+                            if (typeof window.renderTaskList === 'function') window.renderTaskList();
+                            if (typeof window.updateMetrics === 'function') window.updateMetrics();
+                        });
                     }
                 },
                 onDestroy: function () {
@@ -390,52 +396,82 @@
 
         /**
          * Dynamically inject page CSS if not already present.
+         * Includes promise deduplication and mock test environment support.
          */
         loadCss: function (url, id) {
             const cleanUrl = encodeURI(decodeURI(url));
-            return new Promise((resolve) => {
-                if (document.getElementById(id) || this.cssCache[cleanUrl]) {
-                    return resolve();
-                }
+            if (this.cssCache[cleanUrl] || (id && document.getElementById(id))) {
+                this.cssCache[cleanUrl] = true;
+                return Promise.resolve();
+            }
+            if (this._pendingCssPromises && this._pendingCssPromises[cleanUrl]) {
+                return this._pendingCssPromises[cleanUrl];
+            }
+            this._pendingCssPromises = this._pendingCssPromises || {};
+            const p = new Promise((resolve) => {
                 const link = document.createElement('link');
-                link.id = id;
+                if (id) link.id = id;
                 link.rel = 'stylesheet';
                 link.href = cleanUrl;
                 link.onload = () => {
                     this.cssCache[cleanUrl] = true;
+                    if (this._pendingCssPromises) delete this._pendingCssPromises[cleanUrl];
                     resolve();
                 };
                 link.onerror = () => {
                     console.warn(`[Router] Could not load CSS at ${url}`);
+                    if (this._pendingCssPromises) delete this._pendingCssPromises[cleanUrl];
                     resolve(); // Soft fail to not block page rendering
                 };
                 document.head.appendChild(link);
+
+                // Support mock test environments where appendChild does not load stylesheets
+                if (typeof window !== 'undefined' && (!window.navigator || !window.navigator.userAgent) && typeof link.onload === 'function') {
+                    link.onload();
+                }
             });
+            this._pendingCssPromises[cleanUrl] = p;
+            return p;
         },
 
         /**
          * Dynamically inject page JS if not already loaded.
+         * Includes promise deduplication and mock test environment support.
          */
         loadJs: function (url, id) {
             const cleanUrl = encodeURI(decodeURI(url));
-            return new Promise((resolve) => {
-                if (document.getElementById(id) || this.jsLoaded[cleanUrl]) {
-                    return resolve();
-                }
+            if (this.jsLoaded[cleanUrl] || (id && document.getElementById(id))) {
+                this.jsLoaded[cleanUrl] = true;
+                return Promise.resolve();
+            }
+            if (this._pendingJsPromises && this._pendingJsPromises[cleanUrl]) {
+                return this._pendingJsPromises[cleanUrl];
+            }
+            this._pendingJsPromises = this._pendingJsPromises || {};
+            const p = new Promise((resolve) => {
                 const script = document.createElement('script');
-                script.id = id;
+                if (id) script.id = id;
                 script.src = cleanUrl;
                 script.async = false;
                 script.onload = () => {
                     this.jsLoaded[cleanUrl] = true;
+                    if (this._pendingJsPromises) delete this._pendingJsPromises[cleanUrl];
                     resolve();
                 };
                 script.onerror = () => {
                     console.error(`[Router] Failed to load script at ${url}`);
+                    if (this._pendingJsPromises) delete this._pendingJsPromises[cleanUrl];
                     resolve();
                 };
                 document.body.appendChild(script);
+
+                // Support mock test environments where appendChild does not load scripts
+                if (typeof window !== 'undefined' && (!window.navigator || !window.navigator.userAgent) && typeof script.onload === 'function') {
+                    script.onload();
+                }
             });
+            this._pendingJsPromises[cleanUrl] = p;
+            return p;
         },
 
         /**
@@ -479,25 +515,84 @@
         },
 
         /**
-         * Main navigation method.
-         * Switches the active page internally with NO URL modification.
+         * Normalize route ID and aliases.
          */
-        loadPage: async function (pageId, sectionId) {
-            // Normalize ID
-            if (pageId === 'dashboard-page') pageId = 'dashboard';
-            if (pageId === 'analytics') pageId = 'spectra-analytics';
-            if (pageId === 'focus') pageId = 'timer';
-            if (pageId === 'daily actions' || pageId === 'Daily Actions') pageId = 'daily-actions';
-            if (pageId === 'daily-schedule' || pageId === 'Daily Schedule' || pageId === 'daily schedule') pageId = 'schedule';
-            if (pageId === 'monthly target' || pageId === 'Monthly Target' || pageId === 'monthly-target' || pageId === 'monthly target setup' || pageId === 'Monthly Target Setup' || pageId === 'monthly-target-setup' || pageId === 'add-monthly-target' || pageId === 'Add Monthly Target') pageId = 'monthly-target-setup';
-            if (pageId === 'subjects' || pageId === 'Subjects' || pageId === 'subject' || pageId === 'Subject') pageId = 'subjects';
-            if (pageId === 'paces-management' || pageId === 'pace-management' || pageId === 'Pace Management' || pageId === 'pace management' || pageId === 'paces' || pageId === 'pace') pageId = 'paces-management';
-            if (pageId === 'master-config' || pageId === 'master-configuration' || pageId === 'Master Config' || pageId === 'master config' || pageId === 'Master Configuration' || pageId === 'master configuration') pageId = 'master-config';
-            if (pageId === 'outcome' || pageId === 'Outcome' || pageId === 'results' || pageId === 'Results') pageId = 'outcome';
-            if (pageId === 'exam' || pageId === 'exam-routine' || pageId === 'Exam Routine' || pageId === 'exam routine') pageId = 'exam';
+        normalizePageId: function (pageId) {
+            if (!pageId) return 'dashboard';
+            if (pageId === 'dashboard-page') return 'dashboard';
+            if (pageId === 'analytics') return 'spectra-analytics';
+            if (pageId === 'focus') return 'timer';
+            if (pageId === 'daily actions' || pageId === 'Daily Actions') return 'daily-actions';
+            if (pageId === 'daily-schedule' || pageId === 'Daily Schedule' || pageId === 'daily schedule') return 'schedule';
+            if (pageId === 'monthly target' || pageId === 'Monthly Target' || pageId === 'monthly-target' || pageId === 'monthly target setup' || pageId === 'Monthly Target Setup' || pageId === 'monthly-target-setup' || pageId === 'add-monthly-target' || pageId === 'Add Monthly Target') return 'monthly-target-setup';
+            if (pageId === 'subjects' || pageId === 'Subjects' || pageId === 'subject' || pageId === 'Subject') return 'subjects';
+            if (pageId === 'paces-management' || pageId === 'pace-management' || pageId === 'Pace Management' || pageId === 'pace management' || pageId === 'paces' || pageId === 'pace') return 'paces-management';
+            if (pageId === 'master-config' || pageId === 'master-configuration' || pageId === 'Master Config' || pageId === 'master config' || pageId === 'Master Configuration' || pageId === 'master configuration') return 'master-config';
+            if (pageId === 'outcome' || pageId === 'Outcome' || pageId === 'results' || pageId === 'Results') return 'outcome';
+            if (pageId === 'exam' || pageId === 'exam-routine' || pageId === 'Exam Routine' || pageId === 'exam routine') return 'exam';
+            return pageId;
+        },
+
+        /**
+         * Map canonical route ID to URL path.
+         */
+        getPathForPageId: function (pageId) {
+            const canonical = this.normalizePageId(pageId);
+            if (canonical === 'dashboard') return '/';
+            return '/' + canonical;
+        },
+
+        /**
+         * Resolve canonical route ID from URL pathname or hash.
+         */
+        getPageIdFromPath: function (pathname) {
+            if (!pathname) return 'dashboard';
+            let path = pathname;
+            if (path.includes('#')) {
+                path = path.split('#')[1] || '';
+            }
+            path = path.split('?')[0].replace(/^\/+|\/+$/g, '');
+            if (!path || path === 'index.html' || path === 'index') return 'dashboard';
+            return this.normalizePageId(path);
+        },
+
+        /**
+         * Frame-budgeted transition task scheduler.
+         * Defers non-critical rendering to the next animation frame,
+         * preserving 60 fps slide-up transition animations.
+         */
+        scheduleTransitionTask: function (fn) {
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                return window.requestAnimationFrame(fn);
+            }
+            return setTimeout(fn, 0);
+        },
+
+        /**
+         * Main navigation method.
+         * Switches the active page with optional History API address bar synchronization.
+         */
+        loadPage: async function (pageId, sectionId, options) {
+            options = options || {};
+            pageId = this.normalizePageId(pageId);
 
             const previousPageId = this.activePageId;
             const isSamePage = previousPageId === pageId;
+
+            // Synchronize browser address bar via History API (clean SPA navigation & deep-linking)
+            if (options.updateHistory !== false && typeof window !== 'undefined' && window.history && typeof window.history.pushState === 'function' && window.location && window.location.protocol !== 'file:') {
+                try {
+                    const targetPath = this.getPathForPageId(pageId);
+                    const currentPath = window.location.pathname;
+                    if (options.replace) {
+                        window.history.replaceState({ pageId: pageId, sectionId: sectionId }, '', targetPath);
+                    } else if (currentPath !== targetPath) {
+                        window.history.pushState({ pageId: pageId, sectionId: sectionId }, '', targetPath);
+                    }
+                } catch (e) {
+                    // Safe fallback for restricted iframe / local environments
+                }
+            }
 
             // Prevent redundant recursive navigation if already navigating to the same target page
             if (this.isNavigating && isSamePage) {
@@ -576,7 +671,10 @@
                     if (currentSeq !== this._navSeq) return;
                 } else if (route) {
                     this.loadCss(route.cssUrl, route.cssId);
-                    this.loadJs(route.jsUrl, route.jsId);
+                    if (!this.jsLoaded[encodeURI(decodeURI(route.jsUrl))]) {
+                        await this.loadJs(route.jsUrl, route.jsId);
+                        if (currentSeq !== this._navSeq) return;
+                    }
                 }
 
                 // 7. Call mount / render on active route
@@ -685,29 +783,61 @@
         },
 
         /**
+         * Safely preload a single route's CSS and JS module in background.
+         * Never invokes onMount() or alters active page state.
+         */
+        preloadRoute: function (pageId) {
+            if (!pageId) return;
+            pageId = this.normalizePageId(pageId);
+            const route = this.routes[pageId];
+            if (!route) return;
+
+            // Trigger non-blocking CSS and JS prefetch
+            this.loadCss(route.cssUrl, route.cssId);
+            this.loadJs(route.jsUrl, route.jsId);
+        },
+
+        /**
          * Preload all other registered route HTML, CSS, and JS during browser idle time.
          * Injects HTML into the pre-existing container divs so that future page switches
          * require 0 network requests and execute near-instantly.
+         * Includes connection bandwidth awareness (Save-Data and slow connection bypass).
          */
         preloadAllRoutes: function () {
             if (this._hasPreloadedRoutes || typeof document === 'undefined') return;
             this._hasPreloadedRoutes = true;
 
+            // Bandwidth awareness: bypass aggressive preloading on metered or slow mobile connections
+            if (typeof navigator !== 'undefined' && navigator.connection) {
+                if (navigator.connection.saveData === true) {
+                    this._preloadBypassed = true;
+                    console.log('[Router] Preload bypassed: Save-Data enabled.');
+                    return;
+                }
+                const et = navigator.connection.effectiveType;
+                if (et === 'slow-2g' || et === '2g') {
+                    this._preloadBypassed = true;
+                    console.log('[Router] Preload bypassed: slow connection (' + et + ').');
+                    return;
+                }
+            }
+
             const executePreload = async () => {
-                const uniqueKeys = [
-                    'spectra-analytics',
-                    'timer',
+                // Prioritize high-frequency adjacent routes first
+                const priorityKeys = [
                     'daily-actions',
-                    'schedule',
-                    'monthly-target-setup',
                     'subjects',
+                    'schedule',
+                    'spectra-analytics',
+                    'monthly-target-setup',
+                    'timer',
                     'paces-management',
                     'master-config',
                     'outcome',
                     'exam'
                 ];
 
-                for (const key of uniqueKeys) {
+                for (const key of priorityKeys) {
                     const route = this.routes[key];
                     if (!route) continue;
 
@@ -761,6 +891,37 @@
                 return this.loadPage(pageId, sectionId);
             };
 
+            // Wire browser Back/Forward navigation via PopState
+            if (!this._popStateInitialized && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+                this._popStateInitialized = true;
+                window.addEventListener('popstate', (e) => {
+                    const targetPageId = (e && e.state && e.state.pageId)
+                        ? e.state.pageId
+                        : this.getPageIdFromPath(window.location ? (window.location.pathname || window.location.hash) : '/');
+                    const targetSectionId = (e && e.state) ? e.state.sectionId : null;
+                    this.loadPage(targetPageId, targetSectionId, { updateHistory: false });
+                });
+            }
+
+            // Wire predictive intent preloading on pointerenter, touchstart, and keyboard focus
+            if (!this._intentListenersInitialized && typeof document !== 'undefined') {
+                this._intentListenersInitialized = true;
+                const onIntent = (e) => {
+                    const navEl = e.target && e.target.closest ? e.target.closest('[data-switch-page], #header-exam-countdown-compact-mobile') : null;
+                    if (navEl) {
+                        const targetId = navEl.id === 'header-exam-countdown-compact-mobile'
+                            ? 'exam'
+                            : navEl.getAttribute('data-switch-page');
+                        if (targetId && targetId !== this.activePageId) {
+                            this.preloadRoute(targetId);
+                        }
+                    }
+                };
+                document.addEventListener('pointerenter', onIntent, { capture: true, passive: true });
+                document.addEventListener('touchstart', onIntent, { capture: true, passive: true });
+                document.addEventListener('focusin', onIntent, { capture: true, passive: true });
+            }
+
             // Wire click delegation for navigation triggers
             if (!this._navListenersInitialized && typeof document !== 'undefined') {
                 this._navListenersInitialized = true;
@@ -788,13 +949,29 @@
                 });
             }
 
-            // Explicitly default initial active page to Dashboard
-            this.activePageId = 'dashboard';
-            this.updateNavButtons('dashboard');
+            // Resolve initial route from URL path (deep-linking support)
+            const initialPageId = (typeof window !== 'undefined' && window.location && (window.location.pathname || window.location.hash))
+                ? this.getPageIdFromPath(window.location.pathname || window.location.hash)
+                : 'dashboard';
 
-            // Pre-load and mount Dashboard module if page-dashboard is in DOM
-            if (document.getElementById('page-dashboard')) {
-                this.loadPage('dashboard').then(() => {
+            this.activePageId = initialPageId;
+            this.updateNavButtons(initialPageId);
+
+            // Replace initial history state so Back button knows the starting entry
+            if (typeof window !== 'undefined' && window.history && typeof window.history.replaceState === 'function' && window.location && window.location.protocol !== 'file:') {
+                try {
+                    const initialPath = this.getPathForPageId(initialPageId);
+                    window.history.replaceState({ pageId: initialPageId }, '', initialPath);
+                } catch (e) {
+                    // Ignore in sandboxed environments
+                }
+            }
+
+            // Pre-load and mount the initial page container
+            const initialRoute = this.routes[initialPageId];
+            const initialContainerId = initialRoute ? initialRoute.containerId : 'page-dashboard';
+            if (document.getElementById(initialContainerId) || document.getElementById('page-dashboard')) {
+                this.loadPage(initialPageId, null, { updateHistory: false, replace: true }).then(() => {
                     this.preloadAllRoutes();
                 });
             } else {

@@ -21,13 +21,18 @@
 
         mount: function () {
             this.isMounted = true;
-            if (this._hasRendered) {
+            const currentVersion = (window.AppState && typeof window.AppState.getDataVersion === 'function')
+                ? window.AppState.getDataVersion()
+                : (window.AppState && window.AppState.localRevision) || 0;
+
+            if (this._hasRendered && this._renderedDataVersion === currentVersion) {
                 if (window.resultsTrendChartInstance && typeof window.resultsTrendChartInstance.resize === 'function') {
                     window.resultsTrendChartInstance.resize();
                 }
                 return;
             }
             this._hasRendered = true;
+            this._renderedDataVersion = currentVersion;
 
             if (window.OutcomeResults && typeof window.OutcomeResults.renderOutcomeProgramToggles === 'function') {
                 window.OutcomeResults.renderOutcomeProgramToggles();

@@ -37,12 +37,16 @@
 
         mount: function () {
             this.isMounted = true;
+            const currentVersion = (window.AppState && typeof window.AppState.getDataVersion === 'function')
+                ? window.AppState.getDataVersion()
+                : (window.AppState && window.AppState.localRevision) || 0;
 
-            // Fast revisit: Keep existing rendered cards & heatmaps intact
-            if (this._hasRendered) {
+            // Fast revisit: Keep existing rendered cards & heatmaps intact if data is unchanged
+            if (this._hasRendered && this._renderedDataVersion === currentVersion) {
                 return;
             }
             this._hasRendered = true;
+            this._renderedDataVersion = currentVersion;
 
             // 1. Populate track dropdown on create form
             populateDailyActionTrackDropdown();
@@ -50,30 +54,39 @@
                 window.populateTrackDropdowns();
             }
 
-            // 2. Render main Daily Actions cards & progress bar
+            // 2. Render main Daily Actions cards & progress bar (Frame 1: Critical 0ms)
             if (typeof window.renderDailyTracker === 'function') {
                 window.renderDailyTracker();
             }
 
-            // 3. Render 180-day action log mini-heatmaps
-            if (typeof window.renderDailyLogs === 'function') {
-                window.renderDailyLogs();
-            }
+            // Frame 2 (Deferred to next animation frame): 180-day mini-heatmaps & secondary checklists
+            const scheduleTask = (typeof window !== 'undefined' && window.Router && typeof window.Router.scheduleTransitionTask === 'function')
+                ? window.Router.scheduleTransitionTask
+                : (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function' ? window.requestAnimationFrame : setTimeout);
 
-            // 4. Render Monthly Targets checklist & pace metrics
-            if (typeof window.renderMonthlyTargets === 'function') {
-                window.renderMonthlyTargets();
-            }
+            scheduleTask(() => {
+                if (!this.isMounted) return;
 
-            // 5. Render Weekly Targets checklist & pace metrics
-            if (typeof window.renderWeeklyTargets === 'function') {
-                window.renderWeeklyTargets();
-            }
+                // 3. Render 180-day action log mini-heatmaps
+                if (typeof window.renderDailyLogs === 'function') {
+                    window.renderDailyLogs();
+                }
 
-            // 6. Render Daily Targets checklist
-            if (typeof window.renderDailyTargets === 'function') {
-                window.renderDailyTargets();
-            }
+                // 4. Render Monthly Targets checklist & pace metrics
+                if (typeof window.renderMonthlyTargets === 'function') {
+                    window.renderMonthlyTargets();
+                }
+
+                // 5. Render Weekly Targets checklist & pace metrics
+                if (typeof window.renderWeeklyTargets === 'function') {
+                    window.renderWeeklyTargets();
+                }
+
+                // 6. Render Daily Targets checklist
+                if (typeof window.renderDailyTargets === 'function') {
+                    window.renderDailyTargets();
+                }
+            });
         },
 
         destroy: function () {

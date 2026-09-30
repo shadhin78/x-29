@@ -42,6 +42,14 @@ if (!_root.AppState) {
     db: undefined,
     isSyncing: false,
     isAppInitialized: false,
+    _dataVersion: 0,
+    getDataVersion: function () {
+        return (this._dataVersion || 0) + (this.localRevision || 0);
+    },
+    incrementDataVersion: function () {
+        this._dataVersion = (this._dataVersion || 0) + 1;
+        return this.getDataVersion();
+    },
     tasks: [],
     progressChart: undefined,
     masterLineChart: undefined,
@@ -1154,6 +1162,17 @@ function migrateLegacyData() {
 
 _root.ensureConfigDefaults = ensureConfigDefaults;
 _root.migrateLegacyData = migrateLegacyData;
+
+if (_root.AppState && !_root.AppState.getDataVersion) {
+    _root.AppState._dataVersion = _root.AppState._dataVersion || 0;
+    _root.AppState.getDataVersion = function () {
+        return (_root.AppState._dataVersion || 0) + (_root.AppState.localRevision || 0);
+    };
+    _root.AppState.incrementDataVersion = function () {
+        _root.AppState._dataVersion = (_root.AppState._dataVersion || 0) + 1;
+        return _root.AppState.getDataVersion();
+    };
+}
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {

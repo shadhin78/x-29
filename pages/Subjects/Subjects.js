@@ -1221,42 +1221,55 @@
 
         mount: function () {
             this.isMounted = true;
+            const currentVersion = (window.AppState && typeof window.AppState.getDataVersion === 'function')
+                ? window.AppState.getDataVersion()
+                : (window.AppState && window.AppState.localRevision) || 0;
 
             // Fast revisit: Keep existing task list and cards intact, only refresh chart
-            if (this._hasRendered) {
+            if (this._hasRendered && this._renderedDataVersion === currentVersion) {
                 this.refreshProgressChart();
                 return;
             }
             this._hasRendered = true;
+            this._renderedDataVersion = currentVersion;
 
             // Ensure task container is visible
             const dashContent = document.getElementById('dashboard-content');
             if (dashContent) dashContent.classList.remove('hidden');
 
-            // 1. Render Subject Navigation Filter Bar
+            // 1. Render Subject Navigation Filter Bar (Frame 1: Critical 0ms)
             if (typeof window.renderSubjectNavigation === 'function') {
                 window.renderSubjectNavigation();
             }
 
-            // 2. Render Subject Progress Breakdown
+            // 2. Render Subject Progress Breakdown (Frame 1: Critical 0ms)
             if (typeof window.renderSubjectProgress === 'function') {
                 window.renderSubjectProgress(window.lastSubjectStats || {});
             }
 
-            // 3. Render Task List
-            if (typeof window.renderTaskList === 'function') {
-                window.renderTaskList();
-            }
+            // Frame 2 (Deferred to next animation frame): Heavy 1,300-row task list & metrics calculation
+            const scheduleTask = (typeof window !== 'undefined' && window.Router && typeof window.Router.scheduleTransitionTask === 'function')
+                ? window.Router.scheduleTransitionTask
+                : (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function' ? window.requestAnimationFrame : setTimeout);
 
-            // 4. Update Metrics (calculations, donut chart, global completion)
-            if (typeof window.updateMetrics === 'function') {
-                window.updateMetrics();
-            } else if (typeof updateMetrics === 'function') {
-                updateMetrics();
-            }
+            scheduleTask(() => {
+                if (!this.isMounted) return;
 
-            // 5. Refresh progress donut chart with double timeout for transition smoothness
-            this.refreshProgressChart();
+                // 3. Render Task List
+                if (typeof window.renderTaskList === 'function') {
+                    window.renderTaskList();
+                }
+
+                // 4. Update Metrics (calculations, donut chart, global completion)
+                if (typeof window.updateMetrics === 'function') {
+                    window.updateMetrics();
+                } else if (typeof updateMetrics === 'function') {
+                    updateMetrics();
+                }
+
+                // 5. Refresh progress donut chart with double timeout for transition smoothness
+                this.refreshProgressChart();
+            });
         },
 
         refreshProgressChart: function () {

@@ -24,8 +24,13 @@
 
         mount: function () {
             this.isMounted = true;
-            if (this._hasRendered) return;
+            const currentVersion = (window.AppState && typeof window.AppState.getDataVersion === 'function')
+                ? window.AppState.getDataVersion()
+                : (window.AppState && window.AppState.localRevision) || 0;
+
+            if (this._hasRendered && this._renderedDataVersion === currentVersion) return;
             this._hasRendered = true;
+            this._renderedDataVersion = currentVersion;
 
             // 1. Populate dashboard header input fields
             const tagInput = document.getElementById('edit-header-tag');

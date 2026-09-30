@@ -234,14 +234,17 @@ export const App = {
     },
 
     /**
-     * 5. Initialize current feature
+     * 5. Initialize current feature (preserves deep-linking)
      */
     initCurrentFeature() {
         if (typeof window !== 'undefined') {
+            const initialPage = (window.Router && typeof window.Router.getPageIdFromPath === 'function' && window.location)
+                ? window.Router.getPageIdFromPath(window.location.pathname || window.location.hash)
+                : 'dashboard';
             if (typeof window.switchPage === 'function') {
-                window.switchPage('dashboard');
+                window.switchPage(initialPage);
             } else if (window.Router && typeof window.Router.loadPage === 'function') {
-                window.Router.loadPage('dashboard');
+                window.Router.loadPage(initialPage);
             }
         }
     },

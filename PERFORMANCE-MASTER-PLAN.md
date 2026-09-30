@@ -1,414 +1,207 @@
-# X-29 — ULTRA PERFORMANCE MASTER PLAN & ROADMAP
+# X-29 — ULTRA-FAST PAGE / ROUTE PERFORMANCE MASTER PLAN
 
-**Version:** 1.0.0  
+**Version:** 2.0.0 (Route Performance Optimization Plan)  
 **Date:** 2026-09-30  
-**Mission:** Transform X-29 into a light-speed, ultra-responsive, premium web application with 0 visual changes, 0 feature changes, 0 logic changes, and 100% preservation of existing technologies and behaviors.
+**Mission:** Transform X-29 into a light-speed, ultra-responsive, premium-app fast experience during page navigation, cold boot, and route transitions with 100% preservation of design, layout, styling, colors, typography, animations, components, features, functions, calculations, business logic, data models, routes, backend, Firebase, and PWA behavior.
 
 ---
 
-## 1. CURRENT TECHNOLOGY STACK
+## 1. ARCHITECTURAL OBJECTIVE & PERFORMANCE CONTRACT
 
-* **Core Language:** Vanilla JavaScript (ES6+ with standard CommonJS/Global interoperability for automated tests).
-* **Markup:** Semantic HTML5 SPA Shell (`index.html`) + Modular page fragments (`pages/*/*.html`).
-* **Styling:** Vanilla CSS design systems (`css/style.css`, `pages/*/*.css`) combined with Tailwind CSS utility classes.
-* **Charts & Visualizations:** Chart.js v4+ (via CDN/local integration).
-* **Database & Cloud Backend:** Google Firebase v12 Compat (`firebase-app`, `firebase-auth`, `firebase-firestore`).
-* **Authentication:** Firebase Client Authentication with strict admin email verification guard (`ris2k29@gmail.com`).
-* **Runtime / Local Server:** Node.js HTTP dev-server (`js/dev-server.js`) on port 3000.
-* **Production Deployment:** Vercel static hosting (`vercel.json`).
-* **Test Architecture:** Node.js Native Unit & Integration Test Suites (12 suites, 57 regression checkpoints).
-
----
-
-## 2. CURRENT ARCHITECTURE SUMMARY
-
-The application operates as a high-density, multi-track execution, scheduling, habit tracking, and analytics dashboard.
-1. **Application Lifecycle:** Entry point is `js/core/app.js` (orchestrating state migration, Firebase authentication, Firestore subscription, and initial Dashboard mount).
-2. **State Management:** Single global source of truth centered on `window.AppState` and synchronized to Firestore collection `/users/{uid}`.
-3. **Routing System:** Internal Vanilla JS router (`router/router.js`) managing 11 routes (`dashboard`, `spectra-analytics`, `timer`, `daily-actions`, `schedule`, `subjects`, `paces-management`, `master-config`, `outcome`, `exam`, `monthly-target-setup`) using DOM container visibility switching with zero URL reload or browser pushState.
-4. **Rendering Strategy:** Dynamic DOM template rendering and Chart.js canvas graphing triggered on state changes and route navigation.
-
----
-
-## 3. CURRENT PERFORMANCE BASELINE SUMMARY
-
-* **HTML Shell Size:** 617,052 bytes (7,839 lines, 3,171 DOM elements).
-* **Active Project JavaScript Size:** 3,178,750 bytes (3.03 MB across 42,810 lines).
-* **Active CSS Size:** 54,939 bytes (53.7 KB across 13 stylesheets).
-* **Cold Shell HTTP Requests:** 55+ synchronous `<script>` requests + 13 stylesheets + 5 external CDNs + fonts.
-* **Asset Weight:** `icons/logo-sticker.png` is 656.4 KB (uncompressed icon asset).
-* **Client-Side Runtime Cost:** Runtime Tailwind JIT compiler parses 7,839 DOM lines client-side on startup.
-* **DOM Query Cost:** 1,750 static DOM queries across modules with frequent lookups inside rendering loops.
-* **Hot Loop Calculation:** `getChapterStatus` requires 28 ms per 300 calls via linear array scans over 365 task days.
-
----
-
-## 4. DETECTED BOTTLENECK ANALYSIS
-
-### Bottleneck A: Render-Blocking Head Execution
-* **Phenomenon:** 55 JavaScript files and 13 stylesheets are synchronously linked in `<head>` without `defer` or `async`.
-* **Impact:** The browser parser stops HTML parsing for every single script tag, resulting in high Time to First Paint (FCP) and prolonged blank screens.
-
-### Bottleneck B: Client-Side JIT Tailwind Runtime
-* **Phenomenon:** `<script src="https://cdn.tailwindcss.com"></script>` downloads and runs an in-browser CSS compiler.
-* **Impact:** The script traverses the entire 7,839-line DOM tree, extracts class tokens, compiles CSS rules, and injects `<style>` blocks into `<head>` at runtime, locking the main thread during initial startup.
-
-### Bottleneck C: Duplicate Script Evaluation
-* **Phenomenon:** `state.js`, `auth.js`, `firebase.js`, `timerService.js`, `router.js`, `dashboard.js`, and `rollover.js` are loaded as standard `<script>` tags in `<head>`, and then re-imported as ES Modules inside `js/core/app.js`.
-* **Impact:** Redundant script parsing and memory allocation on browser startup.
-
-### Bottleneck D: Oversized Unoptimized Image Asset
-* **Phenomenon:** `icons/logo-sticker.png` is 656.4 KB (2000x2000px raw image) displayed at 24px in the sidebar and 112px in the loading screen.
-* **Impact:** 656 KB of network bandwidth and memory decoding wasted on a small UI icon.
-
-### Bottleneck E: Un-memoized Hot Path Lookups in Task Engine
-* **Phenomenon:** `TaskEngine.getChapterStatus` and `TaskEngine.isChapterCompleted` scan linearly through `AppState.tasks` (up to 365 days of tasks) and target databases on every invocation.
-* **Impact:** During full dashboard and subject renders, thousands of linear scans occur, consuming CPU and causing perceptible stuttering.
-
-### Bottleneck F: DOM Lookup Thrashing in Target Modules
-* **Phenomenon:** `monthlyTargets.js` executes 230 DOM lookups (`getElementById`, `querySelector`, `querySelectorAll`), and `monthly target setup.js` executes 198 DOM lookups without caching references.
-* **Impact:** Unnecessary DOM tree walks inside rendering loops triggering layout recalculations.
-
-### Bottleneck G: Monolithic Firestore State Serialization
-* **Phenomenon:** Every auto-save calls `JSON.stringify(AppState)` across the entire task history and targets databases.
-* **Impact:** Synchronous JSON serialization blocks the UI thread during frequent background sync operations.
-
-### Bottleneck H: Absence of Static Asset Caching & Service Worker
-* **Phenomenon:** `js/dev-server.js` enforces `no-cache, no-store`, `vercel.json` defines no cache headers, and `sw.js` is absent despite PWA manifest presence.
-* **Impact:** Zero repeat-view caching; all assets re-requested or revalidated over the network.
-
----
-
-## 5. ROOT-CAUSE ANALYSIS
-
-1. **Evolutionary Architecture:** The project originated as a monolithic single-file system (`js/script.js` was 20,683 lines and `index.html` was 285KB). In Phase 2, JavaScript was successfully decomposed into modules, but all module tags were accumulated in the HTML head.
-2. **Prototyping Dependencies:** Tailwind Play CDN was originally introduced for rapid prototyping and never replaced with pre-compiled static CSS.
-3. **Linear Data Structures:** `AppState.tasks` is an array of daily objects, which is natural for calendar display but computationally inefficient for O(1) status queries across subjects and chapters without a secondary index.
-
----
-
-## 6. RISK ASSESSMENT
-
-| Area | Risk Level | Mitigation Strategy |
-| :--- | :--- | :--- |
-| **UI / Styling Integrity** | High | Never alter existing classes, HTML markup, color tokens, or CSS rules. Compile or preserve exact Tailwind classes. |
-| **Logic & Calculations** | High | Protect calculations with before-and-after snapshot tests; run all 12 test suites after each change. |
-| **Event Handling** | Medium | Preserve existing global/window method attachments for inline handlers while using delegation for dynamic elements. |
-| **Firebase Synchronization** | High | Retain existing data schemas, debounce timers, and cloud save triggers byte-for-byte. |
-| **Navigation & Transition** | Medium | Maintain `_navSeq` synchronization and instant visibility toggle in `router/router.js`. |
-
----
-
-## 7. OPTIMIZATION STRATEGY
-
-1. **Phase 1: Zero-Risk Asset & Resource Loading (Steps 001 – 003)**
-   - Optimize high-cost assets (PNG image payload).
-   - Optimize font loading and preconnect resource hints.
-   - Defer synchronous script loading and eliminate duplicate module executions.
-2. **Phase 2: CSS & Rendering Engine Modernization (Step 004)**
-   - Replace client-side JIT Tailwind compiler with pre-compiled static CSS containing identical classes.
-3. **Phase 3: JavaScript hot Path & Memoization (Steps 005 – 006)**
-   - Implement O(1) indexed caching for `getChapterStatus` and chapter lookups.
-   - Optimize KPI calculation loops and debounced metric cascades.
-4. **Phase 4: DOM Performance & List Rendering (Steps 007 – 008)**
-   - Cache stable DOM element queries.
-   - Batch DOM insertions with DocumentFragments.
-   - Ensure lazy initialization of heavy chart instances on inactive tabs.
-5. **Phase 5: State Serialization & Backend Optimization (Step 009 – 010)**
-   - Optimize cloud save serialization payload.
-   - Ensure background tasks do not block the main thread.
-6. **Phase 6: Caching, Network & PWA Service Worker (Steps 011 – 012)**
-   - Configure intelligent cache-control headers.
-   - Implement lightweight Service Worker for static asset caching.
-
----
-
-## 8. COMPLETE ORDERED STEP LIST
-
+When a user interacts with navigation in X-29:
 ```text
-Step ID: Step 001
-Title: Lossless Image Compression & Optimal Sizing for Logo Asset
-Priority: High (High Impact, Zero Risk)
-Problem: icons/logo-sticker.png is 656.4 KB (2000x2000px uncompressed PNG) downloaded on every page load and rendered at 24px (sidebar) and 112px (loading overlay).
-Root Cause: Raw oversized image asset deployed without web optimization or multi-resolution scaling.
-Affected Area: Initial page load, network transfer, memory decoding.
-Current Measurement: 672,115 bytes (656.4 KB).
-Goal: Reduce asset size below 40 KB while maintaining pixel-perfect fidelity at target display sizes.
-Proposed Solution: Generate an optimized web-ready PNG/WebP with sharp alpha channel matching the exact visual appearance of the logo sticker.
-Why It Is Safe: Only changes image asset compression; no HTML, CSS, or JS behavior is touched.
-Potential Risks: None if visual quality is strictly verified against original.
-Files Likely Affected: icons/logo-sticker.png
-Dependencies: None.
-Validation Method: Visual inspection at 24px and 112px; file size verification.
-Expected Performance Impact: 615+ KB reduction in cold network payload; faster image decode on mobile.
-Status: COMPLETED
+CLICK / TOUCH
+  ↓ (0ms)
+IMMEDIATE VISUAL FEEDBACK (Active nav style highlights + instant drawer slide-out)
+  ↓ (<16ms / Frame 1)
+INSTANT ROUTE VISIBILITY SWITCH (App shell remains intact; view container slides up)
+  ↓
+ONLY REQUIRED CODE / DATA HYDRATED (Dynamic code splitting & cooperative frame budget)
+  ↓
+PAGE BECOMES INTERACTIVE & USABLE NEAR-INSTANTLY (Zero dropped frames, zero spinners)
 ```
 
-```text
-Step ID: Step 002
-Title: Font Loading & Resource Hint Optimization
-Priority: High
-Problem: Google Fonts stylesheet in <head> fetches 6 distinct font families (Inter, Outfit, Plus Jakarta Sans, JetBrains Mono, Rajdhani, Chakra Petch) with 20+ weights synchronously, causing render blocking.
-Root Cause: Standard Google Fonts snippet loaded synchronously in head with full weight spectrum.
-Affected Area: First Contentful Paint (FCP), font render waterfall.
-Current Measurement: Synchronous Google Fonts stylesheet link blocking HTML parser.
-Goal: Eliminate font render-blocking and ensure smooth font swap with zero layout shift (CLS: 0).
-Proposed Solution: Ensure optimal preconnect to fonts.gstatic.com with crossorigin; audit font weights to load only actively used weights; verify font-display: swap.
-Why It Is Safe: Visual typography remains 100% identical; no styles or font faces are changed.
-Potential Risks: Flash of unstyled text if fallback fonts differ substantially.
-Files Likely Affected: index.html, login.html
-Dependencies: None.
-Validation Method: Typography visual comparison; network waterfall inspection.
-Expected Performance Impact: FCP improvement of 100-300ms on slower networks.
-Status: COMPLETED
-```
-
-```text
-Step ID: Step 003
-Title: Defer Non-Critical Head Scripts & Eliminate Dual-Mode Execution
-Priority: High
-Problem: 55 script tags are synchronously loaded in <head>, blocking DOM parsing. Additionally, 7 core modules are loaded via script tags AND re-imported via app.js ES Module.
-Root Cause: Historical migration left script tags in <head> while simultaneously bootstrapping via ES Module app.js.
-Affected Area: HTML parsing, First Contentful Paint, DOMContentLoaded time.
-Current Measurement: 55 synchronous blocking script tags in <head>; duplicate execution of 7 core modules.
-Goal: Enable asynchronous/deferred parsing of scripts so HTML parser completes with zero blocking, and eliminate duplicate script evaluation.
-Proposed Solution: Add defer attributes to scripts or cleanly harmonize ES Module dependency graph; preserve all global window assignments for inline HTML handlers.
-Why It Is Safe: Scripts will still execute in exact order prior to DOMContentLoaded, and global window exports remain untouched.
-Potential Risks: Execution timing issues if inline handlers fire before deferred script finishes.
-Files Likely Affected: index.html, js/core/app.js
-Dependencies: Step 001.
-Validation Method: Run full regression test suite (tests/full-regression.test.js); verify all 46 modals and navigation buttons trigger correctly.
-Expected Performance Impact: 200-500ms reduction in main-thread parse blocking.
-Status: COMPLETED
-```
-
-```text
-Step ID: Step 004
-Title: Eliminate Client-Side Tailwind Runtime JIT Compilation
-Priority: Critical
-Problem: cdn.tailwindcss.com loads a ~100KB gzipped runtime compiler that parses 7,839 DOM lines client-side on startup, generating styles on the fly and locking the main thread.
-Root Cause: Using development-oriented Tailwind Play CDN in production.
-Affected Area: CPU execution on startup, Total Blocking Time (TBT), mobile responsiveness.
-Current Measurement: cdn.tailwindcss.com evaluates dynamically against 3,171 DOM elements on every load.
-Goal: Replace in-browser JIT compilation with pre-generated static CSS containing the exact identical utility classes, with 0 visual alteration.
-Proposed Solution: Generate a static standalone CSS file containing all utilities used across index.html, login.html, and page fragments; serve as static CSS.
-Why It Is Safe: The generated CSS rules match the exact Tailwind classes currently rendered; no visual styling is modified.
-Potential Risks: Missing a dynamically generated class if not captured in the build scan.
-Files Likely Affected: index.html, login.html, css/style.css, package.json
-Dependencies: Step 003.
-Validation Method: Visual regression check on all 11 pages and 46 modals; automated test suite.
-Expected Performance Impact: Elimination of 150-400ms of synchronous client-side JavaScript execution on startup.
-Status: COMPLETED
-```
-
-```text
-Step ID: Step 005
-Title: O(1) Indexed Chapter & Task Status Memoization Engine
-Priority: High
-Problem: TaskEngine.getChapterStatus and isChapterCompleted perform linear scans over AppState.tasks (up to 365 daily objects) and multiple target databases on every invocation. 300 calls = 28ms in Node; thousands of calls occur during render.
-Root Cause: Data is organized by date (AppState.tasks[d]), requiring an O(N) array search every time a subject/chapter's completion status is queried.
-Affected Area: Dashboard render, Subjects view render, Metrics recalculation, Task toggle speed.
-Current Measurement: 28 ms per 300 calls (linear iteration).
-Goal: Reduce lookup time to <0.01 ms per query (O(1) Map/Set lookup) with an automated invalidation cache on task toggle.
-Proposed Solution: Implement an indexed cache (Map/Set) of completed and skipped chapters keyed by track:subject:chapter. Invalidate or update specifically on handleTaskToggle and cloud sync.
-Why It Is Safe: Returns the exact same boolean/status value; verified against scratch_bench.js and tasks-metrics-dashboard.test.js.
-Potential Risks: Stale cache if a task update occurs outside the standard mutation points.
-Files Likely Affected: js/features/tasks/taskEngine.js
-Dependencies: Step 004.
-Validation Method: Run node tests/tasks-metrics-dashboard.test.js and tests/pace-outcome.test.js; run scratch_bench.js benchmark.
-Expected Performance Impact: 10x-50x speedup in chapter status queries; eliminates UI micro-stutters during task toggles.
-Status: COMPLETED
-```
-
-```text
-Step ID: Step 006
-Title: Metrics Calculation & Analytics Hot Loop Optimization
-Priority: Medium
-Problem: updateMetrics() and renderTrendCharts() rebuild large date arrays and recalculate totals across all tracks sequentially, triggering layout thrashing when called in rapid succession.
-Root Cause: Sequential un-memoized iteration over syllabus arrays and task dates with intermediate object allocations.
-Affected Area: Dashboard KPI updates, Pace Management metrics, Analytics charts.
-Current Measurement: Sequential calculation over all tracks on every minor state update.
-Goal: Optimize inner calculation loops, reduce transient object allocations, and ensure debounce coalescing for rapid consecutive metrics updates.
-Proposed Solution: Cache intermediate syllabus totals; reuse date ranges; ensure reentrancy guards prevent redundant calculations.
-Why It Is Safe: Preserves all metric calculations, CGPA precision, pace velocities, and formulas.
-Potential Risks: None when covered by tests/tasks-metrics-dashboard.test.js and tests/analytics-visualization.test.js.
-Files Likely Affected: js/core/metrics.js, js/features/analytics/spectra.js
-Dependencies: Step 005.
-Validation Method: Run node tests/tasks-metrics-dashboard.test.js and tests/analytics-visualization.test.js.
-Expected Performance Impact: 30-50% reduction in CPU scripting time during metrics refresh.
-Status: COMPLETED
-```
-
-```text
-Step ID: Step 007
-Title: DOM Query Caching & Fragment Batching in Target Modules
-Priority: Medium
-Problem: monthlyTargets.js has 230 DOM lookups and monthly target setup.js has 198 DOM lookups, repeatedly querying document.getElementById and querySelector inside loops.
-Root Cause: Un-cached DOM element access and string concatenation causing frequent layout thrashing during list renders.
-Affected Area: Daily Actions, Monthly Targets, Weekly Targets rendering performance.
-Current Measurement: 428 DOM queries across monthly target modules.
-Goal: Cache static parent and modal container references; batch table and checklist DOM updates via DocumentFragment.
-Proposed Solution: Introduce element caching for static modal inputs/containers and batch dynamic row insertions.
-Why It Is Safe: Generates identical HTML markup and retains all existing element IDs, classes, and attributes.
-Potential Risks: Stale reference if an element is dynamically destroyed and recreated.
-Files Likely Affected: js/features/targets/monthlyTargets.js, pages/Daily Actions/monthly target setup/monthly target setup.js
-Dependencies: Step 005.
-Validation Method: Run node tests/monthly-targets.test.js and tests/daily-targets.test.js.
-Expected Performance Impact: 40% reduction in DOM operation duration during targets table rendering.
-Status: COMPLETED
-```
-
-```text
-Step ID: Step 008
-Title: Inactive Route Chart & Secondary Canvas Initialization Deferral
-Priority: Medium
-Problem: Chart instances and complex SVG visualizers for inactive tabs are fully evaluated or retained with active animation frames, consuming memory and background CPU.
-Root Cause: Eager creation of Chart.js objects across inactive page views.
-Affected Area: Memory usage, smooth tab switching.
-Current Measurement: Multiple Chart.js instances held in memory simultaneously.
-Goal: Ensure Chart.js instances only render when the corresponding route is active, reusing canvas contexts efficiently without recreation overhead.
-Proposed Solution: Guard chart renderers with active page checks; ensure requestAnimationFrame handles visual updates only for visible canvas elements.
-Why It Is Safe: Preserves all chart configurations, colors, datasets, and responsive options; charts render seamlessly when navigating to the tab.
-Potential Risks: Chart appearing blank on first navigation if mount hook is missed.
-Files Likely Affected: router/router.js, js/features/analytics/spectra.js, pages/Analytics/Analytics.js
-Dependencies: Step 006.
-Validation Method: Run node tests/navigation-performance.test.js and manual tab navigation verification.
-Expected Performance Impact: 15-25% reduction in runtime heap memory; zero background animation cost.
-Status: COMPLETED
-```
-
-```text
-Step ID: Step 009
-Title: Modal Shell & Inline Vector Graphic Optimization
-Priority: Low
-Problem: index.html contains 198 inline SVGs and 46 full modal dialogs, creating a 617 KB initial document payload.
-Root Cause: All modals and icons embedded directly into the root index.html rather than using a shared SVG sprite or template defs.
-Affected Area: Initial HTML parsing, memory footprint.
-Current Measurement: 617,052 bytes HTML; 198 inline SVGs.
-Goal: Streamline repetitive inline SVG definitions via reusable symbol defs while preserving exact visual appearance, attributes, and classes.
-Proposed Solution: Consolidate repeated SVG paths into a hidden SVG <defs> sprite or optimize redundant path strings without changing any visual pixels.
-Why It Is Safe: Visual output is identical; all icon dimensions, colors, and animations remain unchanged.
-Potential Risks: Broken icon if an SVG ID or symbol reference is mismatched.
-Files Likely Affected: index.html, js/shared/modals.js
-Dependencies: Step 003.
-Validation Method: Run node tests/modals.test.js; verify all 46 modals render their close buttons and icons correctly.
-Expected Performance Impact: 100-200 KB reduction in HTML document payload.
-Status: COMPLETED
-```
-
-```text
-Step ID: Step 010
-Title: State Serialization & Cloud Save Payload Optimization
-Priority: Medium
-Problem: FirebaseService.saveToCloud() executes JSON.stringify(AppState) across the entire monolithic database, blocking the main thread on large states.
-Root Cause: Full-state stringification including transient and non-persistent properties.
-Affected Area: Background autosave, typing latency, task checkbox toggle smoothness.
-Current Measurement: Full serialization of AppState on every cloud save cycle.
-Goal: Filter transient/DOM properties from the serialization stream and optimize the payload preparation before Firestore write.
-Proposed Solution: Ensure saveToCloud serializes only persistent domain collections; prevent redundant stringifications when no state changes occurred.
-Why It Is Safe: Exactly matches the Firestore security rules and restore schemas.
-Potential Risks: Omitting a required property from the cloud document.
-Files Likely Affected: js/firebase.js, js/state.js
-Dependencies: Step 005.
-Validation Method: Run node tests/firestore-rules.test.js and tests/data-consistency.test.js; verify save and restore data integrity.
-Expected Performance Impact: Elimination of main-thread freeze during autosave cycles.
-Status: COMPLETED
-```
-
-```text
-Step ID: Step 011
-Title: Production & Development Server Caching Headers Configuration
-Priority: High
-Problem: js/dev-server.js serves all assets with no-cache, no-store headers, and vercel.json defines no static asset cache headers, forcing 100% re-downloads on every refresh.
-Root Cause: Default development server settings left in place without cache policy headers.
-Affected Area: Repeat navigation, warm reload speed, network bandwidth.
-Current Measurement: All assets served with no-cache, no-store.
-Goal: Configure immutable or long-term caching for static hashed/versioned assets (CSS, JS, images, fonts) and stale-while-revalidate for HTML.
-Proposed Solution: Add Cache-Control headers in js/dev-server.js for static file extensions (.png, .css, .js, .json) and configure headers in vercel.json.
-Why It Is Safe: Application version query parameters (e.g., ?v=1.0.17) already exist on all script and CSS imports, guaranteeing instant cache busting on updates.
-Potential Risks: Stale asset served during active development if version tag is unchanged.
-Files Likely Affected: js/dev-server.js, vercel.json
-Dependencies: Step 001.
-Validation Method: Inspect HTTP response headers via curl/node; verify 304 Not Modified or Cache-Control headers.
-Expected Performance Impact: Instant 0ms warm page reloads from browser disk cache.
-Status: COMPLETED
-```
-
-```text
-Step ID: Step 012
-Title: PWA Service Worker (sw.js) Static Asset Offline Cache
-Priority: Medium
-Problem: manifest.json and PWA install buttons exist, but sw.js is missing, leaving the app incapable of offline operation or cache-first asset loading.
-Root Cause: Identified in full regression test finding: "sw.js is currently absent (documented baseline gap)".
-Affected Area: PWA installation, offline reliability, instant startup on mobile.
-Current Measurement: sw.js absent.
-Goal: Implement a reliable, lightweight Service Worker with a cache-first strategy for static assets and network-first strategy for Firebase/API calls.
-Proposed Solution: Create sw.js caching core static assets (HTML shell, CSS, JS, fonts, icons) and register it cleanly in app.js.
-Why It Is Safe: Cloud data sync continues using Firebase Network/Firestore SDK without interference; only static presentation assets are cached.
-Potential Risks: Service worker caching stale assets if cache versioning is improperly handled.
-Files Likely Affected: sw.js, js/core/app.js, manifest.json
-Dependencies: Steps 001, 004, 011.
-Validation Method: Run node tests/full-regression.test.js (verifying PWA checks pass); verify Service Worker registration in browser.
-Expected Performance Impact: Near-instant load times (<500ms) on warm/offline mobile visits.
-Status: COMPLETED
-```
+### Absolute Constraints & Invariants
+1. **Zero UI / Visual Change:** Pixel-for-pixel preservation of all designs, Tailwind styles, gradients, modals, and typography across all 11 routes.
+2. **Zero Functional Regression:** All calculations, habit logs, timers, countdowns, targets, task toggles, and state sync mechanisms must remain 100% intact.
+3. **No Bad Loading Screens:** No full-screen loading spinners, no fake progress bars, no artificial delays, no blank screens.
+4. **App Shell Continuity:** The header, sidebar, profile, backdrop, and persistent background remain mounted continuously without re-creation.
+5. **Real Performance Engineering:** Improvements achieved through real code-splitting, smart preloading, frame-budgeted scheduling, and DOM retention.
 
 ---
 
-## 9. EXPECTED IMPACT SUMMARY
+## 2. DETECTED ROUTE BOTTLENECK ANALYSIS
 
-| Area | Before Optimization | After Full Plan Implementation |
-| :--- | :--- | :--- |
-| **Initial Network Transfer** | ~5.0 MB | ~1.5 MB – 2.0 MB (60-70% reduction) |
-| **Blocking Scripts in Head** | 55 scripts | 0 blocking scripts (all deferred/async) |
-| **CSS Compilation Runtime** | ~150-400 ms on main thread | 0 ms (pre-compiled static CSS) |
-| **Hot Path `getChapterStatus`** | 28 ms / 300 calls | < 1 ms / 300 calls (O(1) Map cache) |
-| **DOM Lookups in Targets** | 428 un-cached queries | Cached DOM references & batch fragments |
-| **Cold Startup Time** | High (blank overlay delay) | Instantaneous shell display |
-| **Repeat Visit Load Time** | Full network waterfall | Instant from Disk Cache / Service Worker |
-| **Visual / Feature Regression** | Baseline | 0% regression (strict automated test verification) |
+### Bottleneck R1: Upfront Monolithic Route Script Loading in `<head>`
+* **Phenomenon:** In `index.html` (lines 100-110), all 11 modular page scripts are linked in `<head>` via `<script defer>` during cold boot.
+* **Impact:** 394.8 KB (404,294 bytes) of route-specific JavaScript is downloaded, parsed, and evaluated on initial load, even if the user never navigates away from Dashboard. Three modules alone (`monthly target setup.js` [190.1KB], `Focus.js` [85.2KB], `Subjects.js` [85.1KB]) represent 360.4 KB of inactive payload.
 
----
+### Bottleneck R2: Upfront Monolithic Route CSSOM Construction
+* **Phenomenon:** In `index.html` (lines 86-96), all 11 route stylesheets (42.2 KB across 11 files) are linked in `<head>` upfront.
+* **Impact:** The browser must construct CSSOM rules for all 11 pages before painting the initial frame.
 
-## 10. DEPENDENCIES BETWEEN STEPS
+### Bottleneck R3: Absence of Predictive Intent Preloading
+* **Phenomenon:** Navigation links only trigger action on `'click'`. When a user hovers a mouse cursor or places a finger over a navigation tab (a 100-300ms physical delay window), zero prefetching occurs.
+* **Impact:** Route resources must be handled after the click event, losing the opportunity for perceived 0ms instantaneous switching. Furthermore, the existing background `preloadAllRoutes()` loop blindly requests all 10 remaining routes sequentially without checking for metered data or slow mobile connections.
 
-```mermaid
-graph TD
-    Step001[Step 001: Image & Asset Optimization] --> Step003[Step 003: Defer Scripts & Remove Dual-Mode]
-    Step002[Step 002: Font Optimization] --> Step003
-    Step003 --> Step004[Step 004: Eliminate Tailwind Runtime JIT]
-    Step004 --> Step005[Step 005: O1 Chapter Status Cache]
-    Step005 --> Step006[Step 006: Metrics Hot Loop Optimization]
-    Step005 --> Step007[Step 007: DOM Caching & Fragments]
-    Step006 --> Step008[Step 008: Inactive Chart Deferral]
-    Step003 --> Step009[Step 009: Modal Shell & Icon Optimization]
-    Step005 --> Step010[Step 010: Firestore Payload Serialization]
-    Step001 --> Step011[Step 011: Server Caching Headers]
-    Step004 --> Step012[Step 012: PWA Service Worker sw.js]
-    Step011 --> Step012
-```
+### Bottleneck R4: Missing SPA Deep-Linking & History API Synchronization
+* **Phenomenon:** Route navigation does not update the browser address bar (`history.pushState` / `history.replaceState` is unused). Direct visits to `x.vercel.app/subjects`, `x.vercel.app/schedule`, etc., fail with 404 Not Found because `vercel.json` and `dev-server.js` lack an SPA route fallback rewrite rule.
+* **Impact:** Users cannot bookmark routes, share links to specific views, or use browser Back/Forward buttons.
+
+### Bottleneck R5: Synchronous Multi-Component Mount Spikes (Main-Thread Freezing)
+* **Phenomenon:** When navigating into heavy routes (`Daily Actions` renders 5 full target databases and mini-heatmaps; `Subjects` renders 1,300 lines of task lists and recalculates metrics), all rendering routines run synchronously in a single task inside `onMount()`.
+* **Impact:** The main thread blocks for 40-120ms during view entry, dropping animation frames and causing noticeable stutter during the `.animate-page-enter` slide-up.
+
+### Bottleneck R6: Redundant Re-render & DOM Thrashing on Route Revisits
+* **Phenomenon:** Revisiting routes can trigger repetitive HTML string construction and Chart.js re-initialization rather than leveraging cached DOM structures and lightweight property updates.
+* **Impact:** Unnecessary CPU spikes and layout recalculations on frequent tab switching.
+
+### Bottleneck R7: Mobile Tap Latency & Drawer Transition Contention
+* **Phenomenon:** Mobile navigation buttons lack explicit `touch-action: manipulation`, and mobile sidebar closing executes synchronously on the same event tick as heavy route mounting.
+* **Impact:** Sluggish drawer dismissal and perceived input lag on low/mid-range mobile devices.
 
 ---
 
-## 11. VALIDATION REQUIREMENTS
-
-For EVERY single step, the following battery of checks must pass before marking the step COMPLETED:
-1. `npm test`: All 12 unit/integration suites must exit with code 0 (100% pass).
-2. `node tests/full-regression.test.js`: All 57 full regression assertions must pass.
-3. Relevant specialized benchmarks (e.g., `scratch_bench.js` for Step 005) must demonstrate measurable improvement.
-4. Visual verification: Shell layout, colors, typography, and modal dialogs must show zero visual alteration.
-5. Functional verification: Tasks toggle, navigation switches instantly, modals open/close cleanly, Firebase synchronizes.
+## 3. NUMBERED EXECUTION ROADMAP
 
 ---
 
-## 12. ROLLBACK REQUIREMENTS
-
-1. Every step must be isolated to its declared affected files.
-2. In the event of a test regression or visual discrepancy, the step's changes can be cleanly reverted via Git (`git checkout -- <files>`) without affecting any completed predecessor steps.
-3. No cross-step code mixing is permitted.
+### Step 001 — Route-Level Dynamic Script Code-Splitting
+* **Step ID:** Step 001
+* **Title:** Route-Level Dynamic Script Code-Splitting
+* **Problem:** All 11 route scripts totaling 394.8 KB (404,294 bytes) are statically linked in `<head>` of `index.html` via `<script defer>`, forcing cold boot to download and evaluate inactive page logic (`monthly target setup.js` 190.1 KB, `Focus.js` 85.2 KB, `Subjects.js` 85.1 KB, etc.).
+* **Root Cause:** Modular page scripts were accumulated in `<head>` for upfront caching rather than loading dynamically on-demand via the router.
+* **Affected Routes:** `spectra-analytics`, `timer` (`focus`), `daily-actions`, `schedule`, `monthly-target-setup`, `subjects`, `paces-management`, `master-config`, `outcome`, `exam`.
+* **Affected Files:** `index.html`, `router/router.js`.
+* **Current Measurement:** 394.8 KB of route JavaScript evaluated on cold boot; 11 route `<script>` tags in `<head>`.
+* **Optimization:** Keep only the initial active page script (`pages/Dashboard/Dashboard.js`, 5.3 KB) in `<head>`. Remove the 10 inactive route `<script>` tags from `<head>`. Enhance `Router.loadJs()` to dynamically inject and execute route scripts on-demand or upon predictive prefetch with strict deduplication and execution order guarantees.
+* **Expected Result:** Cold route JavaScript payload reduced by 389.5 KB (-98.6% reduction in initial route JS); initial cold parsing time significantly reduced.
+* **Risk:** A dynamically loaded script must resolve before `onMount()` executes. Router must cleanly await `loadJs()` when navigating to an unmounted route.
+* **Dependencies:** None.
+* **Validation:** Automated test suite verification (`npm test`), verify all 11 routes load and mount on first click, verify zero console errors, verify 389.5 KB payload reduction in dev tools / network audit.
+* **Status:** COMPLETED
 
 ---
 
-## 13. PROGRESS TRACKING
+### Step 002 — Route-Level Stylesheet Code-Splitting
+* **Step ID:** Step 002
+* **Title:** Route-Level Stylesheet Code-Splitting
+* **Problem:** All 11 route stylesheets (42.2 KB across 11 files) are linked in `<head>` of `index.html`, forcing upfront CSSOM construction for inactive routes.
+* **Root Cause:** Inactive page stylesheets were linked statically in `<head>` alongside base styles.
+* **Affected Routes:** All routes except initial Dashboard (`spectra-analytics`, `timer`, `daily-actions`, `schedule`, `monthly-target-setup`, `subjects`, `paces-management`, `master-config`, `outcome`, `exam`).
+* **Affected Files:** `index.html`, `router/router.js`.
+* **Current Measurement:** 42.2 KB of route CSS across 11 `<link rel="stylesheet">` tags evaluated during initial CSSOM creation.
+* **Optimization:** Keep base shell stylesheets (`css/tailwind.css`, `css/style.css`, `pages/Dashboard/Dashboard.css`) in `<head>`. Defer the remaining 10 route stylesheets so they are dynamically loaded via `Router.loadCss()` upon predictive prefetch or immediate route transition.
+* **Expected Result:** Cold route CSS payload reduced by 39.5 KB (-93.6% reduction in initial route CSS); zero render-blocking styles for inactive routes.
+* **Risk:** Asynchronous stylesheet loading must not cause Flash of Unstyled Content (FOUC). Solved by loading CSS prior to or in parallel with container un-hiding.
+* **Dependencies:** Step 001.
+* **Validation:** Visual regression check on all routes; CSS link injection verified in DOM; all automated test suites pass.
+* **Status:** COMPLETED
 
-Refer to `PERFORMANCE-PROGRESS.md` for real-time chronological execution status.
+---
+
+### Step 003 — Predictive Next-Route Preloading & Bandwidth Awareness
+* **Step ID:** Step 003
+* **Title:** Predictive Next-Route Preloading & Bandwidth Awareness
+* **Problem:** Router lacks intent-driven hover/pointer preloading. The existing `preloadAllRoutes()` loop blindly requests all 10 routes sequentially in idle time without checking for metered networks or user intent.
+* **Root Cause:** Preloading was implemented as a single unconditional batch loop rather than an event-driven, intent-aware system.
+* **Affected Routes:** All 11 routes.
+* **Affected Files:** `router/router.js`.
+* **Current Measurement:** 0 prefetching on `pointerenter` / `touchstart` / `focus`; unguided background loop competes for bandwidth on slow/mobile connections.
+* **Optimization:**
+  1. Add intent-based preloading listeners to navigation triggers (`[data-switch-page]`, `#sidebar-container nav button`): when a user hovers (`pointerenter`), focuses (`focus`), or touches (`touchstart`), preload the target route's JS and CSS immediately in that 100-300ms window before click completion.
+  2. Implement smart predictive prefetching from Dashboard for top-priority adjacent routes (`daily-actions`, `subjects`, `schedule`).
+  3. Add network awareness: bypass aggressive background preloading if `navigator.connection.saveData === true` or connection is slow (`2g`, `slow-2g`).
+* **Expected Result:** When user clicks a route, required assets are already cached in memory, yielding instantaneous 0ms perceived transitions while saving mobile bandwidth.
+* **Risk:** Redundant duplicate prefetch requests. Prevented via in-memory status maps (`Router.jsLoaded`, `Router.cssCache`).
+* **Dependencies:** Step 001, Step 002.
+* **Validation:** Hover over navigation buttons and verify resource prefetch in Network panel; verify mobile `saveData` bypass; all automated tests pass.
+* **Status:** COMPLETED
+
+---
+
+### Step 004 — Seamless SPA History API Navigation & Deep-Linking Support
+* **Step ID:** Step 004
+* **Title:** Seamless SPA History API Navigation & Deep-Linking Support
+* **Problem:** Navigating between pages does not update the browser URL, breaking Back/Forward browser buttons, bookmarks, and deep links. Direct navigation to `x.vercel.app/subjects` or `localhost:3000/subjects` returns 404 Not Found.
+* **Root Cause:** `router/router.js` explicitly disables URL updates; `vercel.json` and `dev-server.js` lack an SPA fallback rewrite rule for clean route paths.
+* **Affected Routes:** All 11 routes (`dashboard`, `spectra-analytics` / `analytics`, `timer` / `focus`, `daily-actions`, `schedule`, `monthly-target-setup`, `subjects`, `paces-management`, `master-config`, `outcome`, `exam`).
+* **Affected Files:** `router/router.js`, `vercel.json`, `js/dev-server.js`, `js/core/app.js`.
+* **Current Measurement:** URL never updates on page switch; direct clean route URLs return 404.
+* **Optimization:**
+  1. Integrate `history.pushState()` and `history.replaceState()` in `Router.loadPage()` to seamlessly synchronize the browser address bar with the active route without page reload.
+  2. Listen to `window.addEventListener('popstate')` so browser Back and Forward buttons navigate instantly between views.
+  3. Parse initial `window.location.pathname` on startup so deep-linked URLs (e.g. `/subjects`) mount the requested route immediately upon authentication.
+  4. Configure clean SPA route fallback rewrites in `vercel.json` and `js/dev-server.js` so all route paths map to `index.html`.
+* **Expected Result:** Complete, native premium-app navigation: direct URLs work, browser back/forward works, zero 404 errors, zero page reloads.
+* **Risk:** Admin auth route guard must preserve requested deep-link path across authentication redirect.
+* **Dependencies:** None.
+* **Validation:** Test direct navigation to `/subjects`, `/schedule`, `/exam` in dev-server; test browser back/forward buttons; verify all automated test suites pass.
+* **Status:** COMPLETED
+
+---
+
+### Step 005 — Chunked Main-Thread Scheduling for Route Transitions (Frame-Budgeting)
+* **Step ID:** Step 005
+* **Title:** Chunked Main-Thread Scheduling for Route Transitions (Frame-Budgeting)
+* **Problem:** Synchronous mount routines in heavy routes (`Daily Actions` renders 5 target checklists; `Subjects` renders 1,300 lines of task lists and calculates metrics) block the main thread for 40-120ms during navigation, causing dropped animation frames and perceptible click stutter.
+* **Root Cause:** Initial route mounting performs all secondary card, table, and heatmap renders synchronously on the same execution tick as the container visibility toggle.
+* **Affected Routes:** `daily-actions`, `subjects`, `spectra-analytics`, `master-config`.
+* **Affected Files:** `pages/Daily Actions/Daily Actions.js`, `pages/Subjects/Subjects.js`, `pages/Analytics/Analytics.js`, `router/router.js`.
+* **Current Measurement:** 40-120ms synchronous execution spike on route switch; dropped animation frames during `.animate-page-enter`.
+* **Optimization:** Implement cooperative frame-budgeted scheduling using `requestAnimationFrame` / `scheduler.postTask` / chunked microtasks. In Frame 1 (0ms), execute the instant visibility switch, active nav highlight, and slide-up animation. In subsequent frames, progressively hydrate secondary checklists, heatmaps, and charts without blocking input or animation.
+* **Expected Result:** Flawless 60 fps slide-up transition animation; 0ms perceived click response; main thread remains responsive to touch and scroll at all times.
+* **Risk:** Content layout shift (CLS). Prevented by preserving pre-sized container shells and skeleton dimensions already present in the markup.
+* **Dependencies:** Step 001, Step 003.
+* **Validation:** Performance timeline trace measuring Long Tasks during route transitions; frame rate inspection; all automated tests pass.
+* **Status:** COMPLETED
+
+---
+
+### Step 006 — Route View In-Memory DOM Retention & Re-render Prevention
+* **Step ID:** Step 006
+* **Title:** Route View In-Memory DOM Retention & Re-render Prevention
+* **Problem:** Switching away from and back to a page can trigger unnecessary DOM string construction, canvas re-instantiations, and full recalculations even when the underlying data has not changed.
+* **Root Cause:** Inconsistent view lifecycle caching across modules. While some use `_hasRendered`, others lack clear state-version tracking.
+* **Affected Routes:** All 11 routes.
+* **Affected Files:** `router/router.js`, `pages/Daily Actions/Daily Actions.js`, `pages/Subjects/Subjects.js`, `pages/Analytics/Analytics.js`, `pages/Dashboard/Dashboard.js`.
+* **Current Measurement:** Redundant innerHTML replacements and Chart.js re-renders during repeat route visits.
+* **Optimization:** Implement state revision-indexed view caching (`AppState._dataVersion`). On route revisit, if `_dataVersion` has not incremented since last render, preserve existing DOM nodes entirely and execute only lightweight chart `.resize()` / viewport stabilization. Only trigger selective DOM reconciliation when underlying data has actually mutated.
+* **Expected Result:** Repeat route transitions execute in < 4ms with 0 CPU overhead, delivering instant native-app switching speed.
+* **Risk:** Stale data display if state changes while on another route. Prevented by incrementing `AppState._dataVersion` on any task toggle, habit update, or cloud sync, signaling views to reconcile.
+* **Dependencies:** Step 005.
+* **Validation:** Benchmark repeat navigation time before vs after; verify UI reflects updated data immediately when tasks change; all automated tests pass.
+* **Status:** COMPLETED
+
+---
+
+### Step 007 — Mobile Navigation Responsiveness & Touch Latency Optimization
+* **Step ID:** Step 007
+* **Title:** Mobile Navigation Responsiveness & Touch Latency Optimization
+* **Problem:** On mobile devices, sidebar drawer closing and page navigation share the same synchronous execution thread, and navigation buttons lack `touch-action: manipulation`, risking 300ms double-tap delay and jerky drawer slide-out.
+* **Root Cause:** Touch handling defaults and synchronous drawer DOM mutation during click handlers.
+* **Affected Routes:** All routes on mobile viewports (< 768px).
+* **Affected Files:** `router/router.js`, `index.html`, `js/shared/sidebar.js`, `css/style.css`.
+* **Current Measurement:** 300ms tap delay risk on mobile; mobile drawer close competes with page rendering.
+* **Optimization:**
+  1. Add `touch-action: manipulation` across all navigation buttons, tabs, and drawer controls to permanently eliminate mobile tap delays.
+  2. Decouple mobile drawer dismissal (`closeMobileSidebar`) to run via hardware-accelerated CSS transform with `requestAnimationFrame`, allowing the drawer to glide smoothly while the target route prepares in parallel.
+  3. Ensure passive touch event listeners on drawer backdrop to prevent scroll-blocking.
+* **Expected Result:** Instant (< 50ms) touch feedback on mobile; silky smooth drawer closing; native mobile app feel on Android and iOS devices.
+* **Risk:** None; standard mobile CSS and touch performance best practices.
+* **Dependencies:** Step 003, Step 005.
+* **Validation:** Mobile viewport emulation testing; touch event latency measurement; drawer animation frame rate verification; all automated tests pass.
+* **Status:** PENDING
+
+---
+
+## 4. VERIFICATION & VALIDATION PROTOCOL
+
+Following the execution model, after each step:
+1. **Build:** Verify syntax and clean execution.
+2. **Type/Static Checks:** Verify clean linting with 0 syntax errors.
+3. **Automated Unit Tests:** Execute all 12 test suites (`npm test`).
+4. **Full Regression Suite:** Execute `node tests/full-regression.test.js` (58/58 checkpoints must pass).
+5. **Route Navigation Test:** Verify all 11 routes transition cleanly with zero double-mounting or DOM leakage.
+6. **Visual & Behavioral Parity:** 100% preservation of design, layout, typography, dark mode, colors, animations, and features.
+7. **Performance Measurement:** Exact Before, After, and Difference measurements documented in `PERFORMANCE-PROGRESS.md`.
