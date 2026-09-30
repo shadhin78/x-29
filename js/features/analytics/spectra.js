@@ -1439,7 +1439,15 @@
 
             const getProgColor = global.getProgramColor || (typeof window !== 'undefined' ? window.getProgramColor : () => '#6366f1');
 
-            if (ctx1) {
+            const isAnalyticsRouteActive = !global.Router || !global.Router.activePageId || global.Router.activePageId === 'spectra-analytics';
+            const pageAnalyticsEl = typeof document !== 'undefined' ? document.getElementById('page-spectra-analytics') : null;
+            const isAnalyticsPageVisible = !pageAnalyticsEl || !pageAnalyticsEl.classList.contains('hidden');
+
+            if (!isAnalyticsRouteActive && !isAnalyticsPageVisible) {
+                global._trendChartsPending = true;
+            } else {
+                global._trendChartsPending = false;
+                if (ctx1) {
                 let pDatasets = [];
                 Object.keys(progCum).forEach(p => {
                     const color = getProgColor(p);
@@ -1530,6 +1538,7 @@
                     if (global.yearlyChartActions) global.yearlyChartActions.destroy();
                     global.yearlyChartActions = new Chart(ctxYearly.getContext('2d'), { type: 'line', data: { labels: months, datasets: yDatasets }, options: chartOptions });
                 }
+            }
             }
         }
 

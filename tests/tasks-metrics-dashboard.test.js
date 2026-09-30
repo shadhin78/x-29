@@ -430,6 +430,17 @@ runTest('getChapterStatus returns accurate status', () => {
     assert(['complete', 'incomplete', 'skip'].includes(status), 'Status is valid');
 });
 
+runTest('invalidateChapterStatusCache and memoization work reliably', () => {
+    assert(typeof TaskEngine.invalidateChapterStatusCache === 'function', 'invalidateChapterStatusCache is exported');
+    TaskEngine.invalidateChapterStatusCache();
+    const status1 = TaskEngine.getChapterStatus('Bangla Literature', 1, 'bcs');
+    const status2 = TaskEngine.getChapterStatus('Bangla Literature', 1, 'bcs');
+    assert.strictEqual(status1, status2, 'Memoized status matches');
+    TaskEngine.invalidateChapterStatusCache('Bangla Literature');
+    const status3 = TaskEngine.getChapterStatus('Bangla Literature', 1, 'bcs');
+    assert.strictEqual(status1, status3, 'Fresh status matches');
+});
+
 runTest('isSubjectPassed checks passed items', () => {
     window.passedItems = { programs: [], subjects: ['Bangla Literature'] };
     assert.strictEqual(TaskEngine.isSubjectPassed('bcs', 'Bangla Literature'), true);

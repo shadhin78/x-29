@@ -1407,6 +1407,16 @@
         const canvas = document.getElementById('globalPaceTrendCanvas');
         if (!canvas) return;
 
+        const isAnalyticsRouteActive = !global.Router || !global.Router.activePageId || global.Router.activePageId === 'spectra-analytics';
+        const pageAnalyticsEl = typeof document !== 'undefined' ? document.getElementById('page-spectra-analytics') : null;
+        const isAnalyticsPageVisible = !pageAnalyticsEl || !pageAnalyticsEl.classList.contains('hidden');
+
+        if (!isAnalyticsRouteActive && !isAnalyticsPageVisible) {
+            global._globalPaceTrendChartPending = true;
+            return;
+        }
+        global._globalPaceTrendChartPending = false;
+
         let paceData = global.latestPaceData;
         if (!paceData) return;
 

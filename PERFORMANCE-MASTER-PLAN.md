@@ -217,7 +217,7 @@ Files Likely Affected: js/features/tasks/taskEngine.js
 Dependencies: Step 004.
 Validation Method: Run node tests/tasks-metrics-dashboard.test.js and tests/pace-outcome.test.js; run scratch_bench.js benchmark.
 Expected Performance Impact: 10x-50x speedup in chapter status queries; eliminates UI micro-stutters during task toggles.
-Status: NOT STARTED
+Status: COMPLETED
 ```
 
 ```text
@@ -236,7 +236,7 @@ Files Likely Affected: js/core/metrics.js, js/features/analytics/spectra.js
 Dependencies: Step 005.
 Validation Method: Run node tests/tasks-metrics-dashboard.test.js and tests/analytics-visualization.test.js.
 Expected Performance Impact: 30-50% reduction in CPU scripting time during metrics refresh.
-Status: NOT STARTED
+Status: COMPLETED
 ```
 
 ```text
@@ -255,7 +255,7 @@ Files Likely Affected: js/features/targets/monthlyTargets.js, pages/Daily Action
 Dependencies: Step 005.
 Validation Method: Run node tests/monthly-targets.test.js and tests/daily-targets.test.js.
 Expected Performance Impact: 40% reduction in DOM operation duration during targets table rendering.
-Status: NOT STARTED
+Status: COMPLETED
 ```
 
 ```text
@@ -274,7 +274,7 @@ Files Likely Affected: router/router.js, js/features/analytics/spectra.js, pages
 Dependencies: Step 006.
 Validation Method: Run node tests/navigation-performance.test.js and manual tab navigation verification.
 Expected Performance Impact: 15-25% reduction in runtime heap memory; zero background animation cost.
-Status: NOT STARTED
+Status: COMPLETED
 ```
 
 ```text
@@ -293,7 +293,7 @@ Files Likely Affected: index.html, js/shared/modals.js
 Dependencies: Step 003.
 Validation Method: Run node tests/modals.test.js; verify all 46 modals render their close buttons and icons correctly.
 Expected Performance Impact: 100-200 KB reduction in HTML document payload.
-Status: NOT STARTED
+Status: COMPLETED
 ```
 
 ```text

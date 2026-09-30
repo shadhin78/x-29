@@ -201,6 +201,7 @@
     }
 
     function rebuildTaskDates(shouldSave = true) {
+        invalidateChapterStatusCache();
         if (!AppState.tasks || AppState.tasks.length === 0) return;
         const baseDate = new Date(AppState.PLAN_START_DATE.getTime());
         AppState.tasks.forEach(t => {
@@ -283,6 +284,7 @@
     }
 
     function generateStudyPlan() {
+        invalidateChapterStatusCache();
         if (!window.tracks || !Array.isArray(window.tracks) || window.tracks.length === 0) {
             return [];
         }
@@ -392,6 +394,7 @@
     }
 
     function syncTaskChapterCompletion(track, subject, chapter, isCompleted, completedAt = null) {
+        invalidateChapterStatusCache();
         if (!AppState.tasks || !Array.isArray(AppState.tasks)) return;
         const key = track + 'Tasks';
         const nowIso = completedAt || (isCompleted ? new Date().toISOString() : null);
@@ -484,7 +487,33 @@
         return true;
     }
 
+    // Step 005: O(1) Chapter & Task Status Memoization Cache
+    let _chapterStatusCache = new Map();
+
+    function invalidateChapterStatusCache(subName = null) {
+        if (!subName) {
+            _chapterStatusCache.clear();
+        } else {
+            const prefix = subName + ':';
+            for (const key of _chapterStatusCache.keys()) {
+                if (key.startsWith(prefix)) {
+                    _chapterStatusCache.delete(key);
+                }
+            }
+        }
+    }
+
     function getChapterStatus(subName, chNum, trackId = null) {
+        const cacheKey = `${subName}:${chNum}:${trackId || ''}`;
+        if (_chapterStatusCache.has(cacheKey)) {
+            return _chapterStatusCache.get(cacheKey);
+        }
+        const status = _computeChapterStatus(subName, chNum, trackId);
+        _chapterStatusCache.set(cacheKey, status);
+        return status;
+    }
+
+    function _computeChapterStatus(subName, chNum, trackId = null) {
         const sObj = typeof window.getAllSubjects === 'function'
             ? window.getAllSubjects().find(s => s.subject === subName)
             : null;
@@ -767,6 +796,8 @@
                 });
             });
         }
+
+        invalidateChapterStatusCache();
 
         // 1. Optimistic UI update: Immediate Card State styling (zero-lag)
         const cardEl = safeGetEl(`single-task-${taskObj.id}-${studyDayId}`);
@@ -1135,6 +1166,7 @@
             if (bIdx > -1) {
                 const isSkipped = !!AppState.tasks[taskIndex][key][bIdx].skipped;
                 AppState.tasks[taskIndex][key][bIdx].skipped = !isSkipped;
+                invalidateChapterStatusCache();
                 if (!isSkipped) {
                     AppState.tasks[taskIndex][key][bIdx].completed = false;
                     AppState.tasks[taskIndex][key][bIdx].completedAt = null;
@@ -1189,6 +1221,7 @@
             }
         }
 
+        invalidateChapterStatusCache();
         if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
         if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') window.FirebaseService.saveToCloud();
         if (typeof window.renderUI === 'function') window.renderUI();
@@ -1308,6 +1341,7 @@
             }
         }
 
+        invalidateChapterStatusCache();
         if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
         if (window.FirebaseService && typeof window.FirebaseService.saveToCloud === 'function') window.FirebaseService.saveToCloud();
         if (typeof window.renderUI === 'function') window.renderUI();
@@ -1696,6 +1730,7 @@
         if (!window.revisionData) window.revisionData = { active: [], progress: {} };
         if (!window.revisionData.progress[sub]) window.revisionData.progress[sub] = {};
         window.revisionData.progress[sub][chNum] = isChecked ? new Date().toISOString() : false;
+        invalidateChapterStatusCache();
 
         const cardEl = safeGetEl(`rev-task-${sub.replace(/[^a-zA-Z0-9]/g, '-')}-${chNum}`);
         if (cardEl) {
@@ -1769,6 +1804,7 @@
         getChaptersForSubject,
         isSubjectCompleted,
         getChapterStatus,
+        invalidateChapterStatusCache,
         getSubjectSkippedCount,
         handleTaskToggle,
         openEditModal,
@@ -1805,6 +1841,7 @@
     window.getChaptersForSubject = getChaptersForSubject;
     window.isSubjectCompleted = isSubjectCompleted;
     window.getChapterStatus = getChapterStatus;
+    window.invalidateChapterStatusCache = invalidateChapterStatusCache;
     window.getSubjectSkippedCount = getSubjectSkippedCount;
 
     window.handleTaskToggle = handleTaskToggle;

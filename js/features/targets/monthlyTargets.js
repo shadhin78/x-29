@@ -49,6 +49,12 @@
 
     const window = global;
 
+    const safeGetEl = (typeof window !== 'undefined' && typeof window.safeGetEl === 'function')
+        ? window.safeGetEl
+        : (typeof global !== 'undefined' && typeof global.safeGetEl === 'function'
+            ? global.safeGetEl
+            : (id => (typeof document !== 'undefined' ? document.getElementById(id) : null)));
+
     // CSS.escape fallback for non-browser / test environments
     if (typeof global.CSS === 'undefined' || typeof global.CSS.escape !== 'function') {
         global.CSS = global.CSS || {};
@@ -649,9 +655,9 @@ function cleanOrphanedWeeklyAndDailyTargets() {
 };
 
 function updateMonthlyTargetColorSync() {
-    const subSelect = document.getElementById('mt-select-sub');
-    const chSelect = document.getElementById('mt-select-ch');
-    const dot = document.getElementById('mt-sub-color-dot');
+    const subSelect = safeGetEl('mt-select-sub');
+    const chSelect = safeGetEl('mt-select-ch');
+    const dot = safeGetEl('mt-sub-color-dot');
     if (!subSelect) return;
     const subject = subSelect.value;
     if (subject && subject !== "No Subjects") {
@@ -671,7 +677,7 @@ function updateMonthlyTargetColorSync() {
 
 /* --- Multi-Program & Multi-Subject Selection Engine --- */
 function populateMonthlyProgramsList(preselectedProgram = null) {
-    const container = document.getElementById('mt-progs-container');
+    const container = safeGetEl('mt-progs-container');
     if (!container) return;
     container.innerHTML = '';
 
@@ -699,6 +705,7 @@ function populateMonthlyProgramsList(preselectedProgram = null) {
         return;
     }
 
+    let cardsHtml = '';
     allPrograms.forEach(prog => {
         const isSelected = Boolean(preselectedProgram && (prog.progName === preselectedProgram));
         const isProgPassed = Boolean(
@@ -738,15 +745,16 @@ function populateMonthlyProgramsList(preselectedProgram = null) {
                 </div>
             </div>
         `;
-        container.innerHTML += cardHtml;
+        cardsHtml += cardHtml;
     });
+    container.innerHTML = cardsHtml;
 
     window.handleMonthlyProgramToggle();
 };
 
 function toggleMonthlyProgramsDropdown(forceState = null) {
-    const menu = document.getElementById('mt-progs-dropdown-menu');
-    const chevron = document.getElementById('mt-progs-dropdown-chevron');
+    const menu = safeGetEl('mt-progs-dropdown-menu');
+    const chevron = safeGetEl('mt-progs-dropdown-chevron');
     if (!menu) return;
 
     const shouldOpen = forceState !== null ? forceState : menu.classList.contains('hidden');
@@ -780,12 +788,12 @@ function toggleAllMonthlyPrograms(select) {
 
 function handleMonthlyProgramToggle(preselectSubject = null) {
     const checkedProgs = Array.from(document.querySelectorAll('.mt-prog-checkbox:checked'));
-    const badgeCount = document.getElementById('mt-progs-count-badge');
+    const badgeCount = safeGetEl('mt-progs-count-badge');
     if (badgeCount) {
         badgeCount.textContent = `${checkedProgs.length} Selected`;
     }
 
-    const dropdownLabel = document.getElementById('mt-progs-dropdown-label');
+    const dropdownLabel = safeGetEl('mt-progs-dropdown-label');
     if (dropdownLabel) {
         if (checkedProgs.length === 0) {
             dropdownLabel.textContent = 'Select Programs...';
@@ -804,7 +812,7 @@ function handleMonthlyProgramToggle(preselectSubject = null) {
 };
 
 function updateMonthlyTargetSubjectDropdown(preselectSubject = null, preselectChapter = null, preselectSize = null, preselectWeek = null) {
-    const container = document.getElementById('mt-subjects-container');
+    const container = safeGetEl('mt-subjects-container');
     if (!container) return;
 
     // Keep track of currently checked subjects before re-rendering
@@ -887,9 +895,10 @@ function updateMonthlyTargetSubjectDropdown(preselectSubject = null, preselectCh
                     </div>
                 </div>
             `;
-            container.innerHTML += cardHtml;
+            cardsHtml += cardHtml;
         });
     });
+    container.innerHTML = cardsHtml;
 
     if (totalSubsRendered === 0) {
         container.innerHTML = `
@@ -903,8 +912,8 @@ function updateMonthlyTargetSubjectDropdown(preselectSubject = null, preselectCh
 };
 
 function toggleMonthlySubjectsDropdown(forceState = null) {
-    const menu = document.getElementById('mt-subjects-dropdown-menu');
-    const chevron = document.getElementById('mt-subjects-dropdown-chevron');
+    const menu = safeGetEl('mt-subjects-dropdown-menu');
+    const chevron = safeGetEl('mt-subjects-dropdown-chevron');
     if (!menu) return;
 
     const shouldOpen = forceState !== null ? forceState : menu.classList.contains('hidden');
@@ -947,7 +956,7 @@ function handleMonthlySubjectToggle() {
 };
 
 function updateMonthlyTargetChapterDropdown(preselectChapter = null, preselectSize = null, targetSubject = null, preselectWeek = null) {
-    const container = document.getElementById('mt-chapters-container');
+    const container = safeGetEl('mt-chapters-container');
     if (!container) return;
 
     // 1. Snapshot and remember all current chapter and whole subject selections / values before re-rendering
@@ -1020,7 +1029,7 @@ function updateMonthlyTargetChapterDropdown(preselectChapter = null, preselectSi
         baseWeeksOptions += `<option value="${w.key}">${shortLabel}</option>`;
     });
 
-    const bulkWeekSelect = document.getElementById('mt-bulk-week-select');
+    const bulkWeekSelect = safeGetEl('mt-bulk-week-select');
     if (bulkWeekSelect) {
         const prevVal = bulkWeekSelect.value;
         bulkWeekSelect.innerHTML = '<option value="">-- No Week --</option>' + baseWeeksOptions;
@@ -1029,6 +1038,7 @@ function updateMonthlyTargetChapterDropdown(preselectChapter = null, preselectSi
         }
     }
 
+    let groupsHtml = '';
     checkedSubjectCbs.forEach(cb => {
         const trackId = cb.getAttribute('data-track');
         const progName = cb.getAttribute('data-program');
@@ -1203,8 +1213,9 @@ function updateMonthlyTargetChapterDropdown(preselectChapter = null, preselectSi
                 </div>
             </div>
         `;
-        container.innerHTML += groupHtml;
+        groupsHtml += groupHtml;
     });
+    container.innerHTML = groupsHtml;
 
     if (typeof window.updateChapterMultiWeekBadges === 'function') {
         window.updateChapterMultiWeekBadges();
@@ -1212,7 +1223,7 @@ function updateMonthlyTargetChapterDropdown(preselectChapter = null, preselectSi
     window.renderMonthlyTargetDailyAllocations();
     window.updateMonthlyTargetPageSummary();
 
-    const searchInput = document.getElementById('mt-chapter-search-input');
+    const searchInput = safeGetEl('mt-chapter-search-input');
     if (searchInput && searchInput.value) {
         window.filterMonthlyTargetChapters(searchInput.value);
     }
@@ -1299,7 +1310,7 @@ function filterMonthlyTargetChapters(query) {
 };
 
 function setBulkSizePreset(val) {
-    const bulkInput = document.getElementById('mt-bulk-size-input');
+    const bulkInput = safeGetEl('mt-bulk-size-input');
     if (bulkInput) {
         bulkInput.value = val;
         window.applyBulkSizeToMonthlyChapters();
@@ -1446,7 +1457,7 @@ function handleMonthlyChapterWeekSelectChange(subject, chapter, weekKey, trackId
 };
 
 function applyBulkWeekToMonthlyChapters() {
-    const bulkWeekSelect = document.getElementById('mt-bulk-week-select');
+    const bulkWeekSelect = safeGetEl('mt-bulk-week-select');
     const selectedWeek = bulkWeekSelect ? bulkWeekSelect.value : '';
 
     let appliedCount = 0;
@@ -1639,8 +1650,8 @@ function getAssignedWeekKeyForTarget(subject, chapter, track = null, program = n
 };
 
 function renderMonthlyTargetDailyAllocations() {
-    const container = document.getElementById('mt-daily-allocations-container');
-    const countBadge = document.getElementById('mt-daily-allocation-count-badge');
+    const container = safeGetEl('mt-daily-allocations-container');
+    const countBadge = safeGetEl('mt-daily-allocation-count-badge');
     if (!container) return;
 
     const savedScrollTop = container.scrollTop;
@@ -1947,7 +1958,7 @@ function renderMonthlyTargetDailyAllocations() {
 function updateDailyAllocationBadgesInPlace(subject, chapter) {
     const key = subject + '|||' + chapter;
     const badgeContainer = document.querySelector(`[data-alloc-badge-key="${CSS.escape(key)}"]`);
-    const countBadge = document.getElementById('mt-daily-allocation-count-badge');
+    const countBadge = safeGetEl('mt-daily-allocation-count-badge');
 
     const allocations = (window.monthlyTargetDailyAllocations && window.monthlyTargetDailyAllocations[key]) || [];
     let sumAllocated = 0;
@@ -2114,7 +2125,7 @@ function addDailyAllocationRow(subject, chapter, defaultDay = '', defaultSize = 
 
         // 3. If still not determined, use bulk start date dropdown or first day
         if (!dayKeyToUse) {
-            const bulkSelect = document.getElementById('mt-bulk-assign-day-select');
+            const bulkSelect = safeGetEl('mt-bulk-assign-day-select');
             dayKeyToUse = (bulkSelect && bulkSelect.value) ? bulkSelect.value : (allDays[0] ? allDays[0].key : '');
         }
     } else if (dayKeyToUse && allDays.length > 0 && !allDays.some(d => d.key === dayKeyToUse)) {
@@ -2262,7 +2273,7 @@ function splitChapterAcrossDays(subject, chapter, numDays, track = null, program
 
     const effectiveDays = Math.max(1, Math.min(numDays, allDays.length));
 
-    const bulkSelect = document.getElementById('mt-bulk-assign-day-select');
+    const bulkSelect = safeGetEl('mt-bulk-assign-day-select');
     const selectedDay = bulkSelect ? bulkSelect.value : '';
 
     let startIdx = -1;
@@ -2361,7 +2372,7 @@ function splitAllChaptersAcrossDays(numDays) {
     if (allDays.length === 0) return showToast("No days available in the active month.", "error");
 
     const todayStr = (window.Utils && Utils.formatDate) ? Utils.formatDate(new Date()) : new Date().toISOString().split('T')[0];
-    const bulkSelect = document.getElementById('mt-bulk-assign-day-select');
+    const bulkSelect = safeGetEl('mt-bulk-assign-day-select');
     const selectedDay = bulkSelect ? bulkSelect.value : '';
 
     let currentMonthDayIdx = selectedDay ? allDays.findIndex(d => d.key === selectedDay) : -1;
@@ -2514,7 +2525,7 @@ function autoSpreadAllChaptersAcrossDays(mode = 'month') {
     const allDays = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(targetMonthDate) : [];
     if (allDays.length === 0) return showToast("No days available in the active month.", "error");
 
-    const bulkSelect = document.getElementById('mt-bulk-assign-day-select');
+    const bulkSelect = safeGetEl('mt-bulk-assign-day-select');
     const selectedStartDay = bulkSelect ? bulkSelect.value : '';
     let startIdx = selectedStartDay ? allDays.findIndex(d => d.key === selectedStartDay) : 0;
     if (startIdx === -1) startIdx = 0;
@@ -2588,7 +2599,7 @@ function autoSpreadAllChaptersAcrossDays(mode = 'month') {
 };
 
 function spreadAllChaptersFromStartDate() {
-    const bulkSelect = document.getElementById('mt-bulk-assign-day-select');
+    const bulkSelect = safeGetEl('mt-bulk-assign-day-select');
     const selectedDay = bulkSelect ? bulkSelect.value : '';
     if (!selectedDay) {
         return showToast("Please select a start date from the dropdown first.", "error");
@@ -2690,12 +2701,12 @@ function clearAllDailyAllocations() {
 
 function updateMonthlyTargetPageSummary() {
     const checkedSubjects = Array.from(document.querySelectorAll('.mt-subject-checkbox:checked')).map(cb => cb.getAttribute('data-subject'));
-    const badgeCount = document.getElementById('mt-subjects-count-badge');
+    const badgeCount = safeGetEl('mt-subjects-count-badge');
     if (badgeCount) {
         badgeCount.textContent = `${checkedSubjects.length} Selected`;
     }
 
-    const dropdownLabel = document.getElementById('mt-subjects-dropdown-label');
+    const dropdownLabel = safeGetEl('mt-subjects-dropdown-label');
     if (dropdownLabel) {
         if (checkedSubjects.length === 0) {
             dropdownLabel.textContent = 'Select Subjects...';
@@ -2709,10 +2720,10 @@ function updateMonthlyTargetPageSummary() {
         }
     }
 
-    const summarySubject = document.getElementById('mt-summary-subject-display');
-    const summaryTargetCount = document.getElementById('mt-summary-target-count');
-    const summaryTotalSize = document.getElementById('mt-summary-total-size');
-    const bottomSummary = document.getElementById('mt-bottom-summary-text');
+    const summarySubject = safeGetEl('mt-summary-subject-display');
+    const summaryTargetCount = safeGetEl('mt-summary-target-count');
+    const summaryTotalSize = safeGetEl('mt-summary-total-size');
+    const bottomSummary = safeGetEl('mt-bottom-summary-text');
 
     if (summarySubject) {
         if (checkedSubjects.length === 0) {
@@ -2805,7 +2816,7 @@ function updateMonthlyTargetPageSummary() {
 };
 
 function applyBulkSizeToMonthlyChapters() {
-    const bulkInput = document.getElementById('mt-bulk-size-input');
+    const bulkInput = safeGetEl('mt-bulk-size-input');
     const bulkVal = bulkInput && bulkInput.value ? bulkInput.value : '';
     if (!bulkVal) {
         return showToast("Please enter a bulk size number first.", "error");
@@ -2938,16 +2949,13 @@ function getDaysForMonthOrWeek(monthDate = new Date(), weekKey = null) {
 };
 
 function populateMonthlyTargetWeeksAndDays(monthDate = new Date(), selectedWeekKey = null, selectedDayKey = null) {
-    const weekSelect = document.getElementById('mt-select-week-range');
-    const daySelect = document.getElementById('mt-select-day');
-    const bulkDaySelect = document.getElementById('mt-bulk-assign-day-select');
+    const weekSelect = safeGetEl('mt-select-week-range');
+    const daySelect = safeGetEl('mt-select-day');
+    const bulkDaySelect = safeGetEl('mt-bulk-assign-day-select');
 
     const weeks = window.getWeeksForMonth ? window.getWeeksForMonth(monthDate) : [];
     if (weekSelect) {
-        weekSelect.innerHTML = '<option value="">-- None (Only Monthly Target) --</option>';
-        weeks.forEach(w => {
-            weekSelect.innerHTML += `<option value="${w.key}">${w.label}</option>`;
-        });
+        weekSelect.innerHTML = '<option value="">-- None (Only Monthly Target) --</option>' + weeks.map(w => `<option value="${w.key}">${w.label}</option>`).join('');
         if (selectedWeekKey && weeks.some(w => w.key === selectedWeekKey)) {
             weekSelect.value = selectedWeekKey;
         } else {
@@ -2958,20 +2966,14 @@ function populateMonthlyTargetWeeksAndDays(monthDate = new Date(), selectedWeekK
     const days = window.getDaysForMonthOrWeek ? window.getDaysForMonthOrWeek(monthDate) : [];
     if (bulkDaySelect) {
         const prevBulkVal = bulkDaySelect.value;
-        bulkDaySelect.innerHTML = '<option value="">-- Choose Start Date --</option>';
-        days.forEach(d => {
-            bulkDaySelect.innerHTML += `<option value="${d.key}">${d.label}</option>`;
-        });
+        bulkDaySelect.innerHTML = '<option value="">-- Choose Start Date --</option>' + days.map(d => `<option value="${d.key}">${d.label}</option>`).join('');
         if (prevBulkVal && days.some(d => d.key === prevBulkVal)) {
             bulkDaySelect.value = prevBulkVal;
         }
     }
 
     if (daySelect) {
-        daySelect.innerHTML = '<option value="">-- None (Not Assigned to Day) --</option>';
-        days.forEach(d => {
-            daySelect.innerHTML += `<option value="${d.key}">${d.label}</option>`;
-        });
+        daySelect.innerHTML = '<option value="">-- None (Not Assigned to Day) --</option>' + days.map(d => `<option value="${d.key}">${d.label}</option>`).join('');
         if (selectedDayKey && days.some(d => d.key === selectedDayKey)) {
             daySelect.value = selectedDayKey;
         } else {
@@ -2983,14 +2985,11 @@ function populateMonthlyTargetWeeksAndDays(monthDate = new Date(), selectedWeekK
 };
 
 function updateMonthlyTargetDaysDropdown(monthDate = new Date(), weekKey = null, selectedDayKey = null) {
-    const daySelect = document.getElementById('mt-select-day');
+    const daySelect = safeGetEl('mt-select-day');
     if (!daySelect) return;
 
     const days = window.getDaysForMonthOrWeek(monthDate, weekKey);
-    daySelect.innerHTML = '<option value="">-- None (Not Assigned to Day) --</option>';
-    days.forEach(d => {
-        daySelect.innerHTML += `<option value="${d.key}">${d.label}</option>`;
-    });
+    daySelect.innerHTML = '<option value="">-- None (Not Assigned to Day) --</option>' + days.map(d => `<option value="${d.key}">${d.label}</option>`).join('');
 
     if (selectedDayKey && days.some(d => d.key === selectedDayKey)) {
         daySelect.value = selectedDayKey;
@@ -3000,15 +2999,15 @@ function updateMonthlyTargetDaysDropdown(monthDate = new Date(), weekKey = null,
 };
 
 function handleMonthlyTargetWeekChange() {
-    const weekSelect = document.getElementById('mt-select-week-range');
+    const weekSelect = safeGetEl('mt-select-week-range');
     const targetMonthDate = window.currentMonthlyTargetsDate || new Date();
     const weekKey = weekSelect ? weekSelect.value : null;
     window.updateMonthlyTargetDaysDropdown(targetMonthDate, weekKey, null);
 };
 
 function handleMonthlyTargetDayChange() {
-    const daySelect = document.getElementById('mt-select-day');
-    const weekSelect = document.getElementById('mt-select-week-range');
+    const daySelect = safeGetEl('mt-select-day');
+    const weekSelect = safeGetEl('mt-select-week-range');
     if (!daySelect || !weekSelect) return;
 
     const dayKey = daySelect.value;
@@ -3036,9 +3035,9 @@ function addMonthlyTarget() {
     if (!window.monthlyTargetsDatabase) window.monthlyTargetsDatabase = {};
     if (!window.monthlyTargetsDatabase[targetMonthKey]) window.monthlyTargetsDatabase[targetMonthKey] = [];
 
-    const weekSelectEl = document.getElementById('mt-select-week-range');
+    const weekSelectEl = safeGetEl('mt-select-week-range');
     const selectedWeekKey = weekSelectEl ? weekSelectEl.value : '';
-    const daySelectEl = document.getElementById('mt-select-day');
+    const daySelectEl = safeGetEl('mt-select-day');
     const selectedDayKey = daySelectEl ? daySelectEl.value : '';
 
     // Collect targets to add across all checked subjects
@@ -3320,7 +3319,7 @@ function addMonthlyTarget() {
 
     // Update active month to the month where target was added
     window.currentMonthlyTargetsDate = range.start;
-    const monthSelectEl = document.getElementById('mt-select-month');
+    const monthSelectEl = safeGetEl('mt-select-month');
     if (monthSelectEl) monthSelectEl.value = targetMonthKey;
 
     if (connectedToWeek) {
@@ -3337,7 +3336,7 @@ function addMonthlyTarget() {
     // Smoothly return to Daily Actions page and focus monthly targets section
     window.switchPage('daily-actions');
     setTimeout(() => {
-        const targetSection = document.getElementById('monthly-targets-section');
+        const targetSection = safeGetEl('monthly-targets-section');
         if (targetSection) {
             targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -3360,7 +3359,7 @@ function addMonthlyTarget() {
 };
 
 function deleteMonthlyTarget(idx, targetId = null) {
-    const monthSelectEl = document.getElementById('mt-select-month');
+    const monthSelectEl = safeGetEl('mt-select-month');
     if (!monthSelectEl) return;
     const selectedMonthKey = monthSelectEl.value;
 
@@ -3397,7 +3396,7 @@ function deleteMonthlyTarget(idx, targetId = null) {
 function toggleMonthlyTargetCompletion(idx, isCompleted, monthKey = null) {
     let selectedMonthKey = monthKey;
     if (!selectedMonthKey) {
-        const monthSelectEl = document.getElementById('mt-select-month');
+        const monthSelectEl = safeGetEl('mt-select-month');
         selectedMonthKey = monthSelectEl ? monthSelectEl.value : null;
     }
     if (!selectedMonthKey) {
@@ -3496,7 +3495,7 @@ function toggleMonthlyTargetCompletion(idx, isCompleted, monthKey = null) {
 };
 
 function navigateMonth(mode) {
-    const monthSelectEl = document.getElementById('mt-select-month');
+    const monthSelectEl = safeGetEl('mt-select-month');
     if (!window.currentMonthlyTargetsDate) {
         const selectedMonthKey = monthSelectEl ? monthSelectEl.value : null;
         window.currentMonthlyTargetsDate = (selectedMonthKey && Utils.parseStart && !isNaN(Utils.parseStart(selectedMonthKey).getTime()))
@@ -3516,9 +3515,9 @@ function navigateMonth(mode) {
 };
 
 function renderMonthlyTargets() {
-    const listContainer = document.getElementById('monthly-targets-list');
-    const progDropdown = document.getElementById('mt-select-prog');
-    const monthSelectEl = document.getElementById('mt-select-month');
+    const listContainer = safeGetEl('monthly-targets-list');
+    const progDropdown = safeGetEl('mt-select-prog');
+    const monthSelectEl = safeGetEl('mt-select-month');
     if (!listContainer || !monthSelectEl) return;
 
     if (typeof window.cleanOrphanedWeeklyAndDailyTargets === 'function') {
@@ -3548,14 +3547,11 @@ function renderMonthlyTargets() {
         return Utils.parseStart(b) - Utils.parseStart(a);
     });
 
-    monthSelectEl.innerHTML = '';
-    allMonths.forEach(mk => {
-        monthSelectEl.innerHTML += `<option value="${mk}">${mk}</option>`;
-    });
+    monthSelectEl.innerHTML = allMonths.map(mk => `<option value="${mk}">${mk}</option>`).join('');
     monthSelectEl.value = activeMonthKey;
 
     const monthName = activeRange.start.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-    const selectedBadge = document.getElementById('mt-selected-month-range');
+    const selectedBadge = safeGetEl('mt-selected-month-range');
     if (selectedBadge) {
         selectedBadge.textContent = `[ ${monthName} : ${activeMonthKey} ]`;
     }
@@ -3563,14 +3559,14 @@ function renderMonthlyTargets() {
     const todayDate = new Date();
     const weekday = todayDate.toLocaleDateString('en-GB', { weekday: 'long' });
     const formattedToday = todayDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    const todayDisplay = document.getElementById('mt-today-display');
+    const todayDisplay = safeGetEl('mt-today-display');
     if (todayDisplay) {
         todayDisplay.textContent = `Today: ${weekday}, ${formattedToday}`;
     }
 
-    const btnPast = document.getElementById('mt-btn-past');
-    const btnPresent = document.getElementById('mt-btn-present');
-    const btnFuture = document.getElementById('mt-btn-future');
+    const btnPast = safeGetEl('mt-btn-past');
+    const btnPresent = safeGetEl('mt-btn-present');
+    const btnFuture = safeGetEl('mt-btn-future');
 
     const activeClass = "bg-indigo-600 text-white shadow";
     const inactiveClass = "text-slate-650 dark:text-slate-355 hover:bg-slate-200 dark:hover:bg-slate-600/50";
@@ -3594,10 +3590,7 @@ function renderMonthlyTargets() {
 
         const currentSelectedProg = progDropdown.value;
         if (progDropdown.options.length !== activeProgs.length) {
-            progDropdown.innerHTML = '';
-            activeProgs.forEach(p => {
-                progDropdown.innerHTML += `<option value="${p}">${p}</option>`;
-            });
+            progDropdown.innerHTML = activeProgs.map(p => `<option value="${p}">${p}</option>`).join('');
             if (activeProgs.length > 0) {
                 if (activeProgs.includes(currentSelectedProg)) {
                     progDropdown.value = currentSelectedProg;
@@ -3607,7 +3600,7 @@ function renderMonthlyTargets() {
         }
     }
 
-    listContainer.innerHTML = '';
+    let itemsHtml = '';
     const targetsList = window.monthlyTargetsDatabase[activeMonthKey] || [];
 
     let totalTargets = targetsList.length;
@@ -3698,8 +3691,9 @@ function renderMonthlyTargets() {
                         </button>
                     </div>
                 </div>`;
-        listContainer.innerHTML += itemHtml;
+        itemsHtml += itemHtml;
     });
+    listContainer.innerHTML = itemsHtml;
 
     if (totalTargets === 0) {
         listContainer.innerHTML = `
@@ -3709,9 +3703,9 @@ function renderMonthlyTargets() {
     }
 
     const remainingTargets = totalTargets - completedTargets;
-    const estFinishEl = document.getElementById('mt-est-finish');
-    const reqPaceEl = document.getElementById('mt-req-pace');
-    const actPaceEl = document.getElementById('mt-act-pace');
+    const estFinishEl = safeGetEl('mt-est-finish');
+    const reqPaceEl = safeGetEl('mt-req-pace');
+    const actPaceEl = safeGetEl('mt-act-pace');
 
     if (activeMonthKey === currentMonthKey) {
         const daysInMonth = currentRange.daysInMonth;
@@ -3792,43 +3786,43 @@ function openAddMonthlyTargetPage(targetDate = null) {
         window.switchPage('monthly-target-setup');
     }
 
-    const pageTitle = document.getElementById('mt-page-title');
+    const pageTitle = safeGetEl('mt-page-title');
     if (pageTitle) pageTitle.textContent = "Add Monthly Target";
 
-    const pageSubtitle = document.getElementById('mt-page-subtitle');
+    const pageSubtitle = safeGetEl('mt-page-subtitle');
     if (pageSubtitle) pageSubtitle.textContent = "Configure program, subject, chapter breakdown, sizes, and weekly/daily target synchronization";
 
-    const modeBadge = document.getElementById('mt-page-mode-badge');
+    const modeBadge = safeGetEl('mt-page-mode-badge');
     if (modeBadge) modeBadge.textContent = "Target Setup";
 
-    const btnBottom = document.getElementById('mt-btn-save-bottom');
+    const btnBottom = safeGetEl('mt-btn-save-bottom');
     if (btnBottom) {
         btnBottom.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg><span>Add Target</span>`;
         btnBottom.setAttribute('onclick', 'window.addMonthlyTarget()');
     }
 
-    const btnDeleteBottom = document.getElementById('mt-btn-delete-bottom');
+    const btnDeleteBottom = safeGetEl('mt-btn-delete-bottom');
     if (btnDeleteBottom) {
         btnDeleteBottom.classList.add('hidden');
     }
 
-    const searchInput = document.getElementById('mt-chapter-search-input');
+    const searchInput = safeGetEl('mt-chapter-search-input');
     if (searchInput) searchInput.value = '';
 
-    const bulkSizeInput = document.getElementById('mt-bulk-size-input');
+    const bulkSizeInput = safeGetEl('mt-bulk-size-input');
     if (bulkSizeInput) bulkSizeInput.value = '';
 
     const activeRange = window.getMonthlyTargetRange(window.currentMonthlyTargetsDate || new Date());
     const activeMonthKey = window.formatMonthRangeKey(activeRange.start, activeRange.end);
     const monthName = activeRange.start.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
-    const monthBadge = document.getElementById('mt-page-month-badge');
+    const monthBadge = safeGetEl('mt-page-month-badge');
     if (monthBadge) monthBadge.textContent = `${monthName}`;
 
-    const summaryMonth = document.getElementById('mt-summary-month-display');
+    const summaryMonth = safeGetEl('mt-summary-month-display');
     if (summaryMonth) summaryMonth.textContent = `${monthName} (${activeMonthKey})`;
 
-    const monthInput = document.getElementById('mt-setup-month-input');
+    const monthInput = safeGetEl('mt-setup-month-input');
     if (monthInput) {
         const y = activeRange.start.getFullYear();
         const m = String(activeRange.start.getMonth() + 1).padStart(2, '0');
@@ -3867,9 +3861,9 @@ function updateMonthlyTargetSetupNavButtons() {
         activeDate.getFullYear() === today.getFullYear()
     );
 
-    const currentBtn = document.getElementById('mt-setup-btn-current');
-    const prevBtn = document.getElementById('mt-setup-btn-prev');
-    const nextBtn = document.getElementById('mt-setup-btn-next');
+    const currentBtn = safeGetEl('mt-setup-btn-current');
+    const prevBtn = safeGetEl('mt-setup-btn-prev');
+    const nextBtn = safeGetEl('mt-setup-btn-next');
 
     const activeRange = window.getMonthlyTargetRange(activeDate);
     const currentRange = window.getMonthlyTargetRange(today);
@@ -3882,7 +3876,7 @@ function updateMonthlyTargetSetupNavButtons() {
     if (prevBtn) prevBtn.className = startDiff < 0 ? activeClass : inactiveClass;
     if (nextBtn) nextBtn.className = startDiff > 0 ? activeClass : inactiveClass;
 
-    const monthInput = document.getElementById('mt-setup-month-input');
+    const monthInput = safeGetEl('mt-setup-month-input');
     if (monthInput) {
         const y = activeDate.getFullYear();
         const m = String(activeDate.getMonth() + 1).padStart(2, '0');
@@ -3907,10 +3901,10 @@ function navigateMonthlyTargetSetupMonth(mode) {
     const activeMonthKey = window.formatMonthRangeKey(activeRange.start, activeRange.end);
     const monthName = activeRange.start.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
-    const monthBadge = document.getElementById('mt-page-month-badge');
+    const monthBadge = safeGetEl('mt-page-month-badge');
     if (monthBadge) monthBadge.textContent = `${monthName}`;
 
-    const summaryMonth = document.getElementById('mt-summary-month-display');
+    const summaryMonth = safeGetEl('mt-summary-month-display');
     if (summaryMonth) summaryMonth.textContent = `${monthName} (${activeMonthKey})`;
 
     // Preserve checked state and sizes
@@ -4004,31 +3998,31 @@ function openEditMonthlyTargetPage(idx, monthKey = null) {
         window.switchPage('monthly-target-setup');
     }
 
-    const pageTitle = document.getElementById('mt-page-title');
+    const pageTitle = safeGetEl('mt-page-title');
     if (pageTitle) pageTitle.textContent = "Edit Monthly Target";
 
-    const pageSubtitle = document.getElementById('mt-page-subtitle');
+    const pageSubtitle = safeGetEl('mt-page-subtitle');
     if (pageSubtitle) pageSubtitle.textContent = "Update target details, scope, chapter size, and weekly/daily connections";
 
-    const modeBadge = document.getElementById('mt-page-mode-badge');
+    const modeBadge = safeGetEl('mt-page-mode-badge');
     if (modeBadge) modeBadge.textContent = "Edit Mode";
 
-    const btnBottom = document.getElementById('mt-btn-save-bottom');
+    const btnBottom = safeGetEl('mt-btn-save-bottom');
     if (btnBottom) {
         btnBottom.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg><span>Save Changes</span>`;
         btnBottom.setAttribute('onclick', `window.saveMonthlyTarget(${idx}, '${monthKey}')`);
     }
 
-    const btnDeleteBottom = document.getElementById('mt-btn-delete-bottom');
+    const btnDeleteBottom = safeGetEl('mt-btn-delete-bottom');
     if (btnDeleteBottom) {
         btnDeleteBottom.classList.remove('hidden');
         btnDeleteBottom.setAttribute('onclick', `window.deleteMonthlyTargetFromEditPage(${idx}, '${monthKey}')`);
     }
 
-    const searchInput = document.getElementById('mt-chapter-search-input');
+    const searchInput = safeGetEl('mt-chapter-search-input');
     if (searchInput) searchInput.value = '';
 
-    const bulkSizeInput = document.getElementById('mt-bulk-size-input');
+    const bulkSizeInput = safeGetEl('mt-bulk-size-input');
     if (bulkSizeInput) bulkSizeInput.value = '';
 
     const targetMonthDate = (monthKey && Utils.parseStart && !isNaN(Utils.parseStart(monthKey).getTime()))
@@ -4040,13 +4034,13 @@ function openEditMonthlyTargetPage(idx, monthKey = null) {
     const activeRange = window.getMonthlyTargetRange(targetMonthDate);
     const monthName = activeRange.start.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
-    const monthBadge = document.getElementById('mt-page-month-badge');
+    const monthBadge = safeGetEl('mt-page-month-badge');
     if (monthBadge) monthBadge.textContent = `${monthName}`;
 
-    const summaryMonth = document.getElementById('mt-summary-month-display');
+    const summaryMonth = safeGetEl('mt-summary-month-display');
     if (summaryMonth) summaryMonth.textContent = `${monthName} (${monthKey})`;
 
-    const monthInput = document.getElementById('mt-setup-month-input');
+    const monthInput = safeGetEl('mt-setup-month-input');
     if (monthInput) {
         const y = activeRange.start.getFullYear();
         const m = String(activeRange.start.getMonth() + 1).padStart(2, '0');
@@ -4112,7 +4106,7 @@ function openEditMonthlyTargetModal(idx, monthKey = null) {
 function closeMonthlyTargetPage() {
     window.switchPage('daily-actions');
     setTimeout(() => {
-        const targetSection = document.getElementById('monthly-targets-section');
+        const targetSection = safeGetEl('monthly-targets-section');
         if (targetSection) {
             targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -4200,7 +4194,7 @@ function saveMonthlyTarget(idx, originalMonthKey = null) {
         }
     }
 
-    const progName = selectedProg || (document.getElementById('mt-select-prog') ? document.getElementById('mt-select-prog').value : '') || target.program;
+    const progName = selectedProg || (safeGetEl('mt-select-prog') ? safeGetEl('mt-select-prog').value : '') || target.program;
     const trackId = selectedTrack || target.track || window.tracks.find(t => window.customPrograms[t.id] && window.customPrograms[t.id].some(p => (p.name || p) === progName))?.id;
 
     if (!selectedSubject || !selectedChapter) {
@@ -4256,7 +4250,7 @@ function saveMonthlyTarget(idx, originalMonthKey = null) {
         targetType: oldIsSubject ? 'subject' : 'chapter'
     }, originalMonthKey, mtId);
 
-    const weekSelectEl = document.getElementById('mt-select-week-range');
+    const weekSelectEl = safeGetEl('mt-select-week-range');
     const targetWeekKey = (selectedWeek !== undefined && selectedWeek !== null) ? selectedWeek : (weekSelectEl ? weekSelectEl.value : '');
     const isNoWeek = !targetWeekKey || targetWeekKey === 'none';
 
@@ -4342,7 +4336,7 @@ function saveMonthlyTarget(idx, originalMonthKey = null) {
         if (typeof window.autoSyncWeeklyToDailyTargets === 'function') window.autoSyncWeeklyToDailyTargets();
     }
 
-    const daySelectEl = document.getElementById('mt-select-day');
+    const daySelectEl = safeGetEl('mt-select-day');
     const selectedDayKey = isNoWeek ? '' : (daySelectEl ? daySelectEl.value : '');
     let connectedToDay = false;
     let totalDailyAllocationsAdded = 0;
@@ -4431,7 +4425,7 @@ function saveMonthlyTarget(idx, originalMonthKey = null) {
 
     // Update active month to the edited target's month
     window.currentMonthlyTargetsDate = activeRange.start;
-    const monthSelectEl = document.getElementById('mt-select-month');
+    const monthSelectEl = safeGetEl('mt-select-month');
     if (monthSelectEl) monthSelectEl.value = targetMonthKey;
 
     if (typeof window.cleanOrphanedWeeklyAndDailyTargets === 'function') {
@@ -4448,7 +4442,7 @@ function saveMonthlyTarget(idx, originalMonthKey = null) {
     // Smoothly return to Daily Actions page and focus monthly targets section
     window.switchPage('daily-actions');
     setTimeout(() => {
-        const targetSection = document.getElementById('monthly-targets-section');
+        const targetSection = safeGetEl('monthly-targets-section');
         if (targetSection) {
             targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -4469,13 +4463,13 @@ function saveMonthlyTarget(idx, originalMonthKey = null) {
 
 // --- Monthly Targets Database Modal Controls & Logic ---
 function openMonthlyTargetsDatabase() {
-    const modal = document.getElementById('monthly-targets-db-modal');
+    const modal = safeGetEl('monthly-targets-db-modal');
     if (!modal) return;
 
     modal.classList.remove('hidden');
     setTimeout(() => {
-        const backdrop = document.getElementById('mtdb-backdrop');
-        const content = document.getElementById('mtdb-content');
+        const backdrop = safeGetEl('mtdb-backdrop');
+        const content = safeGetEl('mtdb-content');
         if (backdrop) backdrop.classList.replace('opacity-0', 'opacity-100');
         if (content) {
             content.classList.replace('scale-95', 'scale-100');
@@ -4490,10 +4484,10 @@ function openMonthlyTargetsDatabase() {
 };
 
 function switchMtdbTab(tab) {
-    const listBtn = document.getElementById('mtdb-tab-btn-list');
-    const monthBtn = document.getElementById('mtdb-tab-btn-month');
-    const listContent = document.getElementById('mtdb-tab-content-list');
-    const monthContent = document.getElementById('mtdb-tab-content-month');
+    const listBtn = safeGetEl('mtdb-tab-btn-list');
+    const monthBtn = safeGetEl('mtdb-tab-btn-month');
+    const listContent = safeGetEl('mtdb-tab-content-list');
+    const monthContent = safeGetEl('mtdb-tab-content-month');
 
     if (!listBtn || !monthBtn || !listContent || !monthContent) return;
 
@@ -4513,9 +4507,9 @@ function switchMtdbTab(tab) {
 };
 
 function populateMtdbFilters() {
-    const monthFilter = document.getElementById('mtdb-filter-month');
-    const progFilter = document.getElementById('mtdb-filter-prog');
-    const subFilter = document.getElementById('mtdb-filter-sub');
+    const monthFilter = safeGetEl('mtdb-filter-month');
+    const progFilter = safeGetEl('mtdb-filter-prog');
+    const subFilter = safeGetEl('mtdb-filter-sub');
 
     if (!monthFilter || !progFilter || !subFilter) return;
 
@@ -4530,10 +4524,7 @@ function populateMtdbFilters() {
     });
 
     const prevMonthVal = monthFilter.value;
-    monthFilter.innerHTML = '<option value="all">All Months</option>';
-    allMonths.forEach(mk => {
-        monthFilter.innerHTML += `<option value="${mk}">${mk}</option>`;
-    });
+    monthFilter.innerHTML = '<option value="all">All Months</option>' + allMonths.map(mk => `<option value="${mk}">${mk}</option>`).join('');
     if (prevMonthVal) monthFilter.value = prevMonthVal;
     else monthFilter.value = currentMonthKey;
 
@@ -4547,34 +4538,28 @@ function populateMtdbFilters() {
     });
 
     const prevProgVal = progFilter.value;
-    progFilter.innerHTML = '<option value="all">All Programs</option>';
-    activeProgs.forEach(p => {
-        progFilter.innerHTML += `<option value="${p}">${p}</option>`;
-    });
+    progFilter.innerHTML = '<option value="all">All Programs</option>' + activeProgs.map(p => `<option value="${p}">${p}</option>`).join('');
     if (prevProgVal) progFilter.value = prevProgVal;
 
     const prevSubVal = subFilter.value;
-    subFilter.innerHTML = '<option value="all">All Subjects</option>';
-    window.getAllSubjects().forEach(s => {
-        subFilter.innerHTML += `<option value="${s.subject}">${s.subject}</option>`;
-    });
+    subFilter.innerHTML = '<option value="all">All Subjects</option>' + window.getAllSubjects().map(s => `<option value="${s.subject}">${s.subject}</option>`).join('');
     if (prevSubVal) subFilter.value = prevSubVal;
 };
 
 function renderMtdbList() {
-    const tbody = document.getElementById('mtdb-targets-tbody');
+    const tbody = safeGetEl('mtdb-targets-tbody');
     if (!tbody) return;
 
     if (typeof window.cleanOrphanedWeeklyAndDailyTargets === 'function') {
         window.cleanOrphanedWeeklyAndDailyTargets();
     }
 
-    const mFilter = document.getElementById('mtdb-filter-month') ? document.getElementById('mtdb-filter-month').value : 'all';
-    const pFilter = document.getElementById('mtdb-filter-prog') ? document.getElementById('mtdb-filter-prog').value : 'all';
-    const sFilter = document.getElementById('mtdb-filter-sub') ? document.getElementById('mtdb-filter-sub').value : 'all';
-    const statFilter = document.getElementById('mtdb-filter-status') ? document.getElementById('mtdb-filter-status').value : 'all';
+    const mFilter = safeGetEl('mtdb-filter-month') ? safeGetEl('mtdb-filter-month').value : 'all';
+    const pFilter = safeGetEl('mtdb-filter-prog') ? safeGetEl('mtdb-filter-prog').value : 'all';
+    const sFilter = safeGetEl('mtdb-filter-sub') ? safeGetEl('mtdb-filter-sub').value : 'all';
+    const statFilter = safeGetEl('mtdb-filter-status') ? safeGetEl('mtdb-filter-status').value : 'all';
 
-    tbody.innerHTML = '';
+    let rowsHtml = '';
     let matchedCount = 0;
 
     if (!window.monthlyTargetsDatabase) window.monthlyTargetsDatabase = {};
@@ -4643,9 +4628,10 @@ function renderMtdbList() {
                             </div>
                         </td>
                     </tr>`;
-            tbody.innerHTML += row;
+            rowsHtml += row;
         });
     });
+    tbody.innerHTML = rowsHtml;
 
     if (matchedCount === 0) {
         tbody.innerHTML = `
@@ -4773,8 +4759,13 @@ function calculateMonthWiseMonthlyTargets() {
 };
 
 function renderMtdbMonthChart(monthsList) {
-    const ctx = document.getElementById('monthlyMonthMixedChart');
+    const ctx = safeGetEl('monthlyMonthMixedChart');
     if (!ctx) return;
+
+    const modal = safeGetEl('monthly-targets-db-modal');
+    const monthTab = safeGetEl('wtdb-tab-content-month');
+    if (modal && modal.classList.contains('hidden')) return;
+    if (monthTab && monthTab.classList.contains('hidden')) return;
 
     const labels = monthsList.map(m => m.month);
     const setDataset = {
@@ -4848,13 +4839,12 @@ function renderMtdbMonthChart(monthsList) {
 };
 
 function renderMtdbMonthView() {
-    const tbody = document.getElementById('mtdb-months-tbody');
+    const tbody = safeGetEl('mtdb-months-tbody');
     if (!tbody) return;
 
-    tbody.innerHTML = '';
     const monthsList = window.calculateMonthWiseMonthlyTargets();
-
     const tableList = [...monthsList].reverse();
+    let rowsHtml = '';
 
     tableList.forEach(m => {
         const rate = m.set > 0 ? Math.round((m.completed / m.set) * 100) : 0;
@@ -4869,8 +4859,9 @@ function renderMtdbMonthView() {
                     <td class="py-3 px-4 text-center text-emerald-600 dark:text-emerald-400 font-black">${m.completed}</td>
                     <td class="py-3 px-4 text-center font-black ${rateColor}">${rate}%</td>
                 </tr>`;
-        tbody.innerHTML += row;
+        rowsHtml += row;
     });
+    tbody.innerHTML = rowsHtml;
 
     if (monthsList.length === 0) {
         tbody.innerHTML = `

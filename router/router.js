@@ -636,6 +636,14 @@
                         }
                     }
                 } else if (pageId === 'spectra-analytics') {
+                    if (window._trendChartsPending && typeof window.renderTrendCharts === 'function') {
+                        window._trendChartsPending = false;
+                        window.renderTrendCharts();
+                    }
+                    if (window._globalPaceTrendChartPending && typeof window.renderGlobalPaceTrendChart === 'function') {
+                        window._globalPaceTrendChartPending = false;
+                        window.renderGlobalPaceTrendChart();
+                    }
                     const analyticsCharts = [
                         window.mainChartPrograms,
                         window.monthlyChartActions,

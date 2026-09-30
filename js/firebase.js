@@ -102,6 +102,10 @@ window.firebaseConfig = firebaseConfig;
 
 window.FirebaseService = {
     _saveDebounceTimer: null,
+    _cachedSerializedRevision: -1,
+    _cachedSerializedJson: null,
+    _cachedPayload: null,
+    _localPersistTimer: null,
     _unsubscribeSnapshot: null,
     _authListeners: [],
     _firestoreInitialized: false,
@@ -167,13 +171,38 @@ window.FirebaseService = {
         };
     },
 
-    _fastPersistLocalStorage: function() {
+    _fastPersistLocalStorage: function(forceSync = false) {
+        if (!forceSync) {
+            if (this._localPersistTimer) return;
+            this._localPersistTimer = setTimeout(() => {
+                this._localPersistTimer = null;
+                this._fastPersistLocalStorage(true);
+            }, 60);
+            return;
+        }
+
+        if (this._localPersistTimer) {
+            clearTimeout(this._localPersistTimer);
+            this._localPersistTimer = null;
+        }
+
         try {
-            const currentCache = this._buildCurrentStatePayload();
-            const jsonStr = JSON.stringify(currentCache);
+            const rev = (typeof AppState !== 'undefined' && AppState && AppState.localRevision) || 0;
+            let jsonStr = '';
+            if (rev === this._cachedSerializedRevision && this._cachedSerializedJson) {
+                jsonStr = this._cachedSerializedJson;
+            } else {
+                const currentCache = this._buildCurrentStatePayload();
+                jsonStr = JSON.stringify(currentCache);
+                this._cachedSerializedRevision = rev;
+                this._cachedSerializedJson = jsonStr;
+                this._cachedPayload = currentCache;
+            }
             safeStorage.setItem('local_app_state', jsonStr);
             safeStorage.setItem('appState', jsonStr);
-            AppState.lastLocalPersistTime = Date.now();
+            if (typeof AppState !== 'undefined' && AppState) {
+                AppState.lastLocalPersistTime = Date.now();
+            }
         } catch(e) {}
     },
 
@@ -789,8 +818,8 @@ window.FirebaseService = {
             }
         }
 
-        // Fast synchronous local storage persist (0ms latency local safety)
-        this._fastPersistLocalStorage();
+        // Coalesced local storage persist (immediate for manual saves, coalesced for background edits)
+        this._fastPersistLocalStorage(immediate);
 
         if (immediate) {
             if (this._saveDebounceTimer) {
@@ -871,11 +900,14 @@ window.FirebaseService = {
                 });
             }
 
-            // Fast single-pass local storage persist
+            // Fast single-pass local storage persist with serialization caching
             window.appState = payload;
             let jsonStr = '';
             try {
                 jsonStr = JSON.stringify(payload);
+                this._cachedSerializedRevision = targetRevision;
+                this._cachedSerializedJson = jsonStr;
+                this._cachedPayload = payload;
                 safeStorage.setItem('local_app_state', jsonStr);
                 safeStorage.setItem('appState', jsonStr);
                 AppState.lastLocalPersistTime = Date.now();

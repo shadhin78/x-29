@@ -826,6 +826,7 @@ window.applyFullAppState = function(data, saveCloud = true, isExplicitWipe = fal
 
     if (typeof window.rebuildTaskDateMap === 'function') window.rebuildTaskDateMap();
     if (typeof window.updateSubjectTargetUI === 'function') window.updateSubjectTargetUI();
+    if (typeof window.invalidateChapterStatusCache === 'function') window.invalidateChapterStatusCache();
     if (typeof window.recalculateTotals === 'function') window.recalculateTotals();
     if (!isSilent && typeof window.renderUI === 'function') window.renderUI();
     return !rejectedAnyField;

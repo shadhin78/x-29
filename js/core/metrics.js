@@ -275,6 +275,64 @@
             const subjectStats = {};
             const allSubjects = typeof window.getAllSubjects === 'function' ? window.getAllSubjects() : [];
 
+            // Step 006: Single-pass task indexing across all study tasks
+            const tasksBySubject = new Map();
+            const subjectChapterTaskMap = new Map();
+            let globalEarliestCompletedDate = null;
+
+            if (AppState.tasks && Array.isArray(AppState.tasks) && Array.isArray(window.tracks)) {
+                for (let i = 0; i < AppState.tasks.length; i++) {
+                    const t = AppState.tasks[i];
+                    if (t.type !== 'study') continue;
+                    for (let j = 0; j < window.tracks.length; j++) {
+                        const track = window.tracks[j];
+                        const key = track.id + 'Tasks';
+                        const taskArr = t[key];
+                        if (Array.isArray(taskArr)) {
+                            for (let k = 0; k < taskArr.length; k++) {
+                                const b = taskArr[k];
+                                if (!b || !b.subject) continue;
+                                const subName = b.subject;
+
+                                const item = { dayObj: t, taskObj: b, trackId: track.id };
+
+                                let subTaskList = tasksBySubject.get(subName);
+                                if (!subTaskList) {
+                                    subTaskList = [];
+                                    tasksBySubject.set(subName, subTaskList);
+                                }
+                                subTaskList.push(item);
+
+                                if (b.chapter) {
+                                    let chMap = subjectChapterTaskMap.get(subName);
+                                    if (!chMap) {
+                                        chMap = new Map();
+                                        subjectChapterTaskMap.set(subName, chMap);
+                                    }
+                                    const m = String(b.chapter).match(/(\d+)(?!.*\d)/);
+                                    if (m) {
+                                        const parsedCh = parseInt(m[0], 10);
+                                        if (!chMap.has(parsedCh)) {
+                                            chMap.set(parsedCh, item);
+                                        }
+                                    }
+                                }
+
+                                if (b.completed) {
+                                    let d = b.completedAt ? (typeof Utils !== 'undefined' && typeof Utils.parseDateSafe === 'function' ? Utils.parseDateSafe(b.completedAt) : new Date(b.completedAt)) : getTaskDateSafe(t);
+                                    if (isNaN(d.getTime())) d = getTaskDateSafe(t);
+                                    if (!isNaN(d.getTime())) {
+                                        if (!globalEarliestCompletedDate || d < globalEarliestCompletedDate) {
+                                            globalEarliestCompletedDate = d;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             allSubjects.forEach(sObj => {
                 const sub = sObj.subject;
                 const totalSyllabusChapters = sObj.chapters || 0;
@@ -299,34 +357,14 @@
                 let earliestCompletedDate = null;
                 let tasksAssigned = 0;
 
-                const subTasks = [];
-                if (AppState.tasks && Array.isArray(AppState.tasks)) {
-                    AppState.tasks.filter(t => t.type === 'study').forEach(t => {
-                        if (Array.isArray(window.tracks)) {
-                            window.tracks.forEach(track => {
-                                const key = track.id + 'Tasks';
-                                if (Array.isArray(t[key])) {
-                                    t[key].forEach(b => {
-                                        if (b.subject === sub) {
-                                            subTasks.push({ dayObj: t, taskObj: b, trackId: track.id });
-                                        }
-                                    });
-                                }
-                            });
-                        }
-                    });
-                }
+                const subTasks = tasksBySubject.get(sub) || [];
+                const chMap = subjectChapterTaskMap.get(sub);
 
                 tasksAssigned = subTasks.filter(x => !x.taskObj.skipped).length;
 
                 if (totalSyllabusChapters > 0) {
                     for (let chNum = 1; chNum <= totalSyllabusChapters; chNum++) {
-                        const matchedTaskItem = subTasks.find(x => {
-                            const chStr = x.taskObj.chapter;
-                            if (chStr === `Ch. ${chNum}` || chStr === `Ch.${chNum}` || chStr === String(chNum)) return true;
-                            const match = chStr ? chStr.match(/(\d+)(?!.*\d)/) : null;
-                            return match && parseInt(match[0], 10) === chNum;
-                        });
+                        const matchedTaskItem = chMap ? chMap.get(chNum) : undefined;
 
                         if (matchedTaskItem && matchedTaskItem.taskObj.skipped) {
                             skippedChapters++;
@@ -407,25 +445,7 @@
 
             // 2. Accurate Aggregated Pace Engine (Top Boxes)
             if (!AppState.globalStartDate || !AppState.globalEndDate) {
-                let earliestDate = null;
-                if (AppState.tasks && Array.isArray(AppState.tasks)) {
-                    AppState.tasks.forEach(t => {
-                        if (t.type === 'study' && Array.isArray(window.tracks)) {
-                            window.tracks.forEach(track => {
-                                const key = track.id + 'Tasks';
-                                if (Array.isArray(t[key])) {
-                                    t[key].forEach(b => {
-                                        if (b.completed) {
-                                            let d = b.completedAt ? new Date(b.completedAt) : getTaskDateSafe(t);
-                                            if (!earliestDate || d < earliestDate) earliestDate = d;
-                                        }
-                                    });
-                                }
-                            });
-                        }
-                    });
-                }
-
+                let earliestDate = globalEarliestCompletedDate;
                 let paceTotalChapters = scopeTotalChapters;
                 let paceCompleted = scopeCompleted;
                 let remaining = Math.max(0, paceTotalChapters - paceCompleted);
