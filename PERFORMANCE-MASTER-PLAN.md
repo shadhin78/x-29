@@ -312,7 +312,7 @@ Files Likely Affected: js/firebase.js, js/state.js
 Dependencies: Step 005.
 Validation Method: Run node tests/firestore-rules.test.js and tests/data-consistency.test.js; verify save and restore data integrity.
 Expected Performance Impact: Elimination of main-thread freeze during autosave cycles.
-Status: NOT STARTED
+Status: COMPLETED
 ```
 
 ```text
@@ -331,7 +331,7 @@ Files Likely Affected: js/dev-server.js, vercel.json
 Dependencies: Step 001.
 Validation Method: Inspect HTTP response headers via curl/node; verify 304 Not Modified or Cache-Control headers.
 Expected Performance Impact: Instant 0ms warm page reloads from browser disk cache.
-Status: NOT STARTED
+Status: COMPLETED
 ```
 
 ```text
@@ -350,7 +350,7 @@ Files Likely Affected: sw.js, js/core/app.js, manifest.json
 Dependencies: Steps 001, 004, 011.
 Validation Method: Run node tests/full-regression.test.js (verifying PWA checks pass); verify Service Worker registration in browser.
 Expected Performance Impact: Near-instant load times (<500ms) on warm/offline mobile visits.
-Status: NOT STARTED
+Status: COMPLETED
 ```
 
 ---

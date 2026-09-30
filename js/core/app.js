@@ -201,6 +201,17 @@ export const App = {
             }
         });
 
+        // Register PWA Service Worker (sw.js)
+        if (typeof window !== 'undefined' && 'serviceWorker' in navigator && window.location.protocol !== 'file:') {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then((reg) => {
+                    console.log('[PWA] Service Worker registered successfully with scope:', reg.scope);
+                }).catch((err) => {
+                    console.warn('[PWA] Service Worker registration failed:', err);
+                });
+            });
+        }
+
         // Date rollover monitor & cross-tab synchronization
         if (typeof window !== 'undefined' && typeof window.initRollover === 'function') {
             window.initRollover();

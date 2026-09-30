@@ -34,7 +34,10 @@ const MIME_TYPES = {
   '.jpg': 'image/jpeg',
   '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon'
+  '.ico': 'image/x-icon',
+  '.webp': 'image/webp',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2'
 };
 
 const server = http.createServer((req, res) => {
@@ -98,11 +101,35 @@ const server = http.createServer((req, res) => {
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
+    // Generate standard ETag based on size and mtime
+    const etag = `W/"${stats.size.toString(16)}-${Math.floor(stats.mtimeMs).toString(16)}"`;
+
+    let cacheControl = 'no-cache';
+    if (ext === '.html') {
+      cacheControl = 'no-cache';
+    } else if (['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.webp', '.woff', '.woff2'].includes(ext)) {
+      cacheControl = 'public, max-age=86400, stale-while-revalidate=604800';
+    } else if (ext === '.css') {
+      cacheControl = 'public, max-age=86400, stale-while-revalidate=604800';
+    } else if (ext === '.js') {
+      cacheControl = 'public, max-age=3600, must-revalidate';
+    }
+
+    // Handle conditional request (instant 304 Not Modified)
+    if (req.headers['if-none-match'] === etag) {
+      res.writeHead(304, {
+        'ETag': etag,
+        'Cache-Control': cacheControl
+      });
+      res.end();
+      return;
+    }
+
     res.writeHead(200, {
       'Content-Type': contentType,
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
+      'Content-Length': stats.size,
+      'ETag': etag,
+      'Cache-Control': cacheControl
     });
     fs.createReadStream(filePath).pipe(res);
   });
