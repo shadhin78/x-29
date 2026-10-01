@@ -1,13 +1,31 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [
+    { "source": "/dashboard", "destination": "/", "permanent": true },
+    { "source": "/paces-management", "destination": "/pace", "permanent": true },
+    { "source": "/spectra-analytics", "destination": "/analytics", "permanent": true },
+    { "source": "/daily-schedule", "destination": "/schedule", "permanent": true },
+    { "source": "/subject", "destination": "/subjects", "permanent": true },
+    { "source": "/exam-routine", "destination": "/exam", "permanent": true },
+    { "source": "/monthly-target-setup", "destination": "/daily-actions/monthly-setup", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/login", "destination": "/login.html" },
     { "source": "/((?!api/|.*\\..*).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
-      "source": "/(.*)\\.(html)?",
+      "source": "/((?!api/|icons/|css/|.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|json)).*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)\\.html",
       "headers": [
         {
           "key": "Cache-Control",
@@ -34,11 +52,11 @@
       ]
     },
     {
-      "source": "/(.*)\\.(js)",
+      "source": "/(.*)\\.js",
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=86400, stale-while-revalidate=604800"
+          "value": "public, max-age=0, must-revalidate"
         }
       ]
     },
@@ -53,3 +71,4 @@
     }
   ]
 }
+

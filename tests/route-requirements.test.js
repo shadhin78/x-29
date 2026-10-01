@@ -138,13 +138,13 @@ async function testAll() {
     console.log('1. Dedicated Route Mapping & Canonical Resolution:');
 
     const routeMappings = [
-        { urlPath: '/', expectedPageId: 'dashboard', expectedPath: '/dashboard' },
-        { urlPath: '/dashboard', expectedPageId: 'dashboard', expectedPath: '/dashboard' },
-        { urlPath: '/dashboard/', expectedPageId: 'dashboard', expectedPath: '/dashboard' },
+        { urlPath: '/', expectedPageId: 'dashboard', expectedPath: '/' },
+        { urlPath: '/dashboard', expectedPageId: 'dashboard', expectedPath: '/' },
+        { urlPath: '/dashboard/', expectedPageId: 'dashboard', expectedPath: '/' },
         { urlPath: '/timer', expectedPageId: 'timer', expectedPath: '/timer' },
         { urlPath: '/timer/', expectedPageId: 'timer', expectedPath: '/timer' },
         { urlPath: '/timer%20or%20page', expectedPageId: 'timer', expectedPath: '/timer' },
-        { urlPath: '/focus', expectedPageId: 'timer', expectedPath: '/timer' },
+        { urlPath: '/focus', expectedPageId: 'focus', expectedPath: '/focus' },
         { urlPath: '/subjects', expectedPageId: 'subjects', expectedPath: '/subjects' },
         { urlPath: '/subjects/', expectedPageId: 'subjects', expectedPath: '/subjects' },
         { urlPath: '/subject', expectedPageId: 'subjects', expectedPath: '/subjects' },
@@ -156,7 +156,7 @@ async function testAll() {
         { urlPath: '/spectra-analytics', expectedPageId: 'spectra-analytics', expectedPath: '/analytics' },
         { urlPath: '/exam', expectedPageId: 'exam', expectedPath: '/exam' },
         { urlPath: '/exam/', expectedPageId: 'exam', expectedPath: '/exam' },
-        { urlPath: '/exam-routine', expectedPageId: 'exam', expectedPath: '/exam-routine', canonicalExpectedPath: '/exam' },
+        { urlPath: '/exam-routine', expectedPageId: 'exam', expectedPath: '/exam' },
         { urlPath: '/pace', expectedPageId: 'paces-management', expectedPath: '/pace' },
         { urlPath: '/pace/', expectedPageId: 'paces-management', expectedPath: '/pace' },
         { urlPath: '/paces-management', expectedPageId: 'paces-management', expectedPath: '/pace' },
@@ -164,7 +164,8 @@ async function testAll() {
         { urlPath: '/outcome', expectedPageId: 'outcome', expectedPath: '/outcome' },
         { urlPath: '/daily-actions', expectedPageId: 'daily-actions', expectedPath: '/daily-actions' },
         { urlPath: '/daily%20actions', expectedPageId: 'daily-actions', expectedPath: '/daily-actions' },
-        { urlPath: '/monthly-target-setup', expectedPageId: 'monthly-target-setup', expectedPath: '/monthly-target-setup' }
+        { urlPath: '/daily-actions/monthly-setup', expectedPageId: 'monthly-target-setup', expectedPath: '/daily-actions/monthly-setup' },
+        { urlPath: '/monthly-target-setup', expectedPageId: 'monthly-target-setup', expectedPath: '/daily-actions/monthly-setup' }
     ];
 
     for (const r of routeMappings) {
@@ -194,7 +195,7 @@ async function testAll() {
         assert.strictEqual(Router.activePageId, 'subjects');
 
         await Router.loadPage('dashboard');
-        assert.strictEqual(window.location.pathname, '/dashboard');
+        assert.strictEqual(window.location.pathname, '/');
         assert.strictEqual(Router.activePageId, 'dashboard');
     });
 
@@ -216,8 +217,8 @@ async function testAll() {
         historyStack = [];
         currentHistoryIndex = -1;
 
-        window.location.pathname = '/dashboard';
-        window.history.replaceState({ pageId: 'dashboard' }, '', '/dashboard');
+        window.location.pathname = '/';
+        window.history.replaceState({ pageId: 'dashboard' }, '', '/');
 
         await Router.loadPage('schedule');
         assert.strictEqual(window.location.pathname, '/schedule');
@@ -232,12 +233,12 @@ async function testAll() {
         assert.strictEqual(Router.activePageId, 'schedule');
         assert.strictEqual(window.location.pathname, '/schedule');
 
-        // Simulate Browser Back to /dashboard
+        // Simulate Browser Back to /
         const firstState = historyStack[0];
         await Router.loadPage(firstState.state.pageId, null, { updateHistory: false });
         window.location.pathname = firstState.url;
         assert.strictEqual(Router.activePageId, 'dashboard');
-        assert.strictEqual(window.location.pathname, '/dashboard');
+        assert.strictEqual(window.location.pathname, '/');
     });
 
     // ---------------------------------------------------------
@@ -291,17 +292,27 @@ async function testAll() {
         assert(loginHtml.includes('<base href="/">'), 'login.html must include <base href="/">');
     });
 
-    await runTest('All 18 route directories contain valid, non-empty index.html entry points', () => {
-        const routesToCheck = [
-            'dashboard', 'timer', 'focus', 'subjects', 'subject', 'schedule', 'daily-schedule',
-            'analytics', 'spectra-analytics', 'exam', 'exam-routine', 'pace', 'paces-management',
-            'master-config', 'outcome', 'daily-actions', 'monthly-target-setup', 'login'
+    await runTest('All canonical route directories contain valid, non-empty index.html entry points', () => {
+        const canonicalRoutesToCheck = [
+            'focus', 'subjects', 'daily-actions', 'daily-actions/monthly-setup',
+            'schedule', 'pace', 'master-config', 'outcome', 'exam', 'analytics', 'timer', 'login'
         ];
-        routesToCheck.forEach(r => {
+        canonicalRoutesToCheck.forEach(r => {
             const entryPath = path.join(__dirname, '..', r, 'index.html');
-            assert(fs.existsSync(entryPath), `Route directory "${r}" must contain index.html`);
+            assert(fs.existsSync(entryPath), `Canonical route directory "${r}" must contain index.html`);
             const stat = fs.statSync(entryPath);
-            assert(stat.size > 1000, `Route entry "${r}/index.html" must not be empty (was ${stat.size} bytes)`);
+            assert(stat.size > 1000, `Canonical route entry "${r}/index.html" must not be empty (was ${stat.size} bytes)`);
+        });
+    });
+
+    await runTest('Obsolete duplicate route directories are completely removed and cannot be served', () => {
+        const obsoleteDirs = [
+            'dashboard', 'paces-management', 'spectra-analytics',
+            'daily-schedule', 'subject', 'exam-routine', 'monthly-target-setup',
+            path.join('pages', 'Polymath Orbit')
+        ];
+        obsoleteDirs.forEach(dir => {
+            assert(!fs.existsSync(path.join(__dirname, '..', dir)), `Obsolete duplicate directory "${dir}" must NOT exist`);
         });
     });
 
@@ -335,11 +346,10 @@ async function testAll() {
         });
     });
 
-    await runTest('All 17 SPA route index.html files contain matching valid SVG sprite definitions', () => {
+    await runTest('All 11 canonical SPA route index.html files contain matching valid SVG sprite definitions', () => {
         const routesToCheck = [
-            'dashboard', 'timer', 'focus', 'subjects', 'subject', 'schedule', 'daily-schedule',
-            'analytics', 'spectra-analytics', 'exam', 'exam-routine', 'pace', 'paces-management',
-            'master-config', 'outcome', 'daily-actions', 'monthly-target-setup'
+            'focus', 'subjects', 'daily-actions', 'daily-actions/monthly-setup',
+            'schedule', 'pace', 'master-config', 'outcome', 'exam', 'analytics', 'timer'
         ];
         const requiredIcons = [
             'x29-icon-close-thick', 'x29-icon-close', 'x29-icon-close-thin', 'x29-icon-plus',

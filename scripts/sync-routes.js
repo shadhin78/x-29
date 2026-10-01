@@ -27,36 +27,31 @@ const INDEX_HTML_PATH = path.join(ROOT_DIR, 'index.html');
 const LOGIN_HTML_PATH = path.join(ROOT_DIR, 'login.html');
 
 const SPA_ROUTES = [
-    'dashboard',
-    'timer',
     'focus',
     'subjects',
-    'subject',
+    'daily-actions',
+    'daily-actions/monthly-setup',
     'schedule',
-    'daily-schedule',
-    'analytics',
-    'spectra-analytics',
-    'exam',
-    'exam-routine',
     'pace',
-    'paces-management',
     'master-config',
     'outcome',
-    'daily-actions',
-    'monthly-target-setup'
+    'exam',
+    'analytics',
+    'timer'
+];
+
+const OBSOLETE_ROUTE_DIRS = [
+    'dashboard',
+    'paces-management',
+    'spectra-analytics',
+    'daily-schedule',
+    'subject',
+    'exam-routine',
+    'monthly-target-setup',
+    path.join('pages', 'Polymath Orbit')
 ];
 
 const ROUTE_CONFIGS = {
-    'dashboard': {
-        containerId: 'page-dashboard',
-        title: 'Dashboard - X-29',
-        navKey: 'dashboard'
-    },
-    'timer': {
-        containerId: 'page-timer',
-        title: 'Focus - X-29',
-        navKey: 'timer'
-    },
     'focus': {
         containerId: 'page-timer',
         title: 'Focus - X-29',
@@ -67,47 +62,22 @@ const ROUTE_CONFIGS = {
         title: 'Subjects - X-29',
         navKey: 'subjects'
     },
-    'subject': {
-        containerId: 'page-subjects',
-        title: 'Subjects - X-29',
-        navKey: 'subjects'
+    'daily-actions': {
+        containerId: 'page-daily-actions',
+        title: 'Daily Actions - X-29',
+        navKey: 'daily-actions'
+    },
+    'daily-actions/monthly-setup': {
+        containerId: 'page-monthly-target-setup',
+        title: 'Monthly Target Setup - X-29',
+        navKey: 'daily-actions'
     },
     'schedule': {
         containerId: 'page-schedule',
         title: 'Daily Schedule - X-29',
         navKey: 'schedule'
     },
-    'daily-schedule': {
-        containerId: 'page-schedule',
-        title: 'Daily Schedule - X-29',
-        navKey: 'schedule'
-    },
-    'analytics': {
-        containerId: 'page-spectra-analytics',
-        title: 'Analytics - X-29',
-        navKey: 'spectra-analytics'
-    },
-    'spectra-analytics': {
-        containerId: 'page-spectra-analytics',
-        title: 'Analytics - X-29',
-        navKey: 'spectra-analytics'
-    },
-    'exam': {
-        containerId: 'page-exam',
-        title: 'Exam Routine - X-29',
-        navKey: 'exam'
-    },
-    'exam-routine': {
-        containerId: 'page-exam',
-        title: 'Exam Routine - X-29',
-        navKey: 'exam'
-    },
     'pace': {
-        containerId: 'page-paces-management',
-        title: 'Pace Management - X-29',
-        navKey: 'paces-management'
-    },
-    'paces-management': {
         containerId: 'page-paces-management',
         title: 'Pace Management - X-29',
         navKey: 'paces-management'
@@ -122,15 +92,20 @@ const ROUTE_CONFIGS = {
         title: 'Outcome - X-29',
         navKey: 'outcome'
     },
-    'daily-actions': {
-        containerId: 'page-daily-actions',
-        title: 'Daily Actions - X-29',
-        navKey: 'daily-actions'
+    'exam': {
+        containerId: 'page-exam',
+        title: 'Exam Routine - X-29',
+        navKey: 'exam'
     },
-    'monthly-target-setup': {
-        containerId: 'page-monthly-target-setup',
-        title: 'Monthly Target Setup - X-29',
-        navKey: 'daily-actions'
+    'analytics': {
+        containerId: 'page-spectra-analytics',
+        title: 'Analytics - X-29',
+        navKey: 'spectra-analytics'
+    },
+    'timer': {
+        containerId: 'page-timer',
+        title: 'Focus - X-29',
+        navKey: 'timer'
     }
 };
 
@@ -211,12 +186,25 @@ function syncRoutes() {
         process.exit(1);
     }
 
+    // 1. Purge obsolete duplicate directories
+    OBSOLETE_ROUTE_DIRS.forEach(relDir => {
+        const fullDir = path.join(ROOT_DIR, relDir);
+        if (fs.existsSync(fullDir)) {
+            try {
+                fs.rmSync(fullDir, { recursive: true, force: true });
+                console.log(`[SyncRoutes] Purged obsolete duplicate directory: ${relDir}`);
+            } catch (err) {
+                console.warn(`[SyncRoutes] Could not purge ${relDir}:`, err.message);
+            }
+        }
+    });
+
     const indexContent = fs.readFileSync(INDEX_HTML_PATH, 'utf8');
     const loginContent = fs.readFileSync(LOGIN_HTML_PATH, 'utf8');
 
     let count = 0;
 
-    // Sync SPA App Routes with tailored pre-rendered HTML
+    // 2. Sync SPA App Routes with tailored pre-rendered HTML
     SPA_ROUTES.forEach(route => {
         const routeDir = path.join(ROOT_DIR, route);
         if (!fs.existsSync(routeDir)) {
@@ -238,7 +226,7 @@ function syncRoutes() {
         count++;
     });
 
-    // Sync Login Route
+    // 3. Sync Login Route
     const loginDir = path.join(ROOT_DIR, 'login');
     if (!fs.existsSync(loginDir)) {
         fs.mkdirSync(loginDir, { recursive: true });
@@ -246,11 +234,12 @@ function syncRoutes() {
     fs.writeFileSync(path.join(loginDir, 'index.html'), loginContent, 'utf8');
     count++;
 
-    console.log(`[SyncRoutes] Successfully synchronized ${count} route entry points.`);
+    console.log(`[SyncRoutes] Successfully synchronized ${count} canonical route entry points.`);
 }
 
 if (require.main === module) {
     syncRoutes();
 }
 
-module.exports = { syncRoutes, SPA_ROUTES, ROUTE_CONFIGS, tailorHtmlForRoute };
+module.exports = { syncRoutes, SPA_ROUTES, OBSOLETE_ROUTE_DIRS, ROUTE_CONFIGS, tailorHtmlForRoute };
+

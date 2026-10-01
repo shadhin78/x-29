@@ -70,6 +70,22 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Canonical Redirects for obsolete duplicate routes
+  const OBSOLETE_REDIRECTS = {
+    '/dashboard': '/',
+    '/paces-management': '/pace',
+    '/spectra-analytics': '/analytics',
+    '/daily-schedule': '/schedule',
+    '/subject': '/subjects',
+    '/exam-routine': '/exam',
+    '/monthly-target-setup': '/daily-actions/monthly-setup'
+  };
+  if (OBSOLETE_REDIRECTS[url]) {
+    res.writeHead(301, { 'Location': OBSOLETE_REDIRECTS[url] });
+    res.end();
+    return;
+  }
+
   // Handle clean URLs (e.g. /login -> login.html)
   if (url === '/login') {
     url = '/login.html';
@@ -98,7 +114,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Direct clean route SPA fallback (e.g. /dashboard, /timer, /subjects, /schedule, /analytics, /exam, /pace, /master-config, /outcome, /daily-actions, /monthly-target-setup)
+  // Direct clean route SPA fallback (e.g. /pace, /subjects, /daily-actions/monthly-setup, etc.)
   const requestedExt = path.extname(url);
   if (!requestedExt && !url.startsWith('/api/')) {
     const routeSlug = url.replace(/^\/+|\/+$/g, '');
@@ -112,7 +128,7 @@ const server = http.createServer((req, res) => {
       }
       res.writeHead(200, {
         'Content-Type': 'text/html',
-        'Cache-Control': 'no-cache'
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
       });
       res.end(indexData);
     });

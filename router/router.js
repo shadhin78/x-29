@@ -209,6 +209,24 @@
                     }
                 }
             },
+            'daily-actions/monthly-setup': {
+                containerId: 'page-monthly-target-setup',
+                htmlUrl: 'pages/Daily Actions/monthly target setup/monthly target setup.html',
+                cssUrl: 'pages/Daily Actions/monthly target setup/monthly target setup.css',
+                jsUrl: 'pages/Daily Actions/monthly target setup/monthly target setup.js',
+                cssId: 'route-monthly-target-css',
+                jsId: 'route-monthly-target-js',
+                onMount: function () {
+                    if (window.MonthlyTargetPage && typeof window.MonthlyTargetPage.mount === 'function') {
+                        window.MonthlyTargetPage.mount();
+                    }
+                },
+                onDestroy: function () {
+                    if (window.MonthlyTargetPage && typeof window.MonthlyTargetPage.destroy === 'function') {
+                        window.MonthlyTargetPage.destroy();
+                    }
+                }
+            },
             'subject': {
                 containerId: 'page-subjects',
                 htmlUrl: 'pages/Subjects/Subjects.html',
@@ -550,11 +568,13 @@
         /**
          * Standard canonical route slug dictionary.
          * Enforces 100% path parity across Local Preview and Vercel Production.
+         * Every URL resolves to ONE canonical path.
          */
         canonicalRoutes: {
-            'dashboard': '/dashboard',
+            'dashboard': '/',
+            'home': '/',
             'timer': '/timer',
-            'focus': '/timer',
+            'focus': '/focus',
             'subjects': '/subjects',
             'subject': '/subjects',
             'schedule': '/schedule',
@@ -568,7 +588,9 @@
             'master-config': '/master-config',
             'outcome': '/outcome',
             'daily-actions': '/daily-actions',
-            'monthly-target-setup': '/monthly-target-setup',
+            'monthly-target-setup': '/daily-actions/monthly-setup',
+            'daily-actions/monthly-setup': '/daily-actions/monthly-setup',
+            'monthly-setup': '/daily-actions/monthly-setup',
             'login': '/login'
         },
 
@@ -584,8 +606,9 @@
             } catch (e) {}
             id = id.replace(/^\/+|\/+$/g, '').trim();
 
-            if (id === 'dashboard' || id === 'dashboard-page' || id === 'home') return 'dashboard';
-            if (id === 'timer' || id === 'focus') return 'timer';
+            if (id === '' || id === 'dashboard' || id === 'dashboard-page' || id === 'home') return 'dashboard';
+            if (id === 'focus') return 'focus';
+            if (id === 'timer') return 'timer';
             if (id === 'subjects' || id === 'subject') return 'subjects';
             if (id === 'schedule' || id === 'daily-schedule' || id === 'daily schedule') return 'schedule';
             if (id === 'analytics' || id === 'spectra-analytics' || id === 'spectra') return 'spectra-analytics';
@@ -594,10 +617,10 @@
             if (id === 'master-config' || id === 'master config' || id === 'master-configuration' || id === 'master configuration') return 'master-config';
             if (id === 'outcome' || id === 'results') return 'outcome';
             if (id === 'daily-actions' || id === 'daily actions' || id === 'daily-action' || id === 'daily action') return 'daily-actions';
-            if (id === 'monthly-target-setup' || id === 'monthly target setup' || id === 'monthly-target' || id === 'monthly target' || id === 'add-monthly-target') return 'monthly-target-setup';
+            if (id === 'monthly-target-setup' || id === 'daily-actions/monthly-setup' || id === 'monthly-setup' || id === 'monthly target setup' || id === 'monthly-target' || id === 'monthly target' || id === 'add-monthly-target') return 'monthly-target-setup';
             if (id === 'login') return 'login';
 
-            // Prefix matchers to sanitize any malformed write-ins (e.g. "timer or page" -> "timer")
+            if (id.startsWith('focus')) return 'focus';
             if (id.startsWith('timer')) return 'timer';
             if (id.startsWith('dashboard')) return 'dashboard';
             if (id.startsWith('subject')) return 'subjects';
@@ -612,8 +635,8 @@
         /**
          * Map canonical route ID to URL path.
          * Guarantees 100% identical clean URL slugs in local development and production.
-         * Clean URLs: /timer, /dashboard, /subjects, /schedule, /analytics, /exam, /pace,
-         * /master-config, /outcome, /daily-actions, /monthly-target-setup, /login
+         * Clean URLs: /timer, /, /subjects, /schedule, /analytics, /exam, /pace,
+         * /master-config, /outcome, /daily-actions, /daily-actions/monthly-setup, /login
          * Never introduces %20, spaces, trailing slashes, query parameters, or hash routes.
          */
         getPathForPageId: function (pageId) {
@@ -630,7 +653,7 @@
                 .replace(/[\s_]+/g, '-')
                 .replace(/[^a-z0-9-]/g, '')
                 .replace(/-+/g, '-');
-            return '/' + (cleaned || 'dashboard');
+            return cleaned === 'dashboard' ? '/' : ('/' + (cleaned || ''));
         },
 
         /**
@@ -648,7 +671,8 @@
                 path = decodeURIComponent(path);
             } catch (e) {}
             path = path.replace(/^\/+|\/+$/g, '').trim();
-            if (!path || path === 'index.html' || path === 'index') return 'dashboard';
+            if (!path || path === 'index.html' || path === 'index' || path === 'dashboard') return 'dashboard';
+            if (path === 'daily-actions/monthly-setup' || path === 'monthly-setup' || path === 'monthly-target-setup') return 'monthly-target-setup';
             return this.normalizePageId(path);
         },
 
