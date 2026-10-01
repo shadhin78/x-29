@@ -43,16 +43,7 @@
   ],
   "headers": [
     {
-      "source": "/((?!api/|icons/|css/|.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|json)).*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)\\.html",
+      "source": "/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
