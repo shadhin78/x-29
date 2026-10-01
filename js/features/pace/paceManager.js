@@ -186,13 +186,24 @@
     }
 
     /**
-     * Toggles bundle configuration mode (programs vs subjects) in Add Pace Goal form.
+     * Toggles bundle configuration mode (programs vs subjects vs global) in Add Pace Goal form.
      */
     function togglePaceBundleType() {
+        const bundleTypeSelect = document.getElementById('add-pace-bundle-type');
         const bundleProgsRadio = document.getElementById('pace-bundle-type-progs');
-        const isProgMode = bundleProgsRadio ? bundleProgsRadio.checked : true;
-        const container = document.getElementById('pace-bundle-items-container');
+        const container = document.getElementById('add-pace-subjects-container') || document.getElementById('pace-bundle-items-container');
         if (!container) return;
+
+        const checklistSection = document.getElementById('add-pace-checklist-section');
+        const checklistLabel = document.getElementById('add-pace-checklist-label');
+        const nameContainer = document.getElementById('add-pace-name-container') || document.getElementById('pace-bundle-name-container');
+
+        let mode = 'subjects';
+        if (bundleTypeSelect) {
+            mode = bundleTypeSelect.value || 'subjects';
+        } else if (bundleProgsRadio) {
+            mode = bundleProgsRadio.checked ? 'programs' : 'subjects';
+        }
 
         const AppStateRef = typeof global.AppState !== 'undefined' ? global.AppState : (typeof window !== 'undefined' ? window.AppState : {});
         const tracksList = global.tracks || (AppStateRef && AppStateRef.tracks) || [];
@@ -200,36 +211,12 @@
         const syllabusStructure = global.syllabusStructure || (AppStateRef && AppStateRef.syllabusStructure) || {};
         const passedItems = global.passedItems || (AppStateRef && AppStateRef.passedItems) || { programs: [], subjects: [] };
 
-        let html = '';
-        if (isProgMode) {
-            html += `<div class="grid grid-cols-2 gap-2 w-full">`;
-            tracksList.forEach(track => {
-                if (customPrograms[track.id]) {
-                    customPrograms[track.id].forEach(p => {
-                        const pName = p.name || p;
-                        const isPassed = Boolean(passedItems.programs && passedItems.programs.includes(pName));
-                        if (isPassed) {
-                            html += `
-                                <label class="flex items-center justify-between space-x-2 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/50 bg-slate-100/60 dark:bg-slate-900/30 opacity-60 cursor-not-allowed shadow-none pace-passed-item" title="${pName} (Passed - cannot be added to pace)">
-                                    <div class="flex items-center space-x-2 min-w-0 flex-1">
-                                        <input type="checkbox" value="${pName}" disabled class="pace-bundle-cb form-checkbox h-4 w-4 text-slate-400 rounded border-slate-300 dark:border-slate-600 cursor-not-allowed">
-                                        <del class="text-[10px] md:text-xs font-bold text-slate-400 dark:text-slate-500 truncate line-through" title="${pName}">${pName}</del>
-                                    </div>
-                                    <span class="text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">Passed</span>
-                                </label>`;
-                        } else {
-                            html += `
-                                <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 active:scale-95 transition-all shadow-sm">
-                                    <input type="checkbox" value="${pName}" class="pace-bundle-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all">
-                                    <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title="${pName}">${pName}</span>
-                                </label>`;
-                        }
-                    });
-                }
-            });
-            html += `</div>`;
-        } else {
-            html += `<div class="space-y-3 w-full">`;
+        if (mode === 'global') {
+            if (nameContainer) nameContainer.classList.remove('hidden');
+            if (checklistSection) checklistSection.classList.remove('hidden');
+            if (checklistLabel) checklistLabel.textContent = 'Optional: Select Subjects (or leave empty for all subjects)';
+
+            let html = `<div class="space-y-3 w-full">`;
             tracksList.forEach(track => {
                 if (customPrograms[track.id]) {
                     customPrograms[track.id].forEach(prog => {
@@ -263,24 +250,100 @@
                 }
             });
             html += `</div>`;
+            container.innerHTML = html;
+            return;
         }
-        container.innerHTML = html;
+
+        if (mode === 'programs') {
+            if (nameContainer) nameContainer.classList.remove('hidden');
+            if (checklistSection) checklistSection.classList.remove('hidden');
+            if (checklistLabel) checklistLabel.textContent = 'Select Programs to Include';
+
+            let html = `<div class="grid grid-cols-2 gap-2 w-full">`;
+            tracksList.forEach(track => {
+                if (customPrograms[track.id]) {
+                    customPrograms[track.id].forEach(p => {
+                        const pName = p.name || p;
+                        const isPassed = Boolean(passedItems.programs && passedItems.programs.includes(pName));
+                        if (isPassed) {
+                            html += `
+                                <label class="flex items-center justify-between space-x-2 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/50 bg-slate-100/60 dark:bg-slate-900/30 opacity-60 cursor-not-allowed shadow-none pace-passed-item" title="${pName} (Passed - cannot be added to pace)">
+                                    <div class="flex items-center space-x-2 min-w-0 flex-1">
+                                        <input type="checkbox" value="${pName}" disabled class="pace-bundle-cb form-checkbox h-4 w-4 text-slate-400 rounded border-slate-300 dark:border-slate-600 cursor-not-allowed">
+                                        <del class="text-[10px] md:text-xs font-bold text-slate-400 dark:text-slate-500 truncate line-through" title="${pName}">${pName}</del>
+                                    </div>
+                                    <span class="text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">Passed</span>
+                                </label>`;
+                        } else {
+                            html += `
+                                <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 active:scale-95 transition-all shadow-sm">
+                                    <input type="checkbox" value="${pName}" class="pace-bundle-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all">
+                                    <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title="${pName}">${pName}</span>
+                                </label>`;
+                        }
+                    });
+                }
+            });
+            html += `</div>`;
+            container.innerHTML = html;
+        } else {
+            // mode === 'subjects'
+            if (nameContainer) nameContainer.classList.remove('hidden');
+            if (checklistSection) checklistSection.classList.remove('hidden');
+            if (checklistLabel) checklistLabel.textContent = 'Select Subjects to Include';
+
+            let html = `<div class="space-y-3 w-full">`;
+            tracksList.forEach(track => {
+                if (customPrograms[track.id]) {
+                    customPrograms[track.id].forEach(prog => {
+                        const progName = prog.name || prog;
+                        const subs = (syllabusStructure[track.id] || []).filter(s => s.program === progName);
+                        if (subs.length > 0) {
+                            html += `<div><div class="text-[10px] font-black uppercase text-slate-400 mb-1 pl-1">${progName}</div><div class="grid grid-cols-2 gap-2">`;
+                            subs.forEach(s => {
+                                let displaySub = s.subject.replace(progName + ' - ', '').replace(progName + ' ', '');
+                                const isPassed = Boolean((passedItems.subjects && passedItems.subjects.includes(s.subject)) || (passedItems.programs && passedItems.programs.includes(progName)));
+                                if (isPassed) {
+                                    html += `
+                                        <label class="flex items-center justify-between space-x-2 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/50 bg-slate-100/60 dark:bg-slate-900/30 opacity-60 cursor-not-allowed shadow-none pace-passed-item" title="${s.subject} (Passed - cannot be added to pace)">
+                                            <div class="flex items-center space-x-2 min-w-0 flex-1">
+                                                <input type="checkbox" value="${s.subject}" disabled class="pace-bundle-cb form-checkbox h-4 w-4 text-slate-400 rounded border-slate-300 dark:border-slate-600 cursor-not-allowed">
+                                                <del class="text-[10px] md:text-xs font-bold text-slate-400 dark:text-slate-500 truncate line-through" title="${s.subject}">${displaySub}</del>
+                                            </div>
+                                            <span class="text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">Passed</span>
+                                        </label>`;
+                                } else {
+                                    html += `
+                                        <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 active:scale-95 transition-all shadow-sm">
+                                            <input type="checkbox" value="${s.subject}" class="pace-bundle-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all">
+                                            <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title="${s.subject}">${displaySub}</span>
+                                        </label>`;
+                                }
+                            });
+                            html += `</div></div>`;
+                        }
+                    });
+                }
+            });
+            html += `</div>`;
+            container.innerHTML = html;
+        }
     }
 
     /**
      * Updates pace target selection input based on type selection.
      */
     function updatePaceSubjects() {
-        const typeSelect = document.getElementById('pace-type');
+        const typeSelect = document.getElementById('pace-type') || document.getElementById('add-pace-bundle-type');
         const targetSelect = document.getElementById('pace-target');
         const singleContainer = document.getElementById('pace-single-target-container');
         const bundleContainer = document.getElementById('pace-bundle-container');
-        const nameContainer = document.getElementById('pace-bundle-name-container');
+        const nameContainer = document.getElementById('pace-bundle-name-container') || document.getElementById('add-pace-name-container');
 
         if (!typeSelect) return;
         const type = typeSelect.value;
 
-        if (type === 'bundle') {
+        if (type === 'bundle' || type === 'subjects' || type === 'programs' || type === 'global') {
             if (singleContainer) singleContainer.classList.add('hidden');
             if (bundleContainer) bundleContainer.classList.remove('hidden');
             if (nameContainer) nameContainer.classList.remove('hidden');
@@ -346,16 +409,26 @@
      * Creates and adds a new pace goal from form inputs.
      */
     function addPaceGoal() {
-        const type = document.getElementById('pace-type').value;
-        const deadline = document.getElementById('pace-deadline').value;
-        const startDateInput = document.getElementById('pace-start-date');
+        const typeSelect = (document.getElementById('add-pace-bundle-type') && document.getElementById('add-pace-bundle-type').value)
+            ? document.getElementById('add-pace-bundle-type')
+            : (document.getElementById('pace-type') || document.getElementById('add-pace-bundle-type'));
+        const rawType = (typeSelect && typeSelect.value) ? typeSelect.value : 'subjects';
+
+        const deadlineInput = (document.getElementById('add-pace-date') && document.getElementById('add-pace-date').value)
+            ? document.getElementById('add-pace-date')
+            : (document.getElementById('pace-deadline') || document.getElementById('add-pace-date'));
+
+        const startDateInput = (document.getElementById('add-pace-start') && document.getElementById('add-pace-start').value)
+            ? document.getElementById('add-pace-start')
+            : (document.getElementById('pace-start-date') || document.getElementById('add-pace-start'));
 
         const toast = (typeof global.showToast === 'function') ? global.showToast : console.log;
 
-        if (!deadline) {
+        if (!deadlineInput || !deadlineInput.value) {
             toast('Please choose a valid deadline date!', 'error');
             return;
         }
+        const deadline = deadlineInput.value;
 
         const AppStateRef = typeof global.AppState !== 'undefined' ? global.AppState : (typeof window !== 'undefined' ? window.AppState : {});
         const defaultPlanStart = (AppStateRef && AppStateRef.PLAN_START_DATE) ? AppStateRef.PLAN_START_DATE : '2026-01-01';
@@ -370,37 +443,82 @@
             return;
         }
 
+        let type = 'bundle';
         let target = '';
         let bundlePrograms = null;
         let bundleSubjects = null;
 
-        if (type === 'bundle') {
-            const bundleName = document.getElementById('pace-bundle-name').value.trim();
+        const nameInput = (document.getElementById('add-pace-name') && document.getElementById('add-pace-name').value)
+            ? document.getElementById('add-pace-name')
+            : (document.getElementById('pace-bundle-name') || document.getElementById('add-pace-name'));
+
+        if (rawType === 'subjects') {
+            type = 'bundle';
+            const bundleName = nameInput ? nameInput.value.trim() : '';
+            if (!bundleName) {
+                toast('Please enter a name for this timeline goal!', 'error');
+                return;
+            }
+            target = bundleName;
+            const checkedBoxes = Array.from(document.querySelectorAll('.pace-bundle-cb:checked'));
+            if (checkedBoxes.length === 0) {
+                toast('Please select at least one subject for the bundle!', 'error');
+                return;
+            }
+            bundleSubjects = checkedBoxes.map(cb => cb.value);
+        } else if (rawType === 'programs') {
+            type = 'bundle';
+            const bundleName = nameInput ? nameInput.value.trim() : '';
+            if (!bundleName) {
+                toast('Please enter a name for this timeline goal!', 'error');
+                return;
+            }
+            target = bundleName;
+            const checkedBoxes = Array.from(document.querySelectorAll('.pace-bundle-cb:checked'));
+            if (checkedBoxes.length === 0) {
+                toast('Please select at least one program for the bundle!', 'error');
+                return;
+            }
+            bundlePrograms = checkedBoxes.map(cb => cb.value);
+        } else if (rawType === 'global') {
+            type = 'global';
+            const bundleName = nameInput ? nameInput.value.trim() : '';
+            target = bundleName || 'Global Overall Goal';
+            const checkedBoxes = Array.from(document.querySelectorAll('.pace-bundle-cb:checked'));
+            if (checkedBoxes.length > 0) {
+                bundleSubjects = checkedBoxes.map(cb => cb.value);
+            }
+        } else if (rawType === 'bundle') {
+            type = 'bundle';
+            const bundleName = nameInput ? nameInput.value.trim() : '';
             if (!bundleName) {
                 toast('Please enter a name for this bundled timeline!', 'error');
                 return;
             }
             target = bundleName;
-            const isProgMode = document.getElementById('pace-bundle-type-progs').checked;
+            const progsRadio = document.getElementById('pace-bundle-type-progs');
+            const isProgMode = progsRadio ? progsRadio.checked : true;
             const checkedBoxes = Array.from(document.querySelectorAll('.pace-bundle-cb:checked'));
-
             if (checkedBoxes.length === 0) {
                 toast(`Please select at least one ${isProgMode ? 'program' : 'subject'} for the bundle!`, 'error');
                 return;
             }
-
             if (isProgMode) {
                 bundlePrograms = checkedBoxes.map(cb => cb.value);
             } else {
                 bundleSubjects = checkedBoxes.map(cb => cb.value);
             }
         } else {
+            type = rawType;
             const targetSelect = document.getElementById('pace-target');
-            if (!targetSelect || !targetSelect.value) {
+            if (targetSelect && targetSelect.value) {
+                target = targetSelect.value;
+            } else if (nameInput && nameInput.value) {
+                target = nameInput.value.trim();
+            } else {
                 toast('Please choose a valid target!', 'error');
                 return;
             }
-            target = targetSelect.value;
         }
 
         if (!global.paceGoals) global.paceGoals = [];
@@ -436,8 +554,15 @@
         renderPaceGoals(global.lastSubjectStats || {});
 
         // Reset inputs
-        document.getElementById('pace-deadline').value = '';
-        if (document.getElementById('pace-bundle-name')) document.getElementById('pace-bundle-name').value = '';
+        const dl1 = document.getElementById('add-pace-date');
+        const dl2 = document.getElementById('pace-deadline');
+        if (dl1) dl1.value = '';
+        if (dl2) dl2.value = '';
+
+        const nm1 = document.getElementById('add-pace-name');
+        const nm2 = document.getElementById('pace-bundle-name');
+        if (nm1) nm1.value = '';
+        if (nm2) nm2.value = '';
         togglePaceBundleType();
 
         toast(`Pace goal "${target}" successfully added!`, 'success');
@@ -503,8 +628,8 @@
         const checklistSection = document.getElementById('epm-checklist-section');
         const nameInput = document.getElementById('edit-pace-name');
         const subjectsContainer = document.getElementById('edit-pace-subjects-container');
-        const deadlineInput = document.getElementById('edit-pace-deadline');
-        const startInput = document.getElementById('edit-pace-start-date');
+        const deadlineInput = document.getElementById('edit-pace-date') || document.getElementById('edit-pace-deadline');
+        const startInput = document.getElementById('edit-pace-start') || document.getElementById('edit-pace-start-date');
 
         const AppStateRef = typeof global.AppState !== 'undefined' ? global.AppState : (typeof window !== 'undefined' ? window.AppState : {});
         const tracksList = global.tracks || (AppStateRef && AppStateRef.tracks) || [];
@@ -693,8 +818,16 @@
         const startDt = goal.startDate ? parseDate(goal.startDate) : new Date(defaultPlanStart);
         const endDt = goal.deadline ? parseDate(goal.deadline) : new Date();
 
-        if (startInput) startInput.value = startDt.toISOString().split('T')[0];
-        if (deadlineInput) deadlineInput.value = endDt.toISOString().split('T')[0];
+        const startIso = startDt.toISOString().split('T')[0];
+        const endIso = endDt.toISOString().split('T')[0];
+
+        if (startInput) startInput.value = startIso;
+        if (deadlineInput) deadlineInput.value = endIso;
+
+        const startFallback = document.getElementById('edit-pace-start-date');
+        const deadlineFallback = document.getElementById('edit-pace-deadline');
+        if (startFallback && startFallback !== startInput) startFallback.value = startIso;
+        if (deadlineFallback && deadlineFallback !== deadlineInput) deadlineFallback.value = endIso;
 
         if (typeof global.openModal === 'function') {
             global.openModal('edit-pace-modal');
@@ -710,8 +843,15 @@
         const goal = goalsList.find(g => g.id === global.editingPaceId);
         if (!goal) return;
 
-        const deadline = document.getElementById('edit-pace-deadline').value;
-        const startDate = document.getElementById('edit-pace-start-date').value;
+        const deadlineEl = (document.getElementById('edit-pace-deadline') && document.getElementById('edit-pace-deadline').value)
+            ? document.getElementById('edit-pace-deadline')
+            : document.getElementById('edit-pace-date');
+        const startEl = (document.getElementById('edit-pace-start-date') && document.getElementById('edit-pace-start-date').value)
+            ? document.getElementById('edit-pace-start-date')
+            : document.getElementById('edit-pace-start');
+
+        const deadline = deadlineEl ? deadlineEl.value : '';
+        const startDate = startEl ? startEl.value : '';
         const toast = (typeof global.showToast === 'function') ? global.showToast : console.log;
 
         if (!deadline || !startDate) {
@@ -734,6 +874,10 @@
         if (goal.type === 'global') {
             const checkedSubs = Array.from(document.querySelectorAll('.edit-pace-subject-cb:checked')).map(cb => cb.value);
             const checkedSecs = Array.from(document.querySelectorAll('.edit-pace-sec-cb:checked')).map(cb => cb.value);
+            const newNameInput = document.getElementById('edit-pace-name');
+            if (newNameInput && newNameInput.value.trim()) {
+                goal.target = newNameInput.value.trim();
+            }
             goal.subjects = checkedSubs;
             goal.secondaryPaces = checkedSecs;
         } else {
@@ -742,11 +886,18 @@
                 const newName = newNameInput.value.trim();
                 if (newName) goal.target = newName;
             }
+            const allBoxes = Array.from(document.querySelectorAll('.edit-pace-bundle-cb'));
             const checkedItems = Array.from(document.querySelectorAll('.edit-pace-bundle-cb:checked')).map(cb => cb.value);
-            if (goal.programs || goal.type === 'program') {
-                goal.programs = checkedItems;
-            } else if (goal.subjects || goal.type === 'subject') {
-                goal.subjects = checkedItems;
+            if (allBoxes.length > 0 && checkedItems.length === 0) {
+                toast('Please keep at least one item selected for this timeline!', 'error');
+                return;
+            }
+            if (checkedItems.length > 0) {
+                if (goal.programs || goal.type === 'program') {
+                    goal.programs = checkedItems;
+                } else if (goal.subjects || goal.type === 'subject') {
+                    goal.subjects = checkedItems;
+                }
             }
         }
 
