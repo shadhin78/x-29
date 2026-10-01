@@ -605,6 +605,14 @@
                 id = decodeURIComponent(id);
             } catch (e) {}
             id = id.replace(/^\/+|\/+$/g, '').trim();
+            if (id.startsWith('pages/')) {
+                id = id.substring(6).trim();
+            }
+            if (id.endsWith('/index')) {
+                id = id.substring(0, id.length - 6).trim();
+            } else if (id.endsWith('/index.html')) {
+                id = id.substring(0, id.length - 11).trim();
+            }
 
             if (id === '' || id === 'dashboard' || id === 'dashboard-page' || id === 'home') return 'dashboard';
             if (id === 'focus') return 'focus';

@@ -48,7 +48,13 @@ const server = http.createServer((req, res) => {
     url = req.url.split('?')[0];
   }
 
-  // Route /api/config to environmental response
+  // Route /api/config (and normalize .js / .json variants) to single canonical endpoint
+  if (url === '/api/config.js' || url === '/api/config.json') {
+    res.writeHead(301, { 'Location': '/api/config' });
+    res.end();
+    return;
+  }
+
   if (url === '/api/config') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
@@ -73,12 +79,39 @@ const server = http.createServer((req, res) => {
   // Canonical Redirects for obsolete duplicate routes
   const OBSOLETE_REDIRECTS = {
     '/dashboard': '/',
+    '/index': '/',
+    '/index.html': '/',
     '/paces-management': '/pace',
     '/spectra-analytics': '/analytics',
     '/daily-schedule': '/schedule',
     '/subject': '/subjects',
     '/exam-routine': '/exam',
-    '/monthly-target-setup': '/daily-actions/monthly-setup'
+    '/monthly-target-setup': '/daily-actions/monthly-setup',
+    // Legacy pages/ prefixes
+    '/pages/pace': '/pace',
+    '/pages/dashboard': '/',
+    '/pages/focus': '/focus',
+    '/pages/subjects': '/subjects',
+    '/pages/schedule': '/schedule',
+    '/pages/analytics': '/analytics',
+    '/pages/exam': '/exam',
+    '/pages/master-config': '/master-config',
+    '/pages/outcome': '/outcome',
+    '/pages/daily-actions': '/daily-actions',
+    '/pages/daily-actions/monthly-setup': '/daily-actions/monthly-setup',
+    '/pages/timer': '/timer',
+    // Obsolete /index suffixes
+    '/pace/index': '/pace',
+    '/focus/index': '/focus',
+    '/subjects/index': '/subjects',
+    '/schedule/index': '/schedule',
+    '/analytics/index': '/analytics',
+    '/exam/index': '/exam',
+    '/master-config/index': '/master-config',
+    '/outcome/index': '/outcome',
+    '/daily-actions/index': '/daily-actions',
+    '/daily-actions/monthly-setup/index': '/daily-actions/monthly-setup',
+    '/timer/index': '/timer'
   };
   if (OBSOLETE_REDIRECTS[url]) {
     res.writeHead(301, { 'Location': OBSOLETE_REDIRECTS[url] });

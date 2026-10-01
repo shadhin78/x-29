@@ -165,7 +165,13 @@ async function testAll() {
         { urlPath: '/daily-actions', expectedPageId: 'daily-actions', expectedPath: '/daily-actions' },
         { urlPath: '/daily%20actions', expectedPageId: 'daily-actions', expectedPath: '/daily-actions' },
         { urlPath: '/daily-actions/monthly-setup', expectedPageId: 'monthly-target-setup', expectedPath: '/daily-actions/monthly-setup' },
-        { urlPath: '/monthly-target-setup', expectedPageId: 'monthly-target-setup', expectedPath: '/daily-actions/monthly-setup' }
+        { urlPath: '/monthly-target-setup', expectedPageId: 'monthly-target-setup', expectedPath: '/daily-actions/monthly-setup' },
+        { urlPath: '/pages/pace', expectedPageId: 'paces-management', expectedPath: '/pace' },
+        { urlPath: '/pace/index', expectedPageId: 'paces-management', expectedPath: '/pace' },
+        { urlPath: '/pages/dashboard', expectedPageId: 'dashboard', expectedPath: '/' },
+        { urlPath: '/pages/focus', expectedPageId: 'focus', expectedPath: '/focus' },
+        { urlPath: '/pages/subjects', expectedPageId: 'subjects', expectedPath: '/subjects' },
+        { urlPath: '/daily-actions/monthly-setup/index', expectedPageId: 'monthly-target-setup', expectedPath: '/daily-actions/monthly-setup' }
     ];
 
     for (const r of routeMappings) {
@@ -278,6 +284,26 @@ async function testAll() {
         assert(devServerCode.includes('requestedExt = path.extname(url)'), 'dev-server must check requestedExt');
         assert(devServerCode.includes('index.html'), 'dev-server must serve index.html for clean routes');
         assert(devServerCode.includes("url === '/login'"), 'dev-server must handle clean /login URL');
+    });
+
+    await runTest('Vercel configuration and Dev Server enforce single canonical API route and obsolete redirects', () => {
+        const vercelJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../vercel.json'), 'utf8'));
+        const devServerCode = fs.readFileSync(path.join(__dirname, '../js/dev-server.js'), 'utf8');
+
+        // Check cleanUrls and trailingSlash in vercel.json
+        assert.strictEqual(vercelJson.cleanUrls, true, 'vercel.json must enforce cleanUrls: true');
+        assert.strictEqual(vercelJson.trailingSlash, false, 'vercel.json must enforce trailingSlash: false');
+
+        // Check API canonicalization
+        assert(vercelJson.redirects.some(r => r.source === '/api/config.js' && r.destination === '/api/config'), 'vercel.json redirects /api/config.js to /api/config');
+        assert(vercelJson.redirects.some(r => r.source === '/api/config.json' && r.destination === '/api/config'), 'vercel.json redirects /api/config.json to /api/config');
+        assert(devServerCode.includes("url === '/api/config.js' || url === '/api/config.json'"), 'dev-server normalizes /api/config variants');
+
+        // Check obsolete /pages/* redirects
+        assert(vercelJson.redirects.some(r => r.source === '/pages/pace' && r.destination === '/pace'), 'vercel.json redirects /pages/pace to /pace');
+        assert(vercelJson.redirects.some(r => r.source === '/pace/index' && r.destination === '/pace'), 'vercel.json redirects /pace/index to /pace');
+        assert(devServerCode.includes("'/pages/pace': '/pace'"), 'dev-server redirects /pages/pace');
+        assert(devServerCode.includes("'/pace/index': '/pace'"), 'dev-server redirects /pace/index');
     });
 
     // ---------------------------------------------------------
@@ -442,15 +468,14 @@ async function testAll() {
         assert(/id="spectra-hm-modal-close-btn"[\s\S]*?<path[^>]*?d="M6 18L18 6M6 6l12 12"/.test(indexHtml), 'Spectra heatmap modal close thin path');
     });
 
-    await runTest('Site-wide SVG vector integrity & total parity across all 18 route files (Step 008)', () => {
+    await runTest('Site-wide SVG vector integrity & total parity across all 11 canonical SPA route files (Step 008)', () => {
         const indexHtml = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
         const countPaths = (indexHtml.match(/<path\b/g) || []).length;
         assert(countPaths > 180, `index.html must contain comprehensive inline paths (found ${countPaths})`);
 
         const routesToCheck = [
-            'dashboard', 'timer', 'focus', 'subjects', 'subject', 'schedule', 'daily-schedule',
-            'analytics', 'spectra-analytics', 'exam', 'exam-routine', 'pace', 'paces-management',
-            'master-config', 'outcome', 'daily-actions', 'monthly-target-setup'
+            'focus', 'subjects', 'daily-actions', 'daily-actions/monthly-setup',
+            'schedule', 'pace', 'master-config', 'outcome', 'exam', 'analytics', 'timer'
         ];
 
         routesToCheck.forEach(r => {
