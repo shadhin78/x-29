@@ -1630,8 +1630,10 @@
     }
 
     function toggleSubDataset(k) {
-        if (!global.chartVisibility || !global.chartVisibility.subjects) return;
-        global.chartVisibility.subjects[k] = !global.chartVisibility.subjects[k];
+        if (!global.chartVisibility) global.chartVisibility = { subjects: {} };
+        if (!global.chartVisibility.subjects) global.chartVisibility.subjects = {};
+        const currentVis = global.chartVisibility.subjects[k] !== false;
+        global.chartVisibility.subjects[k] = !currentVis;
         if (global.subjectTrendLineChartInstance) {
             const ds = global.subjectTrendLineChartInstance.data.datasets.find(d => d.subjectKey === k);
             if (ds) {
@@ -1640,6 +1642,9 @@
             }
         }
         updateLegends();
+        if (typeof global.updateSubjectTrendLegend === 'function') {
+            global.updateSubjectTrendLegend();
+        }
     }
 
     function toggleRevSubDataset(k) {
@@ -1693,6 +1698,10 @@
         }).join('');
         const yLeg = document.getElementById('yearly-legend');
         if (yLeg) yLeg.innerHTML = yearHtml;
+
+        if (typeof global.updateSubjectTrendLegend === 'function') {
+            global.updateSubjectTrendLegend();
+        }
     }
 
     function updateRevisionLegends() {
@@ -1914,6 +1923,9 @@
         renderTrendCharts();
         if (global.revisionTrendChartInstance && typeof global.renderRevisionTrendChart === 'function') {
             global.renderRevisionTrendChart();
+        }
+        if (global.subjectTrendLineChartInstance && typeof global.renderSubjectTrendCircle === 'function') {
+            global.renderSubjectTrendCircle();
         }
         if (typeof document !== 'undefined') {
             ['1Y', '2Y', '3Y', 'ALL'].forEach(id => {

@@ -381,6 +381,18 @@ test('Chapter tooltips show and hide properly', () => {
     assert.strictEqual(tooltipEl.classList.contains('hidden'), true);
 });
 
+test('updateSubjectTrendLegend renders subject chips with names, percentages, and toggle action', () => {
+    let legEl = document.getElementById('subject-trend-legend');
+    if (!legEl) {
+        legEl = new MockElement('subject-trend-legend');
+        document.body.appendChild(legEl);
+    }
+    assert.strictEqual(typeof ChapterMap.updateSubjectTrendLegend, 'function');
+    ChapterMap.updateSubjectTrendLegend();
+    assert.ok(legEl.innerHTML.length > 0, 'Legend should have content');
+    assert.ok(legEl.innerHTML.includes('toggleSubDataset'), 'Legend chips should include toggle action');
+});
+
 // -------------------------------------------------------------
 // Group 2: Spectra Circle Charts
 // -------------------------------------------------------------

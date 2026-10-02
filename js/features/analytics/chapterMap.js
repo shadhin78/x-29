@@ -845,6 +845,73 @@
         if (typeof global.updateLegends === 'function') {
             global.updateLegends();
         }
+        updateSubjectTrendLegend();
+    }
+
+    function updateSubjectTrendLegend() {
+        if (typeof document === 'undefined') return;
+        const leg = document.getElementById('subject-trend-legend');
+        if (!leg) return;
+
+        const getAllSubsFn = global.getAllSubjects || (typeof window !== 'undefined' ? window.getAllSubjects : null) || (() => []);
+        const allSubs = getAllSubsFn().slice().sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+
+        const isGlobal = global.subjectTrendGlobalMode !== false;
+        const subsToDisplay = isGlobal
+            ? allSubs
+            : allSubs.filter(s => global.selectedSubjectsTrend && global.selectedSubjectsTrend.includes(s.subject));
+
+        if (!subsToDisplay || subsToDisplay.length === 0) {
+            leg.innerHTML = `<span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider py-1">No subjects to display</span>`;
+            return;
+        }
+
+        const getCleanLabel = (typeof global.getDynamicCleanLabel === 'function')
+            ? global.getDynamicCleanLabel
+            : ((typeof window !== 'undefined' && typeof window.getDynamicCleanLabel === 'function')
+                ? window.getDynamicCleanLabel
+                : (s => s));
+        const getSubColor = (typeof global.getSubjectColor === 'function')
+            ? global.getSubjectColor
+            : ((typeof window !== 'undefined' && typeof window.getSubjectColor === 'function')
+                ? window.getSubjectColor
+                : (() => '#6366f1'));
+        const chartVis = global.chartVisibility || { subjects: {} };
+        if (!chartVis.subjects) chartVis.subjects = {};
+        const stats = (global.latestChartStats && global.latestChartStats.subjects) || {};
+        const subData = global.lastSubjectTrendData || {};
+
+        leg.innerHTML = subsToDisplay.map(s => {
+            const k = s.subject;
+            const escapedK = k.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+            let val = 0;
+            if (stats[k] !== undefined && stats[k] !== null) {
+                val = stats[k];
+            } else if (subData[k] && Array.isArray(subData[k])) {
+                const validVals = subData[k].filter(v => v !== null && !isNaN(v));
+                if (validVals.length > 0) val = validVals[validVals.length - 1];
+            } else if (global.lastSubjectStats && global.lastSubjectStats[k]) {
+                const sTotal = Math.max(1, s.chapters || 1);
+                val = Math.round((global.lastSubjectStats[k].effectiveChapters / sTotal) * 100);
+            }
+
+            const active = isGlobal ? (chartVis.subjects[k] !== false) : true;
+            const color = getSubColor(k);
+            const label = getCleanLabel(k, 16);
+
+            const activeStyle = active
+                ? `border-color: ${color}55; background: linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.8)); box-shadow: 0 0 10px ${color}20; opacity: 1;`
+                : `border-color: rgba(255, 255, 255, 0.08); background-color: rgba(15,23,42,0.4); opacity: 0.35; filter: grayscale(100%); text-decoration: line-through;`;
+
+            return `<button type="button" onclick="window.toggleSubDataset && window.toggleSubDataset('${escapedK}')"
+                         title="${k} (${val}% completed) - Click to toggle line"
+                         class="cursor-pointer flex items-center space-x-1.5 md:space-x-2 px-2.5 sm:px-3 py-1.5 rounded-xl border active:scale-95 transition-all duration-200 hover:scale-105 backdrop-blur-md select-none group text-left"
+                         style="${activeStyle}">
+                <div class="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" style="background-color: ${color}; box-shadow: 0 0 8px ${color}"></div>
+                <span class="text-[8px] md:text-[9.5px] font-black text-slate-200 uppercase tracking-wider whitespace-nowrap">${label}: <span class="font-extrabold text-white">${val}%</span></span>
+            </button>`;
+        }).join('');
     }
 
     function openSubjectTrendModal() {
@@ -856,6 +923,7 @@
         if (typeof global.openModal === 'function') global.openModal('subject-trend-modal');
         renderSubjectTrendCircle();
         setSubjectTrendChartStyle(global.subjectTrendChartStyle);
+        updateSubjectTrendLegend();
     }
 
     function openSingleSubjectTrendModal(subjectName) {
@@ -867,6 +935,7 @@
         if (typeof global.openModal === 'function') global.openModal('subject-trend-modal');
         renderSubjectTrendCircle();
         setSubjectTrendChartStyle(global.subjectTrendChartStyle);
+        updateSubjectTrendLegend();
     }
 
     function setSubjectTrendChartStyle(style) {
@@ -887,11 +956,29 @@
             if (lineContainer) lineContainer.classList.remove('hidden');
             if (circleBtn) circleBtn.className = inactiveClass;
             if (lineBtn) lineBtn.className = activeClass;
+            updateGlobalBtnStyle();
+            updateSubjectTrendLegend();
+
+            if (!global.subjectTrendLineChartInstance && global.lastSubjectTrendData && global.lastTrendMonths) {
+                renderSubjectTrendCircle();
+            }
+
             if (global.subjectTrendLineChartInstance) {
                 global.subjectTrendLineChartInstance.resize();
                 global.subjectTrendLineChartInstance.update();
             }
-            updateGlobalBtnStyle();
+            requestAnimationFrame(() => {
+                if (global.subjectTrendLineChartInstance) {
+                    global.subjectTrendLineChartInstance.resize();
+                    global.subjectTrendLineChartInstance.update('none');
+                }
+            });
+            setTimeout(() => {
+                if (global.subjectTrendLineChartInstance) {
+                    global.subjectTrendLineChartInstance.resize();
+                    global.subjectTrendLineChartInstance.update('none');
+                }
+            }, 100);
         } else {
             const activeSub = global.activeSingleSubjectTrend || 'Subject';
             safeText('stm-title', `${activeSub}`);
@@ -926,6 +1013,7 @@
         }
         renderSubjectTrendCircle();
         setSubjectTrendChartStyle(global.subjectTrendChartStyle || 'circle');
+        updateSubjectTrendLegend();
     }
 
     function stmToggleSubjectCheck(subjectName) {
@@ -939,6 +1027,7 @@
         }
         renderSubjectTrendCircle();
         setSubjectTrendChartStyle(global.subjectTrendChartStyle || 'circle');
+        updateSubjectTrendLegend();
     }
 
     function stmSelectAll() {
@@ -946,12 +1035,14 @@
         global.selectedSubjectsTrend = getAllSubsFn().map(s => s.subject);
         renderSubjectTrendCircle();
         setSubjectTrendChartStyle(global.subjectTrendChartStyle || 'circle');
+        updateSubjectTrendLegend();
     }
 
     function stmDeselectAll() {
         global.selectedSubjectsTrend = global.activeSingleSubjectTrend ? [global.activeSingleSubjectTrend] : [];
         renderSubjectTrendCircle();
         setSubjectTrendChartStyle(global.subjectTrendChartStyle || 'circle');
+        updateSubjectTrendLegend();
     }
 
     function toggleSubjectTrendGlobal() {
@@ -959,6 +1050,7 @@
         updateGlobalBtnStyle();
         renderSubjectTrendCircle();
         setSubjectTrendChartStyle(global.subjectTrendChartStyle || 'circle');
+        updateSubjectTrendLegend();
     }
 
     function updateGlobalBtnStyle() {
@@ -1015,7 +1107,8 @@
         stmSelectAll,
         stmDeselectAll,
         toggleSubjectTrendGlobal,
-        updateGlobalBtnStyle
+        updateGlobalBtnStyle,
+        updateSubjectTrendLegend
     };
 
     // Attach to global window scope
@@ -1039,6 +1132,7 @@
     global.stmDeselectAll = stmDeselectAll;
     global.toggleSubjectTrendGlobal = toggleSubjectTrendGlobal;
     global.updateGlobalBtnStyle = updateGlobalBtnStyle;
+    global.updateSubjectTrendLegend = updateSubjectTrendLegend;
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = ChapterMap;

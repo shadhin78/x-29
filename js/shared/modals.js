@@ -180,7 +180,12 @@ function openModal(modalId, typeKey = null) {
             resizeAndUpdate(win.subjectWiseChartInstance);
         }
         if (modalId === 'pace-candle-modal') resizeAndUpdate(win.paceCandleChartInstance);
-        if (modalId === 'subject-trend-modal') resizeAndUpdate(win.subjectTrendLineChartInstance);
+        if (modalId === 'subject-trend-modal') {
+            resizeAndUpdate(win.subjectTrendLineChartInstance);
+            if (typeof win.updateSubjectTrendLegend === 'function') {
+                win.updateSubjectTrendLegend();
+            }
+        }
     }, 320);
 }
 
