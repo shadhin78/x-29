@@ -790,7 +790,12 @@
                         if (p === pageId) {
                             el.classList.remove('hidden');
                             if (!isSamePage) {
+                                // Force a DOM reflow between remove and re-add so the browser
+                                // treats this as a fresh animation start, not a no-op.
+                                // Without this, browsers batch both mutations in the same paint
+                                // frame and the CSS animation never fires (Vercel / 127.0.0.1 bug).
                                 el.classList.remove('animate-page-enter');
+                                void el.offsetHeight; // trigger reflow
                                 el.classList.add('animate-page-enter');
                             }
                         } else {
