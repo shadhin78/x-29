@@ -4,7 +4,7 @@
  * and strict Network-Only bypass for Firebase Auth, Firestore, and dynamic API endpoints.
  */
 
-const CACHE_NAME = 'x29-static-v1.2.0';
+const CACHE_NAME = 'x29-static-v1.2.1';
 
 // Critical static assets to pre-cache on service worker installation
 const PRECACHE_ASSETS = [

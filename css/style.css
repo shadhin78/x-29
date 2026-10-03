@@ -99,14 +99,20 @@ html {
     animation: motionFadeIn var(--motion-dur-fast) var(--motion-ease-decel) forwards;
 }
 
-/* Phase 4: Staggered Content Entrance Delays */
+/* Phase 7: Staggered Content Entrance Delays */
 .motion-stagger-1 { animation-delay: 0ms !important; }
 .motion-stagger-2 { animation-delay: 40ms !important; }
 .motion-stagger-3 { animation-delay: 80ms !important; }
 .motion-stagger-4 { animation-delay: 120ms !important; }
 .motion-stagger-5 { animation-delay: 160ms !important; }
 
-/* Phase 5 & 6: Interactive Card Hover & Tactile Press */
+.motion-stagger-container > *:nth-child(1) { animation-delay: 0ms !important; }
+.motion-stagger-container > *:nth-child(2) { animation-delay: 40ms !important; }
+.motion-stagger-container > *:nth-child(3) { animation-delay: 80ms !important; }
+.motion-stagger-container > *:nth-child(4) { animation-delay: 120ms !important; }
+.motion-stagger-container > *:nth-child(n+5) { animation-delay: 160ms !important; }
+
+/* Phase 8 & 9: Interactive Card Hover & Tactile Press */
 .motion-card-interactive,
 .card-hover,
 #pace-stats-section .grid > div,
@@ -123,12 +129,12 @@ html {
     .motion-card-interactive:hover,
     .card-hover:hover,
     #pace-stats-section .grid > div:hover {
-        transform: translateY(-4px);
+        transform: translateY(-2px);
         box-shadow: var(--motion-shadow-card-hover);
     }
     #pace-goals-container > div:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 20px 30px -8px rgba(0, 0, 0, 0.5), 0 0 20px 2px rgba(249, 115, 22, 0.1);
+        transform: translateY(-2px);
+        box-shadow: 0 16px 28px -6px rgba(0, 0, 0, 0.45), 0 0 16px 2px rgba(249, 115, 22, 0.12);
         border-color: rgba(249, 115, 22, 0.45);
     }
 }
@@ -140,8 +146,9 @@ html {
     transition-duration: var(--motion-dur-micro);
 }
 
-/* Phase 5 & 6: Interactive Button Hover & Tactile Click */
+/* Phase 8 & 9: Interactive Button Hover & Tactile Click */
 .motion-btn-interactive,
+.btn-motion,
 button[id^="btn-"]:not(:disabled),
 #btn-add-pace-goal,
 #btn-save-pace-edit,
@@ -157,23 +164,25 @@ button[id^="btn-"]:not(:disabled),
 
 @media (hover: hover) {
     .motion-btn-interactive:hover,
+    .btn-motion:hover,
     button[id^="btn-"]:not(:disabled):hover,
     #btn-add-pace-goal:hover,
     #btn-save-pace-edit:hover {
-        transform: translateY(-2px);
+        transform: translateY(-1.5px);
         filter: brightness(1.06);
         box-shadow: var(--motion-shadow-btn-hover);
     }
 }
 
 .motion-btn-interactive:active,
+.btn-motion:active,
 button[id^="btn-"]:not(:disabled):active,
 #btn-add-pace-goal:active,
 #btn-save-pace-edit:active,
 #btn-open-pace-trend-modal:active {
-    transform: translateY(1px) scale(0.97);
+    transform: scale(0.98);
     transition-duration: 0.08s;
-    filter: brightness(0.95);
+    filter: brightness(0.96);
 }
 
 /* Action Icon Buttons */
@@ -336,24 +345,36 @@ select:focus {
     will-change: transform, opacity;
 }
 
-/* Phase 11: Universal Modal Physics */
+/* Phase 14: Universal Modal Physics */
 .motion-modal-backdrop,
 .modal-backdrop,
+div[id$="-backdrop"],
 [id$="-modal"] {
-    transition: opacity var(--motion-dur-normal, 0.25s) var(--motion-ease-decel) !important;
+    transition: opacity var(--motion-dur-normal, 260ms) var(--motion-ease-decel) !important;
     will-change: opacity;
 }
 
 .motion-modal-dialog,
 .modal-content,
+div[id$="-content"],
 [id$="-modal"] [id$="-content"] {
-    transition: transform var(--motion-dur-modal, 0.32s) var(--motion-ease-decel),
-                opacity var(--motion-dur-normal, 0.26s) var(--motion-ease-decel),
-                box-shadow var(--motion-dur-modal, 0.32s) ease !important;
+    transition: transform var(--motion-dur-modal, 280ms) var(--motion-ease-decel),
+                opacity var(--motion-dur-normal, 260ms) var(--motion-ease-decel),
+                box-shadow var(--motion-dur-modal, 280ms) ease !important;
     will-change: transform, opacity;
 }
 
-button[data-modal-close] {
+/* Restrained Modal Entrance: (scale 0.98 + 10px translate) rather than dramatic zoom */
+[id$="-modal"] [id$="-content"].scale-95 {
+    transform: scale(0.98) translateY(10px) !important;
+}
+
+[id$="-modal"] [id$="-content"].scale-100 {
+    transform: scale(1) translateY(0) !important;
+}
+
+button[data-modal-close],
+button[data-close-modal] {
     transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.18s ease, background-color 0.18s ease;
     will-change: transform;
 }
@@ -416,12 +437,45 @@ details[open] summary svg {
     transform: rotate(180deg);
 }
 
-/* Phase 16: Table Row Micro-Interactions */
-.motion-table-row {
-    transition: background-color var(--motion-dur-micro) ease, border-color var(--motion-dur-micro) ease;
+/* Phase 16: Universal Tabs & Segmented Controls */
+[role="tab"],
+button[id*="-tab-"],
+button[data-tab] {
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast) var(--motion-ease-pop),
+                background-color var(--motion-dur-fast) ease,
+                color var(--motion-dur-fast) ease,
+                border-color var(--motion-dur-fast) ease,
+                box-shadow var(--motion-dur-fast) ease;
+}
+
+@media (hover: hover) {
+    [role="tab"]:hover:not(.active),
+    button[id*="-tab-"]:hover,
+    button[data-tab]:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.08);
+    }
+}
+
+[role="tab"]:active,
+button[id*="-tab-"]:active,
+button[data-tab]:active {
+    transform: scale(0.97);
+    transition-duration: 0.08s;
+}
+
+/* Phase 19: Table Row Micro-Interactions */
+.motion-table-row,
+tbody tr:not(.no-hover),
+.table-row-interactive {
+    transition: background-color var(--motion-dur-micro) ease;
 }
 @media (hover: hover) {
-    .motion-table-row:hover {
+    .motion-table-row:hover,
+    tbody tr:not(.no-hover):hover,
+    .table-row-interactive:hover {
         background-color: rgba(255, 255, 255, 0.035);
     }
 }

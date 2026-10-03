@@ -51,7 +51,7 @@ const OBSOLETE_ROUTE_DIRS = [
     path.join('pages', 'Polymath Orbit')
 ];
 
-const ASSET_VERSION = '1.2.0';
+const ASSET_VERSION = '1.2.1';
 
 const ROUTE_CONFIGS = {
     'focus': {
