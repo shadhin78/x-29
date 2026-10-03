@@ -334,61 +334,82 @@ The Pace Management interface consists of 3 primary visual sections:
 ### 6.2 Active Timeline Card (HTML Blueprint)
 
 ```html
-<div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm flex flex-col justify-between relative group hover:border-slate-300 dark:hover:border-slate-600 transition-all">
+<div class="bg-[#131b2e] p-5 sm:p-6 rounded-3xl border border-slate-700/60 shadow-lg flex flex-col justify-between relative group hover:border-slate-600 transition-all">
   
-  <!-- Header: Target Name, Badges & Action Buttons -->
+  <!-- Header: Dot, Scope Label & Action Buttons -->
   <div>
-    <div class="flex justify-between items-start mb-2">
-      <span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-900 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40">
-        Bundle
-      </span>
+    <div class="flex justify-between items-center mb-1">
+      <div class="flex items-center">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-orange-500 mr-2"></span>
+        <span class="text-[10px] md:text-[11px] font-black uppercase tracking-wider text-slate-400">BUNDLE GOAL</span>
+      </div>
       <div class="flex items-center space-x-1">
-        <!-- Edit Button -->
-        <button class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" title="Edit">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+        <!-- Action Buttons -->
+        <button class="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-all" title="Burn-up Trajectory">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
         </button>
-        <!-- Delete Button -->
-        <button class="p-1.5 text-slate-400 hover:text-red-500 transition-colors" title="Delete">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        <button class="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-lg transition-all" title="Candlestick Chart">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        </button>
+        <button class="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg transition-all" title="Details">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        </button>
+        <button class="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-all" title="Edit">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+        </button>
+        <button class="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-all" title="Delete">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </button>
       </div>
     </div>
 
-    <h4 class="font-black text-base text-slate-800 dark:text-slate-100 truncate tracking-tight">Phase 1 Target</h4>
-    <p class="text-[9px] font-bold text-slate-500 tracking-wider mt-0.5">
-      Timeline: <span class="text-indigo-500 dark:text-indigo-400">01 Jan</span> - <span class="text-orange-500">31 Dec 2026</span>
+    <h4 class="font-black text-xl sm:text-2xl text-white truncate tracking-tight mt-2">Phase 1 Target</h4>
+    <p class="text-xs font-bold text-slate-400 tracking-wider mt-1">
+      Timeline: <span class="text-blue-400 font-bold">01 January 2026</span> - <span class="text-orange-400 font-bold">31 December 2026</span>
     </p>
-    <p class="text-[8px] font-bold text-slate-400 truncate mt-1">Includes: Math, Data Structures, Physics</p>
+    <p class="text-[11px] font-bold text-blue-400/90 truncate mt-1">Math, Data Structures, Physics</p>
   </div>
 
-  <!-- Progress Bar & Velocity Metric Blocks -->
-  <div class="mt-4">
-    <div class="flex justify-between items-end mb-1 text-[9px] font-bold">
-      <span class="text-slate-400">45 / 100 Ch</span>
-      <span class="text-slate-500 font-black">45%</span>
+  <!-- Progress Bar & Redesigned Velocity / Required / Est Part -->
+  <div class="mt-4 sm:mt-5">
+    <div class="flex justify-between items-end mb-1.5 text-xs font-bold">
+      <span class="text-slate-300 font-bold">45 / 100 Ch</span>
+      <span class="text-slate-400 font-bold">45%</span>
     </div>
     
-    <!-- Dynamic Progress Bar -->
-    <div class="w-full bg-slate-100 dark:bg-slate-700/50 h-2 rounded-full overflow-hidden p-0.5 border border-slate-200/50 dark:border-slate-600/50 mb-3">
-      <div class="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-indigo-500 to-emerald-500" style="width: 45%;"></div>
+    <!-- Progress Bar -->
+    <div class="w-full bg-[#1e293b] h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-700/50 mb-4">
+      <div class="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-orange-500 to-amber-500" style="width: 45%;"></div>
     </div>
 
-    <!-- Velocity Comparison Grid -->
-    <div class="grid grid-cols-2 gap-2 text-center">
-      <div class="p-2 rounded-xl border border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-900/30">
-        <span class="block text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Velocity</span>
-        <span class="text-xs font-black text-slate-700 dark:text-slate-200">1.25 <span class="text-[7px] text-slate-400 font-bold">Ch/Day</span></span>
+    <!-- 2-Tier Velocity / Required / Est Noticeable Section -->
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <!-- REQ PACE Box (Emerald on-track / Rose behind) -->
+      <div class="p-3.5 sm:p-4 rounded-2xl border bg-[#0b2424] border-emerald-500/40 flex flex-col justify-between">
+        <div>
+          <span class="block text-[9px] md:text-[10px] font-black uppercase tracking-wider text-emerald-400">REQ PACE</span>
+          <div class="text-xl sm:text-2xl font-black text-emerald-400 mt-1">1.80 <span class="text-[10px] sm:text-xs font-bold text-emerald-500/80">ch/d</span></div>
+        </div>
+        <div class="text-[9px] md:text-[10px] font-black uppercase tracking-wider text-emerald-400 mt-2.5 sm:mt-3">42 DAYS LEFT</div>
       </div>
-      <div class="p-2 rounded-xl border bg-orange-50/50 dark:bg-orange-950/20 border-orange-200/50 dark:border-orange-800/40">
-        <span class="block text-[8px] font-black uppercase tracking-widest text-orange-500 opacity-70 mb-0.5">Required</span>
-        <span class="text-xs font-black text-orange-600 dark:text-orange-400">1.80 <span class="text-[7px] font-bold">Ch/Day</span></span>
+
+      <!-- CUR PACE Box -->
+      <div class="p-3.5 sm:p-4 rounded-2xl border border-slate-700/60 bg-[#162033] flex flex-col justify-between">
+        <div>
+          <span class="block text-[9px] md:text-[10px] font-black uppercase tracking-wider text-slate-400">CUR PACE</span>
+          <div class="text-xl sm:text-2xl font-black text-white mt-1">1.25 <span class="text-[10px] sm:text-xs font-bold text-slate-400">ch/d</span></div>
+        </div>
+        <div class="text-[9px] md:text-[10px] font-black uppercase tracking-wider text-emerald-400 mt-2.5 sm:mt-3">48 DAYS PASSED</div>
       </div>
     </div>
 
-    <!-- Footer: Countdown & Est Finish -->
-    <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[9px] font-bold">
-      <span class="text-slate-400">42 Days Left</span>
-      <span class="text-slate-500 dark:text-slate-300">Est: 14 Dec 2026</span>
+    <!-- EST. FINISH Box (Full Width) -->
+    <div class="p-3.5 sm:p-4 rounded-2xl border border-slate-700/60 bg-[#162033] flex items-center justify-between">
+      <div>
+        <span class="block text-[9px] md:text-[10px] font-black uppercase tracking-wider text-slate-400">EST. FINISH</span>
+        <span class="block text-[11px] sm:text-xs font-black text-amber-500 mt-0.5">44 Days Needed</span>
+      </div>
+      <div class="text-sm sm:text-base font-black text-white text-right">14 December 2026</div>
     </div>
   </div>
 </div>
