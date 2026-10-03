@@ -241,8 +241,49 @@ it('initAuth redirects unauthenticated session to login.html', async () => {
 
     await App.initAuth();
     await authCallback(null);
-
     assert.strictEqual(global.window.location.href, 'login.html', 'Null session should redirect to login.html');
+});
+
+it('initAuth preserves /pace deep link redirect when unauthenticated', async () => {
+    let authCallback = null;
+    global.window.location.pathname = '/pace';
+    global.window.location.search = '';
+    global.window.location.hash = '';
+
+    const sessionStore = new Map();
+    global.sessionStorage = {
+        setItem: (k, v) => sessionStore.set(k, v),
+        getItem: (k) => sessionStore.get(k) || null
+    };
+
+    global.window.AuthService = {
+        getCurrentUser: () => null,
+        onAuthStateChanged: (cb) => { authCallback = cb; }
+    };
+
+    await App.initAuth();
+    await authCallback(null);
+
+    assert.strictEqual(global.window.location.href, 'login.html?redirect=%2Fpace', 'Unauthenticated deep-link should redirect with ?redirect=/pace');
+    assert.strictEqual(global.sessionStorage.getItem('x29_auth_redirect'), '/pace', 'Should store deep-link path in sessionStorage');
+});
+
+it('initCurrentFeature preserves /pace requested route for authenticated users', () => {
+    let loadedPage = null;
+    let loadOptions = null;
+    global.window.location.pathname = '/pace';
+    global.window.Router = {
+        getPageIdFromPath: (path) => path.includes('pace') ? 'paces-management' : 'dashboard',
+        loadPage: (pageId, sectionId, options) => {
+            loadedPage = pageId;
+            loadOptions = options;
+        }
+    };
+
+    App.initCurrentFeature();
+
+    assert.strictEqual(loadedPage, 'paces-management', 'initCurrentFeature must mount requested /pace route');
+    assert.strictEqual(loadOptions.forceAnimation, true, 'initCurrentFeature must force entrance animation');
 });
 
 // ----------------------------------------------------

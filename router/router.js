@@ -14,7 +14,7 @@
     'use strict';
 
     const Router = {
-        ASSET_VERSION: '1.1.0',
+        ASSET_VERSION: '1.2.0',
         activePageId: 'dashboard',
         htmlCache: {},
         cssCache: {},

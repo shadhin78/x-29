@@ -305,7 +305,8 @@ export const App = {
             if (window.Router && typeof window.Router.loadPage === 'function') {
                 window.Router.loadPage(initialPage, null, {
                     updateHistory: !isRoot,
-                    replace: true
+                    replace: true,
+                    forceAnimation: true
                 });
             } else if (typeof window.switchPage === 'function') {
                 window.switchPage(initialPage);

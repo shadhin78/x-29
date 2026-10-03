@@ -15,8 +15,8 @@
  *
  * This guarantees 100% parity across:
  * 1. Live Production (Vercel): https://x-29.vercel.app/<page>
- * 2. Local Live Preview: http://127.0.0.1:3000/<page>
- * 3. Local Dev Server: http://127.0.0.1:3000/<page>
+ * 2. Canonical Development: http://localhost:3000/<page>
+ * 3. Local Live Preview: http://localhost:3000/<page>
  */
 
 const fs = require('fs');
@@ -51,7 +51,7 @@ const OBSOLETE_ROUTE_DIRS = [
     path.join('pages', 'Polymath Orbit')
 ];
 
-const ASSET_VERSION = '1.1.0';
+const ASSET_VERSION = '1.2.0';
 
 const ROUTE_CONFIGS = {
     'focus': {
