@@ -350,6 +350,60 @@ const updatedGoal = global.paceGoals.find(g => g.id === createdGoal.id);
 assert.strictEqual(updatedGoal.deadline, '2026-08-31', 'Goal deadline should be updated');
 console.log('✓ Pace Goal edited and saved successfully');
 
+// 4b. Global Pace Goal Setup: Program Dropdowns & Secondary Paces
+console.log('4b. Testing Global Pace Goal Setup (Program Dropdowns & Secondary Paces)...');
+const globalTypeEl = getOrCreateElement('add-pace-bundle-type', 'select');
+globalTypeEl.value = 'global';
+PaceManager.togglePaceBundleType();
+
+const subjectsContainer = getOrCreateElement('add-pace-subjects-container');
+assert.ok(subjectsContainer.innerHTML.includes('Part 1: Subjects Inside Program Dropdowns'), 'Should render Part 1: Subjects Inside Program Dropdowns');
+assert.ok(subjectsContainer.innerHTML.includes('Part 2: Secondary Paces'), 'Should render Part 2: Secondary Paces');
+assert.ok(subjectsContainer.innerHTML.includes('<details'), 'Should render program dropdowns as accordions');
+
+// Mock checkboxes for subject-wise and secondary paces
+const mockSubCb = new MockElement('input', 'input');
+mockSubCb.className = 'pace-bundle-cb pace-global-subject-cb';
+mockSubCb.value = 'Operating Systems';
+mockSubCb.checked = true;
+
+const mockSecCb = new MockElement('input', 'input');
+mockSecCb.className = 'pace-sec-cb';
+mockSecCb.value = createdGoal.id;
+mockSecCb.checked = true;
+
+const oldQuerySelectorAll = mockDocument.querySelectorAll;
+mockDocument.querySelectorAll = function(sel) {
+    if (sel.includes('pace-global-subject-cb:checked') || sel.includes('pace-bundle-cb:checked')) {
+        return [mockSubCb];
+    }
+    if (sel.includes('pace-sec-cb:checked')) {
+        return [mockSecCb];
+    }
+    return oldQuerySelectorAll.call(mockDocument, sel);
+};
+
+const gNameEl = getOrCreateElement('add-pace-name', 'input');
+gNameEl.value = 'Global Target 2026';
+const gStartEl = getOrCreateElement('add-pace-start', 'input');
+gStartEl.value = '2026-01-01';
+const gDeadEl = getOrCreateElement('add-pace-date', 'input');
+gDeadEl.value = '2026-12-31';
+
+PaceManager.addPaceGoal();
+mockDocument.querySelectorAll = oldQuerySelectorAll;
+
+const globalGoal = global.paceGoals.find(g => g.type === 'global');
+assert.ok(globalGoal, 'Global Pace Goal should be created');
+assert.strictEqual(globalGoal.target, 'Global Target 2026');
+assert.ok(Array.isArray(globalGoal.subjects) && globalGoal.subjects.includes('Operating Systems'), 'Should include selected subject');
+assert.ok(Array.isArray(globalGoal.secondaryPaces) && globalGoal.secondaryPaces.includes(createdGoal.id), 'Should include selected secondary pace');
+
+const globalStats = PaceEstimator.calculatePaceGoalStats(globalGoal, global.lastSubjectStats);
+assert.ok(globalStats, 'Global stats should calculate properly');
+assert.strictEqual(globalStats.total, 18, 'Total chapters should include subject + secondary pace');
+console.log('✓ Global Pace Goal created with both subjects and secondary paces successfully');
+
 // 5. Day Allocation & Goal Details Modal
 console.log('5. Testing Day Allocation & Goal Details Modal...');
 PaceManager.openGoalDetailsModal(createdGoal.id);

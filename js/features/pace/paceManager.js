@@ -145,8 +145,22 @@
             } else if (goal.type === 'subject') {
                 subText = goal.target;
             } else if (goal.type === 'global') {
-                const isManual = goal.subjects || goal.secondaryPaces;
-                subText = isManual ? `Manual Global Target` : `All subjects & active curriculum`;
+                const isManual = Boolean((goal.subjects && goal.subjects.length > 0) || (goal.secondaryPaces && goal.secondaryPaces.length > 0));
+                if (isManual) {
+                    const subCount = (goal.subjects && goal.subjects.length) || 0;
+                    const secCount = (goal.secondaryPaces && goal.secondaryPaces.length) || 0;
+                    if (subCount > 0 && secCount > 0) {
+                        subText = `${subCount} Subjects + ${secCount} Secondary Paces`;
+                    } else if (subCount > 0) {
+                        subText = `${subCount} Selected Subjects`;
+                    } else if (secCount > 0) {
+                        subText = `${secCount} Linked Secondary Paces`;
+                    } else {
+                        subText = `Manual Global Target`;
+                    }
+                } else {
+                    subText = `All subjects & active curriculum`;
+                }
             }
 
             const formatLongDate = (d) => {
@@ -323,16 +337,41 @@
         if (mode === 'global') {
             if (nameContainer) nameContainer.classList.remove('hidden');
             if (checklistSection) checklistSection.classList.remove('hidden');
-            if (checklistLabel) checklistLabel.textContent = 'Optional: Select Subjects (or leave empty for all subjects)';
+            if (checklistLabel) checklistLabel.textContent = 'Configure Global Pace (Subjects & Secondary Paces)';
 
-            let html = `<div class="space-y-3 w-full">`;
+            let html = `
+                <!-- Part 1: All Subjects inside Program Dropdowns -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block shadow-sm"></span>
+                            <h5 class="text-[11px] md:text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">Part 1: Subjects Inside Program Dropdowns</h5>
+                        </div>
+                        <span class="text-[9px] font-bold text-orange-500 uppercase tracking-wider bg-orange-50 dark:bg-orange-950/40 px-2 py-0.5 rounded border border-orange-200/40 dark:border-orange-800/40">Subject-Wise</span>
+                    </div>
+                    <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-2.5">Expand programs to pick specific subjects to include in this global pace target.</p>
+                    <div class="space-y-2 w-full">
+            `;
+
             tracksList.forEach(track => {
                 if (customPrograms[track.id]) {
                     customPrograms[track.id].forEach(prog => {
                         const progName = prog.name || prog;
                         const subs = (syllabusStructure[track.id] || []).filter(s => s.program === progName);
                         if (subs.length > 0) {
-                            html += `<div><div class="text-[10px] font-black uppercase text-slate-400 mb-1 pl-1">${progName}</div><div class="grid grid-cols-2 gap-2">`;
+                            html += `
+                                <details class="bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm group overflow-hidden transition-all duration-150 mb-2">
+                                    <summary class="cursor-pointer font-black text-[11px] md:text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200 p-3 outline-none select-none list-none flex justify-between items-center hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl transition-colors duration-75 [&::-webkit-details-marker]:hidden">
+                                        <div class="flex items-center space-x-2.5">
+                                            <svg class="w-3.5 h-3.5 text-orange-500 group-open:rotate-90 transition-transform duration-150 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                                            <span class="font-black text-slate-800 dark:text-slate-100">${progName}</span>
+                                            <span class="bg-orange-500/10 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 font-black px-2 py-0.5 rounded-md text-[9px] border border-orange-500/20">${subs.length} Subs</span>
+                                        </div>
+                                        <span class="text-[9px] font-bold text-slate-400 group-open:text-orange-500 transition-colors">Expand</span>
+                                    </summary>
+                                    <div class="p-3 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 bg-white/50 dark:bg-slate-900/40">
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                            `;
                             subs.forEach(s => {
                                 let displaySub = s.subject.replace(progName + ' - ', '').replace(progName + ' ', '');
                                 const isPassed = Boolean((passedItems.subjects && passedItems.subjects.includes(s.subject)) || (passedItems.programs && passedItems.programs.includes(progName)));
@@ -340,24 +379,69 @@
                                     html += `
                                         <label class="flex items-center justify-between space-x-2 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/50 bg-slate-100/60 dark:bg-slate-900/30 opacity-60 cursor-not-allowed shadow-none pace-passed-item" title="${s.subject} (Passed - cannot be added to pace)">
                                             <div class="flex items-center space-x-2 min-w-0 flex-1">
-                                                <input type="checkbox" value="${s.subject}" disabled class="pace-bundle-cb form-checkbox h-4 w-4 text-slate-400 rounded border-slate-300 dark:border-slate-600 cursor-not-allowed">
+                                                <input type="checkbox" value="${s.subject}" disabled class="pace-bundle-cb pace-global-subject-cb form-checkbox h-4 w-4 text-slate-400 rounded border-slate-300 dark:border-slate-600 cursor-not-allowed">
                                                 <del class="text-[10px] md:text-xs font-bold text-slate-400 dark:text-slate-500 truncate line-through" title="${s.subject}">${displaySub}</del>
                                             </div>
                                             <span class="text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">Passed</span>
                                         </label>`;
                                 } else {
                                     html += `
-                                        <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 active:scale-95 transition-all shadow-sm">
-                                            <input type="checkbox" value="${s.subject}" class="pace-bundle-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all">
+                                        <label class="flex items-center space-x-2 cursor-pointer bg-white dark:bg-slate-800/90 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-orange-400 dark:hover:border-orange-500/50 active:scale-95 transition-all shadow-sm">
+                                            <input type="checkbox" value="${s.subject}" class="pace-bundle-cb pace-global-subject-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all">
                                             <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title="${s.subject}">${displaySub}</span>
                                         </label>`;
                                 }
                             });
-                            html += `</div></div>`;
+                            html += `</div></div></details>`;
                         }
                     });
                 }
             });
+            html += `</div></div>`;
+
+            // Part 2: Secondary Paces
+            html += `
+                <div class="mt-5 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block shadow-sm"></span>
+                            <h5 class="text-[11px] md:text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">Part 2: Secondary Paces</h5>
+                        </div>
+                        <span class="text-[9px] text-indigo-500 dark:text-indigo-400 font-bold uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-200/40 dark:border-indigo-800/40">Link Timelines</span>
+                    </div>
+                    <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-3">Optionally link existing pace goals. You can set global pace by subjects above, by secondary paces here, or combine both.</p>
+            `;
+
+            const goalsList = global.paceGoals || (typeof window !== 'undefined' && window.paceGoals) || [];
+            const otherGoals = goalsList.filter(g => g.type !== 'global');
+
+            if (otherGoals.length > 0) {
+                html += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">`;
+                otherGoals.forEach(g => {
+                    const parseDate = (typeof global.Utils !== 'undefined' && typeof global.Utils.parseDateSafe === 'function')
+                        ? global.Utils.parseDateSafe
+                        : (d => new Date(d));
+                    const deadlineStr = g.deadline ? (parseDate(g.deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })) : '';
+                    html += `
+                        <label class="flex items-center justify-between space-x-2.5 cursor-pointer bg-white dark:bg-slate-800/90 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500/50 active:scale-95 transition-all shadow-sm group">
+                            <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+                                <input type="checkbox" value="${g.id}" class="pace-sec-cb form-checkbox h-4 w-4 text-indigo-500 rounded border-slate-300 focus:ring-indigo-500 accent-indigo-500 transition-all">
+                                <div class="flex flex-col min-w-0">
+                                    <span class="text-[11px] md:text-xs font-black text-slate-800 dark:text-slate-200 truncate group-hover:text-indigo-400 transition-colors" title="${g.target}">${g.target}</span>
+                                    ${deadlineStr ? `<span class="text-[9px] text-slate-400 font-bold truncate">Due: ${deadlineStr}</span>` : ''}
+                                </div>
+                            </div>
+                            <span class="text-[8px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded border border-indigo-200/50 dark:border-indigo-800/50 shrink-0">${g.type || 'Pace'}</span>
+                        </label>`;
+                });
+                html += `</div>`;
+            } else {
+                html += `
+                    <div class="p-3.5 bg-slate-100/60 dark:bg-slate-900/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700/70 text-center">
+                        <span class="text-xs mb-1 block">📌</span>
+                        <p class="text-[10px] font-bold text-slate-400">No other timeline goals created yet. You can set this global pace using subjects above, and link secondary paces later if needed.</p>
+                    </div>`;
+            }
             html += `</div>`;
             container.innerHTML = html;
             return;
@@ -399,16 +483,28 @@
             // mode === 'subjects'
             if (nameContainer) nameContainer.classList.remove('hidden');
             if (checklistSection) checklistSection.classList.remove('hidden');
-            if (checklistLabel) checklistLabel.textContent = 'Select Subjects to Include';
+            if (checklistLabel) checklistLabel.textContent = 'Select Subjects to Include (Grouped by Program)';
 
-            let html = `<div class="space-y-3 w-full">`;
+            let html = `<div class="space-y-2 w-full">`;
             tracksList.forEach(track => {
                 if (customPrograms[track.id]) {
                     customPrograms[track.id].forEach(prog => {
                         const progName = prog.name || prog;
                         const subs = (syllabusStructure[track.id] || []).filter(s => s.program === progName);
                         if (subs.length > 0) {
-                            html += `<div><div class="text-[10px] font-black uppercase text-slate-400 mb-1 pl-1">${progName}</div><div class="grid grid-cols-2 gap-2">`;
+                            html += `
+                                <details class="bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm group overflow-hidden transition-all duration-150 mb-2">
+                                    <summary class="cursor-pointer font-black text-[11px] md:text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200 p-3 outline-none select-none list-none flex justify-between items-center hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl transition-colors duration-75 [&::-webkit-details-marker]:hidden">
+                                        <div class="flex items-center space-x-2.5">
+                                            <svg class="w-3.5 h-3.5 text-orange-500 group-open:rotate-90 transition-transform duration-150 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                                            <span class="font-black text-slate-800 dark:text-slate-100">${progName}</span>
+                                            <span class="bg-orange-500/10 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 font-black px-2 py-0.5 rounded-md text-[9px] border border-orange-500/20">${subs.length} Subs</span>
+                                        </div>
+                                        <span class="text-[9px] font-bold text-slate-400 group-open:text-orange-500 transition-colors">Expand</span>
+                                    </summary>
+                                    <div class="p-3 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 bg-white/50 dark:bg-slate-900/40">
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                            `;
                             subs.forEach(s => {
                                 let displaySub = s.subject.replace(progName + ' - ', '').replace(progName + ' ', '');
                                 const isPassed = Boolean((passedItems.subjects && passedItems.subjects.includes(s.subject)) || (passedItems.programs && passedItems.programs.includes(progName)));
@@ -423,13 +519,13 @@
                                         </label>`;
                                 } else {
                                     html += `
-                                        <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 active:scale-95 transition-all shadow-sm">
+                                        <label class="flex items-center space-x-2 cursor-pointer bg-white dark:bg-slate-800/90 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-orange-400 dark:hover:border-orange-500/50 active:scale-95 transition-all shadow-sm">
                                             <input type="checkbox" value="${s.subject}" class="pace-bundle-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all">
                                             <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title="${s.subject}">${displaySub}</span>
                                         </label>`;
                                 }
                             });
-                            html += `</div></div>`;
+                            html += `</div></div></details>`;
                         }
                     });
                 }
@@ -556,6 +652,7 @@
         let target = '';
         let bundlePrograms = null;
         let bundleSubjects = null;
+        let secondaryPaces = null;
 
         const nameInput = (document.getElementById('add-pace-name') && document.getElementById('add-pace-name').value)
             ? document.getElementById('add-pace-name')
@@ -593,9 +690,13 @@
             type = 'global';
             const bundleName = nameInput ? nameInput.value.trim() : '';
             target = bundleName || 'Global Overall Goal';
-            const checkedBoxes = Array.from(document.querySelectorAll('.pace-bundle-cb:checked'));
+            const checkedBoxes = Array.from(document.querySelectorAll('.pace-global-subject-cb:checked, .pace-bundle-cb:checked'));
             if (checkedBoxes.length > 0) {
-                bundleSubjects = checkedBoxes.map(cb => cb.value);
+                bundleSubjects = Array.from(new Set(checkedBoxes.map(cb => cb.value)));
+            }
+            const checkedSecs = Array.from(document.querySelectorAll('.pace-sec-cb:checked'));
+            if (checkedSecs.length > 0) {
+                secondaryPaces = Array.from(new Set(checkedSecs.map(cb => cb.value)));
             }
         } else if (rawType === 'bundle') {
             type = 'bundle';
@@ -647,8 +748,9 @@
             startDate: startDate
         };
 
-        if (bundlePrograms) newGoal.programs = bundlePrograms;
-        if (bundleSubjects) newGoal.subjects = bundleSubjects;
+        if (bundlePrograms && bundlePrograms.length > 0) newGoal.programs = bundlePrograms;
+        if (bundleSubjects && bundleSubjects.length > 0) newGoal.subjects = bundleSubjects;
+        if (secondaryPaces && secondaryPaces.length > 0) newGoal.secondaryPaces = secondaryPaces;
 
         global.paceGoals.push(newGoal);
         if (AppStateRef) AppStateRef.paceGoals = global.paceGoals;
@@ -747,19 +849,44 @@
         const passedItems = global.passedItems || (AppStateRef && AppStateRef.passedItems) || { programs: [], subjects: [] };
 
         if (goal.type === 'global') {
-            if (nameContainer) nameContainer.classList.add('hidden');
+            if (nameContainer) nameContainer.classList.remove('hidden');
             if (checklistSection) checklistSection.classList.remove('hidden');
             if (nameInput) nameInput.value = goal.target;
 
-            let html = '';
-            html += `<div class="mb-4"><h5 class="text-[10px] font-black uppercase text-slate-400 mb-2">Subjects</h5>`;
+            let html = `
+                <!-- Part 1: All Subjects inside Program Dropdowns -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block shadow-sm"></span>
+                            <h5 class="text-[11px] md:text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">Part 1: Subjects Inside Program Dropdowns</h5>
+                        </div>
+                        <span class="text-[9px] font-bold text-orange-500 uppercase tracking-wider bg-orange-50 dark:bg-orange-950/40 px-2 py-0.5 rounded border border-orange-200/40 dark:border-orange-800/40">Subject-Wise</span>
+                    </div>
+                    <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-2.5">Expand programs to pick or adjust specific subjects for this global target.</p>
+                    <div class="space-y-2 w-full">
+            `;
+
             tracksList.forEach(track => {
                 if (customPrograms[track.id]) {
                     customPrograms[track.id].forEach(prog => {
                         const progName = prog.name || prog;
                         const subs = (syllabusStructure[track.id] || []).filter(s => s.program === progName);
                         if (subs.length > 0) {
-                            html += `<div class="mb-2"><div class="text-[10px] font-black uppercase text-slate-400 mb-1.5 pl-1">${progName}</div><div class="grid grid-cols-1 sm:grid-cols-2 gap-2">`;
+                            const hasCheckedSub = subs.some(s => goal.subjects && goal.subjects.includes(s.subject));
+                            html += `
+                                <details class="bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm group overflow-hidden transition-all duration-150 mb-2" ${hasCheckedSub ? 'open' : ''}>
+                                    <summary class="cursor-pointer font-black text-[11px] md:text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200 p-3 outline-none select-none list-none flex justify-between items-center hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl transition-colors duration-75 [&::-webkit-details-marker]:hidden">
+                                        <div class="flex items-center space-x-2.5">
+                                            <svg class="w-3.5 h-3.5 text-orange-500 group-open:rotate-90 transition-transform duration-150 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                                            <span class="font-black text-slate-800 dark:text-slate-100">${progName}</span>
+                                            <span class="bg-orange-500/10 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 font-black px-2 py-0.5 rounded-md text-[9px] border border-orange-500/20">${subs.length} Subs</span>
+                                        </div>
+                                        <span class="text-[9px] font-bold text-slate-400 group-open:text-orange-500 transition-colors">Expand</span>
+                                    </summary>
+                                    <div class="p-3 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 bg-white/50 dark:bg-slate-900/40">
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                            `;
                             subs.forEach(s => {
                                 const isChecked = (goal.subjects && goal.subjects.includes(s.subject)) ? 'checked' : '';
                                 let displaySub = s.subject.replace(progName + ' - ', '').replace(progName + ' ', '');
@@ -777,7 +904,7 @@
                                         </label>`;
                                 } else if (isPassed && isAlreadyInGoal) {
                                     html += `
-                                        <label class="flex items-center justify-between space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700/60 active:scale-95 transition-all shadow-sm pace-passed-included-item" title="${s.subject} (Passed - currently included in this pace)">
+                                        <label class="flex items-center justify-between space-x-2 cursor-pointer bg-white dark:bg-slate-800/90 p-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700/60 active:scale-95 transition-all shadow-sm pace-passed-included-item" title="${s.subject} (Passed - currently included in this pace)">
                                             <div class="flex items-center space-x-2 min-w-0 flex-1">
                                                 <input type="checkbox" value="${s.subject}" class="edit-pace-subject-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all" checked>
                                                 <del class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate line-through" title="${s.subject}">${displaySub}</del>
@@ -786,34 +913,59 @@
                                         </label>`;
                                 } else {
                                     html += `
-                                        <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 active:scale-95 transition-all shadow-sm">
+                                        <label class="flex items-center space-x-2 cursor-pointer bg-white dark:bg-slate-800/90 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-orange-400 dark:hover:border-orange-500/50 active:scale-95 transition-all shadow-sm">
                                             <input type="checkbox" value="${s.subject}" class="edit-pace-subject-cb form-checkbox h-4 w-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500 transition-all" ${isChecked}>
                                             <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title="${s.subject}">${displaySub}</span>
                                         </label>`;
                                 }
                             });
-                            html += `</div></div>`;
+                            html += `</div></div></details>`;
                         }
                     });
                 }
             });
-            html += `</div>`;
+            html += `</div></div>`;
 
-            html += `<div><h5 class="text-[10px] font-black uppercase text-slate-400 mb-2">Secondary Paces</h5>`;
-            const otherGoals = goalsList.filter(g => g.type !== 'global');
+            // Part 2: Secondary Paces
+            html += `
+                <div class="mt-5 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block shadow-sm"></span>
+                            <h5 class="text-[11px] md:text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">Part 2: Secondary Paces</h5>
+                        </div>
+                        <span class="text-[9px] text-indigo-500 dark:text-indigo-400 font-bold uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-200/40 dark:border-indigo-800/40">Linked Timelines</span>
+                    </div>
+                    <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-3">Link or unlink other pace goals to include in this global target.</p>
+            `;
+            const otherGoals = goalsList.filter(g => g.id !== goal.id && g.type !== 'global');
             if (otherGoals.length > 0) {
-                html += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">`;
+                html += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">`;
                 otherGoals.forEach(g => {
                     const isChecked = (goal.secondaryPaces && goal.secondaryPaces.includes(g.id)) ? 'checked' : '';
+                    const parseDate = (typeof global.Utils !== 'undefined' && typeof global.Utils.parseDateSafe === 'function')
+                        ? global.Utils.parseDateSafe
+                        : (d => new Date(d));
+                    const deadlineStr = g.deadline ? (parseDate(g.deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })) : '';
                     html += `
-                        <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 active:scale-95 transition-all shadow-sm">
-                            <input type="checkbox" value="${g.id}" class="edit-pace-sec-cb form-checkbox h-4 w-4 text-indigo-500 rounded border-slate-300 focus:ring-indigo-500 accent-indigo-500 transition-all" ${isChecked}>
-                            <span class="text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title="${g.target}">${g.target}</span>
+                        <label class="flex items-center justify-between space-x-2.5 cursor-pointer bg-white dark:bg-slate-800/90 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500/50 active:scale-95 transition-all shadow-sm group">
+                            <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+                                <input type="checkbox" value="${g.id}" class="edit-pace-sec-cb form-checkbox h-4 w-4 text-indigo-500 rounded border-slate-300 focus:ring-indigo-500 accent-indigo-500 transition-all" ${isChecked}>
+                                <div class="flex flex-col min-w-0">
+                                    <span class="text-[11px] md:text-xs font-black text-slate-800 dark:text-slate-200 truncate group-hover:text-indigo-400 transition-colors" title="${g.target}">${g.target}</span>
+                                    ${deadlineStr ? `<span class="text-[9px] text-slate-400 font-bold truncate">Due: ${deadlineStr}</span>` : ''}
+                                </div>
+                            </div>
+                            <span class="text-[8px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded border border-indigo-200/50 dark:border-indigo-800/50 shrink-0">${g.type || 'Pace'}</span>
                         </label>`;
                 });
                 html += `</div>`;
             } else {
-                html += `<span class="text-[10px] text-slate-500">No other pace goals available.</span>`;
+                html += `
+                    <div class="p-3 bg-slate-100/60 dark:bg-slate-900/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700/70 text-center">
+                        <span class="text-xs mb-1 block">📌</span>
+                        <p class="text-[10px] font-bold text-slate-400">No other timeline goals available to link.</p>
+                    </div>`;
             }
             html += `</div>`;
 
@@ -987,8 +1139,16 @@
             if (newNameInput && newNameInput.value.trim()) {
                 goal.target = newNameInput.value.trim();
             }
-            goal.subjects = checkedSubs;
-            goal.secondaryPaces = checkedSecs;
+            if (checkedSubs.length > 0) {
+                goal.subjects = Array.from(new Set(checkedSubs));
+            } else {
+                delete goal.subjects;
+            }
+            if (checkedSecs.length > 0) {
+                goal.secondaryPaces = Array.from(new Set(checkedSecs));
+            } else {
+                delete goal.secondaryPaces;
+            }
         } else {
             const newNameInput = document.getElementById('edit-pace-name');
             if (newNameInput) {
@@ -1057,12 +1217,21 @@
 
         let scopeHtml = '';
         if (goal.type === 'global') {
-            const isManual = goal.subjects || goal.secondaryPaces;
+            const isManual = Boolean((goal.subjects && goal.subjects.length > 0) || (goal.secondaryPaces && goal.secondaryPaces.length > 0));
             if (isManual) {
-                let detailText = `Manually mapped ${goal.subjects ? goal.subjects.length : 0} explicit Subjects and ${goal.secondaryPaces ? goal.secondaryPaces.length : 0} Secondary Paces.`;
+                const subCount = (goal.subjects && goal.subjects.length) || 0;
+                const secCount = (goal.secondaryPaces && goal.secondaryPaces.length) || 0;
+                let detailText = '';
+                if (subCount > 0 && secCount > 0) {
+                    detailText = `Manually configured with ${subCount} explicit Subject(s) and ${secCount} Secondary Pace(s).`;
+                } else if (subCount > 0) {
+                    detailText = `Manually configured with ${subCount} explicit Subject(s).`;
+                } else {
+                    detailText = `Manually linked with ${secCount} Secondary Pace(s).`;
+                }
                 scopeHtml = `<div class="text-[10px] md:text-xs font-bold text-slate-500 dark:text-slate-400 mb-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 rounded-xl shadow-sm">${detailText}</div>`;
             } else {
-                scopeHtml = `<div class="text-[10px] md:text-xs font-bold text-slate-500 dark:text-slate-400 mb-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 rounded-xl shadow-sm">Aggregates mapped subjects intersecting with the Global Timeline bounds.</div>`;
+                scopeHtml = `<div class="text-[10px] md:text-xs font-bold text-slate-500 dark:text-slate-400 mb-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 rounded-xl shadow-sm">Comprehensive target encompassing all subjects in the active curriculum.</div>`;
             }
         } else if (goal.type === 'bundle') {
             if (goal.subjects && goal.subjects.length > 0) {

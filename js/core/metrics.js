@@ -549,10 +549,10 @@
                 const globalGoal = window.paceGoals.find(g => g.type === 'global');
 
                 if (globalGoal) {
-                    const isManualGlobal = globalGoal.subjects || globalGoal.secondaryPaces;
+                    const isManualGlobal = Boolean((globalGoal.subjects && globalGoal.subjects.length > 0) || (globalGoal.secondaryPaces && globalGoal.secondaryPaces.length > 0));
                     if (isManualGlobal) {
-                        if (globalGoal.subjects) globalGoal.subjects.forEach(s => targetedSubjects.add(s));
-                        if (globalGoal.secondaryPaces) {
+                        if (globalGoal.subjects && Array.isArray(globalGoal.subjects)) globalGoal.subjects.forEach(s => targetedSubjects.add(s));
+                        if (globalGoal.secondaryPaces && Array.isArray(globalGoal.secondaryPaces)) {
                             globalGoal.secondaryPaces.forEach(pid => {
                                 const g = window.paceGoals.find(x => x.id === pid);
                                 if (g) {

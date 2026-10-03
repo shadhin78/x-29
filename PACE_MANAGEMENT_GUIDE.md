@@ -107,6 +107,19 @@ export interface PaceStats {
 }
 ```
 
+### 3.3 Global Pace Target Configuration
+
+When setting up a **Global Overall Goal** (`type: 'global'`), the interface provides a dedicated two-part configuration:
+
+1. **Part 1: All Subjects Inside Program Dropdowns**:
+   - Each program is organized into an expandable accordion/dropdown with subject counts and toggle chevron.
+   - Users can select subjects specifically on a subject-wise basis across any active program.
+2. **Part 2: Secondary Paces**:
+   - Users can link existing pace goals (bundles, program milestones, or subject goals) as secondary paces.
+   - Linked timelines contribute their targeted scope into the overarching global pacing calculation.
+3. **Flexible Setup**:
+   - Global pace can be configured **subject-wise** (Part 1 only), via **secondary paces** (Part 2 only), or by **combining both** simultaneously. If neither is specified, the goal defaults to covering all active subjects in the curriculum.
+
 ---
 
 ## 4. Mathematical Engine & Formulas

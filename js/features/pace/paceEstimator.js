@@ -26,7 +26,7 @@
             : (d => new Date(d));
 
         if (goal.type === 'global') {
-            const isManual = goal.subjects || goal.secondaryPaces;
+            const isManual = Boolean((goal.subjects && goal.subjects.length > 0) || (goal.secondaryPaces && goal.secondaryPaces.length > 0));
             if (isManual) {
                 if (goal.subjects && Array.isArray(goal.subjects)) {
                     goal.subjects.forEach(s => targetedSubjects.add(s));
