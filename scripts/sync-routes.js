@@ -51,61 +51,107 @@ const OBSOLETE_ROUTE_DIRS = [
     path.join('pages', 'Polymath Orbit')
 ];
 
+const ASSET_VERSION = '1.1.0';
+
 const ROUTE_CONFIGS = {
     'focus': {
         containerId: 'page-timer',
         title: 'Focus - X-29',
-        navKey: 'timer'
+        navKey: 'timer',
+        cssId: 'route-focus-css',
+        cssUrl: 'pages/Focus/Focus.css',
+        jsId: 'route-focus-js',
+        jsUrl: 'pages/Focus/Focus.js'
     },
     'subjects': {
         containerId: 'page-subjects',
         title: 'Subjects - X-29',
-        navKey: 'subjects'
+        navKey: 'subjects',
+        cssId: 'route-subjects-css',
+        cssUrl: 'pages/Subjects/Subjects.css',
+        jsId: 'route-subjects-js',
+        jsUrl: 'pages/Subjects/Subjects.js'
     },
     'daily-actions': {
         containerId: 'page-daily-actions',
         title: 'Daily Actions - X-29',
-        navKey: 'daily-actions'
+        navKey: 'daily-actions',
+        cssId: 'route-daily-actions-css',
+        cssUrl: 'pages/Daily Actions/Daily Actions.css',
+        jsId: 'route-daily-actions-js',
+        jsUrl: 'pages/Daily Actions/Daily Actions.js'
     },
     'daily-actions/monthly-setup': {
         containerId: 'page-monthly-target-setup',
         title: 'Monthly Target Setup - X-29',
-        navKey: 'daily-actions'
+        navKey: 'daily-actions',
+        cssId: 'route-monthly-target-css',
+        cssUrl: 'pages/Daily Actions/monthly target setup/monthly target setup.css',
+        jsId: 'route-monthly-target-js',
+        jsUrl: 'pages/Daily Actions/monthly target setup/monthly target setup.js'
     },
     'schedule': {
         containerId: 'page-schedule',
         title: 'Daily Schedule - X-29',
-        navKey: 'schedule'
+        navKey: 'schedule',
+        cssId: 'route-schedule-css',
+        cssUrl: 'pages/Daily Schedule/Daily Schedule.css',
+        jsId: 'route-schedule-js',
+        jsUrl: 'pages/Daily Schedule/Daily Schedule.js'
     },
     'pace': {
         containerId: 'page-paces-management',
         title: 'Pace Management - X-29',
-        navKey: 'paces-management'
+        navKey: 'paces-management',
+        cssId: 'route-pace-management-css',
+        cssUrl: 'pages/Pace Management/Pace Management.css',
+        jsId: 'route-pace-management-js',
+        jsUrl: 'pages/Pace Management/Pace Management.js'
     },
     'master-config': {
         containerId: 'page-master-config',
         title: 'Master Config - X-29',
-        navKey: 'master-config'
+        navKey: 'master-config',
+        cssId: 'route-master-config-css',
+        cssUrl: 'pages/Master Config/Master Config.css',
+        jsId: 'route-master-config-js',
+        jsUrl: 'pages/Master Config/Master Config.js'
     },
     'outcome': {
         containerId: 'page-outcome',
         title: 'Outcome - X-29',
-        navKey: 'outcome'
+        navKey: 'outcome',
+        cssId: 'route-outcome-css',
+        cssUrl: 'pages/Outcome/Outcome.css',
+        jsId: 'route-outcome-js',
+        jsUrl: 'pages/Outcome/Outcome.js'
     },
     'exam': {
         containerId: 'page-exam',
         title: 'Exam Routine - X-29',
-        navKey: 'exam'
+        navKey: 'exam',
+        cssId: 'route-exam-routine-css',
+        cssUrl: 'pages/Exam Routine/Exam Routine.css',
+        jsId: 'route-exam-routine-js',
+        jsUrl: 'pages/Exam Routine/Exam Routine.js'
     },
     'analytics': {
         containerId: 'page-spectra-analytics',
         title: 'Analytics - X-29',
-        navKey: 'spectra-analytics'
+        navKey: 'spectra-analytics',
+        cssId: 'route-analytics-css',
+        cssUrl: 'pages/Analytics/Analytics.css',
+        jsId: 'route-analytics-js',
+        jsUrl: 'pages/Analytics/Analytics.js'
     },
     'timer': {
         containerId: 'page-timer',
         title: 'Focus - X-29',
-        navKey: 'timer'
+        navKey: 'timer',
+        cssId: 'route-focus-css',
+        cssUrl: 'pages/Focus/Focus.css',
+        jsId: 'route-focus-js',
+        jsUrl: 'pages/Focus/Focus.js'
     }
 };
 
@@ -139,7 +185,7 @@ const NAV_BUTTONS = {
 const BASE_BTN_CLASS = "w-full text-left border-2 px-4 py-3 rounded-2xl font-black text-xs transition-all duration-300 hover:translate-x-1.5 hover:shadow-md active:scale-98 flex items-center gap-3";
 const INACTIVE_BTN_BASE = "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300";
 
-function tailorHtmlForRoute(baseHtml, targetContainerId, pageTitle, activeNavKey) {
+function tailorHtmlForRoute(baseHtml, targetContainerId, pageTitle, activeNavKey, config) {
     let html = baseHtml;
 
     // 1. Update Title
@@ -176,6 +222,18 @@ function tailorHtmlForRoute(baseHtml, targetContainerId, pageTitle, activeNavKey
             return prefix + desiredClass + suffix;
         });
     });
+
+    // 4. Update Route-specific initial stylesheet & script
+    if (config && config.cssId && config.cssUrl) {
+        const cssUrlClean = encodeURI(config.cssUrl);
+        const cssReplacement = `<link id="${config.cssId}" rel="stylesheet" href="${cssUrlClean}?v=${ASSET_VERSION}">`;
+        html = html.replace(/<link id="route-[^"]*-css"[^>]*>/, cssReplacement);
+    }
+    if (config && config.jsId && config.jsUrl) {
+        const jsUrlClean = encodeURI(config.jsUrl);
+        const jsReplacement = `<script id="${config.jsId}" src="${jsUrlClean}?v=${ASSET_VERSION}" defer></script>`;
+        html = html.replace(/<script id="route-[^"]*-js"[^>]*><\/script>/, jsReplacement);
+    }
 
     return html;
 }
@@ -220,7 +278,8 @@ function syncRoutes() {
             indexContent,
             config.containerId,
             config.title,
-            config.navKey
+            config.navKey,
+            config
         );
         fs.writeFileSync(targetFile, tailoredContent, 'utf8');
         count++;

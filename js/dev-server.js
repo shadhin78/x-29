@@ -186,10 +186,8 @@ const server = http.createServer((req, res) => {
       cacheControl = 'no-cache';
     } else if (['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.webp', '.woff', '.woff2'].includes(ext)) {
       cacheControl = 'public, max-age=86400, stale-while-revalidate=604800';
-    } else if (ext === '.css') {
-      cacheControl = 'public, max-age=86400, stale-while-revalidate=604800';
-    } else if (ext === '.js') {
-      cacheControl = 'public, max-age=3600, must-revalidate';
+    } else if (ext === '.css' || ext === '.js') {
+      cacheControl = 'no-cache, must-revalidate';
     }
 
     // Handle conditional request (instant 304 Not Modified)

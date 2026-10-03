@@ -38,21 +38,50 @@ html {
     --motion-shadow-btn-hover: 0 8px 20px rgba(59, 130, 246, 0.35);
 }
 
-/* Phase 3: Subtle, Immediate Page Entrance (0ms blocking, 180ms GPU Decel) */
+/* Phase 3: Subtle, Immediate Hardware-Accelerated Page Entrance (0ms blocking, 180ms GPU Decel) */
 @keyframes pageEnter {
-    from {
+    0% {
         opacity: 0;
         transform: translateY(8px);
     }
-    to {
+    100% {
         opacity: 1;
         transform: translateY(0);
     }
 }
 
-.animate-page-enter {
-    animation: pageEnter var(--motion-dur-fast) var(--motion-ease-decel) forwards;
+@keyframes paceManagementSlideUp {
+    0% {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-page-enter,
+.pace-management-slide-up,
+.dashboard-slide-up,
+.focus-slide-up,
+.subjects-slide-up,
+.dailyScheduleSlideUp,
+.analyticsSlideUp,
+.examRoutineSlideUp,
+.masterConfigSlideUp,
+.outcomeSlideUp,
+.dailyActionsSlideUp,
+.monthlyTargetSetupSlideUp {
+    animation: pageEnter var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
     will-change: opacity, transform;
+    backface-visibility: hidden;
+}
+
+/* Layer stabilization for smoother transitions */
+[id^="page-"] {
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
 
 @keyframes motionFadeIn {
@@ -78,27 +107,45 @@ html {
 .motion-stagger-5 { animation-delay: 160ms !important; }
 
 /* Phase 5 & 6: Interactive Card Hover & Tactile Press */
+.motion-card-interactive,
+.card-hover,
+#pace-stats-section .grid > div,
+#pace-goals-container > div {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    will-change: transform, box-shadow, border-color;
+    transition: transform var(--motion-dur-normal) var(--motion-ease-decel),
+                box-shadow var(--motion-dur-normal) var(--motion-ease-decel),
+                border-color var(--motion-dur-fast) ease;
+}
+
 @media (hover: hover) {
-    .motion-card-interactive {
-        transform: translate3d(0, 0, 0);
-        backface-visibility: hidden;
-        will-change: transform, box-shadow, border-color;
-        transition: transform var(--motion-dur-normal) var(--motion-ease-decel),
-                    box-shadow var(--motion-dur-normal) var(--motion-ease-decel),
-                    border-color var(--motion-dur-fast) ease;
-    }
-    .motion-card-interactive:hover {
-        transform: translateY(-3px);
+    .motion-card-interactive:hover,
+    .card-hover:hover,
+    #pace-stats-section .grid > div:hover {
+        transform: translateY(-4px);
         box-shadow: var(--motion-shadow-card-hover);
     }
+    #pace-goals-container > div:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 30px -8px rgba(0, 0, 0, 0.5), 0 0 20px 2px rgba(249, 115, 22, 0.1);
+        border-color: rgba(249, 115, 22, 0.45);
+    }
 }
-.motion-card-interactive:active {
+
+.motion-card-interactive:active,
+.card-hover:active,
+#pace-stats-section .grid > div:active {
     transform: translateY(0px) scale(0.99);
     transition-duration: var(--motion-dur-micro);
 }
 
 /* Phase 5 & 6: Interactive Button Hover & Tactile Click */
-.motion-btn-interactive {
+.motion-btn-interactive,
+button[id^="btn-"]:not(:disabled),
+#btn-add-pace-goal,
+#btn-save-pace-edit,
+#btn-open-pace-trend-modal {
     transform: translateZ(0);
     will-change: transform, box-shadow, filter;
     transition: transform var(--motion-dur-fast) var(--motion-ease-pop),
@@ -107,32 +154,47 @@ html {
                 background-color var(--motion-dur-fast) ease,
                 border-color var(--motion-dur-fast) ease;
 }
+
 @media (hover: hover) {
-    .motion-btn-interactive:hover {
-        transform: translateY(-1.5px);
+    .motion-btn-interactive:hover,
+    button[id^="btn-"]:not(:disabled):hover,
+    #btn-add-pace-goal:hover,
+    #btn-save-pace-edit:hover {
+        transform: translateY(-2px);
         filter: brightness(1.06);
+        box-shadow: var(--motion-shadow-btn-hover);
     }
 }
-.motion-btn-interactive:active {
-    transform: translateY(0.5px) scale(0.975);
+
+.motion-btn-interactive:active,
+button[id^="btn-"]:not(:disabled):active,
+#btn-add-pace-goal:active,
+#btn-save-pace-edit:active,
+#btn-open-pace-trend-modal:active {
+    transform: translateY(1px) scale(0.97);
     transition-duration: 0.08s;
-    filter: brightness(0.96);
+    filter: brightness(0.95);
 }
 
 /* Action Icon Buttons */
-.motion-icon-btn {
+.motion-icon-btn,
+#pace-goals-container button {
     transform: translateZ(0);
     will-change: transform;
     transition: transform var(--motion-dur-fast) var(--motion-ease-pop),
                 color var(--motion-dur-fast) ease,
                 background-color var(--motion-dur-fast) ease;
 }
+
 @media (hover: hover) {
-    .motion-icon-btn:hover {
-        transform: scale(1.15);
+    .motion-icon-btn:hover,
+    #pace-goals-container button:hover {
+        transform: scale(1.18);
     }
 }
-.motion-icon-btn:active {
+
+.motion-icon-btn:active,
+#pace-goals-container button:active {
     transform: scale(0.9);
     transition-duration: 0.08s;
 }
@@ -145,9 +207,14 @@ html {
     100% { transform: scale(1); }
 }
 
+@keyframes paceCheckboxPop {
+    0% { transform: scale(0.85); }
+    50% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+}
+
 .motion-checkbox,
-input[type="checkbox"].task-checkbox,
-input[type="checkbox"].form-checkbox {
+input[type="checkbox"] {
     cursor: pointer;
     transform: translateZ(0);
     will-change: transform;
@@ -156,23 +223,31 @@ input[type="checkbox"].form-checkbox {
                 background-color var(--motion-dur-fast) ease,
                 box-shadow var(--motion-dur-fast) ease;
 }
+
 @media (hover: hover) {
     .motion-checkbox:hover,
-    input[type="checkbox"].task-checkbox:hover,
-    input[type="checkbox"].form-checkbox:hover {
-        transform: scale(1.18);
+    input[type="checkbox"]:hover {
+        transform: scale(1.15);
     }
 }
+
 .motion-checkbox:active,
-input[type="checkbox"].task-checkbox:active,
-input[type="checkbox"].form-checkbox:active {
-    transform: scale(0.88);
+input[type="checkbox"]:active {
+    transform: scale(0.9);
     transition-duration: 0.08s;
 }
+
 .motion-checkbox:checked,
-input[type="checkbox"].task-checkbox:checked,
-input[type="checkbox"].form-checkbox:checked {
-    animation: checkmarkPop var(--motion-dur-normal) var(--motion-ease-spring) forwards;
+input[type="checkbox"]:checked {
+    animation: paceCheckboxPop 0.26s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Checked Card Labels */
+#add-pace-subjects-container label:has(input[type="checkbox"]:checked),
+#edit-pace-subjects-container label:has(input[type="checkbox"]:checked) {
+    border-color: rgba(249, 115, 22, 0.65) !important;
+    background-color: rgba(249, 115, 22, 0.09) !important;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
 }
 
 /* Phase 8: Switch / Toggle Smooth Physics */
@@ -197,6 +272,7 @@ select {
                 transform var(--motion-dur-fast) ease,
                 background-color var(--motion-dur-fast) ease;
 }
+
 @media (hover: hover) {
     .motion-input:hover:not(:disabled),
     input[type="text"]:not([readonly]):hover:not(:disabled),
@@ -208,7 +284,15 @@ select {
     select:hover:not(:disabled) {
         border-color: rgba(99, 102, 241, 0.45);
     }
+    #page-paces-management input[type="text"]:hover,
+    #page-paces-management input[type="date"]:hover,
+    #page-paces-management select:hover,
+    #edit-pace-modal input[type="text"]:hover,
+    #edit-pace-modal input[type="date"]:hover {
+        border-color: rgba(249, 115, 22, 0.45);
+    }
 }
+
 .motion-input:focus,
 input[type="text"]:not([readonly]):focus,
 input[type="date"]:focus,
@@ -219,6 +303,18 @@ textarea:focus,
 select:focus {
     border-color: rgba(99, 102, 241, 0.8) !important;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22), 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+    transform: translateY(-1px);
+    outline: none !important;
+}
+
+#page-paces-management input[type="text"]:focus,
+#page-paces-management input[type="date"]:focus,
+#page-paces-management select:focus,
+#edit-pace-modal input[type="text"]:focus,
+#edit-pace-modal input[type="date"]:focus {
+    border-color: rgba(249, 115, 22, 0.8) !important;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2), 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+    transform: translateY(-1px);
     outline: none !important;
 }
 
@@ -233,6 +329,7 @@ select:focus {
         transform: translateY(0) scale(1);
     }
 }
+
 .motion-dropdown-menu {
     animation: dropdownSlideIn var(--motion-dur-fast) var(--motion-ease-decel) forwards;
     transform-origin: top;
@@ -240,15 +337,41 @@ select:focus {
 }
 
 /* Phase 11: Universal Modal Physics */
-.motion-modal-backdrop {
-    transition: opacity var(--motion-dur-normal) var(--motion-ease-decel) !important;
+.motion-modal-backdrop,
+.modal-backdrop,
+[id$="-modal"] {
+    transition: opacity var(--motion-dur-normal, 0.25s) var(--motion-ease-decel) !important;
     will-change: opacity;
 }
-.motion-modal-dialog {
-    transition: transform var(--motion-dur-modal) var(--motion-ease-decel),
-                opacity var(--motion-dur-normal) var(--motion-ease-decel),
-                box-shadow var(--motion-dur-modal) ease !important;
+
+.motion-modal-dialog,
+.modal-content,
+[id$="-modal"] [id$="-content"] {
+    transition: transform var(--motion-dur-modal, 0.32s) var(--motion-ease-decel),
+                opacity var(--motion-dur-normal, 0.26s) var(--motion-ease-decel),
+                box-shadow var(--motion-dur-modal, 0.32s) ease !important;
     will-change: transform, opacity;
+}
+
+button[data-modal-close] {
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.18s ease, background-color 0.18s ease;
+    will-change: transform;
+}
+
+@media (hover: hover) {
+    button[data-modal-close]:hover {
+        transform: rotate(90deg) scale(1.15);
+    }
+}
+
+button[data-modal-close]:active {
+    transform: rotate(90deg) scale(0.9);
+}
+
+/* Phase 12: Smooth Dynamic Progress Bar Filling */
+.rounded-full > div {
+    transition: width 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: width;
 }
 
 /* Phase 13: Accordion Expand Physics */
@@ -262,16 +385,35 @@ select:focus {
         transform: translateY(0);
     }
 }
+
 details[open] > div,
 details[open] > ul {
     animation: accordionExpand var(--motion-dur-fast) var(--motion-ease-decel) forwards;
 }
+
+details summary {
+    cursor: pointer;
+    transition: background-color 0.18s ease;
+}
+
 details summary svg {
-    transition: transform var(--motion-dur-fast) var(--motion-ease-spring);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
     will-change: transform;
 }
+
 details[open] summary svg {
     transform: rotate(90deg);
+}
+
+#page-paces-management details summary svg,
+#edit-pace-subjects-container details summary svg {
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    will-change: transform;
+}
+
+#page-paces-management details[open] summary svg,
+#edit-pace-subjects-container details[open] summary svg {
+    transform: rotate(180deg);
 }
 
 /* Phase 16: Table Row Micro-Interactions */

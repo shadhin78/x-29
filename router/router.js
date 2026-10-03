@@ -14,6 +14,7 @@
     'use strict';
 
     const Router = {
+        ASSET_VERSION: '1.1.0',
         activePageId: 'dashboard',
         htmlCache: {},
         cssCache: {},
@@ -449,9 +450,12 @@
          * Includes promise deduplication and mock test environment support.
          */
         loadCss: function (url, id) {
-            const cleanUrl = encodeURI(decodeURI(url));
-            if (this.cssCache[cleanUrl] || (id && document.getElementById(id))) {
+            const versionedUrl = url.includes('?v=') ? url : `${url}?v=${this.ASSET_VERSION}`;
+            const cleanUrl = encodeURI(decodeURI(versionedUrl));
+            const baseCleanUrl = encodeURI(decodeURI(url.split('?')[0]));
+            if (this.cssCache[cleanUrl] || this.cssCache[baseCleanUrl] || (id && document.getElementById(id))) {
                 this.cssCache[cleanUrl] = true;
+                this.cssCache[baseCleanUrl] = true;
                 return Promise.resolve();
             }
             if (this._pendingCssPromises && this._pendingCssPromises[cleanUrl]) {
@@ -465,6 +469,7 @@
                 link.href = cleanUrl;
                 link.onload = () => {
                     this.cssCache[cleanUrl] = true;
+                    this.cssCache[baseCleanUrl] = true;
                     if (this._pendingCssPromises) delete this._pendingCssPromises[cleanUrl];
                     resolve();
                 };
@@ -489,9 +494,12 @@
          * Includes promise deduplication and mock test environment support.
          */
         loadJs: function (url, id) {
-            const cleanUrl = encodeURI(decodeURI(url));
-            if (this.jsLoaded[cleanUrl] || (id && document.getElementById(id))) {
+            const versionedUrl = url.includes('?v=') ? url : `${url}?v=${this.ASSET_VERSION}`;
+            const cleanUrl = encodeURI(decodeURI(versionedUrl));
+            const baseCleanUrl = encodeURI(decodeURI(url.split('?')[0]));
+            if (this.jsLoaded[cleanUrl] || this.jsLoaded[baseCleanUrl] || (id && document.getElementById(id))) {
                 this.jsLoaded[cleanUrl] = true;
+                this.jsLoaded[baseCleanUrl] = true;
                 return Promise.resolve();
             }
             if (this._pendingJsPromises && this._pendingJsPromises[cleanUrl]) {
@@ -505,6 +513,7 @@
                 script.async = false;
                 script.onload = () => {
                     this.jsLoaded[cleanUrl] = true;
+                    this.jsLoaded[baseCleanUrl] = true;
                     if (this._pendingJsPromises) delete this._pendingJsPromises[cleanUrl];
                     resolve();
                 };
@@ -528,9 +537,11 @@
          * Fetch and cache page HTML.
          */
         loadHtml: async function (url) {
-            const cleanUrl = encodeURI(decodeURI(url));
-            if (this.htmlCache[cleanUrl]) {
-                return this.htmlCache[cleanUrl];
+            const versionedUrl = url.includes('?v=') ? url : `${url}?v=${this.ASSET_VERSION}`;
+            const cleanUrl = encodeURI(decodeURI(versionedUrl));
+            const baseCleanUrl = encodeURI(decodeURI(url.split('?')[0]));
+            if (this.htmlCache[cleanUrl] || this.htmlCache[baseCleanUrl]) {
+                return this.htmlCache[cleanUrl] || this.htmlCache[baseCleanUrl];
             }
             try {
                 const res = await fetch(cleanUrl);
@@ -539,6 +550,7 @@
                 }
                 const html = await res.text();
                 this.htmlCache[cleanUrl] = html;
+                this.htmlCache[baseCleanUrl] = html;
                 return html;
             } catch (err) {
                 console.error(`[Router] Error fetching HTML from ${url}:`, err);
@@ -789,11 +801,10 @@
                     if (el) {
                         if (p === pageId) {
                             el.classList.remove('hidden');
-                            if (!isSamePage) {
+                            if (!isSamePage || options.forceAnimation) {
                                 // Force a DOM reflow between remove and re-add so the browser
                                 // treats this as a fresh animation start, not a no-op.
-                                // Without this, browsers batch both mutations in the same paint
-                                // frame and the CSS animation never fires (Vercel / 127.0.0.1 bug).
+                                // Guarantees smooth entrance animation on cold boots and route transitions.
                                 el.classList.remove('animate-page-enter');
                                 void el.offsetHeight; // trigger reflow
                                 el.classList.add('animate-page-enter');
@@ -1128,7 +1139,7 @@
             const initialRoute = this.routes[initialPageId];
             const initialContainerId = initialRoute ? initialRoute.containerId : 'page-dashboard';
             if (document.getElementById(initialContainerId) || document.getElementById('page-dashboard')) {
-                this.loadPage(initialPageId, null, { updateHistory: false, replace: true }).then(() => {
+                this.loadPage(initialPageId, null, { updateHistory: false, replace: true, forceAnimation: true }).then(() => {
                     this.preloadAllRoutes();
                 });
             } else {
