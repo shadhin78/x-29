@@ -431,6 +431,281 @@ select optgroup {
     text-decoration-color: currentColor;
 }
 
+/* ==========================================================================
+   Pace Management Page & Modals Smooth Animations (Hover, Click, Checkbox, Pop-ups)
+   Hardware-accelerated, optimized for all views and especially PC view.
+   ========================================================================== */
+
+/* 1. Interactive KPI & Timeline Goal Cards (Smooth Elevate & Hover Glow) */
+#pace-stats-section .grid > div {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    will-change: transform, box-shadow, border-color;
+    transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.28s cubic-bezier(0.2, 0.9, 0.3, 1), border-color 0.22s ease;
+}
+
+#pace-stats-section .grid > div:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 18px 30px -6px rgba(0, 0, 0, 0.35), 0 0 16px 2px rgba(99, 102, 241, 0.12);
+}
+
+#pace-goals-container > div {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    will-change: transform, box-shadow, border-color;
+    transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.28s cubic-bezier(0.2, 0.9, 0.3, 1), border-color 0.22s ease;
+}
+
+#pace-goals-container > div:hover {
+    transform: translateY(-6px) scale(1.008);
+    box-shadow: 0 20px 35px -8px rgba(0, 0, 0, 0.6), 0 0 22px 2px rgba(249, 115, 22, 0.12);
+    border-color: rgba(249, 115, 22, 0.45);
+}
+
+/* Action Icons inside Timeline Cards (Hover scale & tactile active press) */
+#pace-goals-container button {
+    transform: translateZ(0);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.18s ease, background-color 0.18s ease;
+    will-change: transform;
+}
+
+#pace-goals-container button:hover {
+    transform: scale(1.22);
+}
+
+#pace-goals-container button:active {
+    transform: scale(0.88);
+    transition-duration: 0.08s;
+}
+
+/* 2. Tactile Click & Press Animations for Buttons */
+#btn-add-pace-goal,
+#btn-save-pace-edit,
+#btn-open-pace-trend-modal {
+    transform: translateZ(0);
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, filter 0.2s ease, background 0.2s ease;
+    will-change: transform, box-shadow;
+}
+
+#btn-add-pace-goal:hover,
+#btn-save-pace-edit:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.07);
+    box-shadow: 0 10px 22px rgba(249, 115, 22, 0.42);
+}
+
+#btn-add-pace-goal:active,
+#btn-save-pace-edit:active,
+#btn-open-pace-trend-modal:active {
+    transform: translateY(1px) scale(0.97);
+    transition-duration: 0.08s;
+    filter: brightness(0.95);
+}
+
+/* 3. Checkbox & Item Selection Bouncy Animations */
+@keyframes paceCheckboxPop {
+    0% {
+        transform: scale(0.7);
+    }
+    45% {
+        transform: scale(1.32);
+    }
+    75% {
+        transform: scale(0.92);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+input[type="checkbox"].pace-bundle-cb,
+input[type="checkbox"].pace-global-subject-cb,
+input[type="checkbox"].pace-sec-cb,
+input[type="checkbox"].edit-pace-bundle-cb,
+input[type="checkbox"].edit-pace-subject-cb,
+input[type="checkbox"].edit-pace-sec-cb {
+    cursor: pointer;
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, filter 0.2s ease;
+    will-change: transform;
+}
+
+input[type="checkbox"].pace-bundle-cb:hover,
+input[type="checkbox"].pace-global-subject-cb:hover,
+input[type="checkbox"].pace-sec-cb:hover,
+input[type="checkbox"].edit-pace-bundle-cb:hover,
+input[type="checkbox"].edit-pace-subject-cb:hover,
+input[type="checkbox"].edit-pace-sec-cb:hover {
+    transform: scale(1.22);
+}
+
+input[type="checkbox"].pace-bundle-cb:active,
+input[type="checkbox"].pace-global-subject-cb:active,
+input[type="checkbox"].pace-sec-cb:active,
+input[type="checkbox"].edit-pace-bundle-cb:active,
+input[type="checkbox"].edit-pace-subject-cb:active,
+input[type="checkbox"].edit-pace-sec-cb:active {
+    transform: scale(0.88);
+    transition-duration: 0.08s;
+}
+
+input[type="checkbox"].pace-bundle-cb:checked,
+input[type="checkbox"].pace-global-subject-cb:checked,
+input[type="checkbox"].pace-sec-cb:checked,
+input[type="checkbox"].edit-pace-bundle-cb:checked,
+input[type="checkbox"].edit-pace-subject-cb:checked,
+input[type="checkbox"].edit-pace-sec-cb:checked {
+    animation: paceCheckboxPop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+#add-pace-subjects-container label,
+#edit-pace-subjects-container label {
+    transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1), border-color 0.22s ease, background-color 0.22s ease, box-shadow 0.22s ease;
+    will-change: transform, border-color, box-shadow;
+}
+
+#add-pace-subjects-container label:hover:not(.pace-passed-item),
+#edit-pace-subjects-container label:hover:not(.pace-passed-item) {
+    transform: translateY(-2.5px);
+    box-shadow: 0 8px 18px -4px rgba(0, 0, 0, 0.28);
+    border-color: rgba(249, 115, 22, 0.45);
+}
+
+#add-pace-subjects-container label:active:not(.pace-passed-item),
+#edit-pace-subjects-container label:active:not(.pace-passed-item) {
+    transform: scale(0.96);
+    transition-duration: 0.08s;
+}
+
+#add-pace-subjects-container label:has(input[type="checkbox"].pace-global-subject-cb:checked),
+#add-pace-subjects-container label:has(input[type="checkbox"].pace-bundle-cb:checked),
+#edit-pace-subjects-container label:has(input[type="checkbox"].edit-pace-subject-cb:checked),
+#edit-pace-subjects-container label:has(input[type="checkbox"].edit-pace-bundle-cb:checked) {
+    border-color: rgba(249, 115, 22, 0.65) !important;
+    background-color: rgba(249, 115, 22, 0.09) !important;
+    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.16);
+}
+
+#add-pace-subjects-container label:has(input[type="checkbox"].pace-sec-cb:checked),
+#edit-pace-subjects-container label:has(input[type="checkbox"].edit-pace-sec-cb:checked) {
+    border-color: rgba(99, 102, 241, 0.65) !important;
+    background-color: rgba(99, 102, 241, 0.09) !important;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.16);
+}
+
+/* 4. Form Inputs & Selects (Glow, Hover & Focus Transition) */
+#page-paces-management input[type="text"],
+#page-paces-management input[type="date"],
+#page-paces-management select,
+#edit-pace-modal input[type="text"],
+#edit-pace-modal input[type="date"] {
+    transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+
+#page-paces-management input[type="text"]:hover,
+#page-paces-management input[type="date"]:hover,
+#page-paces-management select:hover,
+#edit-pace-modal input[type="text"]:hover,
+#edit-pace-modal input[type="date"]:hover {
+    border-color: rgba(249, 115, 22, 0.45);
+}
+
+#page-paces-management input[type="text"]:focus,
+#page-paces-management input[type="date"]:focus,
+#page-paces-management select:focus,
+#edit-pace-modal input[type="text"]:focus,
+#edit-pace-modal input[type="date"]:focus {
+    border-color: rgba(249, 115, 22, 0.8) !important;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.22), 0 2px 8px rgba(0, 0, 0, 0.12);
+    transform: translateY(-1px);
+}
+
+/* Program Dropdowns & Accordion Expand Animation */
+@keyframes paceAccordionExpand {
+    0% {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#page-paces-management details,
+#edit-pace-subjects-container details {
+    transition: border-color 0.22s ease, box-shadow 0.22s ease, background-color 0.22s ease, transform 0.2s ease;
+}
+
+#page-paces-management details:hover,
+#edit-pace-subjects-container details:hover {
+    border-color: rgba(249, 115, 22, 0.4);
+}
+
+#page-paces-management details summary,
+#edit-pace-subjects-container details summary {
+    transition: background-color 0.18s ease;
+}
+
+#page-paces-management details summary svg,
+#edit-pace-subjects-container details summary svg {
+    transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    will-change: transform;
+}
+
+#page-paces-management details[open] > div,
+#edit-pace-subjects-container details[open] > div {
+    animation: paceAccordionExpand 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 5. Pop Up & Modal Smooth Physics */
+#edit-pace-modal,
+#pace-trend-modal,
+#goal-details-modal,
+#pace-candle-modal,
+#edit-trends-pace-modal {
+    transition: opacity 0.26s ease-out;
+}
+
+#edit-pace-modal #epm-content,
+#pace-trend-modal #ptm-content,
+#goal-details-modal #gdm-content,
+#pace-candle-modal #pcm-content,
+#edit-trends-pace-modal #etpm-content {
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.32s ease !important;
+    will-change: transform, opacity;
+}
+
+#edit-pace-modal button[data-modal-close],
+#pace-trend-modal button[data-modal-close],
+#goal-details-modal button[data-modal-close],
+#pace-candle-modal button[data-modal-close],
+#edit-trends-pace-modal button[data-modal-close] {
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.18s ease, background-color 0.18s ease;
+    will-change: transform;
+}
+
+#edit-pace-modal button[data-modal-close]:hover,
+#pace-trend-modal button[data-modal-close]:hover,
+#goal-details-modal button[data-modal-close]:hover,
+#pace-candle-modal button[data-modal-close]:hover,
+#edit-trends-pace-modal button[data-modal-close]:hover {
+    transform: rotate(90deg) scale(1.18);
+}
+
+#edit-pace-modal button[data-modal-close]:active,
+#pace-trend-modal button[data-modal-close]:active,
+#goal-details-modal button[data-modal-close]:active,
+#pace-candle-modal button[data-modal-close]:active,
+#edit-trends-pace-modal button[data-modal-close]:active {
+    transform: rotate(90deg) scale(0.9);
+}
+
+/* 6. Dynamic Progress Bar Gradients & Smooth Filling */
+#pace-goals-container .rounded-full > div {
+    transition: width 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: width;
+}
+
 /* Custom Scrollbar for Studio Containers */
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
