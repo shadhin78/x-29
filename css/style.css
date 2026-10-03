@@ -12,21 +12,302 @@ html {
    ========================================== */
 /* [Moved to pages/Focus/Focus.css] GPU Timer Fullscreen Animations and Mode Styles */
 
+/* ==========================================================================
+   X-2029 GLOBAL MOTION SYSTEM (Phase 2)
+   Tokens, Easing Curves, Micro-Interactions & Hardware Acceleration
+   ========================================================================== */
+
+:root {
+    /* Standardized Animation Durations */
+    --motion-dur-micro: 130ms;
+    --motion-dur-fast: 180ms;
+    --motion-dur-normal: 260ms;
+    --motion-dur-modal: 280ms;
+    --motion-dur-page: 200ms;
+    --motion-dur-slow: 400ms;
+
+    /* Natural Easing Curves (No exaggerated bounce) */
+    --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --motion-ease-decel: cubic-bezier(0.16, 1, 0.3, 1);
+    --motion-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --motion-ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+    --motion-ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* Elevation & Subtle Shadows */
+    --motion-shadow-card-hover: 0 16px 32px -6px rgba(0, 0, 0, 0.45), 0 0 16px 2px rgba(99, 102, 241, 0.12);
+    --motion-shadow-btn-hover: 0 8px 20px rgba(59, 130, 246, 0.35);
+}
+
+/* Phase 3: Subtle, Immediate Page Entrance (0ms blocking, 180ms GPU Decel) */
 @keyframes pageEnter {
     from {
         opacity: 0;
-        transform: translateY(12px) scale(0.99);
+        transform: translateY(8px);
     }
-
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateY(0);
     }
 }
 
 .animate-page-enter {
-    animation: pageEnter 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: pageEnter var(--motion-dur-fast) var(--motion-ease-decel) forwards;
     will-change: opacity, transform;
+}
+
+@keyframes motionFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: motionFadeIn var(--motion-dur-fast) var(--motion-ease-decel) forwards;
+}
+
+/* Phase 4: Staggered Content Entrance Delays */
+.motion-stagger-1 { animation-delay: 0ms !important; }
+.motion-stagger-2 { animation-delay: 40ms !important; }
+.motion-stagger-3 { animation-delay: 80ms !important; }
+.motion-stagger-4 { animation-delay: 120ms !important; }
+.motion-stagger-5 { animation-delay: 160ms !important; }
+
+/* Phase 5 & 6: Interactive Card Hover & Tactile Press */
+@media (hover: hover) {
+    .motion-card-interactive {
+        transform: translate3d(0, 0, 0);
+        backface-visibility: hidden;
+        will-change: transform, box-shadow, border-color;
+        transition: transform var(--motion-dur-normal) var(--motion-ease-decel),
+                    box-shadow var(--motion-dur-normal) var(--motion-ease-decel),
+                    border-color var(--motion-dur-fast) ease;
+    }
+    .motion-card-interactive:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--motion-shadow-card-hover);
+    }
+}
+.motion-card-interactive:active {
+    transform: translateY(0px) scale(0.99);
+    transition-duration: var(--motion-dur-micro);
+}
+
+/* Phase 5 & 6: Interactive Button Hover & Tactile Click */
+.motion-btn-interactive {
+    transform: translateZ(0);
+    will-change: transform, box-shadow, filter;
+    transition: transform var(--motion-dur-fast) var(--motion-ease-pop),
+                box-shadow var(--motion-dur-fast) var(--motion-ease-decel),
+                filter var(--motion-dur-fast) ease,
+                background-color var(--motion-dur-fast) ease,
+                border-color var(--motion-dur-fast) ease;
+}
+@media (hover: hover) {
+    .motion-btn-interactive:hover {
+        transform: translateY(-1.5px);
+        filter: brightness(1.06);
+    }
+}
+.motion-btn-interactive:active {
+    transform: translateY(0.5px) scale(0.975);
+    transition-duration: 0.08s;
+    filter: brightness(0.96);
+}
+
+/* Action Icon Buttons */
+.motion-icon-btn {
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast) var(--motion-ease-pop),
+                color var(--motion-dur-fast) ease,
+                background-color var(--motion-dur-fast) ease;
+}
+@media (hover: hover) {
+    .motion-icon-btn:hover {
+        transform: scale(1.15);
+    }
+}
+.motion-icon-btn:active {
+    transform: scale(0.9);
+    transition-duration: 0.08s;
+}
+
+/* Phase 7: Tactile Checkbox Pop Animation */
+@keyframes checkmarkPop {
+    0% { transform: scale(0.7); }
+    45% { transform: scale(1.28); }
+    75% { transform: scale(0.94); }
+    100% { transform: scale(1); }
+}
+
+.motion-checkbox,
+input[type="checkbox"].task-checkbox,
+input[type="checkbox"].form-checkbox {
+    cursor: pointer;
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast) var(--motion-ease-spring),
+                border-color var(--motion-dur-fast) ease,
+                background-color var(--motion-dur-fast) ease,
+                box-shadow var(--motion-dur-fast) ease;
+}
+@media (hover: hover) {
+    .motion-checkbox:hover,
+    input[type="checkbox"].task-checkbox:hover,
+    input[type="checkbox"].form-checkbox:hover {
+        transform: scale(1.18);
+    }
+}
+.motion-checkbox:active,
+input[type="checkbox"].task-checkbox:active,
+input[type="checkbox"].form-checkbox:active {
+    transform: scale(0.88);
+    transition-duration: 0.08s;
+}
+.motion-checkbox:checked,
+input[type="checkbox"].task-checkbox:checked,
+input[type="checkbox"].form-checkbox:checked {
+    animation: checkmarkPop var(--motion-dur-normal) var(--motion-ease-spring) forwards;
+}
+
+/* Phase 8: Switch / Toggle Smooth Physics */
+.motion-toggle {
+    transition: background-color var(--motion-dur-fast) ease, border-color var(--motion-dur-fast) ease;
+}
+.motion-toggle-thumb {
+    transition: transform var(--motion-dur-fast) var(--motion-ease-decel), background-color var(--motion-dur-fast) ease;
+}
+
+/* Phase 9: Input Focus & Hover Transitions */
+.motion-input,
+input[type="text"]:not([readonly]),
+input[type="date"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+    transition: border-color var(--motion-dur-fast) ease,
+                box-shadow var(--motion-dur-fast) var(--motion-ease-decel),
+                transform var(--motion-dur-fast) ease,
+                background-color var(--motion-dur-fast) ease;
+}
+@media (hover: hover) {
+    .motion-input:hover:not(:disabled),
+    input[type="text"]:not([readonly]):hover:not(:disabled),
+    input[type="date"]:hover:not(:disabled),
+    input[type="number"]:hover:not(:disabled),
+    input[type="email"]:hover:not(:disabled),
+    input[type="password"]:hover:not(:disabled),
+    textarea:hover:not(:disabled),
+    select:hover:not(:disabled) {
+        border-color: rgba(99, 102, 241, 0.45);
+    }
+}
+.motion-input:focus,
+input[type="text"]:not([readonly]):focus,
+input[type="date"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+textarea:focus,
+select:focus {
+    border-color: rgba(99, 102, 241, 0.8) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22), 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+    outline: none !important;
+}
+
+/* Phase 10: Dropdown Entrance & Physics */
+@keyframes dropdownSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+.motion-dropdown-menu {
+    animation: dropdownSlideIn var(--motion-dur-fast) var(--motion-ease-decel) forwards;
+    transform-origin: top;
+    will-change: transform, opacity;
+}
+
+/* Phase 11: Universal Modal Physics */
+.motion-modal-backdrop {
+    transition: opacity var(--motion-dur-normal) var(--motion-ease-decel) !important;
+    will-change: opacity;
+}
+.motion-modal-dialog {
+    transition: transform var(--motion-dur-modal) var(--motion-ease-decel),
+                opacity var(--motion-dur-normal) var(--motion-ease-decel),
+                box-shadow var(--motion-dur-modal) ease !important;
+    will-change: transform, opacity;
+}
+
+/* Phase 13: Accordion Expand Physics */
+@keyframes accordionExpand {
+    0% {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+details[open] > div,
+details[open] > ul {
+    animation: accordionExpand var(--motion-dur-fast) var(--motion-ease-decel) forwards;
+}
+details summary svg {
+    transition: transform var(--motion-dur-fast) var(--motion-ease-spring);
+    will-change: transform;
+}
+details[open] summary svg {
+    transform: rotate(90deg);
+}
+
+/* Phase 16: Table Row Micro-Interactions */
+.motion-table-row {
+    transition: background-color var(--motion-dur-micro) ease, border-color var(--motion-dur-micro) ease;
+}
+@media (hover: hover) {
+    .motion-table-row:hover {
+        background-color: rgba(255, 255, 255, 0.035);
+    }
+}
+
+/* Phase 22: Complete Reduced Motion Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    .animate-page-enter,
+    .dashboard-slide-up,
+    .focus-slide-up,
+    .subjects-slide-up,
+    .dailyScheduleSlideUp,
+    .analyticsSlideUp,
+    .examRoutineSlideUp,
+    .masterConfigSlideUp,
+    .outcomeSlideUp,
+    .pace-management-slide-up {
+        animation: none !important;
+        transform: none !important;
+        opacity: 1 !important;
+    }
 }
 
 @keyframes auraPulse {
@@ -73,6 +354,159 @@ input[type="submit"] {
 
 #sidebar-backdrop {
     will-change: opacity;
+    transition: opacity var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+/* ==========================================================================
+   Global Shell, Header, Sidebar & Navigation Interactions (Phase 15 & 20)
+   ========================================================================== */
+
+/* Header brand logo & title */
+#btn-nav-brand {
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+@media (hover: hover) {
+    #btn-nav-brand:hover {
+        transform: translateY(-1px) scale(1.02);
+    }
+}
+#btn-nav-brand:active {
+    transform: scale(0.97);
+}
+
+/* Header quick action circular buttons */
+#main-header button:not(#btn-nav-brand) {
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1)),
+                background-color var(--motion-dur-fast, 180ms) ease,
+                color var(--motion-dur-fast, 180ms) ease;
+}
+@media (hover: hover) {
+    #main-header button:not(#btn-nav-brand):hover {
+        transform: scale(1.1);
+    }
+}
+#main-header button:not(#btn-nav-brand):active {
+    transform: scale(0.92);
+    transition-duration: 0.08s;
+}
+
+/* Sidebar navigation items */
+#sidebar-container button {
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                background-color var(--motion-dur-fast, 180ms) ease,
+                border-color var(--motion-dur-fast, 180ms) ease,
+                box-shadow var(--motion-dur-fast, 180ms) ease;
+}
+@media (hover: hover) {
+    #sidebar-container button:hover {
+        transform: translateX(4px);
+    }
+}
+#sidebar-container button:active {
+    transform: translateX(2px) scale(0.97);
+    transition-duration: 0.08s;
+}
+
+#sidebar-container button svg {
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-spring, cubic-bezier(0.34, 1.4, 0.64, 1));
+    will-change: transform;
+}
+@media (hover: hover) {
+    #sidebar-container button:hover svg {
+        transform: scale(1.12);
+    }
+}
+
+/* ==========================================================================
+   Universal Modal Dialogs & Popups Physics (Phase 11)
+   ========================================================================== */
+div[id$="-modal"],
+div[id$="-dialog"] {
+    transition: opacity var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+div[id$="-backdrop"] {
+    transition: opacity var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1));
+    will-change: opacity;
+}
+
+div[id$="-content"] {
+    transition: transform var(--motion-dur-modal, 280ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                opacity var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                box-shadow var(--motion-dur-modal, 280ms) ease !important;
+    will-change: transform, opacity;
+}
+
+/* Universal Modal Close Buttons */
+button[data-modal-close],
+button[data-close-modal],
+.btn-modal-close,
+[data-close-subject-target-modal],
+[data-close-congrats] {
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-spring, cubic-bezier(0.34, 1.4, 0.64, 1)),
+                color var(--motion-dur-fast, 180ms) ease,
+                background-color var(--motion-dur-fast, 180ms) ease;
+}
+
+@media (hover: hover) {
+    button[data-modal-close]:hover,
+    button[data-close-modal]:hover,
+    .btn-modal-close:hover,
+    [data-close-subject-target-modal]:hover,
+    [data-close-congrats]:hover {
+        transform: rotate(90deg) scale(1.15);
+    }
+}
+
+button[data-modal-close]:active,
+button[data-close-modal]:active,
+.btn-modal-close:active,
+[data-close-subject-target-modal]:active,
+[data-close-congrats]:active {
+    transform: rotate(90deg) scale(0.9);
+}
+
+/* ==========================================================================
+   Toast Notification Animations (Phase 12)
+   ========================================================================== */
+@keyframes toastEnter {
+    0% {
+        opacity: 0;
+        transform: translateY(12px) scale(0.96);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes toastExit {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.96);
+    }
+}
+
+.animate-toast-enter {
+    animation: toastEnter var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
+    will-change: opacity, transform;
+}
+
+.animate-toast-exit {
+    animation: toastExit var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
+    will-change: opacity, transform;
 }
 
 /* [Moved to pages/Analytics/Analytics.css] #page-spectra-analytics canvas and container styles */

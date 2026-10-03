@@ -9,7 +9,7 @@
 @keyframes paceManagementSlideUp {
     0% {
         opacity: 0;
-        transform: translateY(14px);
+        transform: translateY(8px);
     }
     100% {
         opacity: 1;
@@ -19,7 +19,7 @@
 
 #page-paces-management.animate-page-enter,
 .pace-management-slide-up {
-    animation: paceManagementSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: paceManagementSlideUp var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
     will-change: transform, opacity;
 }
 

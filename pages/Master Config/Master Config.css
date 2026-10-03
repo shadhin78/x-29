@@ -1,13 +1,14 @@
 /* ==========================================================================
    Master Config Page Specific Styles (pages/Master Config/Master Config.css)
    Preserves exact visual identity, responsiveness, and provides slide-up transition.
+   Enhanced with smooth interaction & motion system (Priority 9).
    ========================================================================== */
 
 /* Page Transition: Smooth Hardware-Accelerated Slide-up */
 @keyframes masterConfigSlideUp {
     0% {
         opacity: 0;
-        transform: translateY(14px);
+        transform: translateY(8px);
     }
     100% {
         opacity: 1;
@@ -17,7 +18,7 @@
 
 #page-master-config.animate-page-enter,
 .master-config-slide-up {
-    animation: masterConfigSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: masterConfigSlideUp var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
     will-change: transform, opacity;
 }
 
@@ -30,6 +31,72 @@
     -webkit-transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+}
+
+/* 1. Sub-system Tab Switcher Micro-Interactions */
+#page-master-config [id^="sys-tab-"] {
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1)),
+                background-color var(--motion-dur-fast, 180ms) ease,
+                color var(--motion-dur-fast, 180ms) ease,
+                border-color var(--motion-dur-fast, 180ms) ease;
+}
+
+@media (hover: hover) {
+    #page-master-config [id^="sys-tab-"]:hover {
+        transform: translateY(-1.5px);
+        filter: brightness(1.08);
+    }
+}
+
+#page-master-config [id^="sys-tab-"]:active {
+    transform: scale(0.95);
+    transition-duration: 0.08s;
+}
+
+/* 2. Priority Rows & Track Cards Hover Elevation */
+#sys-content-priority [id^="prio-row-"],
+#sys-content-track > div {
+    transition: transform var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                box-shadow var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                border-color var(--motion-dur-fast, 180ms) ease,
+                background-color var(--motion-dur-fast, 180ms) ease;
+}
+
+@media (hover: hover) {
+    #sys-content-priority [id^="prio-row-"]:hover,
+    #sys-content-track > div:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.3), 0 0 16px 2px rgba(99, 102, 241, 0.1);
+        border-color: rgba(99, 102, 241, 0.35);
+    }
+}
+
+/* 3. Action Buttons & Tactile Save Button */
+#page-master-config button:not([id^="sys-tab-"]) {
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1)),
+                filter var(--motion-dur-fast, 180ms) ease,
+                box-shadow var(--motion-dur-fast, 180ms) ease;
+}
+
+@media (hover: hover) {
+    #page-master-config button:not([id^="sys-tab-"]):hover {
+        transform: translateY(-1.5px);
+        filter: brightness(1.08);
+    }
+
+    #page-master-config #btn-save-master-config:hover,
+    #page-master-config button[class*="bg-emerald"]:hover {
+        box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+    }
+}
+
+#page-master-config button:not([id^="sys-tab-"]):active {
+    transform: scale(0.95);
+    transition-duration: 0.08s;
 }
 
 /* Scoped Custom Scrollbars for Priority & Track Lists */

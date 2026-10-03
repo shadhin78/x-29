@@ -1,13 +1,14 @@
 /* ==========================================================================
    Outcome Page Specific Styles (pages/Outcome/Outcome.css)
    Preserves exact visual identity, responsiveness, and provides slide-up transition.
+   Enhanced with smooth interaction & motion system (Priority 10).
    ========================================================================== */
 
 /* Page Transition: Smooth Hardware-Accelerated Slide-up */
 @keyframes outcomeSlideUp {
     0% {
         opacity: 0;
-        transform: translateY(14px);
+        transform: translateY(8px);
     }
     100% {
         opacity: 1;
@@ -17,7 +18,7 @@
 
 #page-outcome.animate-page-enter,
 .outcome-slide-up {
-    animation: outcomeSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: outcomeSlideUp var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
     will-change: transform, opacity;
 }
 
@@ -27,12 +28,81 @@
     backface-visibility: hidden;
 }
 
-#results-container > div {
-    transform: translateZ(0);
+/* 1. Results Summary & Metric Cards Hover Elevation */
+#results-container > div,
+#outcome-pass-container > div,
+#outcome-celebration-container > div,
+#page-outcome .grid > div {
+    transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
+    will-change: transform, box-shadow, border-color;
+    transition: transform var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                box-shadow var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                border-color var(--motion-dur-fast, 180ms) ease;
 }
 
-/* Custom Scrollbars Scoped to Outcome */
+@media (hover: hover) {
+    #results-container > div:hover,
+    #outcome-pass-container > div:hover,
+    #outcome-celebration-container > div:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 14px 28px -4px rgba(0, 0, 0, 0.35), 0 0 16px 2px rgba(234, 179, 8, 0.12);
+        border-color: rgba(234, 179, 8, 0.35);
+    }
+}
+
+/* 2. Program Details Accordion Transitions */
+#page-outcome details {
+    transition: border-color var(--motion-dur-fast, 180ms) ease,
+                background-color var(--motion-dur-fast, 180ms) ease;
+}
+
+#page-outcome details summary {
+    list-style: none;
+    cursor: pointer;
+    transition: background-color var(--motion-dur-micro, 130ms) ease;
+    user-select: none;
+}
+
+#page-outcome details summary::-webkit-details-marker {
+    display: none;
+}
+
+#page-outcome details summary svg {
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-spring, cubic-bezier(0.34, 1.4, 0.64, 1));
+    will-change: transform;
+}
+
+#page-outcome details[open] summary svg {
+    transform: rotate(90deg);
+}
+
+#page-outcome details[open] > div {
+    animation: accordionExpand var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
+}
+
+/* 3. Action Buttons & Tactile Feedback */
+#page-outcome button {
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1)),
+                filter var(--motion-dur-fast, 180ms) ease,
+                box-shadow var(--motion-dur-fast, 180ms) ease;
+}
+
+@media (hover: hover) {
+    #page-outcome button:hover {
+        transform: translateY(-1.5px);
+        filter: brightness(1.08);
+    }
+}
+
+#page-outcome button:active {
+    transform: scale(0.95);
+    transition-duration: 0.08s;
+}
+
+/* Scoped Scrollbars for Outcome */
 #page-outcome .custom-scrollbar::-webkit-scrollbar,
 #results-trend-container .custom-scrollbar::-webkit-scrollbar,
 #outcome-pass-container .custom-scrollbar::-webkit-scrollbar,
@@ -70,13 +140,4 @@
 #outcome-pass-container .custom-scrollbar::-webkit-scrollbar-thumb:hover,
 #outcome-celebration-container .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: rgba(234, 179, 8, 0.6);
-}
-
-/* Details & Summary Marker Customization */
-#page-outcome details summary {
-    list-style: none;
-}
-
-#page-outcome details summary::-webkit-details-marker {
-    display: none;
 }

@@ -1,13 +1,14 @@
 /* ==========================================================================
    Dashboard Page Specific Styles (pages/Dashboard/Dashboard.css)
    Preserves visual identity, responsiveness, and provides slide-up transition.
+   Enhanced with smooth interaction & motion system (Phase 1 / Priority 1).
    ========================================================================== */
 
 /* Slide-Up Transition for Dashboard Page */
 @keyframes dashboardSlideUp {
     0% {
         opacity: 0;
-        transform: translateY(14px);
+        transform: translateY(8px);
     }
     100% {
         opacity: 1;
@@ -17,8 +18,136 @@
 
 #page-dashboard.animate-page-enter,
 .dashboard-slide-up {
-    animation: dashboardSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: dashboardSlideUp var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
     will-change: transform, opacity;
+}
+
+/* 1. Dashboard Main Cards (Elevated Hover & Subtle Glow on Desktop) */
+@media (hover: hover) {
+    #page-dashboard .grid > div.bg-white,
+    #page-dashboard .grid > div.dark\:bg-slate-800,
+    #page-dashboard [id$="-section"],
+    #page-dashboard .dashboard-card {
+        transform: translate3d(0, 0, 0);
+        backface-visibility: hidden;
+        will-change: transform, box-shadow, border-color;
+        transition: transform var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                    box-shadow var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                    border-color var(--motion-dur-fast, 180ms) ease;
+    }
+
+    #page-dashboard .grid > div.bg-white:hover,
+    #page-dashboard .grid > div.dark\:bg-slate-800:hover,
+    #page-dashboard [id$="-section"]:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 16px 30px -6px rgba(0, 0, 0, 0.35), 0 0 16px 2px rgba(99, 102, 241, 0.1);
+        border-color: rgba(99, 102, 241, 0.35);
+    }
+}
+
+/* 2. Interactive Metric Boxes (Inner Cards Hover Feedback) */
+@media (hover: hover) {
+    #page-dashboard .grid-cols-2 > div,
+    #page-dashboard .grid-cols-4 > div {
+        transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                    border-color var(--motion-dur-fast, 180ms) ease,
+                    background-color var(--motion-dur-fast, 180ms) ease;
+        will-change: transform, border-color;
+    }
+
+    #page-dashboard .grid-cols-2 > div:hover,
+    #page-dashboard .grid-cols-4 > div:hover {
+        transform: translateY(-1.5px);
+    }
+}
+
+/* 3. Action Buttons & Navigation Jump Buttons */
+#page-dashboard button[data-switch-page],
+#page-dashboard button.p-1\.5,
+#page-dashboard .btn-dashboard-action {
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1)),
+                color var(--motion-dur-fast, 180ms) ease,
+                background-color var(--motion-dur-fast, 180ms) ease;
+}
+
+@media (hover: hover) {
+    #page-dashboard button[data-switch-page]:hover,
+    #page-dashboard button.p-1\.5:hover,
+    #page-dashboard .btn-dashboard-action:hover {
+        transform: scale(1.15);
+    }
+}
+
+#page-dashboard button[data-switch-page]:active,
+#page-dashboard button.p-1\.5:active,
+#page-dashboard .btn-dashboard-action:active {
+    transform: scale(0.92);
+    transition-duration: 0.08s;
+}
+
+/* 4. Target Checklist Rows & Checkboxes */
+#page-dashboard #db-weekly-targets-checklist > div,
+#page-dashboard #db-monthly-targets-checklist > div,
+#page-dashboard #db-daily-targets-checklist > div,
+#page-dashboard #db-upcoming-exams-list > div,
+#page-dashboard #db-passed-subjects-list > div {
+    transition: background-color var(--motion-dur-micro, 130ms) ease,
+                border-color var(--motion-dur-micro, 130ms) ease,
+                transform var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+@media (hover: hover) {
+    #page-dashboard #db-weekly-targets-checklist > div:hover,
+    #page-dashboard #db-monthly-targets-checklist > div:hover,
+    #page-dashboard #db-daily-targets-checklist > div:hover {
+        background-color: rgba(255, 255, 255, 0.04);
+        transform: translateX(2px);
+    }
+
+    #page-dashboard #db-upcoming-exams-list > div:hover,
+    #page-dashboard #db-passed-subjects-list > div:hover {
+        transform: translateX(3px);
+    }
+}
+
+/* 5. Dashboard Focus Heatmap Grid Squares */
+#dashboard-focus-heatmap-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+#dashboard-focus-heatmap-grid > div,
+#dashboard-focus-heatmap-grid button {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform var(--motion-dur-micro, 130ms) ease,
+                box-shadow var(--motion-dur-micro, 130ms) ease,
+                filter var(--motion-dur-micro, 130ms) ease;
+    will-change: transform;
+}
+
+@media (hover: hover) {
+    #dashboard-focus-heatmap-grid > div:hover,
+    #dashboard-focus-heatmap-grid button:hover {
+        transform: scale(1.3);
+        z-index: 20;
+        filter: brightness(1.2);
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+    }
+}
+
+#dashboard-focus-heatmap-grid > div:active,
+#dashboard-focus-heatmap-grid button:active {
+    transform: scale(0.9);
+}
+
+/* 6. Dynamic Progress Bar Transitions */
+#page-dashboard .rounded-full > div[style*="width"] {
+    transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: width;
 }
 
 /* Scoped Scrollbars for Dashboard Cards */
@@ -56,13 +185,6 @@
 
 #page-dashboard .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(148, 163, 184, 0.5);
-}
-
-/* Dashboard Focus Heatmap Container */
-#dashboard-focus-heatmap-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
 }
 
 /* Responsive adjustments */

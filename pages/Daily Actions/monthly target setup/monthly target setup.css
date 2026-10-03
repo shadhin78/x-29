@@ -1,45 +1,96 @@
 /**
  * Monthly Target Studio Page Styles (pages/Daily Actions/monthly target setup/monthly target setup.css)
  * Extracted dedicated stylesheet for Add/Edit Monthly Target Studio page.
+ * Enhanced with smooth interaction & motion system (Priority 12).
  */
+
+/* Page Transition: Smooth Hardware-Accelerated Slide-up */
+@keyframes monthlyTargetSetupSlideUp {
+    0% {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#page-monthly-target-setup.animate-page-enter {
+    animation: monthlyTargetSetupSlideUp var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
+    will-change: transform, opacity;
+}
 
 /* Monthly Target Studio Row Enhancements */
 .mt-chapter-row {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                background-color var(--motion-dur-micro, 130ms) ease,
+                border-color var(--motion-dur-micro, 130ms) ease;
 }
 
-.mt-chapter-row:hover {
-    transform: translateY(-1px);
+@media (hover: hover) {
+    .mt-chapter-row:hover {
+        transform: translateY(-1.5px);
+        background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    .mt-subject-card:hover {
+        transform: translateX(3px);
+        border-color: rgba(99, 102, 241, 0.4);
+    }
+
+    .mt-prog-card:hover {
+        transform: translateX(3px);
+        border-color: rgba(99, 102, 241, 0.4);
+    }
 }
 
-.mt-subject-card {
-    transition: all 0.2s ease-in-out;
-}
-
-.mt-subject-card:hover {
-    transform: translateX(2px);
-}
-
+.mt-subject-card,
 .mt-prog-card {
-    transition: all 0.2s ease-in-out;
-}
-
-.mt-prog-card:hover {
-    transform: translateX(2px);
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                border-color var(--motion-dur-fast, 180ms) ease,
+                box-shadow var(--motion-dur-fast, 180ms) ease;
+    will-change: transform;
 }
 
 .mt-subject-chapter-group {
-    transition: all 0.25s ease-in-out;
+    transition: all var(--motion-dur-normal, 260ms) ease-in-out;
 }
 
 .mt-chapter-week-select,
 .mt-size-whole-subject-week {
-    transition: all 0.15s ease-in-out;
+    transition: border-color var(--motion-dur-fast, 180ms) ease,
+                box-shadow var(--motion-dur-fast, 180ms) ease;
 }
 
 .mt-chapter-week-select:focus,
 .mt-size-whole-subject-week:focus {
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
+}
+
+/* Interactive Action Buttons & Bottom Save */
+#page-monthly-target-setup button {
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1)),
+                filter var(--motion-dur-fast, 180ms) ease,
+                box-shadow var(--motion-dur-fast, 180ms) ease;
+}
+
+@media (hover: hover) {
+    #page-monthly-target-setup button:hover {
+        transform: translateY(-1.5px);
+        filter: brightness(1.06);
+    }
+
+    #mt-btn-save-bottom:hover {
+        box-shadow: 0 10px 24px -4px rgba(99, 102, 241, 0.4);
+    }
+}
+
+#page-monthly-target-setup button:active {
+    transform: scale(0.95);
+    transition-duration: 0.08s;
 }
 
 .mt-chapter-multiweek-badge {

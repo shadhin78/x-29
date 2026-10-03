@@ -7,7 +7,7 @@
 @keyframes analyticsSlideUp {
     0% {
         opacity: 0;
-        transform: translateY(14px);
+        transform: translateY(8px);
     }
     100% {
         opacity: 1;
@@ -17,7 +17,7 @@
 
 #page-spectra-analytics.animate-page-enter,
 .analytics-slide-up {
-    animation: analyticsSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: analyticsSlideUp var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
     will-change: transform, opacity;
 }
 
@@ -188,4 +188,61 @@ body.dark #spectra-commitments-chart-wrapper .commitment-hub-digit {
 }
 .spectra-heatmap-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(99, 102, 241, 0.6);
+}
+
+/* ==========================================================================
+   Analytics Dropdowns, Filter Buttons & Cards (Priority 6)
+   ========================================================================== */
+#spectra-filter-dropdown-menu:not(.hidden) {
+    animation: dropdownSlideIn var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
+    transform-origin: top right;
+    will-change: transform, opacity;
+}
+
+#spectra-filter-dropdown-menu button {
+    transition: background-color var(--motion-dur-micro, 130ms) ease,
+                color var(--motion-dur-micro, 130ms) ease;
+}
+
+@media (hover: hover) {
+    #spectra-filter-dropdown-menu button:hover {
+        background-color: rgba(99, 102, 241, 0.15);
+    }
+}
+
+/* Analytics Cards Hover Elevation */
+@media (hover: hover) {
+    #page-spectra-analytics .bg-white,
+    #page-spectra-analytics .dark\:bg-slate-800 {
+        transform: translate3d(0, 0, 0);
+        backface-visibility: hidden;
+        will-change: transform, box-shadow, border-color;
+        transition: transform var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                    box-shadow var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                    border-color var(--motion-dur-fast, 180ms) ease;
+    }
+
+    #page-spectra-analytics .bg-white:hover,
+    #page-spectra-analytics .dark\:bg-slate-800:hover {
+        border-color: rgba(236, 72, 153, 0.3);
+    }
+}
+
+/* Filter buttons tactile click */
+#page-spectra-analytics button {
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1)),
+                filter var(--motion-dur-fast, 180ms) ease;
+}
+
+@media (hover: hover) {
+    #page-spectra-analytics button:hover {
+        filter: brightness(1.06);
+    }
+}
+
+#page-spectra-analytics button:active {
+    transform: scale(0.96);
+    transition-duration: 0.08s;
 }

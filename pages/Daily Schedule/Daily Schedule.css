@@ -1,13 +1,14 @@
 /* ==========================================================================
    Daily Schedule Page Styles & Modular Component System
    Target: pages/Daily Schedule/Daily Schedule.css
+   Enhanced with smooth interaction & motion system (Priority 5).
    ========================================================================== */
 
 /* Page Transition: Smooth Slide-up with Hardware Acceleration */
 @keyframes dailyScheduleSlideUp {
     from {
         opacity: 0;
-        transform: translateY(18px);
+        transform: translateY(8px);
     }
     to {
         opacity: 1;
@@ -16,29 +17,102 @@
 }
 
 #page-schedule.animate-page-enter {
-    animation: dailyScheduleSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: dailyScheduleSlideUp var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
+    will-change: transform, opacity;
 }
 
 /* ==========================================================================
-   Daily Schedule Timeline Cards & Grid GPU Stabilization
+   1. Daily Schedule Timeline Cards & Grid GPU Stabilization
    ========================================================================== */
 #schedule-timeline-grid > div {
-    will-change: transform, box-shadow;
+    will-change: transform, box-shadow, border-color;
     backface-visibility: hidden;
     transform: translateZ(0);
+    transition: transform var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                box-shadow var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                border-color var(--motion-dur-fast, 180ms) ease;
 }
 
-/* Interactive elements optimization */
+@media (hover: hover) {
+    #schedule-timeline-grid > div:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 14px 28px -4px rgba(0, 0, 0, 0.35), 0 0 16px 2px rgba(6, 182, 212, 0.12);
+        border-color: rgba(6, 182, 212, 0.35);
+    }
+}
+
+/* 2. Interactive Timeline Card Buttons (Done, Edit, Delete) */
 #schedule-timeline-grid button,
-#schedule-hours-summary-list button {
+#schedule-hours-summary-list button,
+#schedule-controls-bar button,
+#btn-add-schedule,
+#btn-create-schedule-group {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1)),
+                filter var(--motion-dur-fast, 180ms) ease,
+                background-color var(--motion-dur-fast, 180ms) ease;
+}
+
+@media (hover: hover) {
+    #schedule-timeline-grid button:hover,
+    #schedule-hours-summary-list button:hover {
+        transform: scale(1.15);
+    }
+
+    #schedule-controls-bar button:hover,
+    #btn-add-schedule:hover,
+    #btn-create-schedule-group:hover {
+        transform: translateY(-1.5px);
+        filter: brightness(1.08);
+    }
+}
+
+#schedule-timeline-grid button:active,
+#schedule-hours-summary-list button:active,
+#schedule-controls-bar button:active,
+#btn-add-schedule:active,
+#btn-create-schedule-group:active {
+    transform: scale(0.92);
+    transition-duration: 0.08s;
+}
+
+/* 3. 24-Hour Visual Timeline Interactive Bar */
+#schedule-visual-timeline-bar > div {
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                filter var(--motion-dur-fast, 180ms) ease;
+    will-change: transform;
+}
+
+@media (hover: hover) {
+    #schedule-visual-timeline-bar > div:hover {
+        transform: translateY(-2px) scaleY(1.08);
+        filter: brightness(1.15);
+        z-index: 10;
+    }
+}
+
+/* 4. Hours Summary Row Hover Feedback */
+#schedule-hours-summary-list > div {
+    transition: background-color var(--motion-dur-micro, 130ms) ease,
+                border-color var(--motion-dur-micro, 130ms) ease,
+                transform var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+@media (hover: hover) {
+    #schedule-hours-summary-list > div:hover {
+        background-color: rgba(255, 255, 255, 0.035);
+        transform: translateX(2px);
+    }
 }
 
 /* Custom scrollbars for hours summary and allocation list */
 #schedule-hours-summary-list::-webkit-scrollbar,
 #schedule-visual-timeline-bar::-webkit-scrollbar {
     width: 4px;
+    height: 4px;
 }
 
 #schedule-hours-summary-list::-webkit-scrollbar-track,

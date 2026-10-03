@@ -1,13 +1,14 @@
 /* ==========================================================================
    Daily Actions Page Styles & Modular Component System
    Target: pages/Daily Actions/Daily Actions.css
+   Enhanced with smooth interaction & motion system (Priority 11).
    ========================================================================== */
 
 /* Page Transition: Smooth Slide-up with Hardware Acceleration */
 @keyframes dailyActionsSlideUp {
     from {
         opacity: 0;
-        transform: translateY(18px);
+        transform: translateY(8px);
     }
     to {
         opacity: 1;
@@ -16,28 +17,80 @@
 }
 
 #page-daily-actions.animate-page-enter {
-    animation: dailyActionsSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: dailyActionsSlideUp var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
+    will-change: transform, opacity;
 }
 
 /* ==========================================================================
-   Daily Action Cards & Heat Map UI Enhancements (High Performance & GPU)
+   1. Daily Action Cards & Heat Map UI Enhancements (High Performance & GPU)
    ========================================================================== */
 #daily-actions-grid > div {
     will-change: transform, box-shadow, border-color;
     backface-visibility: hidden;
     transform: translateZ(0);
+    transition: transform var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                box-shadow var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                border-color var(--motion-dur-fast, 180ms) ease;
 }
 
-/* Day log box buttons inside Action Cards */
+@media (hover: hover) {
+    #daily-actions-grid > div:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 16px 30px -6px rgba(0, 0, 0, 0.35), 0 0 16px 2px rgba(249, 115, 22, 0.12);
+        border-color: rgba(249, 115, 22, 0.35);
+    }
+}
+
+/* 2. Day Log Box Buttons inside Action Cards */
 div[id^="dt-log-"] button {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     will-change: transform, box-shadow, background-color;
     user-select: none;
+    transition: transform var(--motion-dur-micro, 130ms) ease,
+                box-shadow var(--motion-dur-micro, 130ms) ease,
+                filter var(--motion-dur-micro, 130ms) ease;
+}
+
+@media (hover: hover) {
+    div[id^="dt-log-"] button:hover {
+        transform: scale(1.18);
+        filter: brightness(1.2);
+        z-index: 10;
+        box-shadow: 0 0 8px rgba(249, 115, 22, 0.4);
+    }
 }
 
 div[id^="dt-log-"] button:active {
-    transform: scale(0.92) translateZ(0);
+    transform: scale(0.88);
+    transition-duration: 0.08s;
+}
+
+/* 3. Action Buttons & Navigation Modals */
+#page-daily-actions button:not([class*="dt-log"]) {
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1)),
+                filter var(--motion-dur-fast, 180ms) ease,
+                box-shadow var(--motion-dur-fast, 180ms) ease;
+}
+
+@media (hover: hover) {
+    #page-daily-actions button:not([class*="dt-log"]):hover {
+        transform: translateY(-1.5px);
+        filter: brightness(1.08);
+    }
+}
+
+#page-daily-actions button:not([class*="dt-log"]):active {
+    transform: scale(0.95);
+    transition-duration: 0.08s;
+}
+
+/* 4. Dynamic Progress Bar Gradients & Smooth Filling */
+#page-daily-actions .rounded-full > div[style*="width"] {
+    transition: width 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: width;
 }
 
 /* Custom scrollbar for action card heatmap container */

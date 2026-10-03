@@ -1,13 +1,14 @@
 /* ==========================================================================
    Exam Routine Page Specific Styles (pages/Exam Routine/Exam Routine.css)
    Preserves exact visual identity, responsiveness, and provides slide-up transition.
+   Enhanced with smooth interaction & motion system (Priority 7).
    ========================================================================== */
 
 /* Page Transition: Smooth Hardware-Accelerated Slide-up */
 @keyframes examRoutineSlideUp {
     0% {
         opacity: 0;
-        transform: translateY(14px);
+        transform: translateY(8px);
     }
     100% {
         opacity: 1;
@@ -17,7 +18,7 @@
 
 #page-exam.animate-page-enter,
 .exam-routine-slide-up {
-    animation: examRoutineSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: examRoutineSlideUp var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
     will-change: transform, opacity;
 }
 
@@ -31,6 +32,69 @@
 #exam-routine-container > div {
     transform: translateZ(0);
     backface-visibility: hidden;
+}
+
+/* 1. Countdown Hero Banner Transition */
+#exam-countdown-hero {
+    transition: transform var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                box-shadow var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+@media (hover: hover) {
+    #exam-countdown-hero:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 32px -6px rgba(0, 0, 0, 0.45), 0 0 20px 2px rgba(244, 63, 94, 0.15);
+    }
+}
+
+/* 2. Session Block & Exam Card Interactive Polish */
+.exam-session-card {
+    will-change: transform, box-shadow, border-color;
+    transition: transform var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                box-shadow var(--motion-dur-normal, 260ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1)),
+                border-color var(--motion-dur-fast, 180ms) ease;
+}
+
+@media (hover: hover) {
+    .exam-session-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 14px 28px -4px rgba(0, 0, 0, 0.35), 0 0 16px 2px rgba(244, 63, 94, 0.12);
+        border-color: rgba(244, 63, 94, 0.4);
+    }
+}
+
+.exam-item-row {
+    transition: background-color var(--motion-dur-micro, 130ms) ease,
+                border-color var(--motion-dur-micro, 130ms) ease,
+                transform var(--motion-dur-fast, 180ms) var(--motion-ease-decel, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+@media (hover: hover) {
+    .exam-item-row:hover {
+        background-color: rgba(255, 255, 255, 0.035);
+        transform: translateX(3px);
+    }
+}
+
+/* 3. Action Buttons & Tactile Feedback */
+#page-exam button {
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform var(--motion-dur-fast, 180ms) var(--motion-ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1)),
+                filter var(--motion-dur-fast, 180ms) ease,
+                box-shadow var(--motion-dur-fast, 180ms) ease;
+}
+
+@media (hover: hover) {
+    #page-exam button:hover {
+        transform: translateY(-1.5px);
+        filter: brightness(1.08);
+    }
+}
+
+#page-exam button:active {
+    transform: scale(0.94);
+    transition-duration: 0.08s;
 }
 
 /* Custom Scrollbars Scoped to Exam Routine & Modals */
@@ -66,21 +130,4 @@
 /* Tabular countdown numbers stabilization */
 #page-exam .tabular-nums {
     font-variant-numeric: tabular-nums;
-}
-
-/* Session Block & Exam Card Interactive Polish */
-.exam-session-card {
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
-}
-
-.exam-session-card:hover {
-    border-color: rgba(244, 63, 94, 0.3);
-}
-
-.exam-item-row {
-    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
-}
-
-.exam-item-row:hover {
-    transform: translateX(2px);
 }
