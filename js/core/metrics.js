@@ -474,7 +474,10 @@
                 const currentPaceDisplay = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function')
                     ? Utils.formatPace(globalCurPace)
                     : `${globalCurPace.toFixed(2)} Ch/Day`;
+                safeSetText('target-pace-stat', `--`);
+                safeSetHtml('global-target-total-days', `<span class="opacity-50">--</span>`);
                 safeSetText('target-req-pace', `--`);
+                safeSetText('required-pace-stat', `--`);
                 safeSetText('current-pace-stat', currentPaceDisplay);
                 safeSetText('global-pace-req', `--`);
                 safeSetText('global-pace-act', currentPaceDisplay);
@@ -700,7 +703,15 @@
                     }
                 }
 
+                const uniformSpeed = (paceTotalChapters > 0 && totalDays > 0) ? (paceTotalChapters / totalDays) : 0;
+                const uniformSpeedDisplay = (typeof Utils !== 'undefined' && typeof Utils.formatPace === 'function')
+                    ? Utils.formatPace(uniformSpeed)
+                    : `${uniformSpeed.toFixed(2)} Ch/Day`;
+
+                safeSetText('target-pace-stat', uniformSpeedDisplay);
+                safeSetHtml('global-target-total-days', `${totalDays} Days Total`);
                 safeSetText('target-req-pace', reqPaceDisplay);
+                safeSetText('required-pace-stat', reqPaceDisplay);
                 safeSetText('current-pace-stat', currentPaceDisplay);
                 safeSetHtml('projected-finish', finishDisplay);
 

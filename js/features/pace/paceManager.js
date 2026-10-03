@@ -96,9 +96,11 @@
                 finishDisplay, timeGoalCountdownStr, estDaysNeededStr
             } = stats;
 
-            const isBehind = remaining > 0 && today >= startDate && curPaceVal < reqPaceVal;
-            const reqColor = isBehind ? 'text-red-500' : 'text-emerald-500';
-            const reqBg = isBehind ? 'bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20' : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20';
+            const isBehind = stats.isBehind !== undefined ? stats.isBehind : (remaining > 0 && today >= startDate && curPaceVal < reqPaceVal);
+            const statusKey = stats.status || (remaining <= 0 ? 'finished' : (curPaceVal <= 0 ? (today < startDate ? 'future' : (today > targetDate ? 'overdue' : 'no-data')) : (today > targetDate ? 'overdue' : (curPaceVal >= reqPaceVal ? 'on-track' : 'behind'))));
+
+            const reqColor = isBehind ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400';
+            const reqBg = isBehind ? 'bg-orange-50/50 dark:bg-orange-950/20 border-orange-200/50 dark:border-orange-800/40' : 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/40';
 
             let isActiveFilter = false;
             if (currentFilter !== 'All') {
@@ -120,61 +122,108 @@
                 isActiveFilter = true;
             }
 
-            let goalColorClass = 'bg-indigo-500';
-            if (goal.type === 'program') goalColorClass = 'bg-violet-500';
-            if (goal.type === 'bundle') goalColorClass = 'bg-orange-500';
-            if (goal.type === 'global') goalColorClass = 'bg-blue-500';
+            // Scope Badge Styling (Section 5.1 & 6.2)
+            let scopeBadge = '<span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-900/60 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40">Bundle</span>';
+            if (goal.type === 'program') {
+                scopeBadge = '<span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-violet-200 dark:border-violet-900/60 text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/40">Program</span>';
+            } else if (goal.type === 'subject') {
+                scopeBadge = '<span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-900/60 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40">Subject</span>';
+            } else if (goal.type === 'global') {
+                scopeBadge = '<span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-900/60 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40">Global</span>';
+            }
+
+            // Status Badge Styling (Section 4.6 & 5.1)
+            let statusBadge = '';
+            if (statusKey === 'finished') {
+                statusBadge = '<span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40">Finished</span>';
+            } else if (statusKey === 'on-track') {
+                statusBadge = '<span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40">On Track</span>';
+            } else if (statusKey === 'behind') {
+                statusBadge = '<span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40">Behind</span>';
+            } else if (statusKey === 'overdue') {
+                statusBadge = '<span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40">Overdue</span>';
+            } else if (statusKey === 'future') {
+                statusBadge = '<span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40">Future</span>';
+            } else {
+                statusBadge = '<span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">No Activity</span>';
+            }
 
             let subText = '';
             if (goal.type === 'bundle') {
-                if (goal.subjects && goal.subjects.length > 0) subText = `<div class="text-[8px] font-bold text-slate-500 dark:text-slate-400 mt-1 line-clamp-1" title="${goal.subjects.join(', ')}">${goal.subjects.join(', ')}</div>`;
-                else if (goal.programs && goal.programs.length > 0) subText = `<div class="text-[8px] font-bold text-violet-500 dark:text-violet-400 mt-1 line-clamp-1" title="${goal.programs.join(', ')}">${goal.programs.join(', ')}</div>`;
+                if (goal.subjects && goal.subjects.length > 0) subText = `Includes: ${goal.subjects.join(', ')}`;
+                else if (goal.programs && goal.programs.length > 0) subText = `Includes programs: ${goal.programs.join(', ')}`;
+            } else if (goal.type === 'program') {
+                subText = `All modules in ${goal.target}`;
+            } else if (goal.type === 'subject') {
+                subText = `Single subject: ${goal.target}`;
             } else if (goal.type === 'global') {
                 const isManual = goal.subjects || goal.secondaryPaces;
-                if (isManual) subText = `<div class="text-[8px] font-bold text-blue-500 dark:text-blue-400 mt-1 line-clamp-1">Manual Global Target</div>`;
-                else subText = `<div class="text-[8px] font-bold text-blue-500 dark:text-blue-400 mt-1 line-clamp-1">Aggregates explicitly targeted subjects</div>`;
+                subText = isManual ? `Manual global scope target` : `All subjects & active curriculum`;
             }
 
             html += `
-                <div class="bg-white dark:bg-slate-800 p-4 md:p-5 rounded-[1.25rem] border ${isActiveFilter ? 'border-orange-500 shadow-md scale-[1.02]' : 'border-slate-200 dark:border-slate-700 shadow-sm'} relative group hover:shadow-lg hover:-translate-y-0.5 transition-all flex flex-col justify-between">
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border ${isActiveFilter ? 'border-orange-500 shadow-md ring-2 ring-orange-500/20' : 'border-slate-200/60 dark:border-slate-700/60 shadow-sm'} flex flex-col justify-between relative group hover:border-slate-300 dark:hover:border-slate-600 transition-all">
                     ${isActiveFilter ? '<div class="absolute -top-2.5 right-4 bg-orange-500 text-white text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm">Active Timeline</div>' : ''}
-                    <div class="absolute top-3.5 right-3.5 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onclick="window.openPaceTrendModal('${goal.id}')" class="text-slate-300 hover:text-indigo-500 bg-white dark:bg-slate-800 rounded-lg p-1 shadow-sm border border-slate-100 dark:border-slate-700 active:scale-95 transition-all" title="View Pace Trend Chart"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1-1H5a1 1 0 01-1-1V4z"></path></svg></button>
-                        <button onclick="window.openGoalDetailsModal('${goal.id}')" class="text-slate-300 hover:text-emerald-500 bg-white dark:bg-slate-800 rounded-lg p-1 shadow-sm border border-slate-100 dark:border-slate-700 active:scale-95 transition-all" title="View Target Details"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg></button>
-                        <button onclick="window.openEditPaceModal('${goal.id}')" class="text-slate-300 hover:text-blue-500 bg-white dark:bg-slate-800 rounded-lg p-1 shadow-sm border border-slate-100 dark:border-slate-700 active:scale-95 transition-all" title="Edit Goal Dates"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
-                        <button onclick="window.requestDeletePaceGoal('${goal.id}')" class="text-slate-300 hover:text-red-500 bg-white dark:bg-slate-800 rounded-lg p-1 shadow-sm border border-slate-100 dark:border-slate-700 active:scale-95 transition-all" title="Remove Goal"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-                    </div>
-                    <div class="mb-3 pr-20">
-                        <div class="flex items-center space-x-1.5 mb-1">
-                            <div class="w-1.5 h-1.5 rounded-full ${goalColorClass}"></div>
-                            <span class="text-[8px] font-black uppercase tracking-widest text-slate-400">${goal.type} Goal</span>
-                        </div>
-                        <h4 class="font-black text-sm md:text-base text-slate-800 dark:text-slate-100 truncate tracking-tight">${goal.target}</h4>
-                        <p class="text-[9px] font-bold text-slate-500 tracking-wider mt-0.5">Timeline: <span class="text-indigo-500 dark:text-indigo-400">${formatDate(startDate)}</span> - <span class="text-orange-500">${formatDate(targetDate)}</span></p>
-                        ${subText}
-                    </div>
                     
+                    <!-- Header: Badges & Action Buttons -->
                     <div>
-                        <div class="flex justify-between items-end mb-1">
-                            <span class="text-[9px] font-bold text-slate-400">${Math.round(completed)} / ${total} Ch</span>
-                            <span class="text-[9px] font-black text-slate-500">${percentage}%</span>
-                        </div>
-                        <div class="w-full bg-slate-100 dark:bg-slate-700/50 h-2 rounded-full overflow-hidden p-0.5 border border-slate-200/50 dark:border-slate-600/50 mb-3">
-                            <div class="h-full rounded-full transition-all duration-500 ${isBehind ? 'bg-gradient-to-r from-orange-500 to-red-500' : 'bg-gradient-to-r from-indigo-500 to-emerald-500'}" style="width: ${percentage}%"></div>
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                                ${scopeBadge}
+                                ${statusBadge}
+                            </div>
+                            <div class="flex items-center space-x-0.5 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="window.openPaceTrendModal('${goal.id}')" class="p-1.5 text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition-all active:scale-95" title="View Burn-Up Trajectory Chart">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
+                                </button>
+                                <button onclick="window.openPaceCandleChartModal('${goal.id}')" class="p-1.5 text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition-all active:scale-95" title="View Velocity Candlestick Chart">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                                </button>
+                                <button onclick="window.openGoalDetailsModal('${goal.id}')" class="p-1.5 text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition-all active:scale-95" title="View Target Details">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                </button>
+                                <button onclick="window.openEditPaceModal('${goal.id}')" class="p-1.5 text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition-all active:scale-95" title="Edit Goal">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                </button>
+                                <button onclick="window.requestDeletePaceGoal('${goal.id}')" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition-all active:scale-95" title="Remove Goal">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
                         </div>
 
+                        <h4 class="font-black text-base text-slate-800 dark:text-slate-100 truncate tracking-tight">${goal.target}</h4>
+                        <p class="text-[9px] font-bold text-slate-500 tracking-wider mt-0.5">
+                            Timeline: <span class="text-indigo-500 dark:text-indigo-400">${formatDate(startDate)}</span> - <span class="text-orange-500">${formatDate(targetDate)}</span>
+                        </p>
+                        ${subText ? `<p class="text-[8px] font-bold text-slate-400 truncate mt-1" title="${subText}">${subText}</p>` : ''}
+                    </div>
+
+                    <!-- Progress Bar & Velocity Metric Blocks -->
+                    <div class="mt-4">
+                        <div class="flex justify-between items-end mb-1 text-[9px] font-bold">
+                            <span class="text-slate-400">${Math.round(completed)} / ${total} Ch</span>
+                            <span class="text-slate-500 font-black">${percentage}%</span>
+                        </div>
+                        
+                        <!-- Dynamic Progress Bar -->
+                        <div class="w-full bg-slate-100 dark:bg-slate-700/50 h-2 rounded-full overflow-hidden p-0.5 border border-slate-200/50 dark:border-slate-600/50 mb-3">
+                            <div class="h-full rounded-full transition-all duration-500 ${isBehind ? 'bg-gradient-to-r from-orange-500 to-red-500' : 'bg-gradient-to-r from-indigo-500 to-emerald-500'}" style="width: ${percentage}%;"></div>
+                        </div>
+
+                        <!-- Velocity Comparison Grid -->
                         <div class="grid grid-cols-2 gap-2 text-center">
                             <div class="p-2 rounded-xl border border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-900/30">
                                 <span class="block text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Velocity</span>
-                                <span class="text-[11px] font-black text-slate-700 dark:text-slate-200">${curPace} <span class="text-[7px] text-slate-400 font-bold">Ch/Day</span></span>
+                                <span class="text-xs font-black text-slate-700 dark:text-slate-200">${curPace} <span class="text-[7px] text-slate-400 font-bold">Ch/Day</span></span>
                             </div>
                             <div class="p-2 rounded-xl border ${reqBg}">
                                 <span class="block text-[8px] font-black uppercase tracking-widest ${reqColor} opacity-70 mb-0.5">Required</span>
-                                <span class="text-[11px] font-black ${reqColor}">${reqPace} <span class="text-[7px] font-bold">Ch/Day</span></span>
+                                <span class="text-xs font-black ${reqColor}">${reqPace} <span class="text-[7px] font-bold">Ch/Day</span></span>
                             </div>
                         </div>
-                        
-                        <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[9px] font-bold">
+
+                        <!-- Footer: Countdown & Est Finish -->
+                        <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[9px] font-bold">
                             <span class="text-slate-400">${timeGoalCountdownStr}</span>
                             <span class="text-slate-500 dark:text-slate-300">Est: ${finishDisplay}</span>
                         </div>

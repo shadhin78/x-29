@@ -207,28 +207,49 @@
         let diffDaysTG = Math.ceil((targetDate - today) / msPerDay);
         let projectedDate = new Date(today);
 
+        // Status Determination according to Section 4.6
+        let status = 'no-data';
         if (total === 0) {
+            status = 'no-data';
             finishDisplay = '<span class="opacity-50">No Target</span>';
         } else if (remaining <= 0) {
+            status = 'finished';
             finishDisplay = '<span class="text-emerald-400">Finished</span>';
             timeGoalCountdownStr = '<span class="text-emerald-400">Done</span>';
             estDaysNeededStr = '<span class="text-emerald-400">0 Days</span>';
-        } else {
-            if (curPaceVal <= 0) {
-                if (today < startDate) finishDisplay = '<span class="text-blue-400 font-bold">Future</span>';
-                else if (today > targetDate) finishDisplay = '<span class="text-red-400 font-bold">Overdue</span>';
-                else finishDisplay = '<span class="opacity-50">No Data</span>';
+        } else if (curPaceVal <= 0) {
+            if (today < startDate) {
+                status = 'future';
+                finishDisplay = '<span class="text-blue-400 font-bold">Future</span>';
+            } else if (today > targetDate) {
+                status = 'overdue';
+                finishDisplay = '<span class="text-red-400 font-bold">Overdue</span>';
             } else {
-                const daysToFinish = remaining / curPaceVal;
-                projectedDate.setDate(today.getDate() + Math.ceil(daysToFinish));
-                finishDisplay = formatDate(projectedDate);
-                estDaysNeededStr = `<span class="text-orange-400">${Math.ceil(daysToFinish)} Days Needed</span>`;
+                status = 'no-data';
+                finishDisplay = '<span class="opacity-50">No Data</span>';
             }
+        } else {
+            const daysToFinish = remaining / curPaceVal;
+            projectedDate.setDate(today.getDate() + Math.ceil(daysToFinish));
+            finishDisplay = formatDate(projectedDate);
+            estDaysNeededStr = `<span class="text-orange-400">${Math.ceil(daysToFinish)} Days Needed</span>`;
 
+            if (today > targetDate) {
+                status = 'overdue';
+            } else if (curPaceVal >= reqPaceVal) {
+                status = 'on-track';
+            } else {
+                status = 'behind';
+            }
+        }
+
+        if (total > 0 && remaining > 0) {
             if (diffDaysTG > 0) timeGoalCountdownStr = `${diffDaysTG} Days Left`;
             else if (diffDaysTG === 0) timeGoalCountdownStr = `<span class="text-orange-400">Due Today</span>`;
             else timeGoalCountdownStr = `<span class="text-red-400">${Math.abs(diffDaysTG)} Days Overdue</span>`;
         }
+
+        const isBehind = status === 'behind' || status === 'overdue';
 
         return {
             total,
@@ -249,7 +270,9 @@
             estDaysNeededStr,
             diffDaysTG,
             projectedDate,
-            targetedSubjects
+            targetedSubjects,
+            status,
+            isBehind
         };
     }
 
@@ -337,13 +360,128 @@
         return `${finishDateStr} (${daysNeeded} Days @ ${paceStr})`;
     }
 
+    /**
+     * PaceEngine - Universal Pace Calculation Engine
+     * Conforms to Section 8 of PACE_MANAGEMENT_GUIDE.md
+     */
+    class PaceEngine {
+        static MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+        /**
+         * Compute full statistics for any workload goal.
+         * @param {Object} goal - { startDate, deadline, totalUnits, completedUnits }
+         * @param {Date} [referenceDate=new Date()]
+         * @returns {Object} PaceStats
+         */
+        static calculateStats(goal, referenceDate = new Date()) {
+            const today = new Date(referenceDate);
+            today.setHours(0, 0, 0, 0);
+
+            const start = new Date(goal.startDate);
+            start.setHours(0, 0, 0, 0);
+
+            const target = new Date(goal.deadline);
+            target.setHours(0, 0, 0, 0);
+
+            const total = Math.max(0, Number(goal.totalUnits) || 0);
+            const completed = Math.max(0, Math.min(total, Number(goal.completedUnits) || 0));
+            const remaining = Math.max(0, total - completed);
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            const totalDays = Math.max(1, Math.ceil((target - start) / this.MS_PER_DAY));
+            const daysElapsed = Math.floor((today - start) / this.MS_PER_DAY) + 1;
+            const daysRemaining = Math.max(0, Math.ceil((target - today) / this.MS_PER_DAY));
+            const diffDaysTarget = Math.ceil((target - today) / this.MS_PER_DAY);
+
+            let reqPaceVal = 0;
+            let curPaceVal = 0;
+
+            if (total > 0 && remaining > 0) {
+                if (today < start) {
+                    reqPaceVal = total / totalDays;
+                    curPaceVal = 0;
+                } else if (today > target) {
+                    reqPaceVal = remaining;
+                    curPaceVal = completed / Math.max(1, daysElapsed);
+                } else {
+                    reqPaceVal = remaining / Math.max(1, daysRemaining);
+                    curPaceVal = completed / Math.max(1, daysElapsed);
+                }
+            } else if (total > 0 && remaining === 0) {
+                curPaceVal = completed / Math.max(1, daysElapsed);
+            }
+
+            const reqPace = Math.round(reqPaceVal * 100) / 100;
+            const curPace = Math.round(curPaceVal * 100) / 100;
+
+            // Status Determination
+            let status = 'no-data';
+            let finishDisplay = '--';
+            let daysNeeded = 0;
+            let projectedDate = new Date(today);
+
+            if (total === 0) {
+                status = 'no-data';
+                finishDisplay = 'No Target';
+            } else if (remaining === 0) {
+                status = 'finished';
+                finishDisplay = 'Finished';
+            } else if (curPaceVal <= 0) {
+                if (today < start) {
+                    status = 'future';
+                    finishDisplay = 'Future';
+                } else if (today > target) {
+                    status = 'overdue';
+                    finishDisplay = 'Overdue';
+                } else {
+                    status = 'no-data';
+                    finishDisplay = 'No Activity';
+                }
+            } else {
+                daysNeeded = Math.ceil(remaining / curPaceVal);
+                projectedDate.setDate(today.getDate() + daysNeeded);
+                finishDisplay = projectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+                if (today > target) {
+                    status = 'overdue';
+                } else if (curPace >= reqPace) {
+                    status = 'on-track';
+                } else {
+                    status = 'behind';
+                }
+            }
+
+            const isBehind = status === 'behind' || status === 'overdue';
+
+            return {
+                total,
+                completed,
+                remaining,
+                percentage,
+                totalDays,
+                daysElapsed,
+                daysRemaining,
+                reqPace,
+                curPace,
+                daysNeeded,
+                projectedDate,
+                finishDisplay,
+                isBehind,
+                status,
+                countdownText: diffDaysTarget > 0 ? `${diffDaysTarget} Days Left` : (diffDaysTarget === 0 ? 'Due Today' : `${Math.abs(diffDaysTarget)} Days Overdue`)
+            };
+        }
+    }
+
     // Attach to global scope
     const PaceEstimator = {
         getTargetedSubjectsForGoal,
         calculatePaceGoalStats,
-        calculateIndependentEstFinish
+        calculateIndependentEstFinish,
+        PaceEngine
     };
 
+    global.PaceEngine = PaceEngine;
     global.PaceEstimator = PaceEstimator;
     global.getTargetedSubjectsForGoal = getTargetedSubjectsForGoal;
     global.calculatePaceGoalStats = calculatePaceGoalStats;
@@ -351,5 +489,6 @@
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = PaceEstimator;
+        module.exports.PaceEngine = PaceEngine;
     }
 })(typeof window !== 'undefined' ? window : globalThis);

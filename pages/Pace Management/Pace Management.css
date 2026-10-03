@@ -1,6 +1,7 @@
 /* ==========================================================================
    Pace Management Page Specific Styles (pages/Pace Management/Pace Management.css)
    Preserves exact visual identity, responsiveness, and provides slide-up transition.
+   Aligned with PACE_MANAGEMENT_GUIDE.md specifications.
    ========================================================================== */
 
 /* Page Transition: Smooth Hardware-Accelerated Slide-up */
@@ -30,6 +31,20 @@
 #pace-goals-container > div {
     transform: translateZ(0);
     backface-visibility: hidden;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+#pace-goals-container > div:hover {
+    transform: translateY(-2px);
+}
+
+/* Dynamic Progress Bar Gradients (Section 5.2) */
+.pace-progress-on-track {
+    background: linear-gradient(to right, #6366f1, #10b981);
+}
+
+.pace-progress-behind {
+    background: linear-gradient(to right, #f97316, #ef4444);
 }
 
 /* Custom Scrollbars Scoped to Pace Management */
