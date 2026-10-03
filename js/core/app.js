@@ -89,6 +89,12 @@ export const App = {
                     }
                 }
             }
+            if (typeof window !== 'undefined' && window.FirebaseService && typeof window.FirebaseService.loadFromCloud === 'function') {
+                window.FirebaseService.loadFromCloud();
+            }
+            if (typeof window !== 'undefined' && window.AppState) {
+                window.AppState.isAppInitialized = true;
+            }
             this.initCurrentFeature();
         }
 
@@ -98,6 +104,9 @@ export const App = {
                 if (!user) {
                     const localUser = (typeof authProvider.getCurrentUser === 'function') ? authProvider.getCurrentUser() : null;
                     if (localUser && (localUser.email || '').trim().toLowerCase() === 'ris2k29@gmail.com') {
+                        if (typeof window !== 'undefined' && window.FirebaseService && typeof window.FirebaseService.loadFromCloud === 'function' && (!window.AppState || !window.AppState.hasLoadedFromCloud)) {
+                            window.FirebaseService.loadFromCloud();
+                        }
                         return;
                     }
                     if (typeof window !== 'undefined' && window.location) {
