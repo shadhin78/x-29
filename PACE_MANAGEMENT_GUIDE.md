@@ -259,8 +259,8 @@ The Pace Management interface consists of 3 primary visual sections:
 
 ```
 +-----------------------------------------------------------------------------------+
-| SECTION 1: GLOBAL KPI CARDS BANNER (4 Cards Grid)                                 |
-| [ Global Target ]    [ Required Pace ]    [ Actual Pace ]    [ Est. Finish Date ] |
+| SECTION 1: GLOBAL KPI CARDS BANNER (3 Cards Grid)                                 |
+| [ Required Pace (To Hit Target) ]    [ My Actual Pace ]    [ Est. Finish Date ]   |
 +-----------------------------------------------------------------------------------+
 | SECTION 2: ADD PACE GOAL FORM                                                     |
 | [ Bundle Type ]  [ Goal Name ]  [ Start Date ]  [ Deadline ]                      |
@@ -282,31 +282,16 @@ The Pace Management interface consists of 3 primary visual sections:
 ### 6.1 Top KPI Stat Cards (HTML Blueprint)
 
 ```html
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-8">
   
-  <!-- Card 1: Global Target -->
-  <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm flex flex-col justify-between hover:-translate-y-1 transition-transform">
-    <div>
-      <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Global Velocity</span>
-      <h3 class="text-xl font-black mt-1 dark:text-white">Target</h3>
-    </div>
-    <div class="mt-4">
-      <div id="target-pace-stat" class="text-3xl font-black text-indigo-600 dark:text-indigo-400">1.50</div>
-      <div class="flex items-center justify-between mt-1 text-[9px] font-bold">
-        <span class="text-slate-400 uppercase tracking-wider">Uniform Speed</span>
-        <span class="text-blue-500 font-black">90 Days Total</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Card 2: Required Daily Pace -->
+  <!-- Card 1: Required Daily Pace (To Hit Target) -->
   <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm flex flex-col justify-between hover:-translate-y-1 transition-transform">
     <div>
       <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Daily Required</span>
       <h3 class="text-xl font-black mt-1 dark:text-white">To Hit Target</h3>
     </div>
     <div class="mt-4">
-      <div id="required-pace-stat" class="text-3xl font-black text-orange-500">1.85</div>
+      <div id="target-req-pace" class="text-3xl font-black text-orange-500">1.85</div>
       <div class="flex items-center justify-between mt-1 text-[9px] font-bold">
         <span class="text-slate-400 uppercase tracking-wider">To hit deadline</span>
         <span class="text-blue-500 font-black">42 Days Left</span>
@@ -314,22 +299,22 @@ The Pace Management interface consists of 3 primary visual sections:
     </div>
   </div>
 
-  <!-- Card 3: Actual Pace -->
+  <!-- Card 2: Actual Pace (My Actual Pace) -->
   <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm flex flex-col justify-between hover:-translate-y-1 transition-transform">
     <div>
       <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Current Performance</span>
-      <h3 class="text-xl font-black mt-1 dark:text-white">Actual Pace</h3>
+      <h3 class="text-xl font-black mt-1 dark:text-white">My Actual Pace</h3>
     </div>
     <div class="mt-4">
       <div id="current-pace-stat" class="text-3xl font-black dark:text-white">1.20</div>
       <div class="flex items-center justify-between mt-1 text-[9px] font-bold">
-        <span class="text-slate-400 uppercase tracking-wider">Your current speed</span>
+        <span class="text-slate-400 uppercase tracking-wider">My current speed</span>
         <span class="text-emerald-500 font-black">48 Days Passed</span>
       </div>
     </div>
   </div>
 
-  <!-- Card 4: Forecast Finish -->
+  <!-- Card 3: Forecast Finish -->
   <div class="bg-indigo-50 dark:bg-indigo-900/20 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-800/50 shadow-sm flex flex-col justify-between hover:-translate-y-1 transition-transform relative group">
     <div>
       <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Trend Forecast</span>
@@ -338,7 +323,7 @@ The Pace Management interface consists of 3 primary visual sections:
     <div class="mt-4">
       <div id="projected-finish" class="text-2xl font-black text-indigo-600 dark:text-indigo-400">14 Dec 2026</div>
       <div class="flex items-center justify-between mt-1 text-[9px] font-bold">
-        <span class="text-indigo-400/80 uppercase tracking-wider">Based on actual pace</span>
+        <span class="text-indigo-400/80 uppercase tracking-wider">Based on my current speed</span>
         <span class="text-orange-500 font-black">62 Days Needed</span>
       </div>
     </div>

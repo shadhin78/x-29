@@ -46,8 +46,6 @@ const paceHtml = fs.readFileSync(path.join(ROOT_DIR, 'pages', 'Pace Management',
 const requiredIds = [
     'pace-stats-section',
     'pace-timeline-info',
-    'target-pace-stat',
-    'global-target-total-days',
     'target-status-label',
     'target-req-pace',
     'global-days-left',
@@ -75,14 +73,15 @@ requiredIds.forEach(id => {
 });
 console.log(`✓ All ${requiredIds.length} required element IDs present in Pace Management.html`);
 
-// 3. Verify 4-Card KPI Banner Structure
-console.log('\n3. Verifying 4-Card KPI Grid layout...');
-assert.ok(paceHtml.includes('grid grid-cols-2 lg:grid-cols-4'), 'Pace Management.html must use 4-card grid');
-assert.ok(paceHtml.includes('Global Velocity'), 'Card 1 must be Global Velocity Target');
-assert.ok(paceHtml.includes('To Hit Target'), 'Card 2 must be Required Pace To Hit Target');
-assert.ok(paceHtml.includes('Current Performance'), 'Card 3 must be Actual Pace Current Performance');
-assert.ok(paceHtml.includes('Trend Forecast'), 'Card 4 must be Est. Finish Trend Forecast');
-console.log('✓ 4-Card KPI Grid verified with correct semantic roles and labels');
+// 3. Verify 3-Card KPI Banner Structure
+console.log('\n3. Verifying 3-Card KPI Grid layout...');
+assert.ok(paceHtml.includes('grid grid-cols-1 md:grid-cols-3'), 'Pace Management.html must use 3-card grid');
+assert.ok(paceHtml.includes('To Hit Target'), 'Card 1 must be Required Pace To Hit Target');
+assert.ok(paceHtml.includes('My Actual Pace'), 'Card 2 must be My Actual Pace Current Performance');
+assert.ok(paceHtml.includes('Est. Finish'), 'Card 3 must be Est. Finish Trend Forecast');
+assert.ok(paceHtml.includes('Based on my current speed'), 'Card 3 subtitle must be Based on my current speed');
+assert.ok(!paceHtml.includes('Global Velocity'), 'Global Velocity Target card must be removed');
+console.log('✓ 3-Card KPI Grid verified with correct semantic roles and labels');
 
 // 4. Verify Parity in index.html and pace/index.html
 console.log('\n4. Verifying parity in index.html and pace/index.html...');
