@@ -320,6 +320,8 @@
         const checklistSection = document.getElementById('add-pace-checklist-section');
         const checklistLabel = document.getElementById('add-pace-checklist-label');
         const nameContainer = document.getElementById('add-pace-name-container') || document.getElementById('pace-bundle-name-container');
+        const nameLabel = nameContainer ? nameContainer.querySelector('label') : null;
+        const nameInput = document.getElementById('add-pace-name') || document.getElementById('pace-bundle-name');
 
         let mode = 'subjects';
         if (bundleTypeSelect) {
@@ -336,6 +338,8 @@
 
         if (mode === 'global') {
             if (nameContainer) nameContainer.classList.remove('hidden');
+            if (nameLabel) nameLabel.innerHTML = 'Goal Name <span class="text-slate-400 font-normal normal-case tracking-normal">(Optional)</span>';
+            if (nameInput) nameInput.placeholder = 'e.g. Global Overall Goal (Optional)';
             if (checklistSection) checklistSection.classList.remove('hidden');
             if (checklistLabel) checklistLabel.textContent = 'Configure Global Pace (Subjects & Secondary Paces)';
 
@@ -449,6 +453,8 @@
 
         if (mode === 'programs') {
             if (nameContainer) nameContainer.classList.remove('hidden');
+            if (nameLabel) nameLabel.innerHTML = 'Goal Name';
+            if (nameInput) nameInput.placeholder = 'e.g. Phase 1 Year Target';
             if (checklistSection) checklistSection.classList.remove('hidden');
             if (checklistLabel) checklistLabel.textContent = 'Select Programs to Include';
 
@@ -482,6 +488,8 @@
         } else {
             // mode === 'subjects'
             if (nameContainer) nameContainer.classList.remove('hidden');
+            if (nameLabel) nameLabel.innerHTML = 'Goal Name';
+            if (nameInput) nameInput.placeholder = 'e.g. Phase 1 Year Target';
             if (checklistSection) checklistSection.classList.remove('hidden');
             if (checklistLabel) checklistLabel.textContent = 'Select Subjects to Include (Grouped by Program)';
 
@@ -689,7 +697,16 @@
         } else if (rawType === 'global') {
             type = 'global';
             const bundleName = nameInput ? nameInput.value.trim() : '';
-            target = bundleName || 'Global Overall Goal';
+            if (bundleName) {
+                target = bundleName;
+            } else {
+                let defaultName = 'Global Overall Goal';
+                let counter = 2;
+                while (global.paceGoals && global.paceGoals.some(g => g.type === 'global' && g.target === defaultName)) {
+                    defaultName = `Global Overall Goal ${counter++}`;
+                }
+                target = defaultName;
+            }
             const checkedBoxes = Array.from(document.querySelectorAll('.pace-global-subject-cb:checked, .pace-bundle-cb:checked'));
             if (checkedBoxes.length > 0) {
                 bundleSubjects = Array.from(new Set(checkedBoxes.map(cb => cb.value)));
@@ -848,10 +865,16 @@
         const syllabusStructure = global.syllabusStructure || (AppStateRef && AppStateRef.syllabusStructure) || {};
         const passedItems = global.passedItems || (AppStateRef && AppStateRef.passedItems) || { programs: [], subjects: [] };
 
+        const nameLabel = nameContainer ? nameContainer.querySelector('label') : null;
+
         if (goal.type === 'global') {
             if (nameContainer) nameContainer.classList.remove('hidden');
+            if (nameLabel) nameLabel.innerHTML = 'Target Name <span class="text-slate-400 font-normal normal-case tracking-normal">(Optional)</span>';
             if (checklistSection) checklistSection.classList.remove('hidden');
-            if (nameInput) nameInput.value = goal.target;
+            if (nameInput) {
+                nameInput.value = goal.target || '';
+                nameInput.placeholder = 'e.g. Global Overall Goal (Optional)';
+            }
 
             let html = `
                 <!-- Part 1: All Subjects inside Program Dropdowns -->
@@ -972,8 +995,12 @@
             if (subjectsContainer) subjectsContainer.innerHTML = html;
         } else {
             if (nameContainer) nameContainer.classList.remove('hidden');
+            if (nameLabel) nameLabel.innerHTML = 'Target Name';
             if (checklistSection) checklistSection.classList.remove('hidden');
-            if (nameInput) nameInput.value = goal.target;
+            if (nameInput) {
+                nameInput.value = goal.target;
+                nameInput.placeholder = 'e.g. Phase 1 Year Target';
+            }
 
             let html = '';
             const isProgramTarget = goal.type === 'program' || (goal.type === 'bundle' && goal.programs);
@@ -1136,8 +1163,9 @@
             const checkedSubs = Array.from(document.querySelectorAll('.edit-pace-subject-cb:checked')).map(cb => cb.value);
             const checkedSecs = Array.from(document.querySelectorAll('.edit-pace-sec-cb:checked')).map(cb => cb.value);
             const newNameInput = document.getElementById('edit-pace-name');
-            if (newNameInput && newNameInput.value.trim()) {
-                goal.target = newNameInput.value.trim();
+            if (newNameInput) {
+                const trimmed = newNameInput.value.trim();
+                goal.target = trimmed || goal.target || 'Global Overall Goal';
             }
             if (checkedSubs.length > 0) {
                 goal.subjects = Array.from(new Set(checkedSubs));

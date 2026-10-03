@@ -71,7 +71,7 @@ class MockElement {
             const cls = sel.slice(1);
             return this.children.find(c => c.classList.contains(cls)) || null;
         }
-        return null;
+        return this.children.find(c => c.tagName.toLowerCase() === sel.toLowerCase()) || null;
     }
 
     querySelectorAll(sel) {
@@ -352,7 +352,27 @@ console.log('✓ Pace Goal edited and saved successfully');
 
 // 4b. Global Pace Goal Setup: Program Dropdowns & Secondary Paces
 console.log('4b. Testing Global Pace Goal Setup (Program Dropdowns & Secondary Paces)...');
+const nameContainer = getOrCreateElement('add-pace-name-container', 'div');
+const nameLabel = new MockElement('', 'label');
+nameLabel.textContent = 'Goal Name';
+nameContainer.appendChild(nameLabel);
+
 const globalTypeEl = getOrCreateElement('add-pace-bundle-type', 'select');
+globalTypeEl.value = 'global';
+PaceManager.togglePaceBundleType();
+
+// Verify dynamic Optional indicator on label and placeholder
+assert.ok(nameLabel.innerHTML.includes('(Optional)'), 'Name label should indicate (Optional) for global pace');
+const gNameEl = getOrCreateElement('add-pace-name', 'input');
+assert.ok(gNameEl.placeholder.includes('(Optional)'), 'Placeholder should indicate (Optional) for global pace');
+
+// Verify switching back to subjects reverts to required label
+globalTypeEl.value = 'subjects';
+PaceManager.togglePaceBundleType();
+assert.strictEqual(nameLabel.textContent, 'Goal Name', 'Name label should revert to required Goal Name for subjects');
+assert.ok(!nameLabel.innerHTML.includes('(Optional)'), 'Optional indicator removed when not in global mode');
+
+// Switch back to global for creation test
 globalTypeEl.value = 'global';
 PaceManager.togglePaceBundleType();
 
@@ -383,8 +403,8 @@ mockDocument.querySelectorAll = function(sel) {
     return oldQuerySelectorAll.call(mockDocument, sel);
 };
 
-const gNameEl = getOrCreateElement('add-pace-name', 'input');
-gNameEl.value = 'Global Target 2026';
+// Test creating global pace goal with EMPTY name (optional name verification)
+gNameEl.value = '';
 const gStartEl = getOrCreateElement('add-pace-start', 'input');
 gStartEl.value = '2026-01-01';
 const gDeadEl = getOrCreateElement('add-pace-date', 'input');
@@ -394,15 +414,39 @@ PaceManager.addPaceGoal();
 mockDocument.querySelectorAll = oldQuerySelectorAll;
 
 const globalGoal = global.paceGoals.find(g => g.type === 'global');
-assert.ok(globalGoal, 'Global Pace Goal should be created');
-assert.strictEqual(globalGoal.target, 'Global Target 2026');
+assert.ok(globalGoal, 'Global Pace Goal should be created even when name is omitted (optional)');
+assert.strictEqual(globalGoal.target, 'Global Overall Goal', 'Default name assigned when name is omitted');
 assert.ok(Array.isArray(globalGoal.subjects) && globalGoal.subjects.includes('Operating Systems'), 'Should include selected subject');
 assert.ok(Array.isArray(globalGoal.secondaryPaces) && globalGoal.secondaryPaces.includes(createdGoal.id), 'Should include selected secondary pace');
 
 const globalStats = PaceEstimator.calculatePaceGoalStats(globalGoal, global.lastSubjectStats);
 assert.ok(globalStats, 'Global stats should calculate properly');
 assert.strictEqual(globalStats.total, 18, 'Total chapters should include subject + secondary pace');
-console.log('✓ Global Pace Goal created with both subjects and secondary paces successfully');
+console.log('✓ Global Pace Goal created with optional name fallback, subjects, and secondary paces successfully');
+
+// Verify adding a second global goal with omitted name auto-assigns Global Overall Goal 2
+mockDocument.querySelectorAll = function(sel) {
+    if (sel.includes('pace-global-subject-cb:checked') || sel.includes('pace-bundle-cb:checked')) return [mockSubCb];
+    if (sel.includes('pace-sec-cb:checked')) return [mockSecCb];
+    return oldQuerySelectorAll.call(mockDocument, sel);
+};
+gNameEl.value = '';
+gDeadEl.value = '2027-01-01';
+PaceManager.addPaceGoal();
+mockDocument.querySelectorAll = oldQuerySelectorAll;
+
+const secondGlobalGoal = global.paceGoals.find(g => g.type === 'global' && g.target === 'Global Overall Goal 2');
+assert.ok(secondGlobalGoal, 'Second Global Pace Goal assigned auto-increment name Global Overall Goal 2');
+
+// Verify openEditPaceModal shows (Optional) label on global pace goal
+const epmNameContainer = getOrCreateElement('epm-name-container', 'div');
+const epmNameLabel = new MockElement('', 'label');
+epmNameLabel.textContent = 'Target Name';
+epmNameContainer.appendChild(epmNameLabel);
+
+PaceManager.openEditPaceModal(globalGoal.id);
+assert.ok(epmNameLabel.innerHTML.includes('(Optional)'), 'Edit modal label indicates Optional for global goal');
+console.log('✓ Global Pace Goal name optionality verified across creation, auto-increment, and edit modal');
 
 // 5. Day Allocation & Goal Details Modal
 console.log('5. Testing Day Allocation & Goal Details Modal...');

@@ -119,6 +119,10 @@ When setting up a **Global Overall Goal** (`type: 'global'`), the interface prov
    - Linked timelines contribute their targeted scope into the overarching global pacing calculation.
 3. **Flexible Setup**:
    - Global pace can be configured **subject-wise** (Part 1 only), via **secondary paces** (Part 2 only), or by **combining both** simultaneously. If neither is specified, the goal defaults to covering all active subjects in the curriculum.
+4. **Optional Goal Name**:
+   - Goal Name is optional when setting or editing a Global Pace Goal.
+   - The UI displays an `(Optional)` tag in the Goal Name label and placeholder.
+   - If left blank, the system automatically assigns an intuitive default (e.g. `Global Overall Goal` or numbered increments such as `Global Overall Goal 2` if one already exists), avoiding validation or duplicate errors.
 
 ---
 
