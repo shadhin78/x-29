@@ -216,12 +216,6 @@ button[id^="btn-"]:not(:disabled):active,
     100% { transform: scale(1); }
 }
 
-@keyframes paceCheckboxPop {
-    0% { transform: scale(0.85); }
-    50% { transform: scale(1.25); }
-    100% { transform: scale(1); }
-}
-
 .motion-checkbox,
 input[type="checkbox"] {
     cursor: pointer;

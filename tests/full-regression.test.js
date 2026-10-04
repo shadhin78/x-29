@@ -62,7 +62,7 @@ const appJs = fs.readFileSync('js/core/app.js', 'utf8');
 const authJs = fs.readFileSync('js/services/auth.js', 'utf8');
 const fbJs = fs.readFileSync('js/firebase.js', 'utf8');
 
-check('Core: Application starts via Native ES Module entry point', indexHtml.includes('type="module" src="/js/core/app.js"'));
+check('Core: Application starts via Native ES Module entry point', /type="module"\s+src="\/js\/core\/app\.js/.test(indexHtml));
 check('Core: Authentication service supports login, logout, and getCurrentUser', authJs.includes('login:') && authJs.includes('logout:') && authJs.includes('getCurrentUser:'));
 check('Core: Admin route guard enforces ris2k29@gmail.com', appJs.includes('ris2k29@gmail.com'));
 check('Core: Logout flow exists and redirects to login.html', authJs.includes('logout') && authJs.includes('login.html'));
