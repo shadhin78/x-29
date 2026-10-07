@@ -2227,12 +2227,20 @@
             // 2. Fullscreen change listeners
             document.addEventListener('fullscreenchange', () => {
                 if (!document.fullscreenElement && window._timerFsActive) {
-                    _exitTimerFsCleanup();
+                    if (typeof window._exitTimerFsCleanup === 'function') {
+                        window._exitTimerFsCleanup();
+                    } else if (typeof window.toggleTimerFullscreen === 'function') {
+                        window.toggleTimerFullscreen();
+                    }
                 }
             });
             document.addEventListener('webkitfullscreenchange', () => {
                 if (!document.webkitFullscreenElement && window._timerFsActive) {
-                    _exitTimerFsCleanup();
+                    if (typeof window._exitTimerFsCleanup === 'function') {
+                        window._exitTimerFsCleanup();
+                    } else if (typeof window.toggleTimerFullscreen === 'function') {
+                        window.toggleTimerFullscreen();
+                    }
                 }
             });
 

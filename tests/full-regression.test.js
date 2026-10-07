@@ -111,6 +111,10 @@ check('Timer: Full timer operations (start, pause, resume, reset)',
     timerServiceJs.includes('start:') && timerServiceJs.includes('pause:') && timerServiceJs.includes('resume:') && timerServiceJs.includes('reset:'));
 check('Timer: Save session and cloud sync', timerServiceJs.includes('saveSession:') || timerServiceJs.includes('saveTimerSession'));
 check('Timer: Running timer status helper (isAnyTimerRunning)', timerServiceJs.includes('isAnyTimerRunning'));
+check('Focus: Fullscreen controls & exit cleanup handlers exported and guarded', 
+    focusJs.includes('window.toggleTimerFullscreen') && 
+    focusJs.includes('window._exitTimerFsCleanup') && 
+    focusJs.includes('window.exitTimerFullscreen'));
 
 // -------------------------------------------------------------
 // F. EXAM CHECKS

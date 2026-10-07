@@ -140,13 +140,37 @@
     transform: scale(0.9) translate3d(0, 0, 0);
 }
 
-#timer-btn-fullscreen svg {
+#timer-btn-fullscreen,
+#timer-fs-btn-exit,
+#timer-fs-btn-toggle {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+}
+
+#timer-btn-fullscreen svg,
+#timer-fs-btn-exit svg {
+    pointer-events: none !important;
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     will-change: transform;
 }
 
 .timer-fullscreen #timer-btn-fullscreen svg {
     transform: rotate(180deg);
+}
+
+#timer-fs-btn-exit {
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease !important;
+    will-change: transform;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+#timer-fs-btn-exit:hover {
+    transform: scale(1.08) translate3d(0, 0, 0);
+}
+
+#timer-fs-btn-exit:active {
+    transform: scale(0.92) translate3d(0, 0, 0);
 }
 
 /* Clean 3-Thing Fullscreen Layout Rules */

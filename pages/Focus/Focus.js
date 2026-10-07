@@ -711,25 +711,31 @@
         if (!btn) return;
         if (active) {
             btn.innerHTML = `
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 sm:w-5 sm:h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 14h6m0 0v6m0-6L4 20m16-6h-6m0 0v6m0-6l6 6M4 10h6m0 0V4m0 6L4 4m16 6h-6m0 0V4m0 6l6-6"></path>
                 </svg>
             `;
             btn.title = "Exit Fullscreen";
+            btn.setAttribute('aria-label', 'Exit Fullscreen');
         } else {
             btn.innerHTML = `
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 sm:w-5 sm:h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4"></path>
                 </svg>
             `;
             btn.title = "Toggle Fullscreen";
+            btn.setAttribute('aria-label', 'Toggle Fullscreen');
         }
     };
 
     const _exitTimerFsCleanup = () => {
         const panel = document.getElementById('timer-active-panel');
-        if (!panel) return;
+        if (!panel) {
+            window._timerFsActive = false;
+            return;
+        }
         if (panel.classList.contains('timer-fs-exiting')) return;
+        if (!window._timerFsActive && !panel.classList.contains('timer-fullscreen')) return;
 
         panel.classList.add('timer-fs-exiting');
         _updateTimerFsBtn(false);
@@ -738,16 +744,28 @@
             panel.classList.remove('timer-fullscreen', 'timer-fs-exiting', 'dark');
             document.body.classList.remove('timer-fullscreen-active');
             window._timerFsActive = false;
-            if (window._timerFsOriginalParent) {
-                if (window._timerFsOriginalNext && window._timerFsOriginalNext.parentNode === window._timerFsOriginalParent) {
-                    window._timerFsOriginalParent.insertBefore(panel, window._timerFsOriginalNext);
+            const targetParent = (window._timerFsOriginalParent && window._timerFsOriginalParent.isConnected)
+                ? window._timerFsOriginalParent
+                : document.querySelector('#page-timer > .grid') || document.querySelector('#page-timer');
+            if (targetParent) {
+                if (window._timerFsOriginalNext && window._timerFsOriginalNext.parentNode === targetParent && window._timerFsOriginalNext.isConnected) {
+                    targetParent.insertBefore(panel, window._timerFsOriginalNext);
                 } else {
-                    window._timerFsOriginalParent.appendChild(panel);
+                    targetParent.prepend(panel);
                 }
-                window._timerFsOriginalParent = null;
-                window._timerFsOriginalNext = null;
             }
+            window._timerFsOriginalParent = null;
+            window._timerFsOriginalNext = null;
         }, 200);
+    };
+
+    window._exitTimerFsCleanup = _exitTimerFsCleanup;
+    window.exitTimerFullscreen = function () {
+        if (window._timerFsActive && typeof window.toggleTimerFullscreen === 'function') {
+            window.toggleTimerFullscreen();
+        } else if (typeof _exitTimerFsCleanup === 'function') {
+            _exitTimerFsCleanup();
+        }
     };
 
     // --- MULTI-MODE STATE PERSISTENCE HELPERS ---
@@ -1524,15 +1542,19 @@
     window.toggleTimerFullscreen = function () {
         const panel = document.getElementById('timer-active-panel');
         if (!panel) return;
+        if (panel.classList.contains('timer-fs-exiting')) return;
 
         const isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark') || window.matchMedia('(prefers-color-scheme: dark)').matches;
 
         if (window._timerFsActive) {
-            if (document.exitFullscreen) {
-                document.exitFullscreen().catch(() => { });
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
+            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(() => { });
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
             }
+            _exitTimerFsCleanup();
             return;
         }
 
@@ -1599,8 +1621,17 @@
         },
         destroy: function () {
             this.isMounted = false;
-            if (window._timerFsActive && typeof _exitTimerFsCleanup === "function") {
-                _exitTimerFsCleanup();
+            if (window._timerFsActive) {
+                if (document.fullscreenElement || document.webkitFullscreenElement) {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen().catch(() => { });
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    }
+                }
+                if (typeof _exitTimerFsCleanup === "function") {
+                    _exitTimerFsCleanup();
+                }
             }
             if (typeof window.closeModal === "function") {
                 window.closeModal("custom-timer-modal");
@@ -1702,6 +1733,16 @@
                     window.FirebaseService.saveTimerToCloud();
                 }
                 return;
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && window._timerFsActive) {
+                if (typeof window.toggleTimerFullscreen === 'function') {
+                    window.toggleTimerFullscreen();
+                } else if (typeof window._exitTimerFsCleanup === 'function') {
+                    window._exitTimerFsCleanup();
+                }
             }
         });
     }
