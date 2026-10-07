@@ -735,15 +735,23 @@
             return;
         }
         if (panel.classList.contains('timer-fs-exiting')) return;
+        if (panel.classList.contains('timer-fs-collapsing')) return;
         if (!window._timerFsActive && !panel.classList.contains('timer-fullscreen')) return;
 
         panel.classList.add('timer-fs-exiting');
+        panel.classList.add('timer-fs-collapsing');
+        panel.classList.remove('timer-fs-expanding');
         _updateTimerFsBtn(false);
 
         setTimeout(() => {
-            panel.classList.remove('timer-fullscreen', 'timer-fs-exiting', 'dark');
+            panel.classList.remove('timer-fullscreen', 'timer-fs-exiting', 'timer-fs-collapsing', 'timer-fs-animating', 'dark');
             document.body.classList.remove('timer-fullscreen-active');
             window._timerFsActive = false;
+
+            // Hide the placeholder that was preventing layout shift
+            const placeholder = document.getElementById('timer-panel-placeholder');
+            if (placeholder) placeholder.classList.add('hidden');
+
             const targetParent = (window._timerFsOriginalParent && window._timerFsOriginalParent.isConnected)
                 ? window._timerFsOriginalParent
                 : document.querySelector('#page-timer > .grid') || document.querySelector('#page-timer');
@@ -1543,6 +1551,7 @@
         const panel = document.getElementById('timer-active-panel');
         if (!panel) return;
         if (panel.classList.contains('timer-fs-exiting')) return;
+        if (panel.classList.contains('timer-fs-collapsing')) return;
 
         const isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark') || window.matchMedia('(prefers-color-scheme: dark)').matches;
 
@@ -1563,12 +1572,24 @@
         window._timerFsOriginalParent = panel.parentNode;
         window._timerFsOriginalNext = panel.nextSibling;
 
+        // Show the placeholder to prevent layout shift while panel is moved
+        const placeholder = document.getElementById('timer-panel-placeholder');
+        if (placeholder) {
+            placeholder.style.height = panel.offsetHeight + 'px';
+            placeholder.classList.remove('hidden');
+        }
+
         document.body.appendChild(panel);
 
-        panel.classList.add('timer-fullscreen');
+        panel.classList.add('timer-fullscreen', 'timer-fs-expanding');
         panel.classList.toggle('dark', isDark);
         document.body.classList.add('timer-fullscreen-active');
         _updateTimerFsBtn(true);
+
+        // Remove expanding class after animation completes
+        setTimeout(() => {
+            panel.classList.remove('timer-fs-expanding');
+        }, 300);
 
         const docEl = document.documentElement;
         const requestFs = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.msRequestFullscreen;

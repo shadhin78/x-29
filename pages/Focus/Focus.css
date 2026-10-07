@@ -21,53 +21,9 @@
     will-change: transform, opacity;
 }
 
-/* ===== Hardware-Accelerated GPU Timer Fullscreen Animations ===== */
-@keyframes timerFsEnter {
-    from {
-        opacity: 0;
-        transform: scale(0.97) translate3d(0, 0, 0);
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1) translate3d(0, 0, 0);
-    }
-}
-
-@keyframes timerFsContentEnter {
-    from {
-        opacity: 0;
-        transform: scale(0.96) translateY(8px) translate3d(0, 0, 0);
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0) translate3d(0, 0, 0);
-    }
-}
-
-@keyframes timerFsExit {
-    from {
-        opacity: 1;
-        transform: scale(1) translate3d(0, 0, 0);
-    }
-
-    to {
-        opacity: 0;
-        transform: scale(0.97) translate3d(0, 0, 0);
-    }
-}
-
-@keyframes timerFsContentExit {
-    from {
-        opacity: 1;
-        transform: scale(1) translateY(0) translate3d(0, 0, 0);
-    }
-
-    to {
-        opacity: 0;
-        transform: scale(0.96) translateY(8px) translate3d(0, 0, 0);
-    }
+/* ===== Hardware-Accelerated GPU Timer Fullscreen Transitions ===== */
+#timer-panel-placeholder {
+    transition: none !important;
 }
 
 /* Timer Fullscreen Mode (Ultra-Smooth Hardware-Accelerated) */
@@ -88,43 +44,115 @@
     flex-direction: column !important;
     justify-content: center !important;
     align-items: center !important;
-    background: #f8fafc;
+    background: #0f172a !important;
     border: none !important;
     box-shadow: none !important;
-    will-change: transform, opacity;
+    overflow: hidden !important;
     backface-visibility: hidden;
     transform: translate3d(0, 0, 0);
-    animation: timerFsEnter 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Exit animation class */
-#timer-active-panel.timer-fs-exiting {
-    animation: timerFsExit 0.18s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+/* Dynamic Animating State: allows inline top/left/width/height/border-radius to drive the transition without jump */
+#timer-active-panel.timer-fs-animating {
+    right: auto !important;
+    bottom: auto !important;
+    overflow: hidden !important;
 }
 
-/* Content animation inside fullscreen */
-#timer-active-panel.timer-fullscreen>.relative {
-    will-change: transform, opacity;
-    backface-visibility: hidden;
-    transform: translate3d(0, 0, 0);
-    animation: timerFsContentEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+/* Fullscreen Toggle & Exit Actions Bar */
+.timer-fullscreen #timer-fs-actions {
+    display: flex !important;
+    position: fixed !important;
+    top: max(1rem, env(safe-area-inset-top)) !important;
+    right: max(1rem, env(safe-area-inset-right)) !important;
+    z-index: 100000 !important;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-#timer-active-panel.timer-fs-exiting>.relative {
-    animation: timerFsContentExit 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+.timer-fs-expanding #timer-fs-actions {
+    opacity: 0;
+    transform: translateY(-8px);
+    animation: fsActionsFadeIn 240ms cubic-bezier(0.16, 1, 0.3, 1) 80ms forwards;
 }
 
-/* Fullscreen Toggle Button Hardware Enhancements & Icon Rotation */
+.timer-fs-collapsing #timer-fs-actions {
+    opacity: 0 !important;
+    transform: translateY(-8px) !important;
+    transition: opacity 160ms ease, transform 160ms ease !important;
+}
+
+@keyframes fsActionsFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Smooth Fade of Controls during Expansion & Contraction */
+.timer-fs-expanding #timer-mode-switcher,
+.timer-fs-expanding #timer-subject-select-container,
+.timer-fs-expanding #timer-alarm-container,
+.timer-fs-expanding #timer-presets-container,
+.timer-fs-expanding #timer-control-buttons-bar {
+    opacity: 0 !important;
+    transition: opacity 160ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+    pointer-events: none !important;
+}
+
+.timer-fs-collapsing #timer-mode-switcher,
+.timer-fs-collapsing #timer-subject-select-container,
+.timer-fs-collapsing #timer-presets-container,
+.timer-fs-collapsing #timer-control-buttons-bar {
+    display: flex !important;
+    opacity: 0;
+    animation: fsControlsFadeIn 220ms cubic-bezier(0.16, 1, 0.3, 1) 80ms forwards;
+}
+
+@keyframes fsControlsFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.timer-fullscreen:not(.timer-fs-expanding):not(.timer-fs-collapsing) #timer-panel-header-bar,
+.timer-fullscreen:not(.timer-fs-expanding):not(.timer-fs-collapsing) #timer-mode-switcher,
+.timer-fullscreen:not(.timer-fs-expanding):not(.timer-fs-collapsing) #timer-subject-select-container,
+.timer-fullscreen:not(.timer-fs-expanding):not(.timer-fs-collapsing) #timer-alarm-container,
+.timer-fullscreen:not(.timer-fs-expanding):not(.timer-fs-collapsing) #timer-presets-container,
+.timer-fullscreen:not(.timer-fs-expanding):not(.timer-fs-collapsing) #timer-control-buttons-bar {
+    display: none !important;
+}
+
+/* Tactile, Performant Button Micro-Interactions */
+#timer-btn-fullscreen,
+#timer-fs-btn-exit,
+#timer-fs-btn-toggle,
+#timer-btn-toggle,
+#timer-btn-reset,
+#timer-btn-save {
+    cursor: pointer !important;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease, box-shadow 0.16s ease !important;
+    will-change: transform;
+}
+
 #timer-btn-fullscreen {
     flex-shrink: 0 !important;
     width: 46px !important;
     min-width: 46px !important;
     height: 46px !important;
     min-height: 46px !important;
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease !important;
-    will-change: transform;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
 }
 
 #timer-subject-select {
@@ -132,63 +160,41 @@
     max-width: 100% !important;
 }
 
-#timer-btn-fullscreen:hover {
-    transform: scale(1.1) translate3d(0, 0, 0);
-}
-
-#timer-btn-fullscreen:active {
-    transform: scale(0.9) translate3d(0, 0, 0);
-}
-
-#timer-btn-fullscreen,
-#timer-fs-btn-exit,
-#timer-fs-btn-toggle {
-    cursor: pointer !important;
-    pointer-events: auto !important;
-}
-
-#timer-btn-fullscreen svg,
-#timer-fs-btn-exit svg {
-    pointer-events: none !important;
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    will-change: transform;
-}
-
-.timer-fullscreen #timer-btn-fullscreen svg {
-    transform: rotate(180deg);
-}
-
-#timer-fs-btn-exit {
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease !important;
-    will-change: transform;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-}
-
+#timer-btn-fullscreen:hover,
 #timer-fs-btn-exit:hover {
     transform: scale(1.08) translate3d(0, 0, 0);
 }
 
+#timer-btn-fullscreen:active,
 #timer-fs-btn-exit:active {
     transform: scale(0.92) translate3d(0, 0, 0);
 }
 
-/* Clean 3-Thing Fullscreen Layout Rules */
-.timer-fullscreen #timer-fs-actions {
-    display: flex !important;
-    position: fixed !important;
-    top: max(1rem, env(safe-area-inset-top)) !important;
-    right: max(1rem, env(safe-area-inset-right)) !important;
-    z-index: 99999 !important;
+#timer-fs-btn-toggle:hover,
+#timer-btn-toggle:hover,
+#timer-btn-reset:hover,
+#timer-btn-save:hover {
+    transform: translateY(-1px) scale(1.02) translate3d(0, 0, 0);
 }
 
-.timer-fullscreen #timer-panel-header-bar,
-.timer-fullscreen #timer-mode-switcher,
-.timer-fullscreen #timer-subject-select-container,
-.timer-fullscreen #timer-alarm-container,
-.timer-fullscreen #timer-presets-container,
-.timer-fullscreen #timer-control-buttons-bar {
-    display: none !important;
+#timer-fs-btn-toggle:active,
+#timer-btn-toggle:active,
+#timer-btn-reset:active,
+#timer-btn-save:active {
+    transform: translateY(0) scale(0.96) translate3d(0, 0, 0);
+}
+
+#timer-btn-fullscreen svg,
+#timer-fs-btn-exit svg,
+#timer-fs-btn-toggle svg,
+#timer-btn-toggle svg,
+#timer-btn-reset svg,
+#timer-btn-save svg {
+    pointer-events: none !important;
+}
+
+.timer-fullscreen #timer-btn-fullscreen svg {
+    transform: rotate(180deg);
 }
 
 /* Program-wise Dropdown Optgroup Styling */
